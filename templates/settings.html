@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+
+{% block title %}الإعدادات والمستخدمين | LawSaaS{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+    <div>
+        <h1>الإعدادات وإدارة الفريق</h1>
+        <p>إدارة بيانات المكتب، والصلاحيات، وإضافة محامين وموظفين جدد للنظام.</p>
+    </div>
+    <div style="display: flex; gap: 10px;">
+        <button class="btn-primary" onclick="document.getElementById('addUserModal').style.display='flex'">
+            <i class="fa-solid fa-user-plus"></i> إضافة مستخدم جديد
+        </button>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 2fr; gap: 25px;">
+    
+    <!-- Office Information -->
+    <div class="card" style="padding: 25px;">
+        <h3 style="color: var(--secondary-color); margin-bottom: 20px; font-size: 1.2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+            <i class="fa-solid fa-building"></i> بيانات مكتب المحاماة
+        </h3>
+        
+        <form action="/settings/update_office" method="post">
+            <input type="hidden" name="office_id" value="{{ office.id if office else '' }}">
+            
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">اسم المكتب / الشركة <span style="color: red;">*</span></label>
+                <input type="text" name="name" value="{{ office.name if office else 'المكتب الرئيسي' }}" required style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit;">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 25px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">حالة الحساب</label>
+                <div style="padding: 12px; background: #dcfce7; color: #166534; border-radius: 8px; font-weight: bold; text-align: center;">
+                    <i class="fa-solid fa-check-circle"></i> نشط (Active)
+                </div>
+            </div>
+            
+            <button type="submit" class="btn-primary" style="width: 100%; padding: 12px; font-family: inherit;">
+                <i class="fa-solid fa-save"></i> حفظ بيانات المكتب
+            </button>
+        </form>
+    </div>
+
+    <!-- Team & Users Management -->
+    <div class="card">
+        <h3 style="color: var(--secondary-color); margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); font-size: 1.2rem;">
+            <i class="fa-solid fa-users-gear"></i> فريق العمل والمستخدمين
+        </h3>
+        
+        <div style="overflow-x: auto;">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>الاسم الكامل</th>
+                        <th>اسم المستخدم</th>
+                        <th>الدور / الصلاحية</th>
+                        <th>رقم الجوال</th>
+                        <th>حالة الحساب</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for team_user in users %}
+                    <tr>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div style="width: 35px; height: 35px; border-radius: 50%; background: var(--primary-color); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                                    {{ team_user.name[0] }}
+                                </div>
+                                <strong>{{ team_user.name }}</strong>
+                            </div>
+                        </td>
+                        <td dir="ltr" style="text-align: right;">{{ team_user.username }}</td>
+                        <td>
+                            {% if team_user.role == 'مدير' %}
+                            <span style="background: #fee2e2; color: #b91c1c; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">مدير نظام</span>
+                            {% elif team_user.role == 'محامٍ' %}
+                            <span style="background: #dbeafe; color: #1d4ed8; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">محامي</span>
+                            {% else %}
+                            <span style="background: #e2e8f0; color: #475569; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">{{ team_user.role }}</span>
+                            {% endif %}
+                        </td>
+                        <td dir="ltr" style="text-align: right;">{{ team_user.phone }}</td>
+                        <td>
+                            {% if team_user.is_active %}
+                            <span style="color: #10b981;"><i class="fa-solid fa-circle-check"></i> فعّال</span>
+                            {% else %}
+                            <span style="color: #ef4444;"><i class="fa-solid fa-circle-xmark"></i> موقوف</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button class="action-btn" style="color: var(--primary-color);" title="تعديل الصلاحيات" onclick="openEditUserModal('{{ team_user.id }}', '{{ team_user.name }}', '{{ team_user.phone }}', '{{ team_user.email }}', '{{ team_user.role }}', '{{ team_user.is_active }}', '{{ team_user.birth_date or '' }}')"><i class="fa-solid fa-user-pen"></i></button>
+                            {% if team_user.id != user.id %}
+                            <button class="action-btn" style="color: #ef4444;" title="إيقاف الحساب"><i class="fa-solid fa-ban"></i></button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Adding New User -->
+<div id="addUserModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000;">
+    <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; width: 600px; max-width: 90%;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0; font-size: 1.5rem; color: var(--secondary-color);">إضافة مستخدم جديد</h2>
+            <button onclick="document.getElementById('addUserModal').style.display='none'" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted);">&times;</button>
+        </div>
+        
+        <form action="/settings/add_user" method="post">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">الاسم الكامل <span style="color: red;">*</span></label>
+                    <input type="text" name="name" required placeholder="مثال: أحمد محمد" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit;">
+                </div>
+                
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">اسم المستخدم للموقع <span style="color: red;">*</span></label>
+                    <input type="text" name="username" required placeholder="مثال: ahmed123" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit;" dir="ltr">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">رقم الجوال <span style="color: red;">*</span></label>
+                    <input type="text" name="phone" required placeholder="05xxxxxxxx" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit;" dir="ltr">
+                </div>
+                
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">البريد الإلكتروني <span style="color: red;">*</span></label>
+                    <input type="email" name="email" required placeholder="email@example.com" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit;" dir="ltr">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; margin-bottom: 25px;">
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">كلمة المرور المؤقتة <span style="color: red;">*</span></label>
+                    <input type="text" name="password" required placeholder="كلمة المرور" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit;" dir="ltr">
+                </div>
+
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">الدور والصلاحية <span style="color: red;">*</span></label>
+                    <select name="role" required style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit;">
+                        <option value="محامٍ">محامي (إدارة قضاياه فقط)</option>
+                        <option value="إداري">إداري (موظف استقبال / سكرتير)</option>
+                        <option value="مدير">مدير نظام (صلاحيات كاملة)</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button type="button" onclick="document.getElementById('addUserModal').style.display='none'" style="padding: 12px 20px; background: #e2e8f0; color: #475569; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-family: inherit;">إلغاء</button>
+                <button type="submit" class="btn-primary" style="padding: 12px 20px; font-family: inherit;">إضافة المستخدم</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal for Editing User -->
+<div id="editUserModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000;">
+    <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; width: 600px; max-width: 90%;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0; font-size: 1.5rem; color: var(--secondary-color);">تعديل بيانات المستخدم</h2>
+            <button onclick="document.getElementById('editUserModal').style.display='none'" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted);">&times;</button>
+        </div>
+        
+        <form action="/settings/edit_user" method="post">
+            <input type="hidden" name="user_id" id="edit_user_id">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">الاسم الكامل <span style="color: red;">*</span></label>
+                    <input type="text" name="name" id="edit_user_name" required style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit;">
+                </div>
+                
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">رقم الجوال <span style="color: red;">*</span></label>
+                    <input type="text" name="phone" id="edit_user_phone" required style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit;" dir="ltr">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">البريد الإلكتروني <span style="color: red;">*</span></label>
+                    <input type="email" name="email" id="edit_user_email" required style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit;" dir="ltr">
+                </div>
+
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">الدور والصلاحية <span style="color: red;">*</span></label>
+                    <select name="role" id="edit_user_role" required style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit;">
+                        <option value="محامٍ">محامي (إدارة قضاياه فقط)</option>
+                        <option value="إداري">إداري (موظف استقبال / سكرتير)</option>
+                        <option value="مدير">مدير نظام (صلاحيات كاملة)</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-group" style="margin-top: 15px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">تاريخ الميلاد</label>
+                <input type="date" name="birth_date" id="edit_user_birth_date" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit;">
+            </div>
+
+            <div class="form-group" style="margin-top: 15px; margin-bottom: 25px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">حالة الحساب</label>
+                <select name="is_active" id="edit_user_is_active" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit;">
+                    <option value="1">حساب فعّال</option>
+                    <option value="0">حساب موقوف</option>
+                </select>
+            </div>
+            
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button type="button" onclick="document.getElementById('editUserModal').style.display='none'" style="padding: 12px 20px; background: #e2e8f0; color: #475569; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-family: inherit;">إلغاء</button>
+                <button type="submit" class="btn-primary" style="padding: 12px 20px; font-family: inherit;">حفظ التعديلات</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function openEditUserModal(id, name, phone, email, role, isActive, birthDate) {
+        document.getElementById('edit_user_id').value = id;
+        document.getElementById('edit_user_name').value = name;
+        document.getElementById('edit_user_phone').value = phone && phone != 'None' ? phone : '';
+        document.getElementById('edit_user_email').value = email && email != 'None' ? email : '';
+        document.getElementById('edit_user_role').value = role;
+        document.getElementById('edit_user_birth_date').value = birthDate && birthDate != 'None' ? birthDate : '';
+        document.getElementById('edit_user_is_active').value = isActive == 'True' || isActive == '1' ? '1' : '0';
+        document.getElementById('editUserModal').style.display = 'flex';
+    }
+</script>
+{% endblock %}

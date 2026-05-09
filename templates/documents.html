@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+{% block title %}المستندات والأرشفة | LawSaaS{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;">
+    <div>
+        <h1><i class="fa-solid fa-folder-open" style="color:var(--primary-color);"></i> المستندات والأرشفة</h1>
+        <p style="color:var(--text-muted);">أرشفة وتصنيف جميع المستندات المرتبطة بالقضايا.</p>
+    </div>
+    <button class="btn-primary" onclick="document.getElementById('addModal').style.display='flex'">
+        <i class="fa-solid fa-plus"></i> إضافة مستند
+    </button>
+</div>
+
+<!-- Stats -->
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;">
+    {% set contracts = docs|selectattr('document_type_key','equalto','عقد')|list|length %}
+    {% set judgments = docs|selectattr('document_type_key','equalto','حكم')|list|length %}
+    {% set letters   = docs|selectattr('document_type_key','equalto','خطاب')|list|length %}
+    <div class="card" style="padding:16px;text-align:center;">
+        <i class="fa-solid fa-folder-open" style="font-size:1.6rem;color:var(--primary-color);margin-bottom:6px;"></i>
+        <p style="font-size:1.6rem;font-weight:900;margin:0;">{{ docs|length }}</p>
+        <p style="color:var(--text-muted);font-size:.82rem;margin:0;">إجمالي المستندات</p>
+    </div>
+    <div class="card" style="padding:16px;text-align:center;">
+        <i class="fa-solid fa-file-contract" style="font-size:1.6rem;color:#6366f1;margin-bottom:6px;"></i>
+        <p style="font-size:1.6rem;font-weight:900;margin:0;color:#6366f1;">{{ contracts }}</p>
+        <p style="color:var(--text-muted);font-size:.82rem;margin:0;">عقود</p>
+    </div>
+    <div class="card" style="padding:16px;text-align:center;">
+        <i class="fa-solid fa-gavel" style="font-size:1.6rem;color:#10b981;margin-bottom:6px;"></i>
+        <p style="font-size:1.6rem;font-weight:900;margin:0;color:#10b981;">{{ judgments }}</p>
+        <p style="color:var(--text-muted);font-size:.82rem;margin:0;">أحكام</p>
+    </div>
+    <div class="card" style="padding:16px;text-align:center;">
+        <i class="fa-solid fa-envelope" style="font-size:1.6rem;color:#f59e0b;margin-bottom:6px;"></i>
+        <p style="font-size:1.6rem;font-weight:900;margin:0;color:#f59e0b;">{{ letters }}</p>
+        <p style="color:var(--text-muted);font-size:.82rem;margin:0;">خطابات</p>
+    </div>
+</div>
+
+<!-- Filter -->
+<div class="card" style="padding:12px 18px;margin-bottom:16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+    <input type="text" id="docSearch" placeholder="🔍 ابحث باسم المستند..." oninput="filterDocs()"
+        style="flex:1;padding:9px 14px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;min-width:180px;">
+    <select id="typeFilter" onchange="filterDocs()" style="padding:9px 14px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+        <option value="">جميع الأنواع</option>
+        <option value="عقد">عقد</option>
+        <option value="حكم">حكم</option>
+        <option value="خطاب">خطاب</option>
+        <option value="وكالة">وكالة</option>
+        <option value="تقرير">تقرير</option>
+        <option value="أخرى">أخرى</option>
+    </select>
+</div>
+
+<div class="card">
+    <div style="overflow-x:auto;">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>اسم المستند</th>
+                    <th>نوع المستند</th>
+                    <th>القضية</th>
+                    <th>تاريخ المستند</th>
+                    <th>ملاحظات</th>
+                    <th>إجراءات</th>
+                </tr>
+            </thead>
+            <tbody id="docsBody">
+                {% for d in docs %}
+                <tr class="doc-row" data-name="{{ d.name }}" data-type="{{ d.document_type_key }}">
+                    <td>{{ loop.index }}</td>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <div style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+                                {% if d.document_type_key == 'عقد' %}background:#e0e7ff;color:#6366f1;
+                                {% elif d.document_type_key == 'حكم' %}background:#dcfce7;color:#10b981;
+                                {% elif d.document_type_key == 'خطاب' %}background:#fef3c7;color:#d97706;
+                                {% else %}background:#f1f5f9;color:#64748b;{% endif %}">
+                                <i class="fa-solid fa-file-alt"></i>
+                            </div>
+                            <strong>{{ d.name }}</strong>
+                        </div>
+                    </td>
+                    <td>
+                        <span style="padding:4px 10px;border-radius:12px;font-size:.8rem;font-weight:700;
+                            {% if d.document_type_key == 'عقد' %}background:#e0e7ff;color:#6366f1;
+                            {% elif d.document_type_key == 'حكم' %}background:#dcfce7;color:#166534;
+                            {% elif d.document_type_key == 'خطاب' %}background:#fef3c7;color:#d97706;
+                            {% else %}background:#f1f5f9;color:#64748b;{% endif %}">
+                            {{ d.document_type_key }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if d.law_case %}
+                        <a href="/cases/{{ d.case_id }}" style="color:var(--primary-color);text-decoration:none;font-size:.85rem;font-weight:600;">{{ d.law_case.case_number }}</a>
+                        {% else %}-{% endif %}
+                    </td>
+                    <td dir="ltr" style="font-size:.88rem;">{{ d.doc_date or '-' }}</td>
+                    <td style="max-width:200px;color:var(--text-muted);font-size:.85rem;">{{ d.notes[:60] if d.notes else '-' }}</td>
+                    <td>
+                        <div style="display:flex;gap:5px;">
+                            {% if d.file_path %}
+                            <a href="/{{ d.file_path }}" target="_blank" class="action-btn" style="color:#10b981;" title="تحميل/عرض الملف"><i class="fa-solid fa-download"></i></a>
+                            {% endif %}
+                            <button class="action-btn" style="color:var(--primary-color);" title="تعديل" onclick="openEditDocModal('{{ d.id }}', '{{ d.case_id }}', '{{ d.name }}', '{{ d.document_type_key }}', '{{ d.doc_date or '' }}', '{{ d.notes or '' }}')"><i class="fa-solid fa-pen"></i></button>
+                            <form action="/documents/delete" method="post" style="display:inline;" onsubmit="return confirm('حذف المستند؟')">
+                                <input type="hidden" name="doc_id" value="{{ d.id }}">
+                                <button type="submit" class="action-btn" style="color:#ef4444;" title="حذف"><i class="fa-solid fa-trash"></i></button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" style="text-align:center;padding:50px;color:var(--text-muted);">
+                    <i class="fa-solid fa-folder-open" style="font-size:3rem;opacity:.3;display:block;margin-bottom:10px;"></i>
+                    <p>لا توجد مستندات مضافة بعد.</p>
+                </td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add Modal -->
+<div id="addModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:1000;">
+    <div style="background:white;padding:28px;border-radius:14px;width:560px;max-width:95%;max-height:90vh;overflow-y:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <h2 style="margin:0;color:var(--secondary-color);">إضافة مستند جديد</h2>
+            <button onclick="document.getElementById('addModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+        </div>
+        <form action="/documents/add" method="post" enctype="multipart/form-data">
+            <div style="margin-bottom:14px;">
+                <label style="display:block;margin-bottom:6px;font-weight:600;">اسم المستند <span style="color:red">*</span></label>
+                <input type="text" name="name" required placeholder="مثال: عقد الوكالة القضائية" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+                <div>
+                    <label style="display:block;margin-bottom:6px;font-weight:600;">نوع المستند <span style="color:red">*</span></label>
+                    <select name="document_type_key" required style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+                        <option value="عقد">عقد</option>
+                        <option value="حكم">حكم</option>
+                        <option value="خطاب">خطاب</option>
+                        <option value="وكالة">وكالة</option>
+                        <option value="صحيفة دعوى">صحيفة دعوى</option>
+                        <option value="مذكرة">مذكرة</option>
+                        <option value="تقرير">تقرير</option>
+                        <option value="أخرى">أخرى</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block;margin-bottom:6px;font-weight:600;">تاريخ المستند</label>
+                    <input type="date" name="doc_date" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;">
+                </div>
+            </div>
+            <div style="margin-bottom:14px;">
+                <label style="display:block;margin-bottom:6px;font-weight:600;">القضية المرتبطة <span style="color:red">*</span></label>
+                <select name="case_id" required style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+                    <option value="">-- اختر القضية --</option>
+                    {% for case in cases %}
+                    <option value="{{ case.id }}">{{ case.case_number }} - {{ case.title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="margin-bottom:20px;">
+                <label style="display:block;margin-bottom:6px;font-weight:600;">ملاحظات</label>
+                <textarea name="notes" rows="3" style="width:100%;padding:12px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;resize:vertical;"></textarea>
+            </div>
+            <div style="margin-bottom:20px;">
+                <label style="display:block;margin-bottom:6px;font-weight:600;">إرفاق ملف (PDF, Image, Word)</label>
+                <input type="file" name="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" style="width:100%;padding:11px;border:1px dashed var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif; background: #f8fafc;">
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+                <button type="button" onclick="document.getElementById('addModal').style.display='none'" style="padding:11px 20px;background:#e2e8f0;color:#475569;border:none;border-radius:8px;cursor:pointer;font-family:'Cairo',sans-serif;font-weight:600;">إلغاء</button>
+                <button type="submit" class="btn-primary" style="padding:11px 20px;">حفظ المستند</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div id="editModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:1000;">
+    <div style="background:white;padding:28px;border-radius:14px;width:560px;max-width:95%;max-height:90vh;overflow-y:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <h2 style="margin:0;color:var(--secondary-color);">تعديل المستند</h2>
+            <button onclick="document.getElementById('editModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+        </div>
+        <form action="/documents/edit" method="post" enctype="multipart/form-data">
+            <input type="hidden" name="doc_id" id="edit_doc_id">
+            <div style="margin-bottom:14px;">
+                <label style="display:block;margin-bottom:6px;font-weight:600;">اسم المستند <span style="color:red">*</span></label>
+                <input type="text" name="name" id="edit_doc_name" required style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+                <div>
+                    <label style="display:block;margin-bottom:6px;font-weight:600;">نوع المستند <span style="color:red">*</span></label>
+                    <select name="document_type_key" id="edit_doc_type" required style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+                        <option value="عقد">عقد</option>
+                        <option value="حكم">حكم</option>
+                        <option value="خطاب">خطاب</option>
+                        <option value="وكالة">وكالة</option>
+                        <option value="صحيفة دعوى">صحيفة دعوى</option>
+                        <option value="مذكرة">مذكرة</option>
+                        <option value="تقرير">تقرير</option>
+                        <option value="أخرى">أخرى</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block;margin-bottom:6px;font-weight:600;">تاريخ المستند</label>
+                    <input type="date" name="doc_date" id="edit_doc_date" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;">
+                </div>
+            </div>
+            <div style="margin-bottom:14px;">
+                <label style="display:block;margin-bottom:6px;font-weight:600;">القضية المرتبطة <span style="color:red">*</span></label>
+                <select name="case_id" id="edit_doc_case" required style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+                    <option value="">-- اختر القضية --</option>
+                    {% for case in cases %}
+                    <option value="{{ case.id }}">{{ case.case_number }} - {{ case.title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="margin-bottom:20px;">
+                <label style="display:block;margin-bottom:6px;font-weight:600;">ملاحظات</label>
+                <textarea name="notes" id="edit_doc_notes" rows="3" style="width:100%;padding:12px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;resize:vertical;"></textarea>
+            </div>
+            <div style="margin-bottom:20px;">
+                <label style="display:block;margin-bottom:6px;font-weight:600;">تحديث المرفق (اختياري)</label>
+                <input type="file" name="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" style="width:100%;padding:11px;border:1px dashed var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif; background: #f8fafc;">
+                <small style="color:var(--text-muted);display:block;margin-top:4px;">اذا لم تختر ملفاً جديداً سيظل الملف القديم محفوظاً.</small>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+                <button type="button" onclick="document.getElementById('editModal').style.display='none'" style="padding:11px 20px;background:#e2e8f0;color:#475569;border:none;border-radius:8px;cursor:pointer;font-family:'Cairo',sans-serif;font-weight:600;">إلغاء</button>
+                <button type="submit" class="btn-primary" style="padding:11px 20px;">حفظ التعديلات</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function filterDocs() {
+    const s = document.getElementById('docSearch').value.toLowerCase();
+    const t = document.getElementById('typeFilter').value;
+    document.querySelectorAll('.doc-row').forEach(row => {
+        const matchS = !s || row.dataset.name.toLowerCase().includes(s);
+        const matchT = !t || row.dataset.type === t;
+        row.style.display = matchS && matchT ? '' : 'none';
+    });
+}
+
+function openEditDocModal(id, case_id, name, type, date, notes) {
+    document.getElementById('edit_doc_id').value = id;
+    document.getElementById('edit_doc_case').value = case_id;
+    document.getElementById('edit_doc_name').value = name;
+    document.getElementById('edit_doc_type').value = type;
+    document.getElementById('edit_doc_date').value = date && date !== 'None' ? date : '';
+    document.getElementById('edit_doc_notes').value = notes && notes !== 'None' ? notes : '';
+    document.getElementById('editModal').style.display = 'flex';
+}
+</script>
+{% endblock %}

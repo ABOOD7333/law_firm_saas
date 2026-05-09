@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+{% block title %}الجداول المرجعية | LawSaaS{% endblock %}
+
+{% block head %}
+<style>
+.ref-layout { display: grid; grid-template-columns: 340px 1fr; gap: 24px; align-items: start; }
+.ref-card { background: var(--card-bg); border-radius: 14px; padding: 22px; border: 1px solid var(--border-color); box-shadow: 0 2px 8px rgba(0,0,0,.05); }
+.ref-card h3 { font-size: 1rem; font-weight: 800; color: var(--secondary-color); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+.tab-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+.tab-pill { padding: 7px 16px; border-radius: 50px; border: 2px solid var(--border-color); background: var(--card-bg); color: var(--text-muted); font-family: 'Cairo', sans-serif; font-size: .82rem; font-weight: 700; cursor: pointer; transition: all .2s; }
+.tab-pill:hover { border-color: var(--primary-color); color: var(--primary-color); }
+.tab-pill.active { border-color: transparent; background: linear-gradient(135deg,#6366f1,#4f46e5); color: white; }
+.form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.form-group label { font-size: .82rem; font-weight: 700; color: var(--text-muted); }
+.form-group input, .form-group select, .form-group textarea {
+  padding: 10px 12px; border: 1.5px solid var(--border-color); border-radius: 9px;
+  font-family: 'Cairo', sans-serif; font-size: .88rem; background: var(--card-bg);
+  color: var(--secondary-color); outline: none; transition: border-color .2s;
+}
+.form-group input:focus, .form-group select:focus { border-color: var(--primary-color); }
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.ref-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.ref-table th { background: #f8fafc; color: var(--text-muted); font-weight: 700; padding: 10px 14px; text-align: right; border-bottom: 2px solid var(--border-color); }
+.ref-table td { padding: 10px 14px; border-bottom: 1px solid var(--border-color); color: var(--secondary-color); vertical-align: middle; }
+.ref-table tr { cursor: pointer; transition: background .15s; }
+.ref-table tr:hover td { background: #f0f4ff; }
+.ref-table tr.selected td { background: #eff6ff; }
+.type-badge { padding: 3px 12px; border-radius: 50px; font-size: .75rem; font-weight: 700; }
+.badge-court    { background: #dbeafe; color: #1d4ed8; }
+.badge-prosecution { background: #fef3c7; color: #d97706; }
+.badge-circuit  { background: #d1fae5; color: #047857; }
+.badge-appeal_stage { background: #ede9fe; color: #7c3aed; }
+.badge-document_category { background: #fce7f3; color: #db2777; }
+.badge-other    { background: #f1f5f9; color: #475569; }
+.alert-box { padding: 10px 14px; border-radius: 9px; font-size: .88rem; font-weight: 600; margin-bottom: 14px; display: none; }
+.alert-success { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+.alert-error   { background: #fee2e2; color: #7f1d1d; border: 1px solid #fecaca; }
+.search-bar-ref { display: flex; gap: 10px; margin-bottom: 16px; }
+.search-bar-ref input { flex: 1; padding: 9px 14px; border: 1.5px solid var(--border-color); border-radius: 9px; font-family: 'Cairo', sans-serif; font-size: .88rem; outline: none; transition: border-color .2s; background: var(--card-bg); color: var(--secondary-color); }
+.search-bar-ref input:focus { border-color: var(--primary-color); }
+.count-badge { background: var(--primary-color); color: white; padding: 2px 8px; border-radius: 50px; font-size: .75rem; font-weight: 700; margin-right: 6px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:24px;">
+  <h1 style="font-size:1.8rem;font-weight:800;color:var(--secondary-color);margin-bottom:6px;">
+    <i class="fa-solid fa-table-list" style="color:#6366f1;margin-left:10px;"></i>الجداول المرجعية
+  </h1>
+  <p style="color:var(--text-muted);font-size:.95rem;">إدارة المحاكم، النيابات، الدوائر، مراحل التقاضي، وتصنيفات المستندات.</p>
+</div>
+
+<!-- Type filter pills -->
+<div class="tab-pills" style="margin-bottom:20px;">
+  <button class="tab-pill active" onclick="setType('all',this)">الكل <span class="count-badge">{{ records|length }}</span></button>
+  <button class="tab-pill" onclick="setType('court',this)"><i class="fa-solid fa-building-columns"></i> المحاكم</button>
+  <button class="tab-pill" onclick="setType('prosecution',this)"><i class="fa-solid fa-landmark"></i> النيابات</button>
+  <button class="tab-pill" onclick="setType('circuit',this)"><i class="fa-solid fa-sitemap"></i> الدوائر</button>
+  <button class="tab-pill" onclick="setType('appeal_stage',this)"><i class="fa-solid fa-layer-group"></i> مراحل التقاضي</button>
+  <button class="tab-pill" onclick="setType('document_category',this)"><i class="fa-solid fa-folder"></i> تصنيفات المستندات</button>
+</div>
+
+<div class="ref-layout">
+  <!-- Form -->
+  <div class="ref-card">
+    <h3><i class="fa-solid fa-plus-circle" style="color:#6366f1;"></i> إضافة / تعديل سجل</h3>
+    <div id="alertBox" class="alert-box"></div>
+    <form onsubmit="saveRecord(event)">
+      <input type="hidden" id="recId">
+      <div class="form-group">
+        <label>نوع الجدول</label>
+        <select id="fType">
+          <option value="court">محكمة</option>
+          <option value="prosecution">نيابة</option>
+          <option value="circuit">دائرة</option>
+          <option value="appeal_stage">مرحلة تقاضي</option>
+          <option value="document_category">تصنيف مستند</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>الاسم <span style="color:#ef4444;">*</span></label>
+        <input type="text" id="fName" required placeholder="أدخل الاسم...">
+      </div>
+      <div class="form-group">
+        <label>ملاحظات (اختياري)</label>
+        <textarea id="fNotes" rows="2" placeholder="ملاحظات إضافية..."></textarea>
+      </div>
+      <div class="btn-row">
+        <button type="submit" class="action-btn" style="background:linear-gradient(135deg,#10b981,#047857);">
+          <i class="fa-solid fa-floppy-disk"></i> حفظ
+        </button>
+        <button type="button" class="action-btn" style="background:linear-gradient(135deg,#6366f1,#4f46e5);" onclick="clearForm()">
+          <i class="fa-solid fa-plus"></i> جديد
+        </button>
+        <button type="button" class="action-btn" style="background:linear-gradient(135deg,#ef4444,#dc2626);" onclick="deleteRecord()">
+          <i class="fa-solid fa-trash"></i> حذف
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Table -->
+  <div class="ref-card">
+    <h3><i class="fa-solid fa-table" style="color:#6366f1;"></i> السجلات المرجعية</h3>
+    <div class="search-bar-ref">
+      <input type="text" id="searchInput" placeholder="بحث في الاسم..." oninput="filterTable()">
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="ref-table" id="refTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>النوع</th>
+            <th>الاسم</th>
+            <th>ملاحظات</th>
+            <th>تاريخ الإضافة</th>
+          </tr>
+        </thead>
+        <tbody id="refTbody">
+          {% set type_labels = {'court':'محكمة','prosecution':'نيابة','circuit':'دائرة','appeal_stage':'مرحلة تقاضي','document_category':'تصنيف مستند'} %}
+          {% for r in records %}
+          <tr onclick="selectRecord({{ r.id }}, this)" data-id="{{ r.id }}" data-type="{{ r.ref_type }}">
+            <td>{{ r.id }}</td>
+            <td><span class="type-badge badge-{{ r.ref_type }}">{{ type_labels.get(r.ref_type, r.ref_type) }}</span></td>
+            <td><strong>{{ r.ref_name }}</strong></td>
+            <td style="color:var(--text-muted);font-size:.82rem;">{{ r.notes or '—' }}</td>
+            <td style="font-size:.78rem;color:var(--text-muted);">{{ (r.created_at or '')[:10] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if not records %}
+      <div style="text-align:center;padding:60px 20px;color:var(--text-muted);">
+        <i class="fa-solid fa-table-list" style="font-size:3rem;opacity:.2;display:block;margin-bottom:12px;"></i>
+        <p style="font-size:1rem;font-weight:600;">لا توجد سجلات مرجعية بعد.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const allRecords = {{ records_json | safe }};
+let selectedId = null;
+let activeType = 'all';
+
+const typeLabels = {
+  court: 'محكمة', prosecution: 'نيابة', circuit: 'دائرة',
+  appeal_stage: 'مرحلة تقاضي', document_category: 'تصنيف مستند'
+};
+
+function showAlert(msg, type='success') {
+  const el = document.getElementById('alertBox');
+  el.className = 'alert-box alert-' + type;
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 4000);
+}
+
+function setType(type, btn) {
+  activeType = type;
+  document.querySelectorAll('.tab-pill').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  filterTable();
+}
+
+function filterTable() {
+  const term = document.getElementById('searchInput').value.trim().toLowerCase();
+  const rows = document.querySelectorAll('#refTbody tr');
+  rows.forEach(row => {
+    const type = row.dataset.type;
+    const name = row.cells[2]?.textContent?.toLowerCase() || '';
+    const typeMatch = activeType === 'all' || type === activeType;
+    const searchMatch = !term || name.includes(term);
+    row.style.display = (typeMatch && searchMatch) ? '' : 'none';
+  });
+}
+
+function selectRecord(id, row) {
+  selectedId = id;
+  document.querySelectorAll('#refTbody tr').forEach(r => r.classList.remove('selected'));
+  row.classList.add('selected');
+  const rec = allRecords.find(r => r.id === id);
+  if (!rec) return;
+  document.getElementById('recId').value = rec.id;
+  document.getElementById('fType').value = rec.ref_type;
+  document.getElementById('fName').value = rec.ref_name;
+  document.getElementById('fNotes').value = rec.notes || '';
+}
+
+function clearForm() {
+  selectedId = null;
+  document.getElementById('recId').value = '';
+  document.getElementById('fName').value = '';
+  document.getElementById('fNotes').value = '';
+  document.querySelectorAll('#refTbody tr').forEach(r => r.classList.remove('selected'));
+}
+
+async function saveRecord(e) {
+  e.preventDefault();
+  const payload = {
+    id: document.getElementById('recId').value || null,
+    ref_type: document.getElementById('fType').value,
+    ref_name: document.getElementById('fName').value.trim(),
+    notes: document.getElementById('fNotes').value.trim(),
+  };
+  if (!payload.ref_name) { showAlert('اسم السجل مطلوب', 'error'); return; }
+  const res = await fetch('/api/refdata/save', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+  const data = await res.json();
+  if (data.ok) { showAlert(data.message); setTimeout(() => location.reload(), 1000); }
+  else showAlert(data.message, 'error');
+}
+
+async function deleteRecord() {
+  if (!selectedId) { showAlert('اختر سجلاً أولاً', 'error'); return; }
+  if (!confirm('هل تريد حذف هذا السجل؟')) return;
+  const res = await fetch(`/api/refdata/delete/${selectedId}`, { method: 'DELETE' });
+  const data = await res.json();
+  if (data.ok) { showAlert(data.message); setTimeout(() => location.reload(), 900); }
+  else showAlert(data.message, 'error');
+}
+</script>
+{% endblock %}

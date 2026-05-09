@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}لوحة التحكم | LawSaaS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>
+        {% if user.role == 'مدير' %}
+        <i class="fa-solid fa-shield-halved" style="color: var(--primary-color);"></i> لوحة تحكم المدير
+        {% else %}
+        <i class="fa-solid fa-scale-balanced" style="color: var(--primary-color);"></i> مساحة عملي
+        {% endif %}
+    </h1>
+    <p>مرحباً <strong>{{ user.name }}</strong>! {{ "إليك ملخص شامل لنشاط المكتب." if user.role == 'مدير' else "إليك مهامك ومتطلباتك للجلسة القادمة." }}</p>
+</div>
+
+<!-- Stats Cards -->
+<div class="stats-grid">
+    <div class="stat-card primary-gradient">
+        <div class="stat-icon"><i class="fa-solid fa-briefcase"></i></div>
+        <div class="stat-details">
+            <h3>إجمالي القضايا</h3>
+            <p class="stat-number">{{ total_cases }}</p>
+        </div>
+    </div>
+    <div class="stat-card success-gradient">
+        <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
+        <div class="stat-details">
+            <h3>إجمالي الموكلين</h3>
+            <p class="stat-number">{{ total_clients }}</p>
+        </div>
+    </div>
+    <div class="stat-card warning-gradient">
+        <div class="stat-icon"><i class="fa-solid fa-list-check"></i></div>
+        <div class="stat-details">
+            <h3>مهامي المعلقة</h3>
+            <p class="stat-number">{{ pending_tasks_count }}</p>
+            <span class="stat-trend">مهام تنتظر إنجازك</span>
+        </div>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 25px; margin-top: 25px;">
+    
+    <!-- My Tasks Widget -->
+    <div class="content-section">
+        <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h2>
+                {% if user.role == 'مدير' %}
+                <i class="fa-solid fa-list-check" style="color: var(--primary-color);"></i> المهام المعلقة (مُسندة إليك)
+                {% else %}
+                <i class="fa-solid fa-list-check" style="color: var(--primary-color);"></i> مهامي
+                {% endif %}
+            </h2>
+            <a href="/tasks" style="color: var(--primary-color); text-decoration: none; font-weight: 600; font-size: 0.9rem;">عرض الكل →</a>
+        </div>
+
+        {% if my_tasks %}
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            {% for task in my_tasks %}
+            <div style="background: #f8fafc; border: 1px solid var(--border-color); border-right: 4px solid {% if task.priority_level == 1 %}#ef4444{% elif task.priority_level == 2 %}#f59e0b{% else %}#10b981{% endif %}; border-radius: 8px; padding: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div style="flex: 1;">
+                        <strong style="font-size: 1rem; display: block; margin-bottom: 5px;">{{ task.title }}</strong>
+                        {% if task.law_case %}
+                        <a href="/cases/{{ task.case_id }}" style="font-size: 0.85rem; color: var(--primary-color); text-decoration: none;">
+                            <i class="fa-solid fa-gavel"></i> {{ task.law_case.title }}
+                        </a>
+                        {% endif %}
+                        {% if task.due_at %}
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 5px;" dir="ltr">
+                            <i class="fa-regular fa-clock"></i> الاستحقاق: {{ task.due_at }}
+                        </p>
+                        {% endif %}
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 6px; margin-right: 10px;">
+                        {% if task.status_key == 'pending' %}
+                        <form action="/tasks/update_status" method="post" style="display: inline;">
+                            <input type="hidden" name="task_id" value="{{ task.id }}">
+                            <input type="hidden" name="status_key" value="in_progress">
+                            <button type="submit" style="background: #dbeafe; color: #1d4ed8; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-family: 'Cairo', sans-serif; font-size: 0.8rem; font-weight: 600; white-space: nowrap;">
+                                <i class="fa-solid fa-play"></i> قبول المهمة
+                            </button>
+                        </form>
+                        {% elif task.status_key == 'in_progress' %}
+                        <form action="/tasks/update_status" method="post" style="display: inline;">
+                            <input type="hidden" name="task_id" value="{{ task.id }}">
+                            <input type="hidden" name="status_key" value="completed">
+                            <button type="submit" style="background: #dcfce7; color: #166534; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-family: 'Cairo', sans-serif; font-size: 0.8rem; font-weight: 600; white-space: nowrap;">
+                                <i class="fa-solid fa-check-double"></i> تم الإنجاز
+                            </button>
+                        </form>
+                        {% endif %}
+                        
+                        {% if task.status_key == 'pending' %}
+                        <span style="background: #e2e8f0; color: #475569; padding: 3px 8px; border-radius: 20px; font-size: 0.75rem; text-align: center;">قيد الانتظار</span>
+                        {% elif task.status_key == 'in_progress' %}
+                        <span style="background: #dbeafe; color: #1d4ed8; padding: 3px 8px; border-radius: 20px; font-size: 0.75rem; text-align: center;">قيد التنفيذ</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 40px; color: var(--text-muted); border: 2px dashed var(--border-color); border-radius: 12px;">
+            <i class="fa-solid fa-circle-check" style="font-size: 3rem; color: #10b981; margin-bottom: 10px; opacity: 0.7;"></i>
+            <p style="font-size: 1.1rem; font-weight: 600; color: #10b981;">أحسنت! لا توجد مهام معلقة.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Quick Links -->
+    <div style="display: flex; flex-direction: column; gap: 15px;">
+        <div class="content-section">
+            <h3 style="margin-bottom: 15px; color: var(--secondary-color); font-size: 1.1rem;">
+                <i class="fa-solid fa-bolt" style="color: #f59e0b;"></i> وصول سريع
+            </h3>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <a href="/cases" style="display: flex; align-items: center; gap: 10px; padding: 12px; background: #f0f9ff; border-radius: 8px; text-decoration: none; color: var(--secondary-color); font-weight: 600; transition: all 0.2s;">
+                    <i class="fa-solid fa-gavel" style="color: var(--primary-color);"></i> القضايا
+                </a>
+                <a href="/hearings" style="display: flex; align-items: center; gap: 10px; padding: 12px; background: #fefce8; border-radius: 8px; text-decoration: none; color: var(--secondary-color); font-weight: 600; transition: all 0.2s;">
+                    <i class="fa-solid fa-calendar-days" style="color: #f59e0b;"></i> الجلسات
+                </a>
+                <a href="/tasks" style="display: flex; align-items: center; gap: 10px; padding: 12px; background: #f0fdf4; border-radius: 8px; text-decoration: none; color: var(--secondary-color); font-weight: 600; transition: all 0.2s;">
+                    <i class="fa-solid fa-list-check" style="color: #10b981;"></i> مهامي
+                </a>
+                {% if user.role == 'مدير' %}
+                <a href="/activity" style="display: flex; align-items: center; gap: 10px; padding: 12px; background: #faf5ff; border-radius: 8px; text-decoration: none; color: var(--secondary-color); font-weight: 600; transition: all 0.2s;">
+                    <i class="fa-solid fa-chart-line" style="color: #8b5cf6;"></i> نشاط الفريق
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

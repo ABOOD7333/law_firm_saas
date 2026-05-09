@@ -1,0 +1,346 @@
+{% extends "base.html" %}
+{% block title %}الفريق والصلاحيات | LawSaaS{% endblock %}
+
+{% block head %}
+<style>
+.team-grid { display: grid; grid-template-columns: 1fr 1.6fr; gap: 24px; align-items: start; }
+.office-card { background: linear-gradient(135deg,#6366f1,#4f46e5); border-radius:16px; padding:24px; color:white; margin-bottom:24px; }
+.office-card h2 { font-size:1.4rem; font-weight:800; margin-bottom:4px; }
+.office-card .meta { opacity:.85; font-size:.88rem; display:flex; gap:20px; flex-wrap:wrap; margin-top:12px; }
+.office-card .meta span { display:flex; align-items:center; gap:6px; }
+.section-card { background:var(--card-bg); border-radius:14px; padding:20px; border:1px solid var(--border-color); margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,.05); }
+.section-card h3 { font-size:1rem; font-weight:800; color:var(--secondary-color); margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+.members-table { width:100%; border-collapse:collapse; font-size:.85rem; }
+.members-table th { background:#f8fafc; color:var(--text-muted); font-weight:700; padding:10px 12px; text-align:right; border-bottom:2px solid var(--border-color); }
+.members-table td { padding:10px 12px; border-bottom:1px solid var(--border-color); color:var(--secondary-color); vertical-align:middle; }
+.members-table tr { cursor:pointer; transition:background .15s; }
+.members-table tr:hover td { background:#f0f4ff; }
+.members-table tr.selected td { background:#eff6ff; }
+.role-badge { padding:3px 10px; border-radius:50px; font-size:.75rem; font-weight:700; }
+.role-owner   { background:#fef3c7; color:#d97706; }
+.role-manager { background:#dbeafe; color:#1d4ed8; }
+.role-lawyer  { background:#d1fae5; color:#047857; }
+.role-other   { background:#f1f5f9; color:#475569; }
+.active-dot   { width:8px; height:8px; border-radius:50%; display:inline-block; }
+.dot-on  { background:#10b981; }
+.dot-off { background:#ef4444; }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:12px; }
+.form-group { display:flex; flex-direction:column; gap:6px; }
+.form-group label { font-size:.82rem; font-weight:700; color:var(--text-muted); }
+.form-group input, .form-group select, .form-group textarea {
+  padding:9px 12px; border:1.5px solid var(--border-color); border-radius:9px;
+  font-family:'Cairo',sans-serif; font-size:.88rem; background:var(--card-bg);
+  color:var(--secondary-color); outline:none; transition:border-color .2s;
+}
+.form-group input:focus, .form-group select:focus { border-color:var(--primary-color); }
+.required-star { color:#ef4444; margin-right:2px; }
+.perm-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:8px; }
+.perm-item { display:flex; align-items:center; gap:8px; padding:8px 10px; border:1.5px solid var(--border-color); border-radius:9px; font-size:.82rem; cursor:pointer; transition:all .2s; }
+.perm-item:hover { border-color:#6366f1; background:#f0f4ff; }
+.perm-item input[type=checkbox] { accent-color:#6366f1; width:16px; height:16px; }
+.perm-item.checked { border-color:#6366f1; background:#eff6ff; }
+.btn-row { display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
+.btn-save   { background:linear-gradient(135deg,#10b981,#047857); }
+.btn-clear  { background:linear-gradient(135deg,#6366f1,#4f46e5); }
+.btn-toggle { background:linear-gradient(135deg,#f59e0b,#d97706); }
+.btn-delete { background:linear-gradient(135deg,#ef4444,#dc2626); }
+.alert-box { padding:12px 16px; border-radius:10px; font-size:.88rem; font-weight:600; margin-bottom:16px; display:none; }
+.alert-success { background:#d1fae5; color:#065f46; border:1px solid #a7f3d0; }
+.alert-error   { background:#fee2e2; color:#7f1d1d; border:1px solid #fecaca; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Office Info Banner -->
+<div class="office-card">
+  <h2><i class="fa-solid fa-building-columns" style="margin-left:10px;"></i>{{ office.name if office else 'مكتب المحاماة' }}</h2>
+  <div class="meta">
+    <span><i class="fa-solid fa-user-tie"></i> المالك: {{ owner.name if owner else '—' }}</span>
+    <span><i class="fa-solid fa-at"></i> {{ owner.username if owner else '—' }}</span>
+    <span><i class="fa-solid fa-users"></i> عدد الحسابات: {{ members|length }}</span>
+    <span><i class="fa-solid fa-circle-check"></i> الحالة: نشط</span>
+  </div>
+</div>
+
+<div class="team-grid">
+  <!-- LEFT: Members table -->
+  <div>
+    <div class="section-card">
+      <h3><i class="fa-solid fa-users" style="color:#6366f1;"></i> أعضاء الفريق</h3>
+      <table class="members-table" id="membersTable">
+        <thead>
+          <tr>
+            <th>الاسم</th>
+            <th>اسم الدخول</th>
+            <th>الدور</th>
+            <th>نشط</th>
+            <th>آخر دخول</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in members %}
+          <tr onclick="selectMember({{ m.id }}, this)" data-id="{{ m.id }}">
+            <td><strong>{{ m.name }}</strong><br><small style="color:var(--text-muted);">{{ m.job_title or '' }}</small></td>
+            <td>{{ m.username or '—' }}</td>
+            <td>
+              {% if m.role in ['صاحب المكتب'] %}
+                <span class="role-badge role-owner">{{ m.role }}</span>
+              {% elif m.role in ['مدير المكتب','مدير'] %}
+                <span class="role-badge role-manager">{{ m.role }}</span>
+              {% elif m.role in ['محامٍ'] %}
+                <span class="role-badge role-lawyer">{{ m.role }}</span>
+              {% else %}
+                <span class="role-badge role-other">{{ m.role }}</span>
+              {% endif %}
+            </td>
+            <td><span class="active-dot {{ 'dot-on' if m.is_active else 'dot-off' }}"></span> {{ 'نعم' if m.is_active else 'لا' }}</td>
+            <td style="font-size:.78rem;color:var(--text-muted);">{{ (m.last_login_at or '—')[:16] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- RIGHT: Form -->
+  <div>
+    <div class="section-card">
+      <h3><i class="fa-solid fa-user-pen" style="color:#6366f1;"></i> إنشاء أو تعديل عضو فريق</h3>
+      <div id="alertBox" class="alert-box"></div>
+      <form id="memberForm" onsubmit="saveMember(event)">
+        <input type="hidden" id="memberId" value="">
+        <div class="form-row">
+          <div class="form-group">
+            <label><span class="required-star">*</span> الاسم الكامل</label>
+            <input type="text" id="fName" required placeholder="اسم العضو">
+          </div>
+          <div class="form-group">
+            <label><span class="required-star">*</span> اسم الدخول</label>
+            <input type="text" id="fUsername" required placeholder="حروف وأرقام فقط">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label><span class="required-star">*</span> الهاتف</label>
+            <input type="text" id="fPhone" placeholder="05XXXXXXXX">
+          </div>
+          <div class="form-group">
+            <label><span class="required-star">*</span> البريد الإلكتروني</label>
+            <input type="email" id="fEmail" placeholder="example@domain.com">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label><span class="required-star">*</span> تاريخ الميلاد</label>
+            <input type="date" id="fBirth">
+          </div>
+          <div class="form-group">
+            <label>رمز الدخول (6 أرقام)</label>
+            <input type="password" id="fPin" maxlength="6" placeholder="للحسابات الجديدة">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>الدور الوظيفي</label>
+            <select id="fRole" onchange="onRoleChange()">
+              <option>صاحب المكتب</option>
+              <option>مدير المكتب</option>
+              <option selected>محامٍ</option>
+              <option>مساعد قانوني</option>
+              <option>موظف إداري</option>
+              <option>محاسب</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>المسمى الوظيفي / القسم</label>
+            <input type="text" id="fJobTitle" placeholder="مثال: رئيس قسم المرافعات">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>التخصصات</label>
+            <input type="text" id="fSpecializations" placeholder="مثال: جزائي، مدني">
+          </div>
+          <div class="form-group" style="justify-content:flex-end;flex-direction:row;align-items:center;gap:16px;">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+              <input type="checkbox" id="fActive" checked style="accent-color:#10b981;width:16px;height:16px;"> الحساب نشط
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+              <input type="checkbox" id="fViewAll" style="accent-color:#6366f1;width:16px;height:16px;"> يرى كل القضايا
+            </label>
+          </div>
+        </div>
+
+        <!-- Case assignment (shown for lawyers) -->
+        <div id="caseAssignRow" class="form-group" style="margin-bottom:12px;">
+          <label>تعيين للقضية (اختياري)</label>
+          <input type="text" id="fCaseInput" placeholder="اكتب رقم القضية..." oninput="filterCases(this.value)">
+          <div id="caseSuggestions" style="border:1px solid var(--border-color);border-radius:8px;max-height:120px;overflow-y:auto;display:none;background:var(--card-bg);margin-top:4px;">
+            {% for c in cases %}
+            <div onclick="selectCase('{{ c.case_number }}')" style="padding:8px 12px;cursor:pointer;font-size:.85rem;" class="case-opt" data-num="{{ c.case_number }}" data-title="{{ c.title }}">
+              {{ c.case_number }} — {{ c.title[:50] }}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Permissions grid -->
+        <h3 style="font-size:.95rem;font-weight:800;color:var(--secondary-color);margin:16px 0 10px;"><i class="fa-solid fa-shield-halved" style="color:#6366f1;margin-left:6px;"></i>الصلاحيات التفصيلية</h3>
+        <div class="perm-grid" id="permGrid">
+          {% set perms = [
+            ('manage_cases','إدارة القضايا'),('view_cases','عرض القضايا'),
+            ('manage_clients','إدارة الموكلين'),('view_clients','عرض الموكلين'),
+            ('manage_hearings','إدارة الجلسات'),('manage_documents','إدارة المستندات'),
+            ('manage_finance','إدارة المالية'),('view_finance','عرض المالية'),
+            ('manage_tasks','إدارة المهام'),('manage_users','إدارة المستخدمين'),
+            ('manage_settings','إعدادات النظام'),('export_data','تصدير البيانات'),
+            ('view_reports','عرض التقارير'),('manage_correspondence','المراسلات'),
+            ('manage_notes','الملاحظات')
+          ] %}
+          {% for key, label in perms %}
+          <label class="perm-item" id="perm_{{ key }}">
+            <input type="checkbox" name="perm_{{ key }}" value="{{ key }}" onchange="this.parentElement.classList.toggle('checked',this.checked)">
+            {{ label }}
+          </label>
+          {% endfor %}
+        </div>
+
+        <div class="btn-row">
+          <button type="submit" class="action-btn btn-save"><i class="fa-solid fa-floppy-disk"></i> حفظ العضو</button>
+          <button type="button" class="action-btn btn-clear" onclick="clearForm()"><i class="fa-solid fa-plus"></i> نموذج جديد</button>
+          <button type="button" class="action-btn btn-toggle" onclick="toggleMember()"><i class="fa-solid fa-toggle-on"></i> إيقاف/تفعيل</button>
+          <button type="button" class="action-btn btn-delete" onclick="deleteMember()"><i class="fa-solid fa-trash"></i> حذف</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const members = {{ members_json | safe }};
+let selectedId = null;
+
+function showAlert(msg, type='success') {
+  const el = document.getElementById('alertBox');
+  el.className = 'alert-box alert-' + type;
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 4000);
+}
+
+function selectMember(id, row) {
+  selectedId = id;
+  document.querySelectorAll('#membersTable tr').forEach(r => r.classList.remove('selected'));
+  row.classList.add('selected');
+  const m = members.find(x => x.id === id);
+  if (!m) return;
+  document.getElementById('memberId').value = m.id;
+  document.getElementById('fName').value = m.name || '';
+  document.getElementById('fUsername').value = m.username || '';
+  document.getElementById('fPhone').value = m.phone || '';
+  document.getElementById('fEmail').value = m.email || '';
+  document.getElementById('fBirth').value = m.birth_date || '';
+  document.getElementById('fPin').value = '';
+  document.getElementById('fRole').value = m.role || 'محامٍ';
+  document.getElementById('fJobTitle').value = m.job_title || '';
+  document.getElementById('fActive').checked = !!m.is_active;
+  document.getElementById('fViewAll').checked = !!m.can_view_all_cases;
+  document.getElementById('fSpecializations').value = m.specializations || '';
+  onRoleChange();
+  // Set permissions
+  const perms = m.permissions || [];
+  document.querySelectorAll('#permGrid input[type=checkbox]').forEach(cb => {
+    cb.checked = perms.includes(cb.value);
+    cb.parentElement.classList.toggle('checked', cb.checked);
+  });
+}
+
+function clearForm() {
+  selectedId = null;
+  document.getElementById('memberForm').reset();
+  document.getElementById('memberId').value = '';
+  document.querySelectorAll('#membersTable tr').forEach(r => r.classList.remove('selected'));
+  document.querySelectorAll('#permGrid input[type=checkbox]').forEach(cb => {
+    cb.checked = false; cb.parentElement.classList.remove('checked');
+  });
+  // Default permissions for lawyer
+  ['view_cases','view_clients','manage_hearings','manage_tasks','manage_notes'].forEach(k => {
+    const el = document.querySelector(`input[value="${k}"]`);
+    if (el) { el.checked = true; el.parentElement.classList.add('checked'); }
+  });
+}
+
+function onRoleChange() {
+  const role = document.getElementById('fRole').value;
+  const isLawyer = ['محامٍ','مدير المكتب'].includes(role);
+  document.getElementById('caseAssignRow').style.display = isLawyer ? 'flex' : 'none';
+}
+
+function filterCases(term) {
+  const box = document.getElementById('caseSuggestions');
+  if (!term.trim()) { box.style.display='none'; return; }
+  const opts = document.querySelectorAll('.case-opt');
+  let any = false;
+  opts.forEach(opt => {
+    const match = opt.dataset.num.includes(term) || opt.dataset.title.includes(term);
+    opt.style.display = match ? 'block' : 'none';
+    if (match) any = true;
+  });
+  box.style.display = any ? 'block' : 'none';
+}
+
+function selectCase(num) {
+  document.getElementById('fCaseInput').value = num;
+  document.getElementById('caseSuggestions').style.display = 'none';
+}
+
+async function saveMember(e) {
+  e.preventDefault();
+  const id = document.getElementById('memberId').value;
+  const perms = [...document.querySelectorAll('#permGrid input:checked')].map(c => c.value);
+  const payload = {
+    id: id || null,
+    name: document.getElementById('fName').value.trim(),
+    username: document.getElementById('fUsername').value.trim(),
+    phone: document.getElementById('fPhone').value.trim(),
+    email: document.getElementById('fEmail').value.trim(),
+    birth_date: document.getElementById('fBirth').value,
+    access_pin: document.getElementById('fPin').value.trim(),
+    role: document.getElementById('fRole').value,
+    job_title: document.getElementById('fJobTitle').value.trim(),
+    is_active: document.getElementById('fActive').checked ? 1 : 0,
+    can_view_all_cases: document.getElementById('fViewAll').checked ? 1 : 0,
+    specializations: document.getElementById('fSpecializations').value.trim(),
+    case_number: document.getElementById('fCaseInput').value.trim(),
+    permissions: perms,
+  };
+  const res = await fetch('/api/team/save', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+  const data = await res.json();
+  if (data.ok) { showAlert(data.message || 'تم الحفظ بنجاح'); setTimeout(()=>location.reload(), 1200); }
+  else showAlert(data.message || 'حدث خطأ', 'error');
+}
+
+async function toggleMember() {
+  if (!selectedId) { showAlert('اختر عضواً أولاً', 'error'); return; }
+  const res = await fetch(`/api/team/toggle/${selectedId}`, {method:'POST'});
+  const data = await res.json();
+  if (data.ok) { showAlert(data.message); setTimeout(()=>location.reload(), 1000); }
+  else showAlert(data.message, 'error');
+}
+
+async function deleteMember() {
+  if (!selectedId) { showAlert('اختر عضواً أولاً', 'error'); return; }
+  if (!confirm('هل أنت متأكد من حذف هذا العضو؟')) return;
+  const res = await fetch(`/api/team/delete/${selectedId}`, {method:'DELETE'});
+  const data = await res.json();
+  if (data.ok) { showAlert(data.message); setTimeout(()=>location.reload(), 1000); }
+  else showAlert(data.message, 'error');
+}
+
+// Init
+clearForm();
+onRoleChange();
+</script>
+{% endblock %}

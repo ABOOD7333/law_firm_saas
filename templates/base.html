@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}LawSaaS{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <i class="fa-solid fa-scale-balanced logo-icon"></i>
+            <h2>LawSaaS</h2>
+        </div>
+        <ul class="nav-menu">
+            <li class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
+                <a href="/dashboard"><i class="fa-solid fa-chart-pie"></i> لوحة التحكم</a>
+            </li>
+            <li class="nav-item {% if active_page == 'calendar' %}active{% endif %}">
+                <a href="/calendar"><i class="fa-solid fa-calendar-week"></i> التقويم القضائي</a>
+            </li>
+            <li class="nav-item {% if active_page == 'search' %}active{% endif %}">
+                <a href="/search"><i class="fa-solid fa-magnifying-glass"></i> البحث المتقدم</a>
+            </li>
+            <li class="nav-item {% if active_page == 'cases' %}active{% endif %}">
+                <a href="/cases"><i class="fa-solid fa-gavel"></i> إدارة القضايا</a>
+            </li>
+            <li class="nav-item {% if active_page == 'parties' %}active{% endif %}">
+                <a href="/parties"><i class="fa-solid fa-people-arrows"></i> الأطراف والمتقاضون</a>
+            </li>
+            <li class="nav-item {% if active_page == 'clients' %}active{% endif %}">
+                <a href="/clients"><i class="fa-solid fa-users"></i> الموكلون</a>
+            </li>
+            <li class="nav-item {% if active_page == 'hearings' %}active{% endif %}">
+                <a href="/hearings"><i class="fa-solid fa-calendar-days"></i> محاضر الجلسات</a>
+            </li>
+            <li class="nav-item {% if active_page == 'documents' %}active{% endif %}">
+                <a href="/documents"><i class="fa-solid fa-folder-open"></i> المستندات والأرشفة</a>
+            </li>
+            <li class="nav-item {% if active_page == 'pleadings' %}active{% endif %}">
+                <a href="/pleadings"><i class="fa-solid fa-scroll"></i> المرافعات والمذكرات</a>
+            </li>
+            <li class="nav-item {% if active_page == 'judgments' %}active{% endif %}">
+                <a href="/judgments"><i class="fa-solid fa-scale-balanced"></i> الأحكام والقرارات</a>
+            </li>
+            <li class="nav-item {% if active_page == 'notes' %}active{% endif %}">
+                <a href="/notes"><i class="fa-solid fa-note-sticky"></i> الملاحظات والاتصالات</a>
+            </li>
+            <li class="nav-item {% if active_page == 'correspondences' %}active{% endif %}">
+                <a href="/correspondences"><i class="fa-solid fa-envelope"></i> المراسلات الرسمية</a>
+            </li>
+            <li class="nav-item {% if active_page == 'automation' %}active{% endif %}">
+                <a href="/automation"><i class="fa-solid fa-wand-magic-sparkles"></i> الأتمتة الذكية</a>
+            </li>
+            <li class="nav-item {% if active_page == 'tasks' %}active{% endif %}">
+                <a href="/tasks"><i class="fa-solid fa-list-check"></i> المهام والمتابعة</a>
+            </li>
+            <li class="nav-item {% if active_page == 'timeline' %}active{% endif %}">
+                <a href="/timeline"><i class="fa-solid fa-timeline"></i> الخط الزمني</a>
+            </li>
+            <li class="nav-item {% if active_page == 'finance' %}active{% endif %}">
+                <a href="/finance"><i class="fa-solid fa-file-invoice-dollar"></i> الحسابات والمالية</a>
+            </li>
+            <li class="nav-item {% if active_page == 'expenses' %}active{% endif %}">
+                <a href="/expenses"><i class="fa-solid fa-money-bill-wave"></i> مصاريف القضية</a>
+            </li>
+            <li class="nav-item {% if active_page == 'timesheet' %}active{% endif %}">
+                <a href="/timesheet"><i class="fa-solid fa-clock"></i> سجل الساعات</a>
+            </li>
+            <li class="nav-item {% if active_page == 'execution' %}active{% endif %}">
+                <a href="/execution"><i class="fa-solid fa-gavel"></i> إجراءات التنفيذ</a>
+            </li>
+            <li class="nav-item {% if active_page == 'power_of_attorney' %}active{% endif %}">
+                <a href="/power_of_attorney"><i class="fa-solid fa-file-signature"></i> الوكالات الرسمية</a>
+            </li>
+            <li class="nav-item {% if active_page == 'reports' %}active{% endif %}">
+                <a href="/reports"><i class="fa-solid fa-chart-bar"></i> التقارير</a>
+            </li>
+            <li class="nav-item {% if active_page == 'team' %}active{% endif %}">
+                <a href="/team"><i class="fa-solid fa-users-gear"></i> الفريق والصلاحيات</a>
+            </li>
+            <li class="nav-item {% if active_page == 'advanced_operations' %}active{% endif %}">
+                <a href="/advanced_operations"><i class="fa-solid fa-microchip"></i> العمليات المتقدمة</a>
+            </li>
+            <li class="nav-item {% if active_page == 'legal_references' %}active{% endif %}">
+                <a href="/legal_references"><i class="fa-solid fa-book-open"></i> المراجع القانونية</a>
+            </li>
+            <li class="nav-item {% if active_page == 'limitations' %}active{% endif %}">
+                <a href="/limitations"><i class="fa-solid fa-clock-rotate-left"></i> تنبيهات التقادم</a>
+            </li>
+            <li class="nav-item {% if active_page == 'reference_data' %}active{% endif %}">
+                <a href="/reference_data"><i class="fa-solid fa-table-list"></i> الجداول المرجعية</a>
+            </li>
+            <li class="nav-item {% if active_page == 'login_log' %}active{% endif %}">
+                <a href="/login_log"><i class="fa-solid fa-shield-halved"></i> سجل الدخول</a>
+            </li>
+            <li class="nav-item {% if active_page == 'settings' %}active{% endif %}">
+                <a href="/settings"><i class="fa-solid fa-gear"></i> الإعدادات</a>
+            </li>
+            {% if user and user.role == 'مدير' %}
+            <li class="nav-item {% if active_page == 'activity' %}active{% endif %}" style="margin-top:8px;border-top:1px solid var(--border-color);padding-top:8px;">
+                <a href="/activity"><i class="fa-solid fa-chart-line"></i> نشاط الفريق</a>
+            </li>
+            {% endif %}
+        </ul>
+        <div class="sidebar-footer">
+            <form action="/logout" method="POST" style="margin: 0; padding: 0;">
+                <button type="submit" class="logout-btn" style="width: 100%; border: none; background-color: transparent; text-align: right; font-family: inherit; font-size: inherit; cursor: pointer;">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i> تسجيل خروج
+                </button>
+            </form>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Topbar -->
+        <header class="topbar">
+            <div class="search-bar" onclick="window.location='/search'" style="cursor:pointer;">
+                <i class="fa-solid fa-search"></i>
+                <form action="/search" method="get" style="flex:1;display:flex;" onsubmit="event.stopPropagation();">
+                    <input type="text" name="q" placeholder="ابحث عن قضية، موكل، أو جلسة..." style="flex:1;border:none;background:transparent;outline:none;font-size:.95rem;font-family:'Cairo',sans-serif;" onclick="event.stopPropagation();">
+                </form>
+            </div>
+            <div class="user-info">
+                <button class="notification-btn">
+                    <i class="fa-regular fa-bell"></i>
+                    <span class="badge">3</span>
+                </button>
+                <div class="profile-dropdown">
+                    <div class="avatar">{{ user.name[0] if user else 'م' }}</div>
+                    <span class="username">{{ user.name if user else 'مدير النظام' }}</span>
+                    <i class="fa-solid fa-chevron-down"></i>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dynamic Page Content -->
+        <div class="dashboard-container">
+            {% block content %}
+            {% endblock %}
+        </div>
+    </main>
+
+    {% block scripts %}{% endblock %}
+    
+    <!-- CSRF Protection Interceptor -->
+    <script>
+    document.addEventListener("DOMContentLoaded", () => {
+        // Function to get cookie value by name
+        const getCookie = (name) => {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        };
+
+        const csrfToken = getCookie('csrf_token');
+
+        if (csrfToken) {
+            // 1. Intercept all forms (POST/PUT/DELETE)
+            document.addEventListener('submit', (e) => {
+                const form = e.target;
+                if (form.tagName === 'FORM' && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(form.method.toUpperCase())) {
+                    // Inject hidden input if not exists
+                    if (!form.querySelector('input[name="csrf_token"]')) {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'csrf_token';
+                        input.value = csrfToken;
+                        form.appendChild(input);
+                    }
+                }
+            });
+
+            // 2. Intercept fetch API
+            const originalFetch = window.fetch;
+            window.fetch = async function() {
+                let [resource, config] = arguments;
+                if (!config) { config = {}; }
+                if (config.method && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(config.method.toUpperCase())) {
+                    config.headers = config.headers || {};
+                    config.headers['X-CSRF-Token'] = csrfToken;
+                }
+                return originalFetch(resource, config);
+            };
+        }
+    });
+    </script>
+</body>
+</html>

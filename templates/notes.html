@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% block title %}الملاحظات | LawSaaS{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;">
+    <div>
+        <h1><i class="fa-solid fa-note-sticky" style="color:var(--primary-color);"></i> الملاحظات والاتصالات</h1>
+        <p style="color:var(--text-muted);">تسجيل الملاحظات المرتبطة بالقضايا من تعليقات، تنبيهات، ومتابعات.</p>
+    </div>
+    <button class="btn-primary" onclick="document.getElementById('addModal').style.display='flex'">
+        <i class="fa-solid fa-plus"></i> إضافة ملاحظة
+    </button>
+</div>
+
+<!-- Filter bar -->
+<div class="card" style="padding:14px 18px;margin-bottom:18px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+    <input type="text" id="searchInput" placeholder="🔍 ابحث في العنوان أو المحتوى..." oninput="filterNotes()"
+        style="flex:1;padding:9px 14px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;min-width:200px;">
+    <select id="typeFilter" onchange="filterNotes()" style="padding:9px 14px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+        <option value="">جميع الأنواع</option>
+        <option value="عام">عام</option>
+        <option value="تنبيه">تنبيه</option>
+        <option value="متابعة">متابعة</option>
+        <option value="قانوني">قانوني</option>
+        <option value="مالي">مالي</option>
+    </select>
+</div>
+
+<!-- Notes Grid -->
+<div id="notesGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;">
+    {% for note in notes %}
+    <div class="note-card" data-type="{{ note.note_type_key or '' }}" data-title="{{ note.title }}" data-content="{{ note.content or '' }}"
+         style="background:white;border-radius:12px;border:1px solid var(--border-color);padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.04);position:relative;overflow:hidden;transition:box-shadow .2s;"
+         onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow='0 2px 8px rgba(0,0,0,.04)'">
+        <!-- Color strip top -->
+        <div style="position:absolute;top:0;right:0;left:0;height:4px;background:
+            {% if note.note_type_key == 'تنبيه' %}#ef4444
+            {% elif note.note_type_key == 'متابعة' %}#f59e0b
+            {% elif note.note_type_key == 'مالي' %}#10b981
+            {% elif note.note_type_key == 'قانوني' %}#6366f1
+            {% else %}#3b82f6{% endif %};"></div>
+
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+            <div>
+                {% if note.note_type_key %}
+                <span style="font-size:.75rem;font-weight:700;padding:3px 10px;border-radius:12px;margin-bottom:6px;display:inline-block;
+                    {% if note.note_type_key == 'تنبيه' %}background:#fee2e2;color:#b91c1c;
+                    {% elif note.note_type_key == 'متابعة' %}background:#fef3c7;color:#d97706;
+                    {% elif note.note_type_key == 'مالي' %}background:#dcfce7;color:#166534;
+                    {% elif note.note_type_key == 'قانوني' %}background:#e0e7ff;color:#3730a3;
+                    {% else %}background:#dbeafe;color:#1d4ed8;{% endif %}">
+                    {{ note.note_type_key }}
+                </span>
+                {% endif %}
+                <h3 style="font-size:1rem;font-weight:800;color:var(--secondary-color);margin:0;">{{ note.title }}</h3>
+            </div>
+            <div style="display:flex;gap:6px;flex-shrink:0;">
+                <button class="action-btn" style="color:var(--primary-color);" title="تعديل"
+                    onclick="openEdit('{{ note.id }}','{{ note.title }}','{{ note.note_type_key or '' }}',`{{ (note.content or '')|replace('`','\\`') }}`)">
+                    <i class="fa-solid fa-pen"></i>
+                </button>
+                <form action="/notes/delete" method="post" style="display:inline;" onsubmit="return confirm('حذف الملاحظة؟')">
+                    <input type="hidden" name="note_id" value="{{ note.id }}">
+                    <button type="submit" class="action-btn" style="color:#ef4444;"><i class="fa-solid fa-trash"></i></button>
+                </form>
+            </div>
+        </div>
+
+        {% if note.content %}
+        <p style="color:var(--text-muted);font-size:.88rem;line-height:1.7;margin:0 0 12px;white-space:pre-wrap;">{{ note.content[:150] }}{% if note.content|length > 150 %}...{% endif %}</p>
+        {% endif %}
+
+        <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border-color);padding-top:10px;margin-top:8px;">
+            {% if note.law_case %}
+            <a href="/cases/{{ note.case_id }}" style="font-size:.8rem;color:var(--primary-color);text-decoration:none;font-weight:600;">
+                <i class="fa-solid fa-gavel"></i> {{ note.law_case.case_number }}
+            </a>
+            {% else %}
+            <span style="font-size:.8rem;color:var(--text-muted);">بدون قضية</span>
+            {% endif %}
+            <span style="font-size:.75rem;color:var(--text-muted);" dir="ltr">{{ note.created_at[:10] if note.created_at else '' }}</span>
+        </div>
+    </div>
+    {% else %}
+    <div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text-muted);">
+        <i class="fa-solid fa-note-sticky" style="font-size:4rem;opacity:.25;display:block;margin-bottom:15px;"></i>
+        <h3>لا توجد ملاحظات بعد</h3>
+        <p>ابدأ بإضافة أول ملاحظة على قضية.</p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Add Modal -->
+<div id="addModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:1000;">
+    <div style="background:white;padding:28px;border-radius:14px;width:560px;max-width:95%;max-height:90vh;overflow-y:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <h2 style="margin:0;color:var(--secondary-color);">إضافة ملاحظة جديدة</h2>
+            <button onclick="document.getElementById('addModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+        </div>
+        <form action="/notes/add" method="post">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+                <div>
+                    <label style="display:block;margin-bottom:6px;font-weight:600;">عنوان الملاحظة <span style="color:red">*</span></label>
+                    <input type="text" name="title" required style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+                </div>
+                <div>
+                    <label style="display:block;margin-bottom:6px;font-weight:600;">نوع الملاحظة</label>
+                    <select name="note_type_key" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+                        <option value="عام">عام</option>
+                        <option value="تنبيه">تنبيه</option>
+                        <option value="متابعة">متابعة</option>
+                        <option value="قانوني">قانوني</option>
+                        <option value="مالي">مالي</option>
+                    </select>
+                </div>
+            </div>
+            <div style="margin-bottom:14px;">
+                <label style="display:block;margin-bottom:6px;font-weight:600;">القضية المرتبطة <span style="color:red">*</span></label>
+                <select name="case_id" required style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+                    <option value="">-- اختر القضية --</option>
+                    {% for case in cases %}
+                    <option value="{{ case.id }}">{{ case.case_number }} - {{ case.title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="margin-bottom:20px;">
+                <label style="display:block;margin-bottom:6px;font-weight:600;">محتوى الملاحظة</label>
+                <textarea name="content" rows="5" placeholder="اكتب الملاحظة هنا..." style="width:100%;padding:12px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;resize:vertical;line-height:1.8;"></textarea>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+                <button type="button" onclick="document.getElementById('addModal').style.display='none'" style="padding:11px 20px;background:#e2e8f0;color:#475569;border:none;border-radius:8px;cursor:pointer;font-family:'Cairo',sans-serif;font-weight:600;">إلغاء</button>
+                <button type="submit" class="btn-primary" style="padding:11px 20px;">حفظ الملاحظة</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div id="editModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:1000;">
+    <div style="background:white;padding:28px;border-radius:14px;width:560px;max-width:95%;max-height:90vh;overflow-y:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <h2 style="margin:0;color:var(--secondary-color);">تعديل الملاحظة</h2>
+            <button onclick="document.getElementById('editModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+        </div>
+        <form action="/notes/edit" method="post">
+            <input type="hidden" name="note_id" id="en_id">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+                <div>
+                    <label style="display:block;margin-bottom:6px;font-weight:600;">العنوان</label>
+                    <input type="text" name="title" id="en_title" required style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+                </div>
+                <div>
+                    <label style="display:block;margin-bottom:6px;font-weight:600;">النوع</label>
+                    <select name="note_type_key" id="en_type" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+                        <option value="عام">عام</option>
+                        <option value="تنبيه">تنبيه</option>
+                        <option value="متابعة">متابعة</option>
+                        <option value="قانوني">قانوني</option>
+                        <option value="مالي">مالي</option>
+                    </select>
+                </div>
+            </div>
+            <div style="margin-bottom:20px;">
+                <label style="display:block;margin-bottom:6px;font-weight:600;">المحتوى</label>
+                <textarea name="content" id="en_content" rows="5" style="width:100%;padding:12px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;resize:vertical;line-height:1.8;"></textarea>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+                <button type="button" onclick="document.getElementById('editModal').style.display='none'" style="padding:11px 20px;background:#e2e8f0;color:#475569;border:none;border-radius:8px;cursor:pointer;font-family:'Cairo',sans-serif;font-weight:600;">إلغاء</button>
+                <button type="submit" class="btn-primary" style="padding:11px 20px;">حفظ التعديلات</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function openEdit(id, title, type, content) {
+    document.getElementById('en_id').value = id;
+    document.getElementById('en_title').value = title;
+    document.getElementById('en_type').value = type;
+    document.getElementById('en_content').value = content;
+    document.getElementById('editModal').style.display = 'flex';
+}
+function filterNotes() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const type   = document.getElementById('typeFilter').value;
+    document.querySelectorAll('.note-card').forEach(card => {
+        const matchSearch = !search || card.dataset.title.toLowerCase().includes(search) || card.dataset.content.toLowerCase().includes(search);
+        const matchType   = !type || card.dataset.type === type;
+        card.style.display = matchSearch && matchType ? '' : 'none';
+    });
+}
+</script>
+{% endblock %}

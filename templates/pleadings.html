@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+{% block title %}المرافعات | LawSaaS{% endblock %}
+{% block content %}
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+    <div>
+        <h1><i class="fa-solid fa-scroll" style="color: var(--primary-color);"></i> المرافعات والمذكرات القانونية</h1>
+        <p>إنشاء وإدارة صيغ المذكرات القانونية المرتبطة بالقضايا — مرافعات، ردود، طعون، وأكثر.</p>
+    </div>
+    <button class="btn-primary" onclick="document.getElementById('addPleadingModal').style.display='flex'">
+        <i class="fa-solid fa-file-pen"></i> إضافة مرافعة جديدة
+    </button>
+</div>
+
+<!-- Stats -->
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-bottom:25px;">
+    {% set total = pleadings|length %}
+    {% set drafts = pleadings|selectattr('status_key','equalto','draft')|list|length %}
+    {% set finals = pleadings|selectattr('status_key','equalto','final')|list|length %}
+    {% set approved = pleadings|selectattr('status_key','equalto','approved')|list|length %}
+    <div class="card" style="padding:18px;text-align:center;">
+        <i class="fa-solid fa-scroll" style="font-size:1.8rem;color:var(--primary-color);margin-bottom:8px;"></i>
+        <p style="font-size:1.8rem;font-weight:800;margin:0;">{{ total }}</p>
+        <p style="color:var(--text-muted);font-size:.9rem;margin:0;">إجمالي المرافعات</p>
+    </div>
+    <div class="card" style="padding:18px;text-align:center;">
+        <i class="fa-solid fa-pencil" style="font-size:1.8rem;color:#f59e0b;margin-bottom:8px;"></i>
+        <p style="font-size:1.8rem;font-weight:800;margin:0;">{{ drafts }}</p>
+        <p style="color:var(--text-muted);font-size:.9rem;margin:0;">مسودات</p>
+    </div>
+    <div class="card" style="padding:18px;text-align:center;">
+        <i class="fa-solid fa-file-circle-check" style="font-size:1.8rem;color:#10b981;margin-bottom:8px;"></i>
+        <p style="font-size:1.8rem;font-weight:800;margin:0;">{{ finals }}</p>
+        <p style="color:var(--text-muted);font-size:.9rem;margin:0;">نسخ نهائية</p>
+    </div>
+    <div class="card" style="padding:18px;text-align:center;">
+        <i class="fa-solid fa-stamp" style="font-size:1.8rem;color:#6366f1;margin-bottom:8px;"></i>
+        <p style="font-size:1.8rem;font-weight:800;margin:0;">{{ approved }}</p>
+        <p style="color:var(--text-muted);font-size:.9rem;margin:0;">معتمدة</p>
+    </div>
+</div>
+
+<div class="card">
+    <div style="overflow-x:auto;">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>عنوان المرافعة</th>
+                    <th>نوع المذكرة</th>
+                    <th>القضية</th>
+                    <th>المحامي المعد</th>
+                    <th>تاريخ الإصدار</th>
+                    <th>الحالة</th>
+                    <th>إجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in pleadings %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>
+                        <strong style="display:block;">{{ p.title }}</strong>
+                        {% if p.content_html %}
+                        <span style="font-size:.8rem;color:var(--text-muted);">{{ p.content_html[:60] }}...</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if p.pleading_type_key == 'defense' %}<span style="background:#dbeafe;color:#1d4ed8;padding:4px 10px;border-radius:20px;font-size:.82rem;font-weight:600;">مذكرة دفاع</span>
+                        {% elif p.pleading_type_key == 'reply' %}<span style="background:#fef3c7;color:#d97706;padding:4px 10px;border-radius:20px;font-size:.82rem;font-weight:600;">مذكرة رد</span>
+                        {% elif p.pleading_type_key == 'appeal' %}<span style="background:#fee2e2;color:#b91c1c;padding:4px 10px;border-radius:20px;font-size:.82rem;font-weight:600;">طعن / استئناف</span>
+                        {% elif p.pleading_type_key == 'claim' %}<span style="background:#dcfce7;color:#166534;padding:4px 10px;border-radius:20px;font-size:.82rem;font-weight:600;">لائحة دعوى</span>
+                        {% else %}<span style="background:#e2e8f0;color:#475569;padding:4px 10px;border-radius:20px;font-size:.82rem;">{{ p.pleading_type_key }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if p.law_case %}
+                        <a href="/cases/{{ p.case_id }}" style="color:var(--primary-color);text-decoration:none;font-size:.9rem;">
+                            <i class="fa-solid fa-gavel"></i> {{ p.law_case.title[:25] }}
+                        </a>
+                        {% else %}-{% endif %}
+                    </td>
+                    <td>
+                        {% for u in [] %}{% endfor %}
+                        {{ p.lead_lawyer_id or '-' }}
+                    </td>
+                    <td dir="ltr" style="font-size:.9rem;">{{ p.issue_date or '-' }}</td>
+                    <td>
+                        {% if p.status_key == 'draft' %}<span style="background:#fef3c7;color:#d97706;padding:4px 10px;border-radius:20px;font-size:.82rem;font-weight:600;">مسودة</span>
+                        {% elif p.status_key == 'final' %}<span style="background:#dcfce7;color:#166534;padding:4px 10px;border-radius:20px;font-size:.82rem;font-weight:600;">نهائية</span>
+                        {% elif p.status_key == 'approved' %}<span style="background:#e0e7ff;color:#3730a3;padding:4px 10px;border-radius:20px;font-size:.82rem;font-weight:600;">معتمدة</span>
+                        {% else %}<span style="background:#e2e8f0;color:#475569;padding:4px 10px;border-radius:20px;font-size:.82rem;">{{ p.status_key }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button class="action-btn" style="color:var(--primary-color);" title="عرض/تعديل"
+                            onclick="openEditPleading('{{ p.id }}','{{ p.case_id }}','{{ p.title }}','{{ p.pleading_type_key }}','{{ p.status_key }}','{{ p.issue_date or '' }}')">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <button class="action-btn" style="color:#8b5cf6;" title="عرض المحتوى"
+                            onclick="showContent('{{ p.title }}', `{{ p.content_html or 'لا يوجد محتوى مكتوب بعد.' }}`)">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="8" style="text-align:center;padding:50px;color:var(--text-muted);">
+                    <i class="fa-solid fa-scroll" style="font-size:3rem;opacity:.4;display:block;margin-bottom:10px;"></i>
+                    <p>لا توجد مرافعات مسجلة. ابدأ بإنشاء أول مذكرة قانونية.</p>
+                </td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add Pleading Modal -->
+<div id="addPleadingModal" class="modal-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:1000;">
+    <div style="background:white;padding:30px;border-radius:12px;width:680px;max-width:95%;max-height:90vh;overflow-y:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <h2 style="margin:0;color:var(--secondary-color);">إضافة مرافعة / مذكرة قانونية</h2>
+            <button onclick="document.getElementById('addPleadingModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+        </div>
+        <form action="/pleadings/add" method="post">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
+                <div>
+                    <label style="display:block;margin-bottom:6px;font-weight:600;">عنوان المرافعة <span style="color:red">*</span></label>
+                    <input type="text" name="title" required placeholder="مثال: مذكرة رد الدعوى الأصلية" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+                </div>
+                <div>
+                    <label style="display:block;margin-bottom:6px;font-weight:600;">نوع المذكرة <span style="color:red">*</span></label>
+                    <select name="pleading_type_key" required style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+                        <option value="defense">مذكرة دفاع</option>
+                        <option value="reply">مذكرة رد</option>
+                        <option value="claim">لائحة دعوى</option>
+                        <option value="appeal">طعن / استئناف</option>
+                        <option value="counter_claim">دعوى متقابلة</option>
+                        <option value="other">أخرى</option>
+                    </select>
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
+                <div>
+                    <label style="display:block;margin-bottom:6px;font-weight:600;">القضية المرتبطة <span style="color:red">*</span></label>
+                    <select name="case_id" required style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+                        <option value="">-- اختر القضية --</option>
+                        {% for case in cases %}
+                        <option value="{{ case.id }}">{{ case.case_number }} - {{ case.title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block;margin-bottom:6px;font-weight:600;">تاريخ الإصدار</label>
+                    <input type="date" name="issue_date" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+                </div>
+            </div>
+            <div style="margin-bottom:15px;">
+                <label style="display:block;margin-bottom:6px;font-weight:600;">الحالة</label>
+                <select name="status_key" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+                    <option value="draft">مسودة</option>
+                    <option value="final">نسخة نهائية</option>
+                    <option value="approved">معتمدة</option>
+                </select>
+            </div>
+            <div style="margin-bottom:20px;">
+                <label style="display:block;margin-bottom:6px;font-weight:600;">نص المرافعة / المذكرة</label>
+                <textarea name="content_html" rows="8" placeholder="اكتب هنا نص المذكرة القانونية كاملاً..." style="width:100%;padding:12px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;resize:vertical;line-height:1.8;"></textarea>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+                <button type="button" onclick="document.getElementById('addPleadingModal').style.display='none'" style="padding:11px 20px;background:#e2e8f0;color:#475569;border:none;border-radius:8px;cursor:pointer;font-family:'Cairo',sans-serif;font-weight:600;">إلغاء</button>
+                <button type="submit" class="btn-primary" style="padding:11px 20px;font-family:'Cairo',sans-serif;">حفظ المرافعة</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Pleading Modal -->
+<div id="editPleadingModal" class="modal-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:1000;">
+    <div style="background:white;padding:30px;border-radius:12px;width:680px;max-width:95%;max-height:90vh;overflow-y:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <h2 style="margin:0;color:var(--secondary-color);">تعديل المرافعة</h2>
+            <button onclick="document.getElementById('editPleadingModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+        </div>
+        <form action="/pleadings/edit" method="post">
+            <input type="hidden" name="pleading_id" id="epl_id">
+            <input type="hidden" name="case_id" id="epl_case_id">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
+                <div>
+                    <label style="display:block;margin-bottom:6px;font-weight:600;">عنوان المرافعة <span style="color:red">*</span></label>
+                    <input type="text" name="title" id="epl_title" required style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+                </div>
+                <div>
+                    <label style="display:block;margin-bottom:6px;font-weight:600;">نوع المذكرة</label>
+                    <select name="pleading_type_key" id="epl_type" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+                        <option value="defense">مذكرة دفاع</option>
+                        <option value="reply">مذكرة رد</option>
+                        <option value="claim">لائحة دعوى</option>
+                        <option value="appeal">طعن / استئناف</option>
+                        <option value="counter_claim">دعوى متقابلة</option>
+                        <option value="other">أخرى</option>
+                    </select>
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
+                <div>
+                    <label style="display:block;margin-bottom:6px;font-weight:600;">تاريخ الإصدار</label>
+                    <input type="date" name="issue_date" id="epl_date" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+                </div>
+                <div>
+                    <label style="display:block;margin-bottom:6px;font-weight:600;">الحالة</label>
+                    <select name="status_key" id="epl_status" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+                        <option value="draft">مسودة</option>
+                        <option value="final">نسخة نهائية</option>
+                        <option value="approved">معتمدة</option>
+                    </select>
+                </div>
+            </div>
+            <div style="margin-bottom:20px;">
+                <label style="display:block;margin-bottom:6px;font-weight:600;">نص المرافعة</label>
+                <textarea name="content_html" id="epl_content" rows="8" style="width:100%;padding:12px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;resize:vertical;line-height:1.8;"></textarea>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+                <button type="button" onclick="document.getElementById('editPleadingModal').style.display='none'" style="padding:11px 20px;background:#e2e8f0;color:#475569;border:none;border-radius:8px;cursor:pointer;font-family:'Cairo',sans-serif;font-weight:600;">إلغاء</button>
+                <button type="submit" class="btn-primary" style="padding:11px 20px;font-family:'Cairo',sans-serif;">حفظ التعديلات</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Content Viewer Modal -->
+<div id="contentModal" class="modal-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:1000;">
+    <div style="background:white;padding:30px;border-radius:12px;width:700px;max-width:95%;max-height:85vh;overflow-y:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <h2 id="contentModalTitle" style="margin:0;color:var(--secondary-color);"></h2>
+            <button onclick="document.getElementById('contentModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+        </div>
+        <div id="contentModalBody" style="white-space:pre-wrap;line-height:2;font-size:1rem;color:var(--secondary-color);border:1px solid var(--border-color);padding:20px;border-radius:8px;background:#f8fafc;"></div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function openEditPleading(id, caseId, title, type, status, date) {
+    document.getElementById('epl_id').value = id;
+    document.getElementById('epl_case_id').value = caseId;
+    document.getElementById('epl_title').value = title;
+    document.getElementById('epl_type').value = type;
+    document.getElementById('epl_status').value = status;
+    document.getElementById('epl_date').value = date;
+    document.getElementById('editPleadingModal').style.display = 'flex';
+}
+function showContent(title, content) {
+    document.getElementById('contentModalTitle').textContent = title;
+    document.getElementById('contentModalBody').textContent = content;
+    document.getElementById('contentModal').style.display = 'flex';
+}
+</script>
+{% endblock %}

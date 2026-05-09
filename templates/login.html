@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الدخول - نظام إدارة مكاتب المحاماة السحابي</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(8px);
+            display: none; align-items: center; justify-content: center; z-index: 9999;
+            opacity: 0; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { display: flex; opacity: 1; }
+        .modal-content {
+            background: #ffffff; border-radius: 20px; width: 90%; max-width: 480px;
+            padding: 32px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            transform: translateY(20px) scale(0.95); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            max-height: 90vh; overflow-y: auto; position: relative;
+        }
+        .modal-overlay.active .modal-content { transform: translateY(0) scale(1); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px; }
+        .modal-header h3 { margin: 0; color: #1e293b; font-size: 1.3rem; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+        .close-btn { background: #f8fafc; border: none; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; color: #64748b; transition: 0.2s; }
+        .close-btn:hover { background: #fee2e2; color: #ef4444; }
+        
+        .modal-step { display: none; animation: fadeIn 0.4s ease forwards; }
+        .modal-step.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .role-btn {
+            display: flex; align-items: center; gap: 15px; width: 100%; padding: 20px; margin-bottom: 15px;
+            background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 16px;
+            font-family: 'Cairo', sans-serif; cursor: pointer; transition: 0.2s; text-align: right;
+        }
+        .role-btn .icon { font-size: 2rem; }
+        .role-btn .info { flex: 1; }
+        .role-btn .info strong { display: block; font-size: 1.1rem; color: #1e293b; margin-bottom: 4px; }
+        .role-btn .info span { font-size: 0.85rem; color: #64748b; }
+        .role-btn.lawyer:hover { border-color: #27ae60; background: #f0fdf4; }
+        .role-btn.client:hover { border-color: #2980b9; background: #eff6ff; }
+
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 700; font-size: 0.85rem; color: #475569; }
+        .form-group input { 
+            width: 100%; padding: 12px 16px; border: 1.5px solid #cbd5e1; border-radius: 10px;
+            font-family: 'Cairo', sans-serif; font-size: 0.95rem; transition: 0.2s; outline: none;
+            background: #f8fafc; color: #0f172a;
+        }
+        .form-group input:focus { border-color: #5c2d91; background: #fff; box-shadow: 0 0 0 4px rgba(92,45,145,0.1); }
+        .form-group input::placeholder { color: #94a3b8; }
+        
+        .btn-submit {
+            width: 100%; padding: 14px; border: none; border-radius: 10px; margin-top: 8px;
+            background: linear-gradient(135deg, #5c2d91 0%, #4338ca 100%);
+            color: white; font-size: 1.05rem; font-weight: 800; cursor: pointer; transition: 0.3s;
+            font-family: 'Cairo', sans-serif; box-shadow: 0 4px 12px rgba(92, 45, 145, 0.2);
+        }
+        .btn-submit:hover { opacity: 0.95; transform: translateY(-2px); box-shadow: 0 6px 16px rgba(92, 45, 145, 0.3); }
+        .btn-submit:disabled { opacity: 0.7; cursor: not-allowed; transform: none; box-shadow: none; }
+        
+        .alert { padding: 12px 16px; border-radius: 10px; margin-bottom: 20px; display: none; font-size: 0.9rem; font-weight: 600; }
+        .alert.error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; display: block; }
+        .alert.success { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; display: block; }
+
+        /* تعديل روابط أسفل الفورم لتبدو كأزرار تفتح نوافذ منبثقة */
+        .form-options a, .form-footer a { cursor: pointer; color: #5c2d91; font-weight: 700; text-decoration: none; }
+        .form-options a:hover, .form-footer a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-left">
+            <div class="branding">
+                <div class="logo">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="white"/>
+                        <path d="M2 17L12 22L22 17" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 12L12 17L22 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>LawSaaS</span>
+                </div>
+                <h1>مستقبل إدارة<br>مكاتب المحاماة</h1>
+                <p>قم بإدارة قضاياك، عملائك، وفريق عملك بذكاء وسهولة عبر سحابة آمنة وموثوقة.</p>
+            </div>
+            <div class="shapes">
+                <div class="shape shape-1"></div>
+                <div class="shape shape-2"></div>
+            </div>
+        </div>
+        <div class="login-right">
+            <div class="login-form-container">
+                <h2>تسجيل الدخول السحابي</h2>
+                <p class="subtitle">مرحباً بك مجدداً! قم بالدخول لمساحة عملك.</p>
+                {% if error %}
+                <div style="color: #d32f2f; background: #ffebee; padding: 12px; border-radius: 8px; margin-bottom: 20px; text-align: center; font-weight: bold; font-size: 0.95rem;">
+                    {{ error }}
+                </div>
+                {% endif %}
+                <form action="/" method="post">
+                    <div class="input-group">
+                        <label for="email">اسم المستخدم أو البريد الإلكتروني</label>
+                        <input type="text" id="email" name="email" placeholder="أدخل اسم المستخدم أو البريد" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="password">كلمة المرور</label>
+                        <input type="password" id="password" name="password" placeholder="أدخل كلمة المرور" required>
+                    </div>
+                    <div class="form-options">
+                        <label class="remember-me">
+                            <input type="checkbox" name="remember">
+                            <span>تذكرني على هذا الجهاز</span>
+                        </label>
+                        <a onclick="openModal('forgot-modal')">نسيت كلمة المرور؟</a>
+                    </div>
+                    <button type="submit" class="btn-primary">تسجيل الدخول</button>
+                </form>
+                <div class="form-footer">
+                    <p>ليس لديك حساب؟ <a onclick="openModal('register-modal')">إنشاء حساب جديد</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة استعادة كلمة المرور -->
+    <div class="modal-overlay" id="forgot-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>نسيت رمز الدخول</h3>
+                <button class="close-btn" onclick="closeModal('forgot-modal')">×</button>
+            </div>
+            <div id="forgot-alert" class="alert"></div>
+            
+            <!-- الخطوة 1: البريد وتاريخ الميلاد -->
+            <div class="modal-step active" id="forgot-step-1">
+                <p style="color:#64748b; font-size:0.9rem; margin-bottom:20px;">أدخل البريد الإلكتروني وتاريخ الميلاد لإرسال رمز التحقق</p>
+                <div class="form-group">
+                    <label>البريد الإلكتروني</label>
+                    <input type="email" id="forgot-email" placeholder="example@domain.com">
+                </div>
+                <div class="form-group">
+                    <label>تاريخ الميلاد</label>
+                    <input type="date" id="forgot-birth">
+                </div>
+                <button class="btn-submit" onclick="forgotSendOTP()" id="btn-forgot-send">إرسال رمز التحقق</button>
+            </div>
+            
+            <!-- الخطوة 2: رمز التحقق -->
+            <div class="modal-step" id="forgot-step-2">
+                <p style="color:#64748b; font-size:0.9rem; margin-bottom:20px;">أدخل رمز التحقق المكون من 6 أرقام المرسل إلى بريدك</p>
+                <div class="form-group">
+                    <label>رمز التحقق</label>
+                    <input type="text" id="forgot-code" placeholder="000000" maxlength="6" style="text-align: center; letter-spacing: 5px; font-size: 1.2rem;">
+                </div>
+                <button class="btn-submit" onclick="forgotVerifyOTP()" id="btn-forgot-verify">تحقق</button>
+            </div>
+            
+            <!-- الخطوة 3: كلمة مرور جديدة -->
+            <div class="modal-step" id="forgot-step-3">
+                <p style="color:#64748b; font-size:0.9rem; margin-bottom:20px;">إعادة تعيين بيانات الدخول</p>
+                <div class="form-group">
+                    <label>اسم المستخدم الجديد (اختياري)</label>
+                    <input type="text" id="forgot-new-username" placeholder="اتركه فارغاً للإبقاء على الاسم الحالي">
+                </div>
+                <div class="form-group">
+                    <label>كلمة المرور الجديدة</label>
+                    <input type="password" id="forgot-new-pass" placeholder="6 أرقام أو حروف" maxlength="6">
+                </div>
+                <div class="form-group">
+                    <label>تأكيد كلمة المرور</label>
+                    <input type="password" id="forgot-new-pass-confirm" placeholder="أعد كتابة كلمة المرور" maxlength="6">
+                </div>
+                <button class="btn-submit" onclick="forgotResetPass()" id="btn-forgot-reset">حفظ التغييرات</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة إنشاء حساب جديد -->
+    <div class="modal-overlay" id="register-modal">
+        <div class="modal-content" style="max-width: 550px;">
+            <div class="modal-header">
+                <h3 id="reg-title">اختيار نوع الحساب</h3>
+                <button class="close-btn" onclick="closeModal('register-modal')">×</button>
+            </div>
+            <div id="reg-alert" class="alert"></div>
+            
+            <!-- الخطوة 1: اختيار الدور -->
+            <div class="modal-step active" id="reg-step-1">
+                <p style="color:#64748b; font-size:0.95rem; margin-bottom:20px;">الرجاء اختيار نوع الحساب المراد إنشاؤه:</p>
+                <button class="role-btn lawyer" onclick="selectRegRole('محامٍ')">
+                    <span class="icon">⚖️</span>
+                    <div class="info">
+                        <strong>تسجيل كمحامي</strong>
+                        <span>إدارة القضايا والجلسات للعملاء</span>
+                    </div>
+                </button>
+                <button class="role-btn client" onclick="selectRegRole('موكل')">
+                    <span class="icon">👤</span>
+                    <div class="info">
+                        <strong>تسجيل كموكل</strong>
+                        <span>متابعة قضاياك مع المحامي الخاص بك</span>
+                    </div>
+                </button>
+            </div>
+            
+            <!-- الخطوة 2: نموذج التسجيل -->
+            <div class="modal-step" id="reg-step-2">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div class="form-group">
+                        <label>اسم المستخدم</label>
+                        <input type="text" id="reg-username">
+                    </div>
+                    <div class="form-group">
+                        <label>الاسم الكامل</label>
+                        <input type="text" id="reg-name">
+                    </div>
+                    <div class="form-group">
+                        <label>رقم الهاتف</label>
+                        <input type="text" id="reg-phone">
+                    </div>
+                    <div class="form-group">
+                        <label>البريد الإلكتروني</label>
+                        <input type="email" id="reg-email">
+                    </div>
+                    <div class="form-group">
+                        <label>تاريخ الميلاد</label>
+                        <input type="date" id="reg-birth">
+                    </div>
+                    <div class="form-group" id="reg-lawyer-group" style="display:none;">
+                        <label>اسم المحامي الخاص بك</label>
+                        <input type="text" id="reg-lawyer-name">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>كلمة المرور (رمز الدخول)</label>
+                    <input type="password" id="reg-pass" placeholder="أدخل كلمة مرور قوية">
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button class="btn-submit" style="background: #f1f5f9; color: #475569;" onclick="regShowStep(1)">رجوع</button>
+                    <button class="btn-submit" onclick="regSubmitForm()" id="btn-reg-submit" style="flex: 2;">إرسال رمز التحقق</button>
+                </div>
+            </div>
+
+            <!-- الخطوة 3: رمز التحقق (التسجيل) -->
+            <div class="modal-step" id="reg-step-3">
+                <p style="color:#64748b; font-size:0.9rem; margin-bottom:20px;">تم إرسال رمز تحقق إلى بريدك الإلكتروني. الرجاء إدخاله لتفعيل الحساب.</p>
+                <div class="form-group">
+                    <label>البريد الإلكتروني</label>
+                    <input type="email" id="reg-verify-email" readonly style="background:#f1f5f9;">
+                </div>
+                <div class="form-group">
+                    <label>رمز التحقق</label>
+                    <input type="text" id="reg-verify-code" placeholder="000000" maxlength="6" style="text-align: center; letter-spacing: 5px; font-size: 1.2rem;">
+                </div>
+                <button class="btn-submit" onclick="regVerifyOTP()" id="btn-reg-verify">تأكيد التسجيل</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openModal(id) {
+            document.getElementById(id).classList.add('active');
+            // reset steps
+            if(id === 'forgot-modal') {
+                document.getElementById('forgot-step-1').classList.add('active');
+                document.getElementById('forgot-step-2').classList.remove('active');
+                document.getElementById('forgot-step-3').classList.remove('active');
+                hideAlert('forgot-alert');
+            } else if (id === 'register-modal') {
+                regShowStep(1);
+                hideAlert('reg-alert');
+            }
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        function showAlert(id, msg, isSuccess=false) {
+            const el = document.getElementById(id);
+            el.textContent = msg;
+            el.className = 'alert ' + (isSuccess ? 'success' : 'error');
+        }
+        function hideAlert(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        let tempToken = ""; // للحفاظ على التوكن بين الخطوات
+
+        // ==================== FORGOT PASSWORD FLOW ====================
+        async function forgotSendOTP() {
+            const email = document.getElementById('forgot-email').value;
+            const birth = document.getElementById('forgot-birth').value;
+            if(!email || !birth) { showAlert('forgot-alert', 'الرجاء إدخال البريد وتاريخ الميلاد'); return; }
+            
+            const btn = document.getElementById('btn-forgot-send');
+            btn.disabled = true; btn.textContent = "جاري الإرسال...";
+            try {
+                const res = await fetch('/api/forgot-send-otp', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ email, birth_date: birth })
+                });
+                const data = await res.json();
+                if(data.success) {
+                    hideAlert('forgot-alert');
+                    document.getElementById('forgot-step-1').classList.remove('active');
+                    document.getElementById('forgot-step-2').classList.add('active');
+                } else {
+                    showAlert('forgot-alert', data.error);
+                }
+            } catch(e) { showAlert('forgot-alert', 'حدث خطأ في الاتصال'); }
+            btn.disabled = false; btn.textContent = "إرسال رمز التحقق";
+        }
+
+        async function forgotVerifyOTP() {
+            const email = document.getElementById('forgot-email').value;
+            const code = document.getElementById('forgot-code').value;
+            if(!code) { showAlert('forgot-alert', 'أدخل الرمز'); return; }
+
+            const btn = document.getElementById('btn-forgot-verify');
+            btn.disabled = true; btn.textContent = "جاري التحقق...";
+            try {
+                const res = await fetch('/api/forgot-verify-otp', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ identifier: email, code })
+                });
+                const data = await res.json();
+                if(data.success) {
+                    tempToken = data.token; // توكن للتحقق الآمن
+                    hideAlert('forgot-alert');
+                    document.getElementById('forgot-step-2').classList.remove('active');
+                    document.getElementById('forgot-step-3').classList.add('active');
+                } else {
+                    showAlert('forgot-alert', data.error);
+                }
+            } catch(e) { showAlert('forgot-alert', 'حدث خطأ في الاتصال'); }
+            btn.disabled = false; btn.textContent = "تحقق";
+        }
+
+        async function forgotResetPass() {
+            const email = document.getElementById('forgot-email').value;
+            const newUsername = document.getElementById('forgot-new-username').value;
+            const pass = document.getElementById('forgot-new-pass').value;
+            const confirm = document.getElementById('forgot-new-pass-confirm').value;
+
+            if(pass.length < 6) { showAlert('forgot-alert', 'كلمة المرور 6 أحرف/أرقام على الأقل'); return; }
+            if(pass !== confirm) { showAlert('forgot-alert', 'كلمتا المرور غير متطابقتين'); return; }
+
+            const btn = document.getElementById('btn-forgot-reset');
+            btn.disabled = true; btn.textContent = "جاري الحفظ...";
+            try {
+                const res = await fetch('/api/reset-password-secure', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ email, new_username: newUsername, new_password: pass, token: tempToken })
+                });
+                const data = await res.json();
+                if(data.success) {
+                    showAlert('forgot-alert', 'تم تغيير بيانات الدخول بنجاح!', true);
+                    setTimeout(() => window.location.reload(), 2000);
+                } else {
+                    showAlert('forgot-alert', data.error);
+                }
+            } catch(e) { showAlert('forgot-alert', 'حدث خطأ في الاتصال'); }
+            btn.disabled = false; btn.textContent = "حفظ التغييرات";
+        }
+
+        // ==================== REGISTER FLOW ====================
+        let currentRole = '';
+        
+        function regShowStep(step) {
+            document.querySelectorAll('#register-modal .modal-step').forEach(s => s.classList.remove('active'));
+            document.getElementById('reg-step-' + step).classList.add('active');
+            if(step === 1) document.getElementById('reg-title').textContent = "اختيار نوع الحساب";
+            if(step === 2) document.getElementById('reg-title').textContent = "إنشاء حساب " + currentRole;
+            if(step === 3) document.getElementById('reg-title').textContent = "التحقق من البريد";
+        }
+
+        function selectRegRole(role) {
+            currentRole = role;
+            if(role === 'موكل') {
+                document.getElementById('reg-lawyer-group').style.display = 'block';
+            } else {
+                document.getElementById('reg-lawyer-group').style.display = 'none';
+            }
+            regShowStep(2);
+        }
+
+        async function regSubmitForm() {
+            const payload = {
+                role: currentRole,
+                username: document.getElementById('reg-username').value,
+                name: document.getElementById('reg-name').value,
+                phone: document.getElementById('reg-phone').value,
+                email: document.getElementById('reg-email').value,
+                birth_date: document.getElementById('reg-birth').value,
+                access_pin: document.getElementById('reg-pass').value,
+                lawyer_name: document.getElementById('reg-lawyer-name').value
+            };
+
+            if(!payload.username || !payload.name || !payload.email || !payload.birth_date || !payload.access_pin) {
+                showAlert('reg-alert', 'الرجاء تعبئة جميع الحقول الأساسية'); return;
+            }
+
+            const btn = document.getElementById('btn-reg-submit');
+            btn.disabled = true; btn.textContent = "جاري الإرسال...";
+            try {
+                const res = await fetch('/api/register-secure', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if(data.success) {
+                    document.getElementById('reg-verify-email').value = payload.email;
+                    hideAlert('reg-alert');
+                    regShowStep(3);
+                } else {
+                    showAlert('reg-alert', data.error);
+                }
+            } catch(e) { showAlert('reg-alert', 'حدث خطأ في الاتصال'); }
+            btn.disabled = false; btn.textContent = "إرسال رمز التحقق";
+        }
+
+        async function regVerifyOTP() {
+            const email = document.getElementById('reg-verify-email').value;
+            const code = document.getElementById('reg-verify-code').value;
+            if(!code) { showAlert('reg-alert', 'أدخل رمز التحقق'); return; }
+
+            const btn = document.getElementById('btn-reg-verify');
+            btn.disabled = true; btn.textContent = "جاري التفعيل...";
+            try {
+                const res = await fetch('/api/verify-otp', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ identifier: email, code })
+                });
+                const data = await res.json();
+                if(data.success) {
+                    showAlert('reg-alert', 'تم التحقق بنجاح! يمكنك الآن تسجيل الدخول.', true);
+                    setTimeout(() => window.location.reload(), 2000);
+                } else {
+                    showAlert('reg-alert', data.error);
+                }
+            } catch(e) { showAlert('reg-alert', 'حدث خطأ في الاتصال'); }
+            btn.disabled = false; btn.textContent = "تأكيد التسجيل";
+        }
+
+        // إغلاق النافذة عند الضغط خارجها
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal-overlay')) {
+                event.target.classList.remove('active');
+            }
+        }
+    </script>
+</body>
+</html>

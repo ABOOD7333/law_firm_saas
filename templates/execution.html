@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% block title %}إجراءات التنفيذ | LawSaaS{% endblock %}
+
+{% block head %}
+<style>
+.page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+.grid-layout { display: grid; grid-template-columns: 360px 1fr; gap: 24px; align-items: start; }
+.form-card { background: var(--card-bg); border-radius: 14px; padding: 22px; border: 1px solid var(--border-color); box-shadow: 0 2px 8px rgba(0,0,0,.05); }
+.form-card h3 { font-size: 1.05rem; font-weight: 800; color: var(--secondary-color); margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
+.form-group { margin-bottom: 14px; display: flex; flex-direction: column; gap: 6px; }
+.form-group label { font-size: .85rem; font-weight: 700; color: var(--text-muted); }
+.form-group input, .form-group select { padding: 10px 12px; border: 1.5px solid var(--border-color); border-radius: 9px; font-family: 'Cairo', sans-serif; font-size: .88rem; background: var(--card-bg); color: var(--secondary-color); outline: none; }
+.form-group input:focus, .form-group select:focus { border-color: var(--primary-color); }
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
+.data-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.data-table th { background: #f8fafc; color: var(--text-muted); font-weight: 700; padding: 12px 14px; text-align: right; border-bottom: 2px solid var(--border-color); }
+.data-table td { padding: 12px 14px; border-bottom: 1px solid var(--border-color); color: var(--secondary-color); vertical-align: middle; }
+.data-table tr { cursor: pointer; transition: background .15s; }
+.data-table tr:hover td { background: #f0f4ff; }
+.data-table tr.selected td { background: #eff6ff; }
+.empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+.empty-state i { font-size: 3rem; opacity: .2; display: block; margin-bottom: 12px; }
+.alert-box { padding: 12px 16px; border-radius: 10px; font-size: .88rem; font-weight: 600; margin-bottom: 16px; display: none; }
+.alert-success { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+.alert-error   { background: #fee2e2; color: #7f1d1d; border: 1px solid #fecaca; }
+.status-badge { padding: 4px 12px; border-radius: 50px; font-size: .75rem; font-weight: 700; }
+.s-pending { background: #fef3c7; color: #d97706; }
+.s-active { background: #dbeafe; color: #1d4ed8; }
+.s-completed { background: #d1fae5; color: #047857; }
+.s-stopped { background: #fee2e2; color: #dc2626; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 style="font-size:1.8rem;font-weight:800;color:var(--secondary-color);margin-bottom:4px;">
+      <i class="fa-solid fa-gavel" style="color:#6366f1;margin-left:10px;"></i>إجراءات التنفيذ
+    </h1>
+    <p style="color:var(--text-muted);font-size:.95rem;">متابعة تنفيذ الأحكام القضائية وإجراءاتها.</p>
+  </div>
+</div>
+
+<div class="grid-layout">
+  <div class="form-card">
+    <h3><i class="fa-solid fa-pen-to-square" style="color:#6366f1;"></i> إضافة / تعديل إجراء تنفيذ</h3>
+    <div id="alertBox" class="alert-box"></div>
+    <form onsubmit="saveRecord(event)">
+      <input type="hidden" id="recId">
+      <div class="form-group">
+        <label>القضية <span style="color:#ef4444;">*</span></label>
+        <select id="fCaseId" required>
+          <option value="">-- اختر القضية --</option>
+          {% for c in cases %}
+          <option value="{{ c.id }}">{{ c.case_number }} - {{ c.title[:30] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>رقم التنفيذ / الملف <span style="color:#ef4444;">*</span></label>
+        <input type="text" id="fExecNum" required placeholder="رقم ملف التنفيذ...">
+      </div>
+      <div class="form-group">
+        <label>الجهة المنفذة / المحكمة</label>
+        <input type="text" id="fAuth" placeholder="مثال: محكمة التنفيذ بجدة...">
+      </div>
+      <div class="form-group" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label>الحالة</label>
+          <select id="fStatus">
+            <option value="قيد الدراسة">قيد الدراسة</option>
+            <option value="جاري التنفيذ">جاري التنفيذ</option>
+            <option value="تم التنفيذ">تم التنفيذ</option>
+            <option value="موقوف">موقوف</option>
+          </select>
+        </div>
+        <div>
+          <label>تاريخ الطلب</label>
+          <input type="date" id="fDate">
+        </div>
+      </div>
+      <div class="btn-row">
+        <button type="submit" class="action-btn" style="background:linear-gradient(135deg,#10b981,#047857);">
+          <i class="fa-solid fa-floppy-disk"></i> حفظ
+        </button>
+        <button type="button" class="action-btn" style="background:linear-gradient(135deg,#6366f1,#4f46e5);" onclick="clearForm()">
+          <i class="fa-solid fa-plus"></i> جديد
+        </button>
+        <button type="button" class="action-btn" style="background:linear-gradient(135deg,#ef4444,#dc2626);" onclick="deleteRecord()">
+          <i class="fa-solid fa-trash"></i> حذف
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <div class="form-card" style="padding:0;overflow:hidden;">
+    <div style="padding:18px 22px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;">
+      <h3 style="margin:0;"><i class="fa-solid fa-list" style="color:#6366f1;margin-left:8px;"></i> الإجراءات المسجلة</h3>
+      <input type="text" id="filterSearch" placeholder="بحث برقم التنفيذ..." style="padding:6px 12px;border:1px solid var(--border-color);border-radius:6px;outline:none;" oninput="filterTable()">
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>القضية</th>
+            <th>رقم التنفيذ</th>
+            <th>الجهة المنفذة</th>
+            <th>تاريخ الطلب</th>
+            <th>الحالة</th>
+          </tr>
+        </thead>
+        <tbody id="refTbody">
+          {% for r in records %}
+          <tr onclick="selectRecord({{ r.id }}, this)" data-search="{{ r.execution_number | lower }} {{ r.law_case.case_number if r.law_case else '' }}">
+            <td><strong>{{ r.law_case.case_number if r.law_case else '—' }}</strong></td>
+            <td style="font-weight:700;">{{ r.execution_number }}</td>
+            <td>{{ r.authority_name or '—' }}</td>
+            <td style="direction:ltr;text-align:right;">{{ r.request_date or '—' }}</td>
+            <td>
+              {% if r.status_key == 'قيد الدراسة' %}<span class="status-badge s-pending">{{ r.status_key }}</span>
+              {% elif r.status_key == 'جاري التنفيذ' %}<span class="status-badge s-active">{{ r.status_key }}</span>
+              {% elif r.status_key == 'تم التنفيذ' %}<span class="status-badge s-completed">{{ r.status_key }}</span>
+              {% else %}<span class="status-badge s-stopped">{{ r.status_key }}</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if not records %}
+      <div class="empty-state">
+        <i class="fa-solid fa-gavel"></i>
+        <p style="font-weight:600;">لا توجد إجراءات تنفيذ بعد.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const allRecords = {{ records_json | safe }};
+let selectedId = null;
+
+function showAlert(msg, type='success') {
+  const el = document.getElementById('alertBox');
+  el.className = 'alert-box alert-' + type;
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 3000);
+}
+
+function filterTable() {
+  const s = document.getElementById('filterSearch').value.toLowerCase();
+  document.querySelectorAll('#refTbody tr').forEach(r => {
+    r.style.display = (r.dataset.search.includes(s)) ? '' : 'none';
+  });
+}
+
+function selectRecord(id, row) {
+  selectedId = id;
+  document.querySelectorAll('#refTbody tr').forEach(r => r.classList.remove('selected'));
+  row.classList.add('selected');
+  const rec = allRecords.find(r => r.id === id);
+  if (!rec) return;
+  document.getElementById('recId').value = rec.id;
+  document.getElementById('fCaseId').value = rec.case_id || '';
+  document.getElementById('fExecNum').value = rec.execution_number || '';
+  document.getElementById('fAuth').value = rec.authority_name || '';
+  document.getElementById('fStatus').value = rec.status_key || 'قيد الدراسة';
+  document.getElementById('fDate').value = rec.request_date || '';
+}
+
+function clearForm() {
+  selectedId = null;
+  document.getElementById('recId').value = '';
+  document.getElementById('fCaseId').value = '';
+  document.getElementById('fExecNum').value = '';
+  document.getElementById('fAuth').value = '';
+  document.getElementById('fStatus').value = 'قيد الدراسة';
+  document.getElementById('fDate').value = '';
+  document.querySelectorAll('#refTbody tr').forEach(r => r.classList.remove('selected'));
+}
+
+async function saveRecord(e) {
+  e.preventDefault();
+  const payload = {
+    id: document.getElementById('recId').value || null,
+    case_id: document.getElementById('fCaseId').value,
+    execution_number: document.getElementById('fExecNum').value.trim(),
+    authority_name: document.getElementById('fAuth').value.trim(),
+    status_key: document.getElementById('fStatus').value,
+    request_date: document.getElementById('fDate').value || null
+  };
+  const res = await fetch('/api/executions/save', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+  const data = await res.json();
+  if (data.ok) { showAlert(data.message); setTimeout(() => location.reload(), 900); }
+  else showAlert(data.message, 'error');
+}
+
+async function deleteRecord() {
+  if (!selectedId) { showAlert('اختر سجلاً أولاً', 'error'); return; }
+  if (!confirm('تأكيد الحذف؟')) return;
+  const res = await fetch(`/api/executions/delete/${selectedId}`, { method: 'DELETE' });
+  const data = await res.json();
+  if (data.ok) { showAlert(data.message); setTimeout(() => location.reload(), 900); }
+  else showAlert(data.message, 'error');
+}
+</script>
+{% endblock %}

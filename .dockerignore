@@ -1,0 +1,56 @@
+# ================================================
+# .dockerignore — ملفات لا ترفع داخل Docker Image
+# ================================================
+
+# بيانات سرية
+.env
+smtp.conf
+
+# قاعدة البيانات المحلية
+*.db
+*.sqlite
+*.sqlite3
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.Python
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+
+# Git
+.git/
+.github/
+
+# Backups
+*.backup
+*.bak
+
+# Tests
+tests/
+pytest.ini
+.pytest_cache/
+
+# Documentation
+*.md
+docs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Uploads (يُضاف كـ volume في وقت التشغيل)
+static/uploads/
+
+# Video files
+*.mp4
+*.avi
+*.mov

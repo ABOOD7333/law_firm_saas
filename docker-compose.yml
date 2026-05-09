@@ -1,0 +1,80 @@
+# ================================================
+# LawSaaS — Docker Compose
+# للتطوير المحلي والـ Staging
+# ================================================
+
+services:
+
+  # --- تطبيق FastAPI ---
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: lawsaas_app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - APP_ENV=development
+      - DATABASE_URL=postgresql://lawsaas:lawsaas_pass@db:5432/lawsaas_db
+    volumes:
+      # مجلد الرفع يبقى خارج الحاوية (persistent)
+      - uploads_data:/app/static/uploads
+      # في وضع التطوير: mount الكود مباشرة
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - lawsaas_network
+
+  # --- قاعدة بيانات PostgreSQL (للتطوير فقط) ---
+  db:
+    image: postgres:16-alpine
+    container_name: lawsaas_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: lawsaas
+      POSTGRES_PASSWORD: lawsaas_pass
+      POSTGRES_DB: lawsaas_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lawsaas -d lawsaas_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lawsaas_network
+
+  # --- Nginx Reverse Proxy (اختياري في التطوير) ---
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: lawsaas_nginx
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+  #     - ./static:/app/static:ro
+  #   depends_on:
+  #     - app
+  #   networks:
+  #     - lawsaas_network
+
+# --- الشبكات ---
+networks:
+  lawsaas_network:
+    driver: bridge
+
+# --- التخزين الدائم ---
+volumes:
+  postgres_data:
+    driver: local
+  uploads_data:
+    driver: local

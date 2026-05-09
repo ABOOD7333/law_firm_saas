@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إنشاء حساب جديد - نظام إدارة مكاتب المحاماة</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        .step { display: none; }
+        .step.active { display: block; }
+        .back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--text-muted); text-decoration: none; font-size: 0.95rem; margin-bottom: 1.5rem; transition: color 0.2s; }
+        .back-link:hover { color: var(--accent); }
+        .step-indicator { display: flex; gap: 8px; margin-bottom: 2rem; align-items: center; }
+        .step-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border); transition: all 0.3s; }
+        .step-dot.active { background: var(--accent); transform: scale(1.2); }
+        .step-dot.done { background: #22c55e; }
+        .step-label { font-size: 0.85rem; color: var(--text-muted); margin-right: 6px; }
+        .role-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 1.5rem 0; }
+        .role-card {
+            border: 2px solid var(--border); border-radius: 14px; padding: 16px 12px;
+            cursor: pointer; text-align: center; transition: all 0.3s; background: var(--bg-main);
+        }
+        .role-card:hover { border-color: var(--accent); background: #eff6ff; }
+        .role-card.selected { border-color: var(--accent); background: #eff6ff; box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
+        .role-card .role-icon { font-size: 2rem; margin-bottom: 8px; display: block; }
+        .role-card .role-name { font-weight: 700; font-size: 0.95rem; color: var(--primary); }
+        .role-card .role-desc { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .success-icon { font-size: 4rem; text-align: center; margin: 1rem 0; }
+        .alert-success { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 12px 16px; color: #16a34a; font-size: 0.9rem; margin-bottom: 1rem; }
+        .terms-check { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 1.5rem; color: var(--text-muted); font-size: 0.9rem; }
+        .terms-check input[type=checkbox] { margin-top: 3px; }
+        .terms-check a { color: var(--accent); }
+        select { width: 100%; padding: 1rem 1.2rem; border: 1.5px solid var(--border); border-radius: 12px; font-size: 1rem; background: var(--bg-main); color: var(--primary); font-family: 'Cairo', sans-serif; }
+        select:focus { outline: none; border-color: var(--accent); }
+        .progress-steps { display: flex; justify-content: space-between; margin-bottom: 2.5rem; position: relative; }
+        .progress-steps::before { content: ''; position: absolute; top: 18px; right: 20px; left: 20px; height: 2px; background: var(--border); z-index: 0; }
+        .prog-step { display: flex; flex-direction: column; align-items: center; gap: 6px; z-index: 1; }
+        .prog-circle { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--border); background: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; color: var(--text-muted); transition: all 0.3s; }
+        .prog-circle.active { border-color: var(--accent); color: var(--accent); background: #eff6ff; }
+        .prog-circle.done { border-color: #22c55e; background: #22c55e; color: white; }
+        .prog-label { font-size: 0.75rem; color: var(--text-muted); }
+        .prog-label.active { color: var(--accent); font-weight: 600; }
+    </style>
+</head>
+<body>
+<div class="login-container">
+    <!-- الجانب الأيسر -->
+    <div class="login-left">
+        <div class="branding">
+            <div class="logo">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="white"/>
+                    <path d="M2 17L12 22L22 17" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M2 12L12 17L22 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>LawSaaS</span>
+            </div>
+            <h1>انضم إلى<br>منظومة الذكاء<br>القانوني</h1>
+            <p>سجّل مكتبك اليوم وابدأ رحلتك نحو إدارة قانونية احترافية وذكية من السحابة.</p>
+        </div>
+        <div class="shapes">
+            <div class="shape shape-1"></div>
+            <div class="shape shape-2"></div>
+        </div>
+    </div>
+
+    <!-- الجانب الأيمن -->
+    <div class="login-right">
+        <div class="login-form-container">
+            <a href="/" class="back-link">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                العودة لتسجيل الدخول
+            </a>
+
+            <!-- شريط التقدم -->
+            <div class="progress-steps" id="progress-bar">
+                <div class="prog-step">
+                    <div class="prog-circle active" id="pc1">1</div>
+                    <span class="prog-label active" id="pl1">الدور</span>
+                </div>
+                <div class="prog-step">
+                    <div class="prog-circle" id="pc2">2</div>
+                    <span class="prog-label" id="pl2">البيانات</span>
+                </div>
+                <div class="prog-step">
+                    <div class="prog-circle" id="pc3">3</div>
+                    <span class="prog-label" id="pl3">كلمة المرور</span>
+                </div>
+            </div>
+
+            <!-- الخطوة 1: اختيار الدور -->
+            <div class="step active" id="step1">
+                <h2>إنشاء حساب جديد</h2>
+                <p class="subtitle">اختر طبيعة دورك في مكتب المحاماة</p>
+
+                <div class="role-grid">
+                    <div class="role-card" onclick="selectRole(this, 'مدير المكتب')">
+                        <span class="role-icon">🏛️</span>
+                        <div class="role-name">مدير المكتب</div>
+                        <div class="role-desc">صلاحيات كاملة وإدارة الفريق</div>
+                    </div>
+                    <div class="role-card" onclick="selectRole(this, 'محامٍ')">
+                        <span class="role-icon">⚖️</span>
+                        <div class="role-name">محامٍ</div>
+                        <div class="role-desc">إدارة القضايا والجلسات</div>
+                    </div>
+                    <div class="role-card" onclick="selectRole(this, 'مساعد قانوني')">
+                        <span class="role-icon">📋</span>
+                        <div class="role-name">مساعد قانوني</div>
+                        <div class="role-desc">متابعة المهام والمستندات</div>
+                    </div>
+                    <div class="role-card" onclick="selectRole(this, 'محاسب')">
+                        <span class="role-icon">💰</span>
+                        <div class="role-name">محاسب</div>
+                        <div class="role-desc">إدارة الشؤون المالية</div>
+                    </div>
+                </div>
+
+                <button class="btn-primary" onclick="goToStep(2)">التالي</button>
+            </div>
+
+            <!-- الخطوة 2: البيانات الشخصية -->
+            <div class="step" id="step2">
+                <h2>البيانات الشخصية</h2>
+                <p class="subtitle">أدخل بياناتك للتواصل والتحقق</p>
+
+                <div class="two-col">
+                    <div class="input-group">
+                        <label>الاسم الكامل</label>
+                        <input type="text" id="full-name" placeholder="الاسم الرباعي">
+                    </div>
+                    <div class="input-group">
+                        <label>اسم المستخدم</label>
+                        <input type="text" id="username" placeholder="مثال: ahmed_ali">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>البريد الإلكتروني</label>
+                    <input type="email" id="email" placeholder="example@lawfirm.com">
+                </div>
+                <div class="two-col">
+                    <div class="input-group">
+                        <label>الدولة</label>
+                        <select id="country" onchange="updatePhoneCode()"></select>
+                    </div>
+                    <div class="input-group">
+                        <label>رقم الهاتف</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="phone-code" readonly style="width: 80px; background: #f8fafc; text-align: left; direction: ltr; font-weight: bold; color: var(--text-muted); border: 1.5px solid var(--border); border-radius: 12px;" value="+966">
+                            <input type="tel" id="phone" placeholder="أدخل رقم الهاتف" style="flex: 1;" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                        </div>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>اسم المكتب</label>
+                    <input type="text" id="office-name" placeholder="مكتب ... للمحاماة">
+                </div>
+
+                <div style="display:flex; gap:12px;">
+                    <button class="btn-primary" style="background: var(--border); color: var(--text-main); flex:1;" onclick="goToStep(1)">السابق</button>
+                    <button class="btn-primary" style="flex:2;" onclick="goToStep(3)">التالي</button>
+                </div>
+            </div>
+
+            <!-- الخطوة 3: كلمة المرور -->
+            <div class="step" id="step3">
+                <h2>تأمين الحساب</h2>
+                <p class="subtitle">اختر رقم سري قوي لحماية حسابك</p>
+
+                <div class="input-group">
+                    <label>كلمة المرور (PIN)</label>
+                    <input type="password" id="reg-pass" placeholder="6 أرقام على الأقل">
+                </div>
+                <div class="input-group">
+                    <label>تأكيد كلمة المرور</label>
+                    <input type="password" id="reg-pass-confirm" placeholder="أعد إدخال كلمة المرور">
+                </div>
+
+                <div class="terms-check">
+                    <input type="checkbox" id="terms">
+                    <label for="terms">أوافق على <a href="#">شروط الاستخدام</a> و<a href="#">سياسة الخصوصية</a></label>
+                </div>
+
+                <div style="display:flex; gap:12px;">
+                    <button class="btn-primary" style="background: var(--border); color: var(--text-main); flex:1;" onclick="goToStep(2)">السابق</button>
+                    <button class="btn-primary" style="flex:2;" onclick="submitRegister()">إنشاء الحساب</button>
+                </div>
+            </div>
+
+            <!-- الخطوة 4: تم -->
+            <div class="step" id="step4">
+                <div class="success-icon">🎉</div>
+                <h2 style="text-align:center;">تم إنشاء حسابك!</h2>
+                <div class="alert-success">تم تسجيل طلبك بنجاح. سيقوم مدير النظام بمراجعة بياناتك وتفعيل حسابك خلال 24 ساعة.</div>
+                <p class="subtitle" style="text-align:center; font-size:0.9rem;">سيتم إرسال إشعار بالتفعيل على بريدك الإلكتروني.</p>
+                <a href="/" class="btn-primary" style="display:block; text-align:center; text-decoration:none; margin-top:1.5rem;">العودة لتسجيل الدخول</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const allCountries = [
+    { name: "اليمن", code: "+967", length: 9 },
+    { name: "السعودية", code: "+966", length: 9 },
+    { name: "مصر", code: "+20", length: 10 },
+    { name: "الإمارات", code: "+971", length: 9 },
+    { name: "الكويت", code: "+965", length: 8 },
+    { name: "قطر", code: "+974", length: 8 },
+    { name: "البحرين", code: "+973", length: 8 },
+    { name: "عمان", code: "+968", length: 8 },
+    { name: "الأردن", code: "+962", length: 9 },
+    { name: "فلسطين", code: "+970", length: 9 },
+    { name: "سوريا", code: "+963", length: 9 },
+    { name: "لبنان", code: "+961", length: 8 },
+    { name: "العراق", code: "+964", length: 10 },
+    { name: "السودان", code: "+249", length: 9 },
+    { name: "المغرب", code: "+212", length: 9 },
+    { name: "الجزائر", code: "+213", length: 9 },
+    { name: "تونس", code: "+216", length: 8 },
+    { name: "ليبيا", code: "+218", length: 9 },
+    { name: "موريتانيا", code: "+222", length: 8 },
+    { name: "الصومال", code: "+252", length: 8 },
+    { name: "جيبوتي", code: "+253", length: 8 },
+    { name: "جزر القمر", code: "+269", length: 7 },
+    { name: "الولايات المتحدة", code: "+1", length: 10 },
+    { name: "كندا", code: "+1", length: 10 },
+    { name: "المملكة المتحدة", code: "+44", length: 10 },
+    { name: "تركيا", code: "+90", length: 10 },
+    { name: "فرنسا", code: "+33", length: 9 },
+    { name: "ألمانيا", code: "+49", length: 11 },
+    { name: "إسبانيا", code: "+34", length: 9 },
+    { name: "إيطاليا", code: "+39", length: 10 },
+    { name: "هولندا", code: "+31", length: 9 },
+    { name: "بلجيكا", code: "+32", length: 9 },
+    { name: "سويسرا", code: "+41", length: 9 },
+    { name: "النمسا", code: "+43", length: 10 },
+    { name: "السويد", code: "+46", length: 9 },
+    { name: "النرويج", code: "+47", length: 8 },
+    { name: "الدنمارك", code: "+45", length: 8 },
+    { name: "فنلندا", code: "+358", length: 10 },
+    { name: "روسيا", code: "+7", length: 10 },
+    { name: "أوكرانيا", code: "+380", length: 9 },
+    { name: "أستراليا", code: "+61", length: 9 },
+    { name: "نيوزيلندا", code: "+64", length: 9 },
+    { name: "الصين", code: "+86", length: 11 },
+    { name: "الهند", code: "+91", length: 10 },
+    { name: "باكستان", code: "+92", length: 10 },
+    { name: "بنغلاديش", code: "+880", length: 10 },
+    { name: "إندونيسيا", code: "+62", length: 11 },
+    { name: "ماليزيا", code: "+60", length: 9 },
+    { name: "سنغافورة", code: "+65", length: 8 },
+    { name: "اليابان", code: "+81", length: 10 },
+    { name: "كوريا الجنوبية", code: "+82", length: 10 },
+    { name: "الفلبين", code: "+63", length: 10 },
+    { name: "تايلاند", code: "+66", length: 9 },
+    { name: "فيتنام", code: "+84", length: 9 },
+    { name: "إيران", code: "+98", length: 10 },
+    { name: "أفغانستان", code: "+93", length: 9 },
+    { name: "البرازيل", code: "+55", length: 11 },
+    { name: "الأرجنتين", code: "+54", length: 10 },
+    { name: "المكسيك", code: "+52", length: 10 },
+    { name: "كولومبيا", code: "+57", length: 10 },
+    { name: "تشيلي", code: "+56", length: 9 },
+    { name: "بيرو", code: "+51", length: 9 },
+    { name: "فنزويلا", code: "+58", length: 10 },
+    { name: "جنوب أفريقيا", code: "+27", length: 9 },
+    { name: "نيجيريا", code: "+234", length: 10 },
+    { name: "كينيا", code: "+254", length: 9 },
+    { name: "إثيوبيا", code: "+251", length: 9 },
+    { name: "تنزانيا", code: "+255", length: 9 },
+    { name: "أوغندا", code: "+256", length: 9 },
+    { name: "غانا", code: "+233", length: 9 },
+    { name: "الكاميرون", code: "+237", length: 9 },
+    { name: "ساحل العاج", code: "+225", length: 10 },
+    { name: "السنغال", code: "+221", length: 9 },
+    { name: "مالي", code: "+223", length: 8 },
+    { name: "اليونان", code: "+30", length: 10 },
+    { name: "البرتغال", code: "+351", length: 9 },
+    { name: "بولندا", code: "+48", length: 9 },
+    { name: "رومانيا", code: "+40", length: 9 },
+    { name: "بلغاريا", code: "+359", length: 9 },
+    { name: "المجر", code: "+36", length: 9 },
+    { name: "التشيك", code: "+420", length: 9 },
+    { name: "أيرلندا", code: "+353", length: 9 },
+    { name: "كوبا", code: "+53", length: 8 },
+    { name: "جامايكا", code: "+1", length: 10 },
+    { name: "كوريا الشمالية", code: "+850", length: 10 },
+    { name: "آيسلندا", code: "+354", length: 7 },
+    { name: "قبرص", code: "+357", length: 8 },
+    { name: "مالطا", code: "+356", length: 8 }
+];
+
+document.addEventListener('DOMContentLoaded', () => {
+    const select = document.getElementById('country');
+    allCountries.forEach((c, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = c.name + " (" + c.code + ")";
+        select.appendChild(option);
+    });
+    updatePhoneCode();
+});
+
+function updatePhoneCode() {
+    const select = document.getElementById('country');
+    const country = allCountries[select.value];
+    document.getElementById('phone-code').value = country.code;
+    const phoneInput = document.getElementById('phone');
+    phoneInput.maxLength = country.length;
+    phoneInput.placeholder = "أدخل " + country.length + " أرقام فقط";
+    // Trim existing input if it exceeds new max length
+    if (phoneInput.value.length > country.length) {
+        phoneInput.value = phoneInput.value.substring(0, country.length);
+    }
+}
+
+let selectedRole = '';
+
+function selectRole(card, role) {
+    document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    selectedRole = role;
+}
+
+function goToStep(step) {
+    if(step === 2 && !selectedRole) { alert('يرجى اختيار دورك أولاً'); return; }
+    if(step === 3) {
+        if(!document.getElementById('full-name').value) { alert('يرجى إدخال الاسم الكامل'); return; }
+        if(!document.getElementById('email').value) { alert('يرجى إدخال البريد الإلكتروني'); return; }
+    }
+
+    document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+    document.getElementById('step' + step).classList.add('active');
+
+    // Update progress bar
+    for(let i = 1; i <= 3; i++) {
+        const circle = document.getElementById('pc' + i);
+        const label = document.getElementById('pl' + i);
+        circle.className = 'prog-circle';
+        label.className = 'prog-label';
+        if(i < step) { circle.classList.add('done'); circle.textContent = '✓'; }
+        else if(i == step) { circle.classList.add('active'); label.classList.add('active'); }
+        else { circle.textContent = i; }
+    }
+}
+
+async function submitRegister() {
+    const pass    = document.getElementById('reg-pass').value;
+    const confirm = document.getElementById('reg-pass-confirm').value;
+    const terms   = document.getElementById('terms').checked;
+    if (pass.length < 6)  { alert('كلمة المرور يجب أن تكون 6 أحرف على الأقل'); return; }
+    if (pass !== confirm)  { alert('كلمتا المرور غير متطابقتين'); return; }
+    if (!terms)            { alert('يرجى الموافقة على شروط الاستخدام'); return; }
+
+    const phoneCode = document.getElementById('phone-code').value || '';
+    const phoneNum  = document.getElementById('phone').value || '';
+
+    const payload = {
+        name:        document.getElementById('full-name').value.trim(),
+        username:    document.getElementById('username').value.trim(),
+        email:       document.getElementById('email').value.trim(),
+        phone:       phoneCode + phoneNum,
+        office_name: document.getElementById('office-name').value.trim(),
+        password:    pass,
+        role:        selectedRole || 'مدير المكتب'
+    };
+
+    // التحقق من الحقول قبل الإرسال
+    if (!payload.name || !payload.username || !payload.email || !payload.office_name) {
+        alert('يرجى تعبئة جميع الحقول المطلوبة'); return;
+    }
+
+    const btn = document.querySelector('#step3 .btn-primary:last-child');
+    btn.disabled = true;
+    btn.textContent = 'جارٍ الإنشاء...';
+
+    try {
+        const csrfToken = document.cookie.split('; ').find(r => r.startsWith('csrf_token='))?.split('=')[1] || '';
+        const res = await fetch('/api/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+            document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+            document.getElementById('step4').classList.add('active');
+            document.getElementById('progress-bar').style.display = 'none';
+        } else {
+            alert('خطأ: ' + (data.error || 'حدث خطأ غير متوقع'));
+            btn.disabled = false;
+            btn.textContent = 'إنشاء الحساب';
+        }
+    } catch (e) {
+        alert('فشل الاتصال بالخادم. تحقق من اتصالك بالإنترنت.');
+        btn.disabled = false;
+        btn.textContent = 'إنشاء الحساب';
+    }
+}
+</script>
+</body>
+</html>

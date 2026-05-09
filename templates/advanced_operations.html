@@ -1,0 +1,346 @@
+{% extends "base.html" %}
+{% block title %}العمليات المتقدمة | LawSaaS{% endblock %}
+
+{% block head %}
+<style>
+.page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+.control-bar { background: var(--card-bg); padding: 16px 20px; border-radius: 12px; border: 1px solid var(--border-color); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
+.control-bar select, .control-bar input { padding: 9px 12px; border: 1.5px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: .9rem; flex: 1; outline: none; background: #f8fafc; }
+.health-box { background: linear-gradient(to left, #ffffff, #f8fafc); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
+.health-title { font-size: 1.1rem; font-weight: 800; color: var(--secondary-color); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+.health-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+.h-item { display: flex; flex-direction: column; gap: 6px; }
+.h-item label { font-size: .8rem; font-weight: 700; color: var(--text-muted); }
+.h-item .val { font-size: 1rem; font-weight: 800; color: var(--secondary-color); }
+.progress-bg { background: #e2e8f0; height: 10px; border-radius: 10px; overflow: hidden; margin-top: 6px; }
+.progress-fill { background: linear-gradient(90deg, #10b981, #059669); height: 100%; border-radius: 10px; transition: width 0.4s ease; }
+.nav-pills { display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); }
+.pill-btn { padding: 10px 18px; border-radius: 8px; font-weight: 700; font-size: .9rem; background: transparent; border: 1px solid transparent; color: var(--text-muted); cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+.pill-btn:hover { background: #f1f5f9; color: var(--secondary-color); }
+.pill-btn.active { background: #e0e7ff; color: #4f46e5; border-color: #c7d2fe; }
+.tab-pane { display: none; background: var(--card-bg); border-radius: 12px; padding: 20px; border: 1px solid var(--border-color); box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
+.tab-pane.active { display: block; animation: fadeIn 0.3s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+.data-table { width: 100%; border-collapse: collapse; font-size: .85rem; margin-top: 10px; margin-bottom: 15px; }
+.data-table th { background: #f8fafc; color: var(--text-muted); font-weight: 700; padding: 12px; text-align: right; border-bottom: 2px solid var(--border-color); }
+.data-table td { padding: 12px; border-bottom: 1px solid var(--border-color); color: var(--secondary-color); }
+.data-table tr:hover td { background: #f8fafc; }
+.section-title { font-size: 1rem; font-weight: 700; color: var(--secondary-color); margin-bottom: 10px; margin-top: 15px; }
+.empty-placeholder { text-align: center; padding: 30px 20px; color: var(--text-muted); }
+.empty-placeholder i { font-size: 2rem; opacity: 0.2; margin-bottom: 10px; display: block; }
+.split-pane { display: grid; grid-template-columns: 1fr; gap: 20px; }
+@media(min-width: 900px) { .split-pane { grid-template-columns: 1fr 1fr; } }
+.form-grid { display: grid; grid-template-columns: 100px 1fr; gap: 10px; align-items: center; margin-bottom: 15px; }
+.form-grid label { font-size: 0.85rem; font-weight: 700; color: var(--text-muted); }
+.chk-group { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; margin-bottom: 15px; }
+.chk-group label { display: flex; align-items: center; gap: 5px; font-size: 0.85rem; font-weight: bold; cursor: pointer; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 style="font-size:1.8rem;font-weight:800;color:var(--secondary-color);margin-bottom:4px;">
+      <i class="fa-solid fa-microchip" style="color:#2c3e50;margin-left:10px;"></i>العمليات المتقدمة
+    </h1>
+  </div>
+</div>
+
+<!-- شريط التحكم العلوي -->
+<div class="control-bar">
+  <label style="font-weight:700;color:var(--secondary-color);">القضية:</label>
+  <select id="caseSelector">
+    <option value="">-- اختر القضية --</option>
+    {% for c in cases %}
+    <option value="{{ c.id }}">{{ c.case_number }} - {{ c.title[:30] }}</option>
+    {% endfor %}
+  </select>
+  <button class="action-btn" style="background:#34495e;"><i class="fa-solid fa-rotate"></i> تحديث</button>
+  <button class="action-btn" style="background:#27ae60;"><i class="fa-solid fa-route"></i> تهيئة المسار</button>
+  <button class="action-btn" style="background:#2980b9;"><i class="fa-solid fa-forward-step"></i> إكمال المرحلة</button>
+  <button class="action-btn" style="background:#8e44ad;"><i class="fa-solid fa-file-zipper"></i> تجميع ملف القضية</button>
+  <button class="action-btn" style="background:#d35400;"><i class="fa-solid fa-magnifying-glass-chart"></i> إعادة بناء البحث</button>
+</div>
+
+<!-- صندوق مؤشرات الحالة -->
+<div class="health-box">
+  <div class="health-title">مؤشرات الحالة</div>
+  <div class="health-grid">
+    <div class="h-item">
+      <label>نسبة الإنجاز</label>
+      <div class="val">0%</div>
+      <div class="progress-bg"><div class="progress-fill" style="width:0%;"></div></div>
+    </div>
+    <div class="h-item">
+      <label>سلامة القضية</label>
+      <div class="val">-</div>
+    </div>
+    <div class="h-item">
+      <label>المرحلة الحالية</label>
+      <div class="val">-</div>
+    </div>
+    <div class="h-item">
+      <label>أقرب موعد</label>
+      <div class="val">-</div>
+    </div>
+  </div>
+  <div class="h-item" style="margin-top:16px;">
+    <label>عوامل التقييم</label>
+    <div style="background:#f1f5f9;padding:12px;border-radius:8px;font-size:.85rem;color:var(--secondary-color);min-height:50px;"></div>
+  </div>
+</div>
+
+<!-- الألسنة (Tabs) -->
+<div class="nav-pills">
+  <button class="pill-btn active" onclick="switchTab(this, 'tab-workflow')">سير العمل وChecklist</button>
+  <button class="pill-btn" onclick="switchTab(this, 'tab-templates')">مركز القوالب والإصدارات</button>
+  <button class="pill-btn" onclick="switchTab(this, 'tab-search')">البحث النصي والذكاء</button>
+  <button class="pill-btn" onclick="switchTab(this, 'tab-quality')">الجودة والتعارض والصلاحيات</button>
+  <button class="pill-btn" onclick="switchTab(this, 'tab-metrics')">الربحية وSLA</button>
+  <button class="pill-btn" onclick="switchTab(this, 'tab-requests')">الطلبات والموافقات</button>
+</div>
+
+<!-- 1. سير العمل و Checklist -->
+<div id="tab-workflow" class="tab-pane active">
+  <div style="display:flex;gap:10px;margin-bottom:14px;">
+    <button class="action-btn" style="background:#10b981;">تحديد كمكتمل</button>
+    <button class="action-btn" style="background:#6366f1;">تحديد كمرفوع</button>
+    <button class="action-btn" style="background:#f59e0b;">يحتاج تحديث</button>
+  </div>
+  <div class="section-title">مسار العمل</div>
+  <table class="data-table">
+    <thead><tr><th>ID</th><th>البيانات</th></tr></thead>
+    <tbody><tr><td colspan="2" class="empty-placeholder"><i class="fa-solid fa-table"></i> لا يوجد بيانات</td></tr></tbody>
+  </table>
+  <div class="section-title">Checklist ذكي حسب نوع القضية</div>
+  <table class="data-table">
+    <thead><tr><th>ID</th><th>البيانات</th></tr></thead>
+    <tbody><tr><td colspan="2" class="empty-placeholder"><i class="fa-solid fa-list-check"></i> لا يوجد بيانات</td></tr></tbody>
+  </table>
+</div>
+
+<!-- 2. مركز القوالب والإصدارات -->
+<div id="tab-templates" class="tab-pane">
+  <div class="split-pane">
+    <div>
+      <div class="section-title" style="margin-top:0;">جدول القوالب</div>
+      <table class="data-table">
+        <thead><tr><th>القالب</th><th>النوع</th></tr></thead>
+        <tbody><tr><td colspan="2" class="empty-placeholder"><i class="fa-solid fa-file-contract"></i> لا يوجد بيانات</td></tr></tbody>
+      </table>
+    </div>
+    <div>
+      <div class="form-grid">
+        <label>اسم القالب</label><input type="text">
+        <label>نوع القضية</label><select><option></option><option>عمالية</option><option>تجارية</option></select>
+        <label>نوع القالب</label><select><option>general</option><option>pleading</option><option>execution</option><option>client_report</option><option>internal_note</option></select>
+      </div>
+      <textarea rows="4" style="width:100%;border-radius:8px;border:1px solid var(--border-color);padding:10px;font-family:'Cairo';background:#f8fafc;margin-bottom:10px;" placeholder="استخدم {{ case.client_name }} وكتل if/for المبسطة."></textarea>
+      <div style="display:flex;gap:10px;">
+        <button class="action-btn" style="background:#27ae60;">حفظ القالب</button>
+        <button class="action-btn" style="background:#2980b9;">توليد نسخة</button>
+      </div>
+    </div>
+  </div>
+  <div class="section-title">الناتج المولد</div>
+  <textarea rows="4" style="width:100%;border-radius:8px;border:1px solid var(--border-color);padding:10px;font-family:'Cairo';background:#f1f5f9;margin-bottom:10px;" readonly></textarea>
+  <div class="section-title">الإصدارات</div>
+  <table class="data-table">
+    <thead><tr><th>النسخة</th><th>التاريخ</th></tr></thead>
+    <tbody><tr><td colspan="2" class="empty-placeholder"><i class="fa-solid fa-clock-rotate-left"></i> لا يوجد بيانات</td></tr></tbody>
+  </table>
+  <div style="display:flex;gap:10px;">
+    <button class="action-btn" style="background:#34495e;">مقارنة النسخ</button>
+    <button class="action-btn" style="background:#c0392b;">استرجاع النسخة</button>
+  </div>
+</div>
+
+<!-- 3. البحث النصي والذكاء -->
+<div id="tab-search" class="tab-pane">
+  <div style="display:flex;gap:10px;margin-bottom:16px;">
+    <input type="text" placeholder="بحث داخل المرافعات والملاحظات والأحكام والملخصات" style="flex:2;">
+    <select style="flex:1;"><option>نوع القضية</option></select>
+    <select style="flex:1;"><option>المحكمة</option></select>
+    <button class="action-btn" style="background:#2c3e50;">بحث نصي كامل</button>
+    <button class="action-btn" style="background:#8e44ad;">علاقات القضية</button>
+  </div>
+  <table class="data-table">
+    <thead><tr><th>النتائج</th></tr></thead>
+    <tbody><tr><td class="empty-placeholder"><i class="fa-solid fa-search"></i> لا توجد نتائج للبحث</td></tr></tbody>
+  </table>
+  <div class="section-title">Knowledge Graph / الروابط بين الكيانات</div>
+  <table class="data-table">
+    <thead><tr><th>الكيانات المترابطة</th></tr></thead>
+    <tbody><tr><td class="empty-placeholder"><i class="fa-solid fa-diagram-project"></i> لا توجد روابط لعرضها</td></tr></tbody>
+  </table>
+</div>
+
+<!-- 4. الجودة والتعارض والصلاحيات -->
+<div id="tab-quality" class="tab-pane">
+  <!-- الجودة -->
+  <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;">
+    <label style="font-weight:700;color:var(--text-muted);">تصنيف الجودة</label>
+    <select style="flex:1;"><option>الكل</option></select>
+    <button class="action-btn" style="background:#2c3e50;">تحديث الجودة</button>
+  </div>
+  <table class="data-table">
+    <thead><tr><th>ID</th><th>البيانات</th></tr></thead>
+    <tbody><tr><td colspan="2" class="empty-placeholder"><i class="fa-solid fa-spell-check"></i> لا توجد تقارير جودة</td></tr></tbody>
+  </table>
+  <hr style="border:0;border-top:1px dashed var(--border-color);margin:20px 0;">
+  
+  <!-- تضارب المصالح -->
+  <div class="section-title" style="margin-top:0;">فحص تضارب المصالح</div>
+  <div class="form-grid">
+    <label>الاسم</label><input type="text">
+    <label>الهوية/السجل</label><input type="text">
+    <label>الجوال</label><input type="text">
+    <label>الشركة</label><input type="text">
+    <label>السجل التجاري</label><input type="text">
+  </div>
+  <button class="action-btn" style="background:#e67e22;margin-bottom:10px;">فحص تضارب المصالح</button>
+  <div style="margin-bottom:10px;font-weight:bold;">-</div>
+  <table class="data-table">
+    <thead><tr><th>النتائج</th></tr></thead>
+    <tbody><tr><td class="empty-placeholder"><i class="fa-solid fa-shield-halved"></i> لا يوجد تعارض</td></tr></tbody>
+  </table>
+  <hr style="border:0;border-top:1px dashed var(--border-color);margin:20px 0;">
+  
+  <!-- الصلاحيات ACL -->
+  <div class="section-title" style="margin-top:0;">إدارة الصلاحيات (ACL)</div>
+  <div style="display:flex;gap:10px;align-items:center;margin-bottom:15px;flex-wrap:wrap;">
+    <label style="font-weight:700;">المستخدم:</label>
+    <select style="width:200px;"><option>اختر مستخدم...</option></select>
+    <div class="chk-group" style="margin:0;">
+      <label><input type="checkbox"> عرض</label>
+      <label><input type="checkbox"> تعديل</label>
+      <label><input type="checkbox"> مستندات حساسة</label>
+      <label><input type="checkbox"> ملاحظات داخلية</label>
+    </div>
+    <button class="action-btn" style="background:#27ae60;">منح/تحديث صلاحية</button>
+    <button class="action-btn" style="background:#c0392b;">حذف الصلاحية</button>
+  </div>
+  <table class="data-table">
+    <thead><tr><th>المستخدم</th><th>الصلاحيات</th></tr></thead>
+    <tbody><tr><td colspan="2" class="empty-placeholder"><i class="fa-solid fa-users-gear"></i> لا توجد صلاحيات مخصصة</td></tr></tbody>
+  </table>
+</div>
+
+<!-- 5. الربحية وSLA -->
+<div id="tab-metrics" class="tab-pane">
+  <div class="section-title" style="margin-top:0;">سلامة القضايا على مستوى المكتب</div>
+  <table class="data-table">
+    <thead><tr><th>ID</th><th>البيانات</th></tr></thead>
+    <tbody><tr><td colspan="2" class="empty-placeholder">لا يوجد بيانات</td></tr></tbody>
+  </table>
+  <div class="section-title">ربحية القضايا</div>
+  <table class="data-table">
+    <thead><tr><th>ID</th><th>البيانات</th></tr></thead>
+    <tbody><tr><td colspan="2" class="empty-placeholder">لا يوجد بيانات</td></tr></tbody>
+  </table>
+  <div class="section-title">ربحية المحامين</div>
+  <table class="data-table">
+    <thead><tr><th>ID</th><th>البيانات</th></tr></thead>
+    <tbody><tr><td colspan="2" class="empty-placeholder">لا يوجد بيانات</td></tr></tbody>
+  </table>
+  <div class="section-title">التأخير وSLA</div>
+  <table class="data-table">
+    <thead><tr><th>ID</th><th>البيانات</th></tr></thead>
+    <tbody><tr><td colspan="2" class="empty-placeholder">لا يوجد بيانات</td></tr></tbody>
+  </table>
+</div>
+
+<!-- 6. الطلبات والموافقات -->
+<div id="tab-requests" class="tab-pane">
+  <div style="background:#f8fafc;padding:15px;border:1px solid var(--border-color);border-radius:10px;margin-bottom:20px;">
+    <div class="section-title" style="margin-top:0;">إنشاء طلب إجراء جديد (نمط الوزارة)</div>
+    <div style="display:flex;gap:15px;align-items:center;flex-wrap:wrap;">
+      <label style="font-weight:bold;">نوع الطلب</label>
+      <select>
+        <option>نقل ملف</option><option>طلب مستند من الأرشيف</option><option>اعتماد مرافعة</option>
+        <option>طلب صرف ميزانية</option><option>إغلاق نهائي</option>
+      </select>
+      <label style="font-weight:bold;">السبب</label>
+      <input type="text" placeholder="سبب الطلب..." style="flex:1;min-width:200px;">
+      <button class="action-btn" style="background:#2980b9;">إرسال الطلب</button>
+    </div>
+  </div>
+  
+  <div class="section-title">طلبات الإجراءات الحالية</div>
+  <table class="data-table">
+    <thead><tr><th>الطلب</th><th>المرسل</th><th>الحالة</th></tr></thead>
+    <tbody><tr><td colspan="3" class="empty-placeholder"><i class="fa-solid fa-inbox"></i> لا يوجد بيانات</td></tr></tbody>
+  </table>
+  
+  <div style="display:flex;gap:10px;">
+    <button class="action-btn" style="background:#27ae60;">موافقة واعتماد</button>
+    <button class="action-btn" style="background:#e74c3c;">رفض الطلب</button>
+    <button class="action-btn" style="background:#34495e;">استلام وتنفيذ</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function switchTab(btn, tabId) {
+  document.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.tab-pane').forEach(t => t.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+}
+
+async function loadCaseHealth() {
+  const caseId = document.getElementById('caseSelector').value;
+  if(!caseId) {
+    document.getElementById('hProgressText').textContent = '0%';
+    document.querySelector('.progress-fill').style.width = '0%';
+    document.querySelectorAll('.val')[1].textContent = '-'; // Health
+    document.querySelectorAll('.val')[1].style.color = '#e11d48';
+    document.querySelectorAll('.val')[2].textContent = '-'; // Stage
+    document.querySelectorAll('.val')[3].textContent = '-'; // Next
+    document.querySelector('.health-box .h-item > div[style*="min-height:50px"]').innerHTML = 'اختر قضية لرؤية تحليل العوامل والمخاطر الذكي...';
+    
+    document.querySelector('#tab-workflow .data-table tbody').innerHTML = '<tr><td colspan="5" class="empty-placeholder"><i class="fa-solid fa-diagram-project"></i> اختر قضية لعرض مسار العمل</td></tr>';
+    document.querySelectorAll('#tab-workflow .data-table tbody')[1].innerHTML = '<tr><td colspan="3" class="empty-placeholder"><i class="fa-solid fa-check-double"></i> اختر قضية لعرض المتطلبات</td></tr>';
+    return;
+  }
+  
+  try {
+    const response = await fetch(`/api/advanced/case_health/${caseId}`);
+    const data = await response.json();
+    
+    if (data.error) { alert(data.error); return; }
+    
+    document.getElementById('hProgressText').textContent = data.progress + '%';
+    document.querySelector('.progress-fill').style.width = data.progress + '%';
+    document.querySelectorAll('.val')[1].textContent = data.health;
+    document.querySelectorAll('.val')[1].style.color = data.color;
+    document.querySelectorAll('.val')[2].textContent = data.stage;
+    document.querySelectorAll('.val')[3].textContent = data.next_hearing;
+    
+    let fHtml = "";
+    data.factors.forEach((f, i) => { fHtml += `${i+1}- ${f}<br>`; });
+    document.querySelector('.health-box .h-item > div[style*="min-height:50px"]').innerHTML = fHtml;
+    
+    let wfHtml = "";
+    data.workflow.forEach(w => {
+      let color = w.status === "مكتمل" ? "#059669" : (w.status === "متأخر" ? "#e11d48" : "#d97706");
+      wfHtml += `<tr><td>${w.stage}</td><td>${w.user}</td><td><span style="color:${color};font-weight:bold;">${w.status}</span></td><td>${w.start}</td><td>${w.due}</td></tr>`;
+    });
+    document.querySelector('#tab-workflow .data-table tbody').innerHTML = wfHtml;
+    
+    let clHtml = "";
+    data.checklist.forEach(c => {
+      let color = c.status === "منجز" ? "#059669" : "#e11d48";
+      let icon = c.status === "منجز" ? "✔️" : "❌";
+      clHtml += `<tr><td>${c.item}</td><td><span style="color:${color};">${icon} ${c.status}</span></td><td>النظام الذكي</td></tr>`;
+    });
+    document.querySelectorAll('#tab-workflow .data-table tbody')[1].innerHTML = clHtml;
+    
+  } catch(e) {
+    console.error("Error fetching health data:", e);
+    alert("فشل جلب المؤشرات الحقيقية من الخادم.");
+  }
+}
+</script>
+{% endblock %}

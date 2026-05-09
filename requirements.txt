@@ -1,0 +1,33 @@
+# ================================================
+# LawSaaS — Python Dependencies (Pinned Versions)
+# تحديث: 2026-05-07
+# ================================================
+
+# --- Framework الأساسي ---
+fastapi==0.115.12
+uvicorn[standard]==0.34.2
+python-multipart==0.0.20
+
+# --- قاعدة البيانات ---
+sqlalchemy==2.0.40
+alembic==1.15.2
+
+# --- قواعد بيانات Drivers ---
+# SQLite: مدمج مع Python (لا يحتاج تثبيت)
+# PostgreSQL للإنتاج:
+psycopg2-binary==2.9.10
+
+# --- Templates ---
+jinja2==3.1.6
+
+# --- متغيرات البيئة ---
+python-dotenv==1.1.0
+
+# --- Email ---
+# مدمج مع Python (smtplib)
+
+# --- Security ---
+# مدمج مع Python (hashlib, hmac, secrets)
+
+# --- Production Servers ---
+gunicorn==21.2.0

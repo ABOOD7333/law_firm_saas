@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% block title %}سجل الدخول | LawSaaS{% endblock %}
+
+{% block head %}
+<style>
+.stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 24px; }
+.stat-card { background: var(--card-bg); border-radius: 14px; padding: 20px; border: 1px solid var(--border-color); text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,.05); }
+.stat-card .num { font-size: 2rem; font-weight: 800; }
+.stat-card .lbl { font-size: .82rem; color: var(--text-muted); font-weight: 600; margin-top: 4px; }
+.filter-card { background: var(--card-bg); border-radius: 14px; padding: 18px 22px; border: 1px solid var(--border-color); margin-bottom: 20px; display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
+.filter-card .fg { display: flex; flex-direction: column; gap: 5px; }
+.filter-card label { font-size: .8rem; font-weight: 700; color: var(--text-muted); }
+.filter-card input, .filter-card select {
+  padding: 9px 12px; border: 1.5px solid var(--border-color); border-radius: 9px;
+  font-family: 'Cairo', sans-serif; font-size: .85rem; background: var(--card-bg);
+  color: var(--secondary-color); outline: none;
+}
+.filter-card input:focus, .filter-card select:focus { border-color: var(--primary-color); }
+.table-card { background: var(--card-bg); border-radius: 14px; padding: 20px; border: 1px solid var(--border-color); box-shadow: 0 2px 8px rgba(0,0,0,.05); }
+.log-table { width: 100%; border-collapse: collapse; font-size: .84rem; }
+.log-table th { background: #f8fafc; color: var(--text-muted); font-weight: 700; padding: 11px 14px; text-align: right; border-bottom: 2px solid var(--border-color); white-space: nowrap; }
+.log-table td { padding: 10px 14px; border-bottom: 1px solid var(--border-color); color: var(--secondary-color); vertical-align: middle; }
+.log-table tr:hover td { background: #f8fafc; }
+.status-badge { padding: 3px 12px; border-radius: 50px; font-size: .75rem; font-weight: 700; }
+.badge-active  { background: #d1fae5; color: #047857; }
+.badge-expired { background: #fee2e2; color: #dc2626; }
+.role-pill { padding: 2px 10px; border-radius: 50px; font-size: .74rem; font-weight: 700; }
+.role-owner   { background: #fef3c7; color: #d97706; }
+.role-manager { background: #dbeafe; color: #1d4ed8; }
+.role-lawyer  { background: #d1fae5; color: #047857; }
+.role-other   { background: #f1f5f9; color: #475569; }
+.avatar-sm { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg,#6366f1,#4f46e5); color: white; display: inline-flex; align-items: center; justify-content: center; font-size: .8rem; font-weight: 800; margin-left: 8px; }
+.revoke-btn { padding: 4px 12px; border-radius: 7px; border: none; background: #fee2e2; color: #dc2626; font-family: 'Cairo',sans-serif; font-size: .78rem; font-weight: 700; cursor: pointer; transition: background .2s; }
+.revoke-btn:hover { background: #fecaca; }
+.empty-state { text-align: center; padding: 80px 20px; color: var(--text-muted); }
+.empty-state i { font-size: 3.5rem; opacity: .15; display: block; margin-bottom: 14px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+  <div>
+    <h1 style="font-size:1.8rem;font-weight:800;color:var(--secondary-color);margin-bottom:4px;">
+      <i class="fa-solid fa-shield-halved" style="color:#6366f1;margin-left:10px;"></i>سجل الدخول والجلسات
+    </h1>
+    <p style="color:var(--text-muted);font-size:.9rem;">مراقبة جميع جلسات تسجيل الدخول وإدارتها.</p>
+  </div>
+  <button class="action-btn" style="background:linear-gradient(135deg,#ef4444,#dc2626);" onclick="revokeAll()">
+    <i class="fa-solid fa-ban"></i> إنهاء كل الجلسات النشطة
+  </button>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="num" style="color:#6366f1;">{{ stats.total }}</div>
+    <div class="lbl"><i class="fa-solid fa-list"></i> إجمالي الجلسات</div>
+  </div>
+  <div class="stat-card">
+    <div class="num" style="color:#10b981;">{{ stats.active }}</div>
+    <div class="lbl"><i class="fa-solid fa-circle-dot"></i> جلسات نشطة</div>
+  </div>
+  <div class="stat-card">
+    <div class="num" style="color:#f59e0b;">{{ stats.today }}</div>
+    <div class="lbl"><i class="fa-solid fa-calendar-day"></i> دخولات اليوم</div>
+  </div>
+  <div class="stat-card">
+    <div class="num" style="color:#ef4444;">{{ stats.expired }}</div>
+    <div class="lbl"><i class="fa-solid fa-clock-rotate-left"></i> جلسات منتهية</div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="filter-card">
+  <div class="fg">
+    <label>بحث بالاسم</label>
+    <input type="text" id="searchName" placeholder="اسم المستخدم..." oninput="filterSessions()">
+  </div>
+  <div class="fg">
+    <label>الحالة</label>
+    <select id="filterStatus" onchange="filterSessions()">
+      <option value="">الكل</option>
+      <option value="1">نشطة</option>
+      <option value="0">منتهية</option>
+    </select>
+  </div>
+  <div class="fg">
+    <label>الدور</label>
+    <select id="filterRole" onchange="filterSessions()">
+      <option value="">جميع الأدوار</option>
+      <option value="صاحب المكتب">صاحب المكتب</option>
+      <option value="مدير المكتب">مدير المكتب</option>
+      <option value="محامٍ">محامٍ</option>
+      <option value="مساعد قانوني">مساعد قانوني</option>
+    </select>
+  </div>
+  <div class="fg">
+    <label>من تاريخ</label>
+    <input type="date" id="filterFrom" onchange="filterSessions()">
+  </div>
+  <div class="fg">
+    <label>إلى تاريخ</label>
+    <input type="date" id="filterTo" onchange="filterSessions()">
+  </div>
+  <button class="action-btn" style="background:var(--primary-color);" onclick="clearFilters()">
+    <i class="fa-solid fa-rotate-right"></i> إعادة ضبط
+  </button>
+</div>
+
+<!-- Table -->
+<div class="table-card">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+    <h3 style="font-size:1rem;font-weight:800;color:var(--secondary-color);margin:0;">
+      <i class="fa-solid fa-table" style="color:#6366f1;margin-left:6px;"></i>
+      سجل الجلسات <span id="countBadge" style="background:#6366f1;color:white;padding:2px 10px;border-radius:50px;font-size:.78rem;font-weight:700;">{{ sessions|length }}</span>
+    </h3>
+    <span style="font-size:.82rem;color:var(--text-muted);">آخر تحديث: {{ now }}</span>
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="log-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>المستخدم</th>
+          <th>الدور</th>
+          <th>وقت الدخول</th>
+          <th>تنتهي في</th>
+          <th>الجهاز</th>
+          <th>الحالة</th>
+          <th>إجراء</th>
+        </tr>
+      </thead>
+      <tbody id="sessionsTbody">
+        {% for s in sessions %}
+        <tr data-name="{{ s.user_name | lower }}" data-active="{{ s.is_active }}" data-role="{{ s.user_role }}" data-date="{{ (s.created_at or '')[:10] }}">
+          <td style="color:var(--text-muted);font-size:.78rem;">{{ s.id }}</td>
+          <td>
+            <div style="display:flex;align-items:center;">
+              <span class="avatar-sm">{{ s.user_name[0] if s.user_name else '?' }}</span>
+              <div>
+                <div style="font-weight:700;">{{ s.user_name or 'غير معروف' }}</div>
+                <div style="font-size:.75rem;color:var(--text-muted);">{{ s.user_email or '' }}</div>
+              </div>
+            </div>
+          </td>
+          <td>
+            {% if s.user_role == 'صاحب المكتب' %}<span class="role-pill role-owner">{{ s.user_role }}</span>
+            {% elif s.user_role in ['مدير المكتب','مدير'] %}<span class="role-pill role-manager">{{ s.user_role }}</span>
+            {% elif s.user_role == 'محامٍ' %}<span class="role-pill role-lawyer">{{ s.user_role }}</span>
+            {% else %}<span class="role-pill role-other">{{ s.user_role or '—' }}</span>{% endif %}
+          </td>
+          <td style="font-size:.82rem;">{{ (s.created_at or '—')[:16] }}</td>
+          <td style="font-size:.82rem;">{{ (s.expires_at or '—')[:16] }}</td>
+          <td style="font-size:.78rem;color:var(--text-muted);">{{ s.device_id or '—' }}</td>
+          <td>
+            {% if s.is_active %}
+              <span class="status-badge badge-active"><i class="fa-solid fa-circle" style="font-size:.5rem;"></i> نشطة</span>
+            {% else %}
+              <span class="status-badge badge-expired"><i class="fa-solid fa-circle" style="font-size:.5rem;"></i> منتهية</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if s.is_active %}
+            <button class="revoke-btn" onclick="revokeSession({{ s.id }}, this)">
+              <i class="fa-solid fa-xmark"></i> إنهاء
+            </button>
+            {% else %}
+            <span style="color:var(--text-muted);font-size:.78rem;">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if not sessions %}
+    <div class="empty-state">
+      <i class="fa-solid fa-shield-halved"></i>
+      <p style="font-size:1rem;font-weight:600;">لا توجد سجلات دخول حتى الآن.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function filterSessions() {
+  const name   = document.getElementById('searchName').value.trim().toLowerCase();
+  const status = document.getElementById('filterStatus').value;
+  const role   = document.getElementById('filterRole').value;
+  const from   = document.getElementById('filterFrom').value;
+  const to     = document.getElementById('filterTo').value;
+  const rows   = document.querySelectorAll('#sessionsTbody tr');
+  let visible  = 0;
+  rows.forEach(row => {
+    const rName   = row.dataset.name || '';
+    const rActive = row.dataset.active;
+    const rRole   = row.dataset.role || '';
+    const rDate   = row.dataset.date || '';
+    const nameOk   = !name   || rName.includes(name);
+    const statusOk = !status || rActive === status;
+    const roleOk   = !role   || rRole === role;
+    const fromOk   = !from   || rDate >= from;
+    const toOk     = !to     || rDate <= to;
+    const show = nameOk && statusOk && roleOk && fromOk && toOk;
+    row.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  document.getElementById('countBadge').textContent = visible;
+}
+
+function clearFilters() {
+  ['searchName','filterFrom','filterTo'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('filterStatus').value = '';
+  document.getElementById('filterRole').value = '';
+  filterSessions();
+}
+
+async function revokeSession(id, btn) {
+  if (!confirm('إنهاء هذه الجلسة؟')) return;
+  btn.disabled = true;
+  const res = await fetch(`/api/sessions/revoke/${id}`, { method: 'POST' });
+  const data = await res.json();
+  if (data.ok) {
+    const row = btn.closest('tr');
+    const badge = row.querySelector('.status-badge');
+    if (badge) { badge.className = 'status-badge badge-expired'; badge.innerHTML = '<i class="fa-solid fa-circle" style="font-size:.5rem;"></i> منتهية'; }
+    btn.replaceWith(document.createTextNode('—'));
+    row.dataset.active = '0';
+    filterSessions();
+  } else {
+    btn.disabled = false;
+    alert(data.message || 'حدث خطأ');
+  }
+}
+
+async function revokeAll() {
+  if (!confirm('هل تريد إنهاء جميع الجلسات النشطة (عدا جلستك الحالية)؟')) return;
+  const res = await fetch('/api/sessions/revoke-all', { method: 'POST' });
+  const data = await res.json();
+  alert(data.message || 'تم');
+  location.reload();
+}
+</script>
+{% endblock %}

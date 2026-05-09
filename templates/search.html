@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block title %}البحث الذكي | LawSaaS{% endblock %}
+{% block content %}
+<div class="page-header" style="margin-bottom:25px;">
+    <h1><i class="fa-solid fa-magnifying-glass" style="color:var(--primary-color);"></i> البحث الذكي الشامل</h1>
+    <p>ابحث في جميع قضاياك، موكليك، الأطراف، الجلسات، المرافعات، والأحكام دفعة واحدة.</p>
+</div>
+
+<!-- Search Bar -->
+<form action="/search" method="get" id="searchForm">
+    <div style="background:white;border-radius:16px;padding:25px;box-shadow:0 4px 20px rgba(0,0,0,.08);border:1px solid var(--border-color);margin-bottom:25px;">
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:15px;">
+            <div style="flex:1;display:flex;align-items:center;background:#f8fafc;border:2px solid {% if q %}var(--primary-color){% else %}var(--border-color){% endif %};border-radius:12px;padding:12px 18px;gap:12px;transition:border-color .2s;">
+                <i class="fa-solid fa-magnifying-glass" style="color:var(--primary-color);font-size:1.1rem;"></i>
+                <input type="text" name="q" value="{{ q }}" id="searchInput" placeholder="اكتب هنا... مثال: اسم موكل، رقم قضية، اسم محكمة، نص مرافعة..." 
+                    style="flex:1;border:none;background:transparent;outline:none;font-family:'Cairo',sans-serif;font-size:1rem;color:var(--secondary-color);"
+                    autofocus>
+                {% if q %}
+                <a href="/search" style="color:var(--text-muted);text-decoration:none;font-size:1.2rem;" title="مسح">×</a>
+                {% endif %}
+            </div>
+            <button type="submit" class="btn-primary" style="padding:14px 28px;font-size:1rem;border-radius:12px;white-space:nowrap;">
+                <i class="fa-solid fa-search"></i> بحث
+            </button>
+        </div>
+        <!-- Scope Filter -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <span style="color:var(--text-muted);font-size:.9rem;align-self:center;font-weight:600;">البحث في:</span>
+            {% for s, label in [('all','الكل'), ('cases','القضايا'), ('clients','الموكلين'), ('parties','الأطراف'), ('hearings','الجلسات'), ('pleadings','المرافعات'), ('judgments','الأحكام'), ('notes','الملاحظات')] %}
+            <a href="/search?q={{ q }}&scope={{ s }}" 
+               style="padding:6px 14px;border-radius:20px;font-size:.85rem;font-weight:600;text-decoration:none;transition:all .2s;
+               {% if scope == s %}background:var(--primary-color);color:white;{% else %}background:#f1f5f9;color:var(--text-muted);{% endif %}">
+                {{ label }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</form>
+
+{% if q %}
+<!-- Results Summary -->
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+    <p style="color:var(--text-muted);font-size:.95rem;">
+        نتائج البحث عن: <strong style="color:var(--secondary-color);">"{{ q }}"</strong> — 
+        <strong style="color:var(--primary-color);">{{ total }} نتيجة</strong>
+    </p>
+</div>
+
+{% if total == 0 %}
+<div style="text-align:center;padding:60px;color:var(--text-muted);">
+    <i class="fa-solid fa-face-sad-tear" style="font-size:4rem;opacity:.4;display:block;margin-bottom:15px;"></i>
+    <h3>لم يتم العثور على نتائج</h3>
+    <p>جرب كلمات بحث مختلفة أو توسّع نطاق البحث.</p>
+</div>
+{% else %}
+
+<!-- Cases Results -->
+{% if results.cases %}
+<div class="card" style="margin-bottom:20px;padding:20px;">
+    <h3 style="margin-bottom:15px;color:var(--secondary-color);font-size:1rem;display:flex;align-items:center;gap:8px;">
+        <span style="background:var(--primary-color);color:white;width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;">{{ results.cases|length }}</span>
+        <i class="fa-solid fa-gavel" style="color:var(--primary-color);"></i> القضايا
+    </h3>
+    {% for c in results.cases %}
+    <a href="/cases/{{ c.id }}" style="display:flex;align-items:center;justify-content:space-between;padding:12px;border-radius:8px;text-decoration:none;color:inherit;border:1px solid var(--border-color);margin-bottom:8px;transition:background .2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+        <div>
+            <strong style="color:var(--secondary-color);">{{ c.title }}</strong>
+            <span style="color:var(--text-muted);font-size:.85rem;margin-right:10px;">{{ c.case_number }}</span>
+            {% if c.summary %}<p style="color:var(--text-muted);font-size:.85rem;margin:4px 0 0;">{{ c.summary[:100] }}</p>{% endif %}
+        </div>
+        <i class="fa-solid fa-arrow-left" style="color:var(--primary-color);"></i>
+    </a>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Clients Results -->
+{% if results.clients %}
+<div class="card" style="margin-bottom:20px;padding:20px;">
+    <h3 style="margin-bottom:15px;color:var(--secondary-color);font-size:1rem;display:flex;align-items:center;gap:8px;">
+        <span style="background:#10b981;color:white;width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;">{{ results.clients|length }}</span>
+        <i class="fa-solid fa-users" style="color:#10b981;"></i> الموكلين
+    </h3>
+    {% for c in results.clients %}
+    <div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:8px;border:1px solid var(--border-color);margin-bottom:8px;">
+        <div style="width:38px;height:38px;border-radius:50%;background:#10b981;color:white;display:flex;align-items:center;justify-content:center;font-weight:bold;flex-shrink:0;">{{ c.name[0] }}</div>
+        <div>
+            <strong>{{ c.name }}</strong>
+            <span style="color:var(--text-muted);font-size:.85rem;margin-right:10px;" dir="ltr">{{ c.phone or '' }}</span>
+            {% if c.national_id %}<span style="color:var(--text-muted);font-size:.85rem;" dir="ltr">| {{ c.national_id }}</span>{% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Parties Results -->
+{% if results.parties %}
+<div class="card" style="margin-bottom:20px;padding:20px;">
+    <h3 style="margin-bottom:15px;color:var(--secondary-color);font-size:1rem;display:flex;align-items:center;gap:8px;">
+        <span style="background:#6366f1;color:white;width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;">{{ results.parties|length }}</span>
+        <i class="fa-solid fa-people-arrows" style="color:#6366f1;"></i> الأطراف
+    </h3>
+    {% for p in results.parties %}
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;border-radius:8px;border:1px solid var(--border-color);margin-bottom:8px;">
+        <div>
+            <strong>{{ p.name }}</strong>
+            <span style="background:#e0e7ff;color:#3730a3;padding:2px 8px;border-radius:10px;font-size:.78rem;margin-right:8px;">{{ p.role_key }}</span>
+            <span style="color:var(--text-muted);font-size:.85rem;" dir="ltr">{{ p.phone or '' }}</span>
+        </div>
+        {% if p.law_case %}
+        <a href="/cases/{{ p.case_id }}" style="color:var(--primary-color);text-decoration:none;font-size:.85rem;">{{ p.law_case.case_number }}</a>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Hearings Results -->
+{% if results.hearings %}
+<div class="card" style="margin-bottom:20px;padding:20px;">
+    <h3 style="margin-bottom:15px;color:var(--secondary-color);font-size:1rem;display:flex;align-items:center;gap:8px;">
+        <span style="background:#f59e0b;color:white;width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;">{{ results.hearings|length }}</span>
+        <i class="fa-solid fa-calendar-days" style="color:#f59e0b;"></i> الجلسات
+    </h3>
+    {% for h in results.hearings %}
+    <a href="/cases/{{ h.case_id }}" style="display:block;padding:12px;border-radius:8px;border:1px solid var(--border-color);margin-bottom:8px;text-decoration:none;color:inherit;">
+        <strong>{{ h.title }}</strong>
+        <span style="color:var(--text-muted);font-size:.85rem;margin-right:10px;" dir="ltr">{{ h.hearing_at }}</span>
+        {% if h.result_summary %}<p style="color:var(--text-muted);font-size:.85rem;margin:4px 0 0;">{{ h.result_summary[:80] }}</p>{% endif %}
+    </a>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Pleadings Results -->
+{% if results.pleadings %}
+<div class="card" style="margin-bottom:20px;padding:20px;">
+    <h3 style="margin-bottom:15px;color:var(--secondary-color);font-size:1rem;display:flex;align-items:center;gap:8px;">
+        <span style="background:#8b5cf6;color:white;width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;">{{ results.pleadings|length }}</span>
+        <i class="fa-solid fa-scroll" style="color:#8b5cf6;"></i> المرافعات
+    </h3>
+    {% for p in results.pleadings %}
+    <a href="/cases/{{ p.case_id }}" style="display:block;padding:12px;border-radius:8px;border:1px solid var(--border-color);margin-bottom:8px;text-decoration:none;color:inherit;">
+        <strong>{{ p.title }}</strong>
+        <span style="background:#e0e7ff;color:#3730a3;padding:2px 8px;border-radius:10px;font-size:.78rem;margin-right:8px;">{{ p.pleading_type_key }}</span>
+        {% if p.content_html %}<p style="color:var(--text-muted);font-size:.85rem;margin:4px 0 0;">{{ p.content_html[:100] }}</p>{% endif %}
+    </a>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Judgments Results -->
+{% if results.judgments %}
+<div class="card" style="margin-bottom:20px;padding:20px;">
+    <h3 style="margin-bottom:15px;color:var(--secondary-color);font-size:1rem;display:flex;align-items:center;gap:8px;">
+        <span style="background:#ef4444;color:white;width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;">{{ results.judgments|length }}</span>
+        <i class="fa-solid fa-gavel" style="color:#ef4444;"></i> الأحكام
+    </h3>
+    {% for j in results.judgments %}
+    <a href="/cases/{{ j.case_id }}" style="display:flex;align-items:center;justify-content:space-between;padding:12px;border-radius:8px;border:1px solid var(--border-color);margin-bottom:8px;text-decoration:none;color:inherit;">
+        <div>
+            <strong>{{ j.court_name or 'حكم قضائي' }}</strong>
+            <span style="color:var(--text-muted);font-size:.85rem;margin-right:8px;">{{ j.judge_name or '' }}</span>
+            <span style="color:var(--text-muted);font-size:.85rem;" dir="ltr">| {{ j.judgment_date }}</span>
+        </div>
+        <span style="font-size:.85rem;font-weight:600;{% if j.status_key == 'صدر لصالحنا' %}color:#10b981{% elif j.status_key == 'صدر ضدنا' %}color:#ef4444{% else %}color:#f59e0b{% endif %};">{{ j.status_key or '' }}</span>
+    </a>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% endif %} {# end total > 0 #}
+
+{% else %}
+<!-- Empty State (no search yet) -->
+<div style="text-align:center;padding:70px 20px;color:var(--text-muted);">
+    <i class="fa-solid fa-magnifying-glass-chart" style="font-size:5rem;opacity:.25;display:block;margin-bottom:20px;color:var(--primary-color);"></i>
+    <h2 style="color:var(--secondary-color);margin-bottom:10px;">ابحث في كامل قاعدة بياناتك</h2>
+    <p>أدخل كلمة البحث أعلاه للوصول الفوري إلى القضايا، الموكلين، الأطراف، الجلسات، المرافعات، والأحكام.</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:25px;">
+        {% for tip in ['محمد', 'CAS-2026', 'المحكمة التجارية', 'مذكرة رد', 'استئناف'] %}
+        <a href="/search?q={{ tip }}" style="padding:8px 16px;background:#f1f5f9;border-radius:20px;text-decoration:none;color:var(--text-muted);font-size:.9rem;transition:all .2s;" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f1f5f9'">
+            <i class="fa-solid fa-magnifying-glass" style="font-size:.8rem;"></i> {{ tip }}
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,312 @@
+{% extends "base.html" %}
+{% block title %}الأتمتة الذكية | LawSaaS{% endblock %}
+{% block content %}
+
+<style>
+.task-btn {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-family: 'Cairo', sans-serif;
+    font-size: .9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    text-align: center;
+}
+.task-btn:hover { background: #1d4ed8; transform: translateY(-2px); box-shadow: 0 4px 14px rgba(37,99,235,.35); }
+.task-btn.green  { background:#10b981; }  .task-btn.green:hover  { background:#059669; }
+.task-btn.orange { background:#f59e0b; }  .task-btn.orange:hover { background:#d97706; }
+.task-btn.purple { background:#8b5cf6; }  .task-btn.purple:hover { background:#7c3aed; }
+.task-btn.red    { background:#ef4444; }  .task-btn.red:hover    { background:#dc2626; }
+.task-btn.dark   { background:#0f172a; }  .task-btn.dark:hover   { background:#1e293b; }
+.section-card { background:white; border-radius:14px; border:1px solid var(--border-color); padding:22px; margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,.04); }
+.section-card h3 { font-size:.95rem; font-weight:800; color:var(--secondary-color); margin:0 0 16px; display:flex; align-items:center; gap:8px; }
+.result-row { display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:8px; background:#f8fafc; margin-bottom:8px; font-size:.88rem; }
+</style>
+
+<!-- Page Header -->
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+    <div>
+        <h1><i class="fa-solid fa-wand-magic-sparkles" style="color:var(--primary-color);"></i> الأتمتة الذكية</h1>
+        <p style="color:var(--text-muted);">توليد المستندات القانونية، فحص التضارب، والمهام الذكية المرتبطة بالقضايا.</p>
+    </div>
+</div>
+
+<!-- Section 1: Case Selection -->
+<div class="section-card">
+    <h3><i class="fa-solid fa-gavel" style="color:#3b82f6;"></i> اختيار القضية</h3>
+    <div style="display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:end;">
+        <div>
+            <label style="display:block;margin-bottom:6px;font-weight:600;font-size:.88rem;">القضية</label>
+            <select id="caseSelect" onchange="onCaseChange()"
+                style="width:100%;padding:11px 14px;border:1.5px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;font-size:.9rem;">
+                <option value="">-- اختر القضية --</option>
+                {% for case in cases %}
+                <option value="{{ case.id }}"
+                    data-number="{{ case.case_number }}"
+                    data-title="{{ case.title }}"
+                    data-client="{{ case.client_name or '' }}"
+                    data-court="{{ case.court_name or '' }}"
+                    data-status="{{ case.status_key or '' }}">
+                    {{ case.case_number }} — {{ case.title }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="display:block;margin-bottom:6px;font-weight:600;font-size:.88rem;">صيغة الحفظ</label>
+            <select id="saveFormat" style="padding:11px 14px;border:1.5px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;min-width:100px;">
+                <option value="PDF">PDF</option>
+                <option value="DOCX">Word</option>
+                <option value="TXT">نص</option>
+            </select>
+        </div>
+        <button class="task-btn" onclick="refreshCases()" style="width:auto;padding:11px 20px;white-space:nowrap;">
+            <i class="fa-solid fa-rotate"></i> تحديث القضايا
+        </button>
+    </div>
+    <!-- Case info banner -->
+    <div id="caseInfo" style="display:none;margin-top:14px;padding:12px 16px;background:#eff6ff;border-radius:10px;border:1px solid #bfdbfe;display:flex;gap:24px;flex-wrap:wrap;">
+        <span><i class="fa-solid fa-hashtag" style="color:#3b82f6;"></i> <strong id="ci_num"></strong></span>
+        <span><i class="fa-solid fa-user" style="color:#6366f1;"></i> <span id="ci_client"></span></span>
+        <span><i class="fa-solid fa-building-columns" style="color:#0891b2;"></i> <span id="ci_court"></span></span>
+        <span id="ci_status_wrap"><i class="fa-solid fa-circle-dot" style="color:#10b981;"></i> <span id="ci_status"></span></span>
+    </div>
+</div>
+
+<!-- Section 2: Conflict Check & Archive Search -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+    <div class="section-card">
+        <h3><i class="fa-solid fa-magnifying-glass" style="color:#ef4444;"></i> فحص التضارب</h3>
+        <div style="display:flex;gap:10px;margin-bottom:14px;">
+            <input id="conflictName" type="text" placeholder="اسم الخصم أو الطرف للبحث..."
+                style="flex:1;padding:10px 14px;border:1.5px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;"
+                onkeydown="if(event.key==='Enter') runConflictCheck()">
+            <button class="task-btn orange" onclick="runConflictCheck()" style="width:auto;padding:10px 18px;white-space:nowrap;">
+                <i class="fa-solid fa-search"></i> فحص
+            </button>
+        </div>
+        <div id="conflictResults" style="min-height:60px;"></div>
+    </div>
+
+    <div class="section-card">
+        <h3><i class="fa-solid fa-folder-magnifying-glass" style="color:#6366f1;"></i> بحث الأرشيف</h3>
+        <div style="display:flex;gap:10px;margin-bottom:14px;">
+            <input id="archiveSearch" type="text" placeholder="كلمة بحث داخل الأرشيف..."
+                style="flex:1;padding:10px 14px;border:1.5px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;"
+                onkeydown="if(event.key==='Enter') window.location='/search?q='+encodeURIComponent(this.value)">
+            <button class="task-btn purple" onclick="window.location='/search?q='+encodeURIComponent(document.getElementById('archiveSearch').value)" style="width:auto;padding:10px 18px;white-space:nowrap;">
+                <i class="fa-solid fa-search"></i> بحث
+            </button>
+        </div>
+        <p style="color:var(--text-muted);font-size:.85rem;text-align:center;padding:10px;">يبحث في القضايا والموكلين والجلسات والمذكرات والأحكام.</p>
+    </div>
+</div>
+
+<!-- Section 3: Available Tasks -->
+<div class="section-card">
+    <h3><i class="fa-solid fa-bolt" style="color:#f59e0b;"></i> المهام المتاحة</h3>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+
+        <!-- Row 1 -->
+        <button class="task-btn" onclick="generateDoc('توكيل')">
+            <i class="fa-solid fa-file-signature"></i> توليد عقد توكيل
+        </button>
+        <button class="task-btn orange" onclick="generateDoc('فاتورة')">
+            <i class="fa-solid fa-file-invoice-dollar"></i> توليد فاتورة أتعاب
+        </button>
+        <button class="task-btn green" onclick="generateDoc('صحيفة')">
+            <i class="fa-solid fa-file-contract"></i> توليد صحيفة دعوى
+        </button>
+
+        <!-- Row 2 -->
+        <button class="task-btn purple" onclick="generateDoc('استئناف')">
+            <i class="fa-solid fa-rotate-left"></i> توليد استئناف
+        </button>
+        <button class="task-btn" onclick="generateDoc('مذكرة')">
+            <i class="fa-solid fa-scroll"></i> توليد مذكرة دفاع
+        </button>
+        <button class="task-btn green" onclick="generateDoc('تقرير')">
+            <i class="fa-solid fa-chart-line"></i> توليد تقرير دوري للموكل
+        </button>
+
+        <!-- Row 3 -->
+        <button class="task-btn red" onclick="runConflictCheck()">
+            <i class="fa-solid fa-shield-halved"></i> فحص تضارب المصالح
+        </button>
+        <button class="task-btn dark" onclick="showTimeline()">
+            <i class="fa-solid fa-timeline"></i> خط زمني للقضية
+        </button>
+        <button class="task-btn orange" onclick="window.location='/documents'">
+            <i class="fa-solid fa-folder-open"></i> فهرسة / أرشيف الوثائق
+        </button>
+
+        <!-- Row 4 -->
+        <button class="task-btn purple" onclick="window.location='/reports'">
+            <i class="fa-solid fa-chart-bar"></i> إحصاءات الأداء
+        </button>
+        <button class="task-btn red" onclick="checkLimitations()">
+            <i class="fa-solid fa-hourglass-half"></i> فحص التقادم
+        </button>
+        <button class="task-btn dark" onclick="sendReportByEmail()">
+            <i class="fa-solid fa-paper-plane"></i> إرسال تقرير للموكل بالبريد
+        </button>
+    </div>
+</div>
+
+<!-- Timeline Modal -->
+<div id="timelineModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:1000;">
+    <div style="background:white;border-radius:14px;width:680px;max-width:95%;max-height:88vh;overflow-y:auto;padding:28px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <h2 style="margin:0;color:var(--secondary-color);"><i class="fa-solid fa-timeline" style="color:var(--primary-color);"></i> الخط الزمني للقضية</h2>
+            <button onclick="document.getElementById('timelineModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+        </div>
+        <div id="timelineContent"><p style="text-align:center;color:var(--text-muted);padding:30px;">جاري التحميل...</p></div>
+    </div>
+</div>
+
+<!-- Doc Generate Modal -->
+<div id="docModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:1000;">
+    <div style="background:white;border-radius:14px;width:580px;max-width:95%;padding:28px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <h2 id="docModalTitle" style="margin:0;color:var(--secondary-color);"></h2>
+            <button onclick="document.getElementById('docModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+        </div>
+        <div id="docModalBody"></div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let selectedCaseData = null;
+
+function onCaseChange() {
+    const sel = document.getElementById('caseSelect');
+    const opt = sel.options[sel.selectedIndex];
+    const info = document.getElementById('caseInfo');
+    if (!opt.value) { info.style.display = 'none'; selectedCaseData = null; return; }
+    selectedCaseData = {
+        id: opt.value,
+        number: opt.dataset.number,
+        title: opt.textContent.trim(),
+        client: opt.dataset.client,
+        court: opt.dataset.court,
+        status: opt.dataset.status
+    };
+    document.getElementById('ci_num').textContent    = opt.dataset.number;
+    document.getElementById('ci_client').textContent = opt.dataset.client || 'غير محدد';
+    document.getElementById('ci_court').textContent  = opt.dataset.court  || 'غير محدد';
+    document.getElementById('ci_status').textContent = opt.dataset.status || '';
+    info.style.display = 'flex';
+}
+
+function refreshCases() { window.location.reload(); }
+
+async function runConflictCheck() {
+    const name = document.getElementById('conflictName').value.trim();
+    if (!name) { alert('أدخل اسم الشخص للفحص'); return; }
+    const res = document.getElementById('conflictResults');
+    res.innerHTML = '<p style="text-align:center;color:var(--text-muted);">جاري الفحص...</p>';
+    try {
+        const data = await fetch(`/api/conflict-check?name=${encodeURIComponent(name)}`).then(r=>r.json());
+        if (data.results.length === 0) {
+            res.innerHTML = `<div style="text-align:center;padding:16px;background:#f0fdf4;border-radius:8px;color:#166534;font-weight:700;">
+                <i class="fa-solid fa-check-circle" style="font-size:1.4rem;margin-bottom:6px;display:block;"></i>
+                لا يوجد تضارب — "${name}" غير موجود في أي قضية أخرى</div>`;
+        } else {
+            res.innerHTML = `<div style="background:#fef3c7;border-radius:8px;padding:10px 14px;margin-bottom:12px;color:#d97706;font-weight:700;">
+                <i class="fa-solid fa-triangle-exclamation"></i> تحذير: وُجد ${data.count} تطابق محتمل</div>`;
+            data.results.forEach(r => {
+                res.innerHTML += `<div class="result-row">
+                    <i class="fa-solid fa-user-shield" style="color:#ef4444;font-size:1.2rem;flex-shrink:0;"></i>
+                    <div>
+                        <strong>${r.name}</strong> — <span style="color:#6366f1;">${r.role}</span> (${r.type})<br>
+                        <small style="color:var(--text-muted);">القضية: ${r.case_number} — ${r.case_title}</small>
+                    </div>
+                </div>`;
+            });
+        }
+    } catch(e) { res.innerHTML = '<p style="color:red;">خطأ في الاتصال بالخادم</p>'; }
+}
+
+async function showTimeline() {
+    if (!selectedCaseData) { alert('اختر قضية أولاً من القائمة أعلاه'); return; }
+    document.getElementById('timelineModal').style.display = 'flex';
+    const cont = document.getElementById('timelineContent');
+    cont.innerHTML = '<p style="text-align:center;padding:30px;color:var(--text-muted);">جاري التحميل...</p>';
+    try {
+        const data = await fetch(`/api/case/${selectedCaseData.id}/timeline`).then(r=>r.json());
+        if (!data.events.length) {
+            cont.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:30px;">لا توجد أحداث مسجلة لهذه القضية</p>';
+            return;
+        }
+        let html = '<div style="position:relative;padding-right:30px;">';
+        html += `<div style="position:absolute;right:14px;top:0;bottom:0;width:2px;background:#e2e8f0;"></div>`;
+        data.events.forEach(ev => {
+            const color = ev.type === 'جلسة' ? '#3b82f6' : '#f59e0b';
+            const icon  = ev.type === 'جلسة' ? 'fa-calendar-day' : 'fa-list-check';
+            html += `<div style="position:relative;margin-bottom:18px;">
+                <div style="position:absolute;right:-8px;top:6px;width:16px;height:16px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 0 0 2px ${color};"></div>
+                <div style="background:#f8fafc;border-radius:10px;padding:12px 16px;border:1px solid #e2e8f0;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <strong><i class="fa-solid ${icon}" style="color:${color};"></i> ${ev.title}</strong>
+                        <span style="font-size:.8rem;color:var(--text-muted);" dir="ltr">${ev.date}</span>
+                    </div>
+                    <div style="margin-top:4px;">
+                        <span style="background:${color}22;color:${color};padding:2px 10px;border-radius:10px;font-size:.78rem;font-weight:700;">${ev.type}</span>
+                        ${ev.status ? `<span style="margin-right:8px;font-size:.8rem;color:var(--text-muted);">${ev.status}</span>` : ''}
+                    </div>
+                </div>
+            </div>`;
+        });
+        html += '</div>';
+        cont.innerHTML = html;
+    } catch(e) { cont.innerHTML = '<p style="color:red;text-align:center;">خطأ في التحميل</p>'; }
+}
+
+function generateDoc(type) {
+    if (!selectedCaseData) { alert('اختر قضية أولاً من القائمة أعلاه'); return; }
+    const fmt = document.getElementById('saveFormat').value;
+    const modal = document.getElementById('docModal');
+    document.getElementById('docModalTitle').innerHTML = `<i class="fa-solid fa-file-circle-check" style="color:var(--primary-color);"></i> توليد ${type}`;
+    document.getElementById('docModalBody').innerHTML = `
+        <div style="background:#eff6ff;border-radius:10px;padding:16px;margin-bottom:16px;">
+            <p style="margin:0 0 6px;font-weight:700;">بيانات القضية المختارة:</p>
+            <p style="margin:0;font-size:.9rem;color:var(--text-muted);">
+                📁 ${selectedCaseData.number} — ${selectedCaseData.title}<br>
+                👤 الموكل: ${selectedCaseData.client || 'غير محدد'}<br>
+                🏛️ المحكمة: ${selectedCaseData.court || 'غير محدد'}
+            </p>
+        </div>
+        <div style="padding:20px;background:#f0fdf4;border-radius:10px;text-align:center;border:2px dashed #86efac;">
+            <i class="fa-solid fa-file-arrow-down" style="font-size:2.5rem;color:#10b981;margin-bottom:10px;display:block;"></i>
+            <p style="font-weight:700;color:#166534;margin:0 0 4px;">سيتم توليد ${type} بصيغة ${fmt}</p>
+            <p style="font-size:.85rem;color:var(--text-muted);margin:0;">هذه الميزة تتطلب تكامل محرك التوليد (قيد التطوير)</p>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:16px;">
+            <button onclick="document.getElementById('docModal').style.display='none'" style="padding:10px 20px;background:#e2e8f0;border:none;border-radius:8px;cursor:pointer;font-family:'Cairo',sans-serif;font-weight:600;">إغلاق</button>
+        </div>`;
+    modal.style.display = 'flex';
+}
+
+function checkLimitations() {
+    if (!selectedCaseData) { alert('اختر قضية أولاً من القائمة أعلاه'); return; }
+    window.location = `/cases/${selectedCaseData.id}`;
+}
+
+function sendReportByEmail() {
+    if (!selectedCaseData) { alert('اختر قضية أولاً من القائمة أعلاه'); return; }
+    alert(`سيتم إرسال تقرير القضية ${selectedCaseData.number} للموكل.\n(هذه الميزة تتطلب تكامل خدمة البريد الإلكتروني)`);
+}
+</script>
+{% endblock %}

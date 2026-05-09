@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+{% block title %}تنبيهات التقادم | LawSaaS{% endblock %}
+
+{% block head %}
+<style>
+.page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+.filter-card { background: var(--card-bg); border-radius: 14px; padding: 18px; border: 1px solid var(--border-color); margin-bottom: 20px; display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; box-shadow: 0 2px 8px rgba(0,0,0,.05); }
+.filter-card .fg { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 150px; }
+.filter-card label { font-size: .8rem; font-weight: 700; color: var(--text-muted); }
+.filter-card input, .filter-card select { padding: 9px 12px; border: 1.5px solid var(--border-color); border-radius: 9px; font-family: 'Cairo', sans-serif; font-size: .88rem; outline: none; background: var(--card-bg); color: var(--secondary-color); }
+.filter-card input:focus, .filter-card select:focus { border-color: var(--primary-color); }
+.grid-layout { display: grid; grid-template-columns: 360px 1fr; gap: 24px; align-items: start; }
+.form-card { background: var(--card-bg); border-radius: 14px; padding: 22px; border: 1px solid var(--border-color); box-shadow: 0 2px 8px rgba(0,0,0,.05); }
+.form-card h3 { font-size: 1.05rem; font-weight: 800; color: var(--secondary-color); margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
+.form-group { margin-bottom: 14px; display: flex; flex-direction: column; gap: 6px; }
+.form-group label { font-size: .85rem; font-weight: 700; color: var(--text-muted); }
+.form-group input, .form-group select, .form-group textarea { padding: 10px 12px; border: 1.5px solid var(--border-color); border-radius: 9px; font-family: 'Cairo', sans-serif; font-size: .88rem; background: var(--card-bg); color: var(--secondary-color); outline: none; }
+.form-group input:focus, .form-group select:focus { border-color: var(--primary-color); }
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
+.data-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.data-table th { background: #f8fafc; color: var(--text-muted); font-weight: 700; padding: 12px 14px; text-align: right; border-bottom: 2px solid var(--border-color); }
+.data-table td { padding: 12px 14px; border-bottom: 1px solid var(--border-color); color: var(--secondary-color); vertical-align: middle; }
+.data-table tr { cursor: pointer; transition: background .15s; }
+.data-table tr:hover td { background: #f0f4ff; }
+.data-table tr.selected td { background: #eff6ff; }
+.empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+.empty-state i { font-size: 3rem; opacity: .2; display: block; margin-bottom: 12px; }
+.alert-box { padding: 12px 16px; border-radius: 10px; font-size: .88rem; font-weight: 600; margin-bottom: 16px; display: none; }
+.alert-success { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+.alert-error   { background: #fee2e2; color: #7f1d1d; border: 1px solid #fecaca; }
+.status-badge { padding: 4px 12px; border-radius: 50px; font-size: .75rem; font-weight: 700; }
+.status-active { background: #fee2e2; color: #dc2626; } /* أحمر لأنه تنبيه تقادم */
+.status-completed { background: #d1fae5; color: #047857; }
+.status-expired { background: #f1f5f9; color: #475569; }
+.status-canceled { background: #fef3c7; color: #d97706; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 style="font-size:1.8rem;font-weight:800;color:var(--secondary-color);margin-bottom:4px;">
+      <i class="fa-solid fa-clock-rotate-left" style="color:#ef4444;margin-left:10px;"></i>تنبيهات التقادم
+    </h1>
+    <p style="color:var(--text-muted);font-size:.95rem;">مراقبة المواعيد النهائية وسقوط الحقوق القانونية بالتقادم.</p>
+  </div>
+</div>
+
+<div class="filter-card">
+  <div class="fg">
+    <label>بحث عام</label>
+    <input type="text" id="filterSearch" placeholder="العنوان، الملاحظات..." oninput="filterTable()">
+  </div>
+  <div class="fg">
+    <label>رقم القضية</label>
+    <input type="text" id="filterCase" placeholder="مثال: ق-2023-..." oninput="filterTable()">
+  </div>
+  <div class="fg">
+    <label>الحالة</label>
+    <select id="filterStatus" onchange="filterTable()">
+      <option value="">الكل</option>
+      <option value="ساري">ساري (تحذير)</option>
+      <option value="مكتمل">مكتمل</option>
+      <option value="منتهي">منتهي</option>
+      <option value="ملغي">ملغي</option>
+    </select>
+  </div>
+  <div class="fg">
+    <label>نوع التقادم</label>
+    <select id="filterType" onchange="filterTable()">
+      <option value="">الكل</option>
+      <option value="تقادم مدني">تقادم مدني</option>
+      <option value="تقادم جزائي">تقادم جزائي</option>
+      <option value="استحقاق إجرائي">استحقاق إجرائي</option>
+      <option value="تنبيه جلسة">تنبيه جلسة</option>
+      <option value="أخرى">أخرى</option>
+    </select>
+  </div>
+</div>
+
+<div class="grid-layout">
+  <!-- Form -->
+  <div class="form-card">
+    <h3><i class="fa-solid fa-pen-to-square" style="color:#ef4444;"></i> إضافة / تعديل تنبيه تقادم</h3>
+    <div id="alertBox" class="alert-box"></div>
+    <form onsubmit="saveRecord(event)">
+      <input type="hidden" id="recId">
+      <div class="form-group">
+        <label>القضية المرتبطة <span style="color:#ef4444;">*</span></label>
+        <select id="fCaseId" required>
+          <option value="">-- اختر القضية --</option>
+          {% for c in cases %}
+          <option value="{{ c.id }}">{{ c.case_number }} - {{ c.title[:30] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>العنوان / الوصف <span style="color:#ef4444;">*</span></label>
+        <input type="text" id="fTitle" required placeholder="مثال: موعد الاستئناف الأخير...">
+      </div>
+      <div class="form-group" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label>النوع</label>
+          <select id="fType">
+            <option>تقادم مدني</option>
+            <option>تقادم جزائي</option>
+            <option>استحقاق إجرائي</option>
+            <option>تنبيه جلسة</option>
+            <option>أخرى</option>
+          </select>
+        </div>
+        <div>
+          <label>الحالة</label>
+          <select id="fStatus">
+            <option>ساري</option>
+            <option>مكتمل</option>
+            <option>منتهي</option>
+            <option>ملغي</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label>تاريخ البدء</label>
+          <input type="date" id="fStartDate">
+        </div>
+        <div>
+          <label>تاريخ الاستحقاق <span style="color:#ef4444;">*</span></label>
+          <input type="date" id="fDueDate" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>ملاحظات (اختياري)</label>
+        <textarea id="fNotes" rows="2" placeholder="إجراءات مطلوبة..."></textarea>
+      </div>
+      <div class="btn-row">
+        <button type="submit" class="action-btn" style="background:linear-gradient(135deg,#10b981,#047857);">
+          <i class="fa-solid fa-floppy-disk"></i> حفظ
+        </button>
+        <button type="button" class="action-btn" style="background:linear-gradient(135deg,#6366f1,#4f46e5);" onclick="clearForm()">
+          <i class="fa-solid fa-plus"></i> جديد
+        </button>
+        <button type="button" class="action-btn" style="background:linear-gradient(135deg,#ef4444,#dc2626);" onclick="deleteRecord()">
+          <i class="fa-solid fa-trash"></i> حذف
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Table -->
+  <div class="form-card" style="padding:0;overflow:hidden;">
+    <div style="padding:18px 22px;border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;">
+      <h3 style="margin:0;"><i class="fa-solid fa-list" style="color:#ef4444;margin-left:8px;"></i> قائمة التقادم والاستحقاقات</h3>
+      <span style="font-size:.8rem;font-weight:700;color:var(--text-muted);background:#f1f5f9;padding:4px 10px;border-radius:50px;">{{ records|length }} سجل</span>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>القضية</th>
+            <th>العنوان</th>
+            <th>النوع</th>
+            <th>تاريخ الاستحقاق</th>
+            <th>الحالة</th>
+          </tr>
+        </thead>
+        <tbody id="refTbody">
+          {% for r in records %}
+          <tr onclick="selectRecord({{ r.id }}, this)" data-search="{{ r.title | lower }} {{ (r.notes or '') | lower }}" data-case="{{ r.law_case.case_number if r.law_case else '' }}" data-status="{{ r.status_key }}" data-type="{{ r.limitation_type_key }}">
+            <td><strong>{{ r.law_case.case_number if r.law_case else '—' }}</strong></td>
+            <td><div style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ r.title }}</div></td>
+            <td>{{ r.limitation_type_key }}</td>
+            <td style="direction:ltr;text-align:right;font-weight:700;color:var(--secondary-color);">{{ r.due_date }}</td>
+            <td>
+              {% if r.status_key == 'ساري' %}<span class="status-badge status-active">ساري</span>
+              {% elif r.status_key == 'مكتمل' %}<span class="status-badge status-completed">مكتمل</span>
+              {% elif r.status_key == 'منتهي' %}<span class="status-badge status-expired">منتهي</span>
+              {% else %}<span class="status-badge status-canceled">{{ r.status_key }}</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if not records %}
+      <div class="empty-state">
+        <i class="fa-solid fa-clock-rotate-left"></i>
+        <p style="font-weight:600;">لا توجد تنبيهات تقادم مسجلة بعد.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const allRecords = {{ records_json | safe }};
+let selectedId = null;
+
+function showAlert(msg, type='success') {
+  const el = document.getElementById('alertBox');
+  el.className = 'alert-box alert-' + type;
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 4000);
+}
+
+function filterTable() {
+  const search = document.getElementById('filterSearch').value.toLowerCase();
+  const caseNum = document.getElementById('filterCase').value.toLowerCase();
+  const status = document.getElementById('filterStatus').value;
+  const type = document.getElementById('filterType').value;
+  
+  document.querySelectorAll('#refTbody tr').forEach(row => {
+    const textSearch = row.dataset.search || '';
+    const textCase = row.dataset.case || '';
+    const rStatus = row.dataset.status || '';
+    const rType = row.dataset.type || '';
+    
+    const match1 = !search || textSearch.includes(search);
+    const match2 = !caseNum || textCase.includes(caseNum);
+    const match3 = !status || rStatus === status;
+    const match4 = !type || rType === type;
+    
+    row.style.display = (match1 && match2 && match3 && match4) ? '' : 'none';
+  });
+}
+
+function selectRecord(id, row) {
+  selectedId = id;
+  document.querySelectorAll('#refTbody tr').forEach(r => r.classList.remove('selected'));
+  row.classList.add('selected');
+  const rec = allRecords.find(r => r.id === id);
+  if (!rec) return;
+  document.getElementById('recId').value = rec.id;
+  document.getElementById('fCaseId').value = rec.case_id || '';
+  document.getElementById('fTitle').value = rec.title || '';
+  document.getElementById('fType').value = rec.limitation_type_key || 'تقادم مدني';
+  document.getElementById('fStatus').value = rec.status_key || 'ساري';
+  document.getElementById('fStartDate').value = rec.start_date || '';
+  document.getElementById('fDueDate').value = rec.due_date || '';
+  document.getElementById('fNotes').value = rec.notes || '';
+}
+
+function clearForm() {
+  selectedId = null;
+  document.getElementById('recId').value = '';
+  document.getElementById('fCaseId').value = '';
+  document.getElementById('fTitle').value = '';
+  document.getElementById('fType').value = 'تقادم مدني';
+  document.getElementById('fStatus').value = 'ساري';
+  document.getElementById('fStartDate').value = '';
+  document.getElementById('fDueDate').value = '';
+  document.getElementById('fNotes').value = '';
+  document.querySelectorAll('#refTbody tr').forEach(r => r.classList.remove('selected'));
+}
+
+async function saveRecord(e) {
+  e.preventDefault();
+  const payload = {
+    id: document.getElementById('recId').value || null,
+    case_id: document.getElementById('fCaseId').value,
+    title: document.getElementById('fTitle').value.trim(),
+    limitation_type_key: document.getElementById('fType').value,
+    status_key: document.getElementById('fStatus').value,
+    start_date: document.getElementById('fStartDate').value,
+    due_date: document.getElementById('fDueDate').value,
+    notes: document.getElementById('fNotes').value.trim()
+  };
+  const res = await fetch('/api/limitations/save', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+  const data = await res.json();
+  if (data.ok) { showAlert(data.message); setTimeout(() => location.reload(), 1000); }
+  else showAlert(data.message, 'error');
+}
+
+async function deleteRecord() {
+  if (!selectedId) { showAlert('اختر سجلاً أولاً', 'error'); return; }
+  if (!confirm('هل تريد حذف هذا التنبيه؟')) return;
+  const res = await fetch(`/api/limitations/delete/${selectedId}`, { method: 'DELETE' });
+  const data = await res.json();
+  if (data.ok) { showAlert(data.message); setTimeout(() => location.reload(), 900); }
+  else showAlert(data.message, 'error');
+}
+</script>
+{% endblock %}

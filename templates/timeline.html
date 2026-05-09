@@ -1,0 +1,542 @@
+{% extends "base.html" %}
+
+{% block title %}الخط الزمني | LawSaaS{% endblock %}
+
+{% block head %}
+<style>
+/* ===== TIMELINE PAGE STYLES ===== */
+.tl-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+.tl-header-left h1 {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--secondary-color);
+    margin-bottom: 6px;
+}
+.tl-header-left p {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+}
+
+/* ---- Filter bar ---- */
+.tl-filters {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.tl-filter-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 50px;
+    border: 2px solid var(--border-color);
+    background: var(--card-bg);
+    color: var(--text-muted);
+    font-family: 'Cairo', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+.tl-filter-btn:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background: #eff6ff;
+}
+.tl-filter-btn.active {
+    border-color: transparent;
+    color: white;
+}
+.tl-filter-btn.active.all    { background: linear-gradient(135deg,#6366f1,#4f46e5); }
+.tl-filter-btn.active.hearing { background: linear-gradient(135deg,#3b82f6,#1d4ed8); }
+.tl-filter-btn.active.task    { background: linear-gradient(135deg,#f59e0b,#d97706); }
+.tl-filter-btn.active.judgment{ background: linear-gradient(135deg,#10b981,#047857); }
+.tl-filter-btn.active.doc     { background: linear-gradient(135deg,#8b5cf6,#7c3aed); }
+.tl-filter-btn.active.note    { background: linear-gradient(135deg,#ec4899,#db2777); }
+.tl-filter-btn.active.corr    { background: linear-gradient(135deg,#0ea5e9,#0284c7); }
+
+/* ---- Stats strip ---- */
+.tl-stats-strip {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+}
+.tl-stat-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: white;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+}
+.tl-stat-pill i { font-size: 1rem; }
+.pill-hearing  { background: linear-gradient(135deg,#3b82f6,#1d4ed8); }
+.pill-task     { background: linear-gradient(135deg,#f59e0b,#d97706); }
+.pill-judgment { background: linear-gradient(135deg,#10b981,#047857); }
+.pill-doc      { background: linear-gradient(135deg,#8b5cf6,#7c3aed); }
+.pill-note     { background: linear-gradient(135deg,#ec4899,#db2777); }
+.pill-corr     { background: linear-gradient(135deg,#0ea5e9,#0284c7); }
+
+/* ---- Timeline container ---- */
+.tl-wrapper {
+    position: relative;
+    padding-right: 32px;
+}
+
+/* Vertical line */
+.tl-wrapper::before {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0;
+    right: 14px;
+    width: 3px;
+    background: linear-gradient(to bottom, #6366f1 0%, #3b82f6 40%, #10b981 80%, #f59e0b 100%);
+    border-radius: 99px;
+}
+
+/* ---- Year/Month separator ---- */
+.tl-month-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 28px 0 16px;
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    position: relative;
+}
+.tl-month-label::before {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border-color);
+}
+.tl-month-badge {
+    background: var(--secondary-color);
+    color: white;
+    padding: 4px 14px;
+    border-radius: 50px;
+    font-size: 0.78rem;
+    white-space: nowrap;
+}
+
+/* ---- Timeline item ---- */
+.tl-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 18px;
+    margin-bottom: 18px;
+    position: relative;
+    animation: tl-fadein 0.45s ease both;
+}
+@keyframes tl-fadein {
+    from { opacity:0; transform: translateX(20px); }
+    to   { opacity:1; transform: translateX(0); }
+}
+.tl-item[data-delay="1"] { animation-delay:.05s }
+.tl-item[data-delay="2"] { animation-delay:.1s }
+.tl-item[data-delay="3"] { animation-delay:.15s }
+.tl-item[data-delay="4"] { animation-delay:.2s }
+.tl-item[data-delay="5"] { animation-delay:.25s }
+
+/* dot */
+.tl-dot {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    color: white;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 4px white, 0 4px 10px rgba(0,0,0,0.15);
+    position: relative;
+    z-index: 2;
+}
+.dot-hearing  { background: linear-gradient(135deg,#3b82f6,#1d4ed8); }
+.dot-task     { background: linear-gradient(135deg,#f59e0b,#d97706); }
+.dot-judgment { background: linear-gradient(135deg,#10b981,#047857); }
+.dot-doc      { background: linear-gradient(135deg,#8b5cf6,#7c3aed); }
+.dot-note     { background: linear-gradient(135deg,#ec4899,#db2777); }
+.dot-corr     { background: linear-gradient(135deg,#0ea5e9,#0284c7); }
+
+/* card */
+.tl-card {
+    flex: 1;
+    background: var(--card-bg);
+    border-radius: 14px;
+    padding: 16px 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border: 1px solid var(--border-color);
+    border-right: 4px solid transparent;
+    transition: box-shadow 0.25s ease, transform 0.25s ease;
+    cursor: default;
+}
+.tl-card:hover {
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+.card-hearing  { border-right-color: #3b82f6; }
+.card-task     { border-right-color: #f59e0b; }
+.card-judgment { border-right-color: #10b981; }
+.card-doc      { border-right-color: #8b5cf6; }
+.card-note     { border-right-color: #ec4899; }
+.card-corr     { border-right-color: #0ea5e9; }
+
+.tl-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+.tl-card-title {
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: var(--secondary-color);
+    line-height: 1.4;
+}
+.tl-type-badge {
+    padding: 3px 12px;
+    border-radius: 50px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.badge-hearing  { background:#dbeafe; color:#1d4ed8; }
+.badge-task     { background:#fef3c7; color:#d97706; }
+.badge-judgment { background:#d1fae5; color:#047857; }
+.badge-doc      { background:#ede9fe; color:#7c3aed; }
+.badge-note     { background:#fce7f3; color:#db2777; }
+.badge-corr     { background:#e0f2fe; color:#0284c7; }
+
+.tl-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    flex-wrap: wrap;
+}
+.tl-card-meta i { font-size: 0.78rem; }
+
+.tl-status-chip {
+    padding: 2px 10px;
+    border-radius: 50px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+.chip-pending    { background:#f1f5f9; color:#475569; }
+.chip-in_progress{ background:#dbeafe; color:#1d4ed8; }
+.chip-completed  { background:#d1fae5; color:#047857; }
+.chip-done       { background:#d1fae5; color:#047857; }
+.chip-win        { background:#d1fae5; color:#047857; }
+.chip-lose       { background:#fee2e2; color:#dc2626; }
+.chip-default    { background:#f1f5f9; color:#475569; }
+
+/* ---- Empty state ---- */
+.tl-empty {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--text-muted);
+}
+.tl-empty i {
+    font-size: 4rem;
+    opacity: 0.25;
+    margin-bottom: 16px;
+    display: block;
+}
+.tl-empty p { font-size: 1.05rem; font-weight: 600; }
+
+/* ---- Case filter dropdown ---- */
+.tl-case-select {
+    padding: 9px 14px;
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--card-bg);
+    font-family: 'Cairo', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--secondary-color);
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s;
+    min-width: 200px;
+}
+.tl-case-select:focus {
+    border-color: var(--primary-color);
+}
+
+/* ---- Upcoming indicator ---- */
+.tl-upcoming-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #f59e0b;
+    background: #fef3c7;
+    padding: 2px 8px;
+    border-radius: 50px;
+}
+.tl-past-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 2px 8px;
+    border-radius: 50px;
+}
+.tl-today-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #7c3aed;
+    background: #ede9fe;
+    padding: 2px 8px;
+    border-radius: 50px;
+}
+
+/* ---- Scroll to top ---- */
+.scroll-top-btn {
+    position: fixed;
+    bottom: 32px;
+    left: 32px;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: linear-gradient(135deg,#6366f1,#4f46e5);
+    color: white;
+    border: none;
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 20px rgba(99,102,241,0.4);
+    z-index: 999;
+    transition: transform 0.2s;
+}
+.scroll-top-btn:hover { transform: scale(1.1); }
+.scroll-top-btn.visible { display: flex; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="tl-header">
+    <div class="tl-header-left">
+        <h1><i class="fa-solid fa-timeline" style="color:#6366f1;margin-left:10px;"></i>الخط الزمني</h1>
+        <p>عرض زمني شامل لجميع الجلسات والمهام والأحكام والوثائق مرتبةً تاريخياً.</p>
+    </div>
+    <div class="tl-filters">
+        <!-- Case filter -->
+        <select class="tl-case-select" id="caseFilter" onchange="applyFilters()">
+            <option value="all">جميع القضايا</option>
+            {% for c in cases %}
+            <option value="{{ c.id }}">{{ c.case_number }} – {{ c.title[:35] }}</option>
+            {% endfor %}
+        </select>
+        <!-- Type filter buttons -->
+        <button class="tl-filter-btn active all" id="btn-all" onclick="setFilter('all')">
+            <i class="fa-solid fa-layer-group"></i> الكل
+        </button>
+        <button class="tl-filter-btn hearing" id="btn-hearing" onclick="setFilter('hearing')">
+            <i class="fa-solid fa-calendar-days"></i> جلسات
+        </button>
+        <button class="tl-filter-btn task" id="btn-task" onclick="setFilter('task')">
+            <i class="fa-solid fa-list-check"></i> مهام
+        </button>
+        <button class="tl-filter-btn judgment" id="btn-judgment" onclick="setFilter('judgment')">
+            <i class="fa-solid fa-scale-balanced"></i> أحكام
+        </button>
+        <button class="tl-filter-btn doc" id="btn-doc" onclick="setFilter('doc')">
+            <i class="fa-solid fa-file-lines"></i> وثائق
+        </button>
+        <button class="tl-filter-btn note" id="btn-note" onclick="setFilter('note')">
+            <i class="fa-solid fa-note-sticky"></i> ملاحظات
+        </button>
+        <button class="tl-filter-btn corr" id="btn-corr" onclick="setFilter('corr')">
+            <i class="fa-solid fa-envelope"></i> مراسلات
+        </button>
+    </div>
+</div>
+
+<!-- Stats strip -->
+<div class="tl-stats-strip">
+    <div class="tl-stat-pill pill-hearing">
+        <i class="fa-solid fa-calendar-days"></i> {{ hearings|length }} جلسة
+    </div>
+    <div class="tl-stat-pill pill-task">
+        <i class="fa-solid fa-list-check"></i> {{ tasks|length }} مهمة
+    </div>
+    <div class="tl-stat-pill pill-judgment">
+        <i class="fa-solid fa-scale-balanced"></i> {{ judgments|length }} حكم
+    </div>
+    <div class="tl-stat-pill pill-doc">
+        <i class="fa-solid fa-file-lines"></i> {{ documents|length }} وثيقة
+    </div>
+    <div class="tl-stat-pill pill-note">
+        <i class="fa-solid fa-note-sticky"></i> {{ notes|length }} ملاحظة
+    </div>
+    <div class="tl-stat-pill pill-corr">
+        <i class="fa-solid fa-envelope"></i> {{ correspondences|length }} مراسلة
+    </div>
+</div>
+
+<!-- Timeline -->
+<div class="tl-wrapper" id="tlWrapper">
+    {% if not events %}
+    <div class="tl-empty">
+        <i class="fa-solid fa-timeline"></i>
+        <p>لا توجد أحداث مسجلة حتى الآن.</p>
+    </div>
+    {% else %}
+    {% set ns = namespace(current_month='') %}
+    {% for ev in events %}
+    {% set ev_month = ev.date[:7] if ev.date else '' %}
+    {% if ev_month != ns.current_month %}
+    {% set ns.current_month = ev_month %}
+    <div class="tl-month-label" data-month-sep="{{ ev_month }}">
+        <div class="tl-month-badge">
+            <i class="fa-regular fa-calendar" style="margin-left:6px;"></i>
+            {{ ev.month_label }}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="tl-item"
+         data-type="{{ ev.type }}"
+         data-case="{{ ev.case_id or 'none' }}"
+         data-delay="{{ loop.index0 % 6 + 1 }}"
+         id="tl-item-{{ loop.index }}">
+        <!-- Dot -->
+        <div class="tl-dot dot-{{ ev.type }}">
+            <i class="fa-solid {{ ev.icon }}"></i>
+        </div>
+        <!-- Card -->
+        <div class="tl-card card-{{ ev.type }}">
+            <div class="tl-card-top">
+                <div class="tl-card-title">{{ ev.title }}</div>
+                <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                    <span class="tl-type-badge badge-{{ ev.type }}">{{ ev.type_label }}</span>
+                    {% if ev.timing == 'upcoming' %}
+                    <span class="tl-upcoming-badge"><i class="fa-solid fa-clock"></i> قادم</span>
+                    {% elif ev.timing == 'today' %}
+                    <span class="tl-today-badge"><i class="fa-solid fa-star"></i> اليوم</span>
+                    {% else %}
+                    <span class="tl-past-badge"><i class="fa-solid fa-check"></i> مضى</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="tl-card-meta">
+                {% if ev.date %}
+                <span><i class="fa-regular fa-calendar-check"></i> {{ ev.date }}</span>
+                {% endif %}
+                {% if ev.case_title %}
+                <a href="/cases/{{ ev.case_id }}" style="color:var(--primary-color);text-decoration:none;font-weight:700;">
+                    <i class="fa-solid fa-gavel"></i> {{ ev.case_title[:40] }}
+                </a>
+                {% endif %}
+                {% if ev.sub %}
+                <span><i class="fa-solid fa-circle-info"></i> {{ ev.sub }}</span>
+                {% endif %}
+                {% if ev.status_chip %}
+                <span class="tl-status-chip {{ ev.status_chip.cls }}">{{ ev.status_chip.label }}</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+</div>
+
+<!-- Scroll to top btn -->
+<button class="scroll-top-btn" id="scrollTopBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+    <i class="fa-solid fa-arrow-up"></i>
+</button>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ===== Filter state =====
+let activeType = 'all';
+let activeCase = 'all';
+
+function setFilter(type) {
+    activeType = type;
+    // Update button states
+    document.querySelectorAll('.tl-filter-btn').forEach(b => {
+        b.classList.remove('active');
+    });
+    const btn = document.getElementById('btn-' + type);
+    if (btn) btn.classList.add('active');
+    applyFilters();
+}
+
+function applyFilters() {
+    activeCase = document.getElementById('caseFilter').value;
+    const items = document.querySelectorAll('.tl-item');
+    const seps  = document.querySelectorAll('.tl-month-label');
+
+    // Show/hide items
+    const visibleMonths = new Set();
+    items.forEach(item => {
+        const typeMatch = (activeType === 'all') || (item.dataset.type === activeType);
+        const caseMatch = (activeCase === 'all') || (item.dataset.case === activeCase);
+        const show = typeMatch && caseMatch;
+        item.style.display = show ? 'flex' : 'none';
+        if (show) {
+            // find the last month separator before this item
+            let prev = item.previousElementSibling;
+            while (prev) {
+                if (prev.classList.contains('tl-month-label')) {
+                    visibleMonths.add(prev.dataset.monthSep);
+                    break;
+                }
+                prev = prev.previousElementSibling;
+            }
+        }
+    });
+
+    // Show/hide month separators
+    seps.forEach(sep => {
+        sep.style.display = visibleMonths.has(sep.dataset.monthSep) ? 'flex' : 'none';
+    });
+}
+
+// ===== Scroll to top button =====
+window.addEventListener('scroll', () => {
+    const btn = document.getElementById('scrollTopBtn');
+    if (window.scrollY > 400) btn.classList.add('visible');
+    else btn.classList.remove('visible');
+});
+
+// ===== Init =====
+document.addEventListener('DOMContentLoaded', () => {
+    applyFilters();
+});
+</script>
+{% endblock %}

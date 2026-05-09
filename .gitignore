@@ -1,0 +1,58 @@
+# ============================================
+# .gitignore — LawSaaS
+# ============================================
+
+# --- بيانات سرية (NEVER COMMIT) ---
+.env
+smtp.conf
+*.conf
+
+# --- قاعدة البيانات المحلية ---
+*.db
+*.sqlite
+*.sqlite3
+
+# --- Python cache ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+.Python
+
+# --- Virtual environments ---
+venv/
+env/
+.venv/
+.env/
+ENV/
+
+# --- IDE ---
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# --- Backups ---
+*.backup
+*.bak
+
+# --- Uploads (لا نرفع ملفات المستخدمين) ---
+static/uploads/
+
+# --- Alembic ---
+# نرفع migrations لكن لا نرفع قاعدة بيانات الـ alembic temp
+alembic/versions/__pycache__/
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Logs ---
+*.log
+logs/
+
+# --- Distribution ---
+dist/
+build/
+*.egg-info/

@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+
+{% block title %}القضايا | LawSaaS{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
+    <div>
+        <h1>سجل القضايا</h1>
+        <p>إدارة وتتبع سير القضايا في مكتبك بكل احترافية وسهولة.</p>
+    </div>
+    <button class="primary-btn" onclick="openAddCaseModal()">
+        <i class="fa-solid fa-plus"></i> فتح قضية جديدة
+    </button>
+</div>
+
+<div class="content-section">
+    <div class="table-container">
+        <table class="saas-table">
+            <thead>
+                <tr>
+                    <th>رقم القضية</th>
+                    <th>العنوان</th>
+                    <th>حالة القضية</th>
+                    <th>المحامي المسؤول</th>
+                    <th>تاريخ الفتح</th>
+                    <th>إجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for case in cases %}
+                <tr>
+                    <td><strong>{{ case.case_number }}</strong></td>
+                    <td>{{ case.title }}</td>
+                    <td>
+                        {% if case.status_key == 'draft' %}<span class="status-badge status-pending">قيد الدراسة</span>{% endif %}
+                        {% if case.status_key == 'active' %}<span class="status-badge status-active">نشطة</span>{% endif %}
+                        {% if case.status_key == 'closed' %}<span class="status-badge" style="background:#e2e8f0; color:#475569;">مغلقة</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if case.lead_lawyer_id %}
+                            {% for lawyer in lawyers if lawyer.id == case.lead_lawyer_id %}
+                                {{ lawyer.name }}
+                            {% endfor %}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>{{ case.created_at.split(' ')[0] if case.created_at else '-' }}</td>
+                    <td style="display:flex;gap:5px;">
+                        <a href="/cases/{{ case.id }}" class="action-btn view-btn" title="اللوحة الموحدة للقضية"><i class="fa-solid fa-folder-open"></i></a>
+                        <button class="action-btn" style="color:var(--primary-color);" title="تعديل القضية" onclick="openEditCaseModal('{{ case.id }}', '{{ case.title }}', '{{ case.case_number }}', '{{ case.law_clients[0].id if case.law_clients else '' }}', '{{ case.lead_lawyer_id or '' }}', '{{ case.status_key }}')"><i class="fa-solid fa-pen"></i></button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 40px; color: #64748b;">
+                        <i class="fa-solid fa-gavel" style="font-size: 3rem; margin-bottom: 10px; opacity: 0.5;"></i>
+                        <br>
+                        لا توجد قضايا مضافة حتى الآن.<br>اضغط على "فتح قضية جديدة" للبدء!
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add Case Modal -->
+<div id="addCaseModal" class="modal-overlay">
+    <div class="modal-content" style="width: 600px;">
+        <div class="modal-header">
+            <h2>فتح قضية جديدة</h2>
+            <button class="close-btn" onclick="closeAddCaseModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+            <form id="addCaseForm" method="POST" action="/cases/add">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>عنوان القضية الوصفي (مثال: نزاع تجاري) *</label>
+                        <input type="text" name="title" required class="form-control" placeholder="اكتب وصفاً قصيراً...">
+                    </div>
+                    <div class="form-group">
+                        <label>رقم القضية الداخلي (مميّز) *</label>
+                        <input type="text" name="case_number" required class="form-control" placeholder="CAS-2026-001">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>اختيار الموكل المرتبط *</label>
+                    <select name="client_id" required class="form-control">
+                        <option value="">-- اختر موكلاً من السجل --</option>
+                        {% for client in clients %}
+                        <option value="{{ client.id }}">{{ client.name }} ({{ client.national_id or 'بدون هوية' }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>المحامي المسؤول</label>
+                        <select name="lead_lawyer_id" class="form-control">
+                            <option value="">-- بدون تعيين حالياً --</option>
+                            {% for lawyer in lawyers %}
+                            <option value="{{ lawyer.id }}">{{ lawyer.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>الحالة المبدئية</label>
+                        <select name="status_key" class="form-control">
+                            <option value="draft">قيد الدراسة المبدئية</option>
+                            <option value="active">نشطة ومرافعة جارية</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="cancel-btn" onclick="closeAddCaseModal()">إلغاء</button>
+                    <button type="submit" class="submit-btn">حفظ القضية</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Case Modal -->
+<div id="editCaseModal" class="modal-overlay">
+    <div class="modal-content" style="width: 600px;">
+        <div class="modal-header">
+            <h2>تعديل بيانات القضية</h2>
+            <button class="close-btn" onclick="closeEditCaseModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+            <!-- The action targets the existing edit_case route in main.py -->
+            <form id="editCaseForm" method="POST" action="">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>عنوان القضية الوصفي *</label>
+                        <input type="text" name="title" id="edit_case_title" required class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>رقم القضية الداخلي *</label>
+                        <input type="text" name="case_number" id="edit_case_number" required class="form-control">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>اختيار الموكل المرتبط *</label>
+                    <select name="client_id" id="edit_case_client" required class="form-control">
+                        <option value="">-- اختر الموكل --</option>
+                        {% for client in clients %}
+                        <option value="{{ client.id }}">{{ client.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>المحامي المسؤول</label>
+                        <select name="lead_lawyer_id" id="edit_case_lawyer" class="form-control">
+                            <option value="">-- بدون تعيين حالياً --</option>
+                            {% for lawyer in lawyers %}
+                            <option value="{{ lawyer.id }}">{{ lawyer.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>الحالة المبدئية</label>
+                        <select name="status_key" id="edit_case_status" class="form-control">
+                            <option value="draft">قيد الدراسة المبدئية</option>
+                            <option value="active">نشطة ومرافعة جارية</option>
+                            <option value="closed">مغلقة / منتهية</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="cancel-btn" onclick="closeEditCaseModal()">إلغاء</button>
+                    <button type="submit" class="submit-btn">حفظ التعديلات</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<style>
+/* Same Modal Styles as Clients Page are handled by inline and base CSS for now */
+.modal-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(15, 23, 42, 0.6);
+    display: flex; justify-content: center; align-items: center;
+    z-index: 1000; opacity: 0; visibility: hidden; transition: all 0.3s ease;
+    backdrop-filter: blur(4px);
+}
+.modal-overlay.active { opacity: 1; visibility: visible; }
+.modal-content { background: white; border-radius: 16px; width: 500px; max-width: 90%; transform: translateY(20px); transition: all 0.3s ease; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
+.modal-overlay.active .modal-content { transform: translateY(0); }
+.modal-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid var(--border-color); }
+.modal-header h2 { font-size: 1.25rem; color: var(--secondary-color); }
+.close-btn { background: none; border: none; font-size: 1.25rem; color: var(--text-muted); cursor: pointer; }
+.modal-body { padding: 24px; }
+.form-group { margin-bottom: 20px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.form-group label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; color: var(--text-main); }
+.form-control { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.95rem; font-family: inherit; }
+.form-control:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+.modal-footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
+.cancel-btn { background: white; border: 1px solid var(--border-color); padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--text-main); }
+.submit-btn { background: var(--primary-color); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+.primary-btn { background-color: var(--primary-color); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 1rem; transition: all 0.3s; }
+.primary-btn:hover { background-color: var(--primary-dark); }
+.action-btn { background: none; border: none; padding: 6px; cursor: pointer; border-radius: 4px; font-size: 1.1rem; }
+.view-btn { color: var(--primary-color); }
+.action-btn:hover { background-color: #f1f5f9; }
+</style>
+
+<script>
+    function openAddCaseModal() { document.getElementById('addCaseModal').classList.add('active'); }
+    function closeAddCaseModal() { document.getElementById('addCaseModal').classList.remove('active'); }
+    
+    function openEditCaseModal(id, title, number, clientId, lawyerId, status) {
+        document.getElementById('editCaseForm').action = "/cases/" + id + "/edit";
+        document.getElementById('edit_case_title').value = title;
+        document.getElementById('edit_case_number').value = number;
+        document.getElementById('edit_case_client').value = clientId;
+        document.getElementById('edit_case_lawyer').value = lawyerId;
+        document.getElementById('edit_case_status').value = status;
+        document.getElementById('editCaseModal').classList.add('active');
+    }
+    function closeEditCaseModal() { document.getElementById('editCaseModal').classList.remove('active'); }
+</script>
+{% endblock %}
