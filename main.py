@@ -22,6 +22,10 @@ import shutil
 
 app = FastAPI(title="Lexzur Clone - SaaS Law Firm Management", version="1.0")
 
+# Ensure database tables are created (critical for Railway deployment)
+from database.database import init_db
+init_db()
+
 # Ensure static and templates directories exist for the server
 os.makedirs("static/css", exist_ok=True)
 os.makedirs("static/js", exist_ok=True)
