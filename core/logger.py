@@ -6,8 +6,13 @@ import logging
 import os
 from logging.handlers import RotatingFileHandler
 
-LOG_DIR = "logs"
-os.makedirs(LOG_DIR, exist_ok=True)
+# في بيئة الإنتاج (Railway/Render) الـ filesystem محمي من الكتابة
+# لذا نستخدم /tmp/logs (متاح للكتابة دائماً على أي سيرفر Linux)
+LOG_DIR = "/tmp/logs" if os.path.exists("/tmp") else "logs"
+try:
+    os.makedirs(LOG_DIR, exist_ok=True)
+except PermissionError:
+    LOG_DIR = "/tmp"  # fallback نهائي
 
 def get_logger(name: str = "law_firm") -> logging.Logger:
     logger = logging.getLogger(name)
