@@ -7,18 +7,15 @@ from sqlalchemy.orm import sessionmaker
 from .models import Base
 import os
 
-# تحميل ملف .env إذا كان موجوداً
+# تحميل ملف .env — لكن لا يتغلب على متغيرات Railway (override=False)
 try:
     from dotenv import load_dotenv
-    load_dotenv()
+    load_dotenv(override=False)  # Railway DATABASE_URL له الأولوية دائماً
 except ImportError:
     pass  # في الإنتاج نستخدم متغيرات البيئة مباشرة
 
-# رابط قاعدة البيانات — من متغير البيئة أو SQLite كـ fallback
-SQLALCHEMY_DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "sqlite:///./law_firm.db"
-)
+# رابط قاعدة البيانات — يقرأ من Railway أولاً (PostgreSQL)
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./law_firm.db")
 
 # إصلاح رابط Heroku/Render القديم (postgres:// → postgresql://)
 if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
