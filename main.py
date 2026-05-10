@@ -952,6 +952,32 @@ async def api_register_secure(request: Request, db: Session = Depends(get_db)):
         app_logger.error(f"api_register_secure error: {exc}", exc_info=True)
         return _J({"success": False, "error": "حدث خطأ داخلي"}, status_code=500)
 
+@app.post("/api/verify-register-otp")
+async def api_verify_register_otp(request: Request, db: Session = Depends(get_db)):
+    from fastapi.responses import JSONResponse as _J
+    try:
+        data  = await request.json()
+        email = (data.get("email") or "").strip().lower()
+        code  = (data.get("code")  or "").strip()
+        if not email or not code:
+            return _J({"success": False, "error": "البيانات غير مكتملة"}, status_code=400)
+        if not verify_otp(email, code):
+            return _J({"success": False, "error": "رمز التحقق غير صحيح أو منتهي الصلاحية"}, status_code=400)
+        # تفعيل الحساب بعد التحقق
+        user = db.query(AccessProfiles).filter(
+            AccessProfiles.email == email,
+            AccessProfiles.email_verified == 0
+        ).first()
+        if user:
+            user.email_verified = 1
+            db.commit()
+            app_logger.info(f"EMAIL_VERIFIED | user={user.id} | {email}")
+        return _J({"success": True, "message": "تم التحقق بنجاح"})
+    except Exception as exc:
+        app_logger.error(f"verify_register_otp error: {exc}", exc_info=True)
+        return _J({"success": False, "error": "حدث خطأ داخلي"}, status_code=500)
+
+
 @app.post("/documents/add")
 async def add_document(
     request: Request,

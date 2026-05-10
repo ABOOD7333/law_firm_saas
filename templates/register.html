@@ -88,6 +88,10 @@
                     <div class="prog-circle" id="pc3">3</div>
                     <span class="prog-label" id="pl3">كلمة المرور</span>
                 </div>
+                <div class="prog-step">
+                    <div class="prog-circle" id="pc4">4</div>
+                    <span class="prog-label" id="pl4">التحقق</span>
+                </div>
             </div>
 
             <!-- الخطوة 1: اختيار الدور -->
@@ -189,12 +193,26 @@
                 </div>
             </div>
 
-            <!-- الخطوة 4: تم -->
+            <!-- الخطوة 4: رمز التحقق -->
             <div class="step" id="step4">
+                <div class="success-icon">📧</div>
+                <h2 style="text-align:center;">تحقق من بريدك!</h2>
+                <p class="subtitle" style="text-align:center;">أدخل الرمز المكون من 6 أرقام الذي أرسلناه إلى بريدك الإلكتروني.</p>
+                <div class="input-group" style="margin: 1.5rem 0;">
+                    <label>رمز التحقق</label>
+                    <input type="text" id="otp-code" placeholder="000000" maxlength="6"
+                        style="text-align:center; font-size:2rem; letter-spacing:12px; font-weight:700;">
+                </div>
+                <div id="otp-error" style="color:#ef4444; font-size:0.9rem; margin-bottom:1rem; display:none;"></div>
+                <button class="btn-primary" style="width:100%;" onclick="verifyOtp()">تأكيد الحساب ✅</button>
+                <p style="text-align:center; margin-top:1rem; font-size:0.85rem; color:var(--text-muted);">لم يصلك الرمز؟ <a href="#" onclick="submitRegister()" style="color:var(--accent);">إعادة الإرسال</a></p>
+            </div>
+
+            <!-- الخطوة 5: تم -->
+            <div class="step" id="step5">
                 <div class="success-icon">🎉</div>
-                <h2 style="text-align:center;">تم إنشاء حسابك!</h2>
-                <div class="alert-success">تم تسجيل طلبك بنجاح. سيقوم مدير النظام بمراجعة بياناتك وتفعيل حسابك خلال 24 ساعة.</div>
-                <p class="subtitle" style="text-align:center; font-size:0.9rem;">سيتم إرسال إشعار بالتفعيل على بريدك الإلكتروني.</p>
+                <h2 style="text-align:center;">تم تأكيد حسابك!</h2>
+                <div class="alert-success">تم التحقق من بريدك الإلكتروني بنجاح. سيقوم مدير النظام بتفعيل حسابك خلال 24 ساعة.</div>
                 <a href="/" class="btn-primary" style="display:block; text-align:center; text-decoration:none; margin-top:1.5rem;">العودة لتسجيل الدخول</a>
             </div>
         </div>
@@ -347,6 +365,8 @@ function goToStep(step) {
     }
 }
 
+let registeredEmail = '';
+
 async function submitRegister() {
     const pass    = document.getElementById('reg-pass').value;
     const confirm = document.getElementById('reg-pass-confirm').value;
@@ -357,50 +377,78 @@ async function submitRegister() {
 
     const phoneCode = document.getElementById('phone-code').value || '';
     const phoneNum  = document.getElementById('phone').value || '';
+    registeredEmail = document.getElementById('email').value.trim();
 
     const payload = {
         name:        document.getElementById('full-name').value.trim(),
         username:    document.getElementById('username').value.trim(),
-        email:       document.getElementById('email').value.trim(),
+        email:       registeredEmail,
         phone:       phoneCode + phoneNum,
-        office_name: document.getElementById('office-name').value.trim(),
-        password:    pass,
+        birth_date:  '2000-01-01',
+        access_pin:  pass,
         role:        selectedRole || 'مدير المكتب'
     };
 
-    // التحقق من الحقول قبل الإرسال
-    if (!payload.name || !payload.username || !payload.email || !payload.office_name) {
+    if (!payload.name || !payload.username || !payload.email) {
         alert('يرجى تعبئة جميع الحقول المطلوبة'); return;
     }
 
     const btn = document.querySelector('#step3 .btn-primary:last-child');
     btn.disabled = true;
-    btn.textContent = 'جارٍ الإنشاء...';
+    btn.textContent = 'جارٍ الإرسال...';
 
     try {
         const csrfToken = document.cookie.split('; ').find(r => r.startsWith('csrf_token='))?.split('=')[1] || '';
-        const res = await fetch('/api/register', {
+        const res = await fetch('/api/register-secure', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': csrfToken
-            },
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
             body: JSON.stringify(payload)
         });
         const data = await res.json();
         if (data.success) {
             document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
             document.getElementById('step4').classList.add('active');
-            document.getElementById('progress-bar').style.display = 'none';
+            // Update progress bar
+            ['pc1','pc2','pc3'].forEach(id => { const c = document.getElementById(id); c.classList.add('done'); c.textContent='✓'; });
+            document.getElementById('pc4').classList.add('active');
+            document.getElementById('pl4').classList.add('active');
         } else {
             alert('خطأ: ' + (data.error || 'حدث خطأ غير متوقع'));
             btn.disabled = false;
-            btn.textContent = 'إنشاء الحساب';
+            btn.textContent = 'إرسال رمز التحقق';
         }
     } catch (e) {
         alert('فشل الاتصال بالخادم. تحقق من اتصالك بالإنترنت.');
         btn.disabled = false;
-        btn.textContent = 'إنشاء الحساب';
+        btn.textContent = 'إرسال رمز التحقق';
+    }
+}
+
+async function verifyOtp() {
+    const code = document.getElementById('otp-code').value.trim();
+    const errEl = document.getElementById('otp-error');
+    if (code.length !== 6) { errEl.textContent = 'يرجى إدخال الرمز المكون من 6 أرقام'; errEl.style.display='block'; return; }
+    errEl.style.display = 'none';
+
+    try {
+        const csrfToken = document.cookie.split('; ').find(r => r.startsWith('csrf_token='))?.split('=')[1] || '';
+        const res = await fetch('/api/verify-register-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+            body: JSON.stringify({ email: registeredEmail, code: code })
+        });
+        const data = await res.json();
+        if (data.success) {
+            document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+            document.getElementById('step5').classList.add('active');
+            document.getElementById('progress-bar').style.display = 'none';
+        } else {
+            errEl.textContent = data.error || 'رمز التحقق غير صحيح أو منتهي الصلاحية';
+            errEl.style.display = 'block';
+        }
+    } catch (e) {
+        errEl.textContent = 'فشل الاتصال. حاول مجدداً.';
+        errEl.style.display = 'block';
     }
 }
 </script>
