@@ -62,8 +62,21 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                 content_type = request.headers.get("Content-Type", "")
                 if "application/x-www-form-urlencoded" in content_type or "multipart/form-data" in content_type:
                     try:
+                        # Replay body trick to avoid exhausting the stream for FastAPI
+                        body_bytes = await request.body()
+                        
+                        # Mock receive function
+                        async def receive():
+                            return {"type": "http.request", "body": body_bytes}
+                            
+                        request._receive = receive
                         form = await request.form()
                         form_token = form.get("csrf_token")
+                        
+                        # Reset again so the endpoint can read it
+                        async def receive_again():
+                            return {"type": "http.request", "body": body_bytes}
+                        request._receive = receive_again
                     except:
                         pass
                 
