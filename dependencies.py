@@ -19,10 +19,12 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
 
     from datetime import datetime, timezone
     
+    now_str = datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%d %H:%M:%S")
+    
     session_record = db.query(AuthSessions).filter(
         AuthSessions.session_token == token,
         AuthSessions.is_active == 1,
-        AuthSessions.expires_at > datetime.now(timezone.utc).replace(tzinfo=None)
+        AuthSessions.expires_at > now_str
     ).first()
 
     if not session_record:
