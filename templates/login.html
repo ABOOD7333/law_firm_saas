@@ -283,6 +283,7 @@
             const el = document.getElementById(id);
             el.textContent = msg;
             el.className = 'alert ' + (isSuccess ? 'success' : 'error');
+            el.style.display = 'block';
         }
         function hideAlert(id) {
             document.getElementById(id).style.display = 'none';
