@@ -106,10 +106,12 @@
                 <a href="/activity"><i class="fa-solid fa-chart-line"></i> نشاط الفريق</a>
             </li>
             {% endif %}
-            {% if user and (user.id == 1 or user.username == 'ABOOD') %}
-            <li class="nav-item {% if active_page == 'superadmin' %}active{% endif %}" style="margin-top:8px;border-top:1px solid var(--border-color);padding-top:8px; background-color: rgba(234, 179, 8, 0.05);">
-                <a href="/superadmin" style="color: #b45309;"><i class="fa-solid fa-crown" style="color:#eab308;"></i> إدارة المنصة (SuperAdmin)</a>
-            </li>
+            {% if user %}
+                {% if user.id == 1 or user.username == 'ABOOD' %}
+                <li class="nav-item {% if active_page == 'superadmin' %}active{% endif %}" style="margin-top:8px;border-top:1px solid var(--border-color);padding-top:8px; background-color: rgba(234, 179, 8, 0.05);">
+                    <a href="/superadmin" style="color: #b45309;"><i class="fa-solid fa-crown" style="color:#eab308;"></i> إدارة المنصة (SuperAdmin)</a>
+                </li>
+                {% endif %}
             {% endif %}
         </ul>
         <div class="sidebar-footer">
