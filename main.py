@@ -283,6 +283,15 @@ async def login_submit(
                 name="login.html",
                 context={"error": "هذا الحساب موقوف. يرجى مراجعة إدارة المكتب."}
             )
+
+        # 🔴 تحقق من حالة المكتب
+        office = db.query(LawOffices).filter(LawOffices.id == user.office_id).first() if user.office_id else None
+        if office and office.is_active == 0:
+            return templates.TemplateResponse(
+                request=request,
+                name="login.html",
+                context={"error": "مكتب المحاماة الخاص بك موقوف حالياً من قبل إدارة المنصة. يرجى التواصل مع الدعم الفني."}
+            )
             
         if user.failed_attempts >= 10:
             return templates.TemplateResponse(
@@ -1226,7 +1235,7 @@ from routers import expenses
 from routers import executions
 from routers import power_of_attorney
 from routers import advanced_operations
-
+from routers import superadmin
 app.include_router(parties.router)
 app.include_router(pleadings.router)
 app.include_router(judgments.router)
@@ -1249,7 +1258,7 @@ app.include_router(expenses.router)
 app.include_router(executions.router)
 app.include_router(power_of_attorney.router)
 app.include_router(advanced_operations.router)
-
+app.include_router(superadmin.router)
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
