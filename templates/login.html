@@ -298,9 +298,10 @@
             
             const btn = document.getElementById('btn-forgot-send');
             btn.disabled = true; btn.textContent = "جاري الإرسال...";
+            const csrfToken = document.cookie.split('; ').find(r => r.startsWith('csrf_token='))?.split('=')[1] || '';
             try {
                 const res = await fetch('/api/forgot-send-otp', {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken},
                     body: JSON.stringify({ email, birth_date: birth })
                 });
                 const data = await res.json();
@@ -322,9 +323,10 @@
 
             const btn = document.getElementById('btn-forgot-verify');
             btn.disabled = true; btn.textContent = "جاري التحقق...";
+            const csrfToken = document.cookie.split('; ').find(r => r.startsWith('csrf_token='))?.split('=')[1] || '';
             try {
                 const res = await fetch('/api/forgot-verify-otp', {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken},
                     body: JSON.stringify({ identifier: email, code })
                 });
                 const data = await res.json();
@@ -351,9 +353,10 @@
 
             const btn = document.getElementById('btn-forgot-reset');
             btn.disabled = true; btn.textContent = "جاري الحفظ...";
+            const csrfToken = document.cookie.split('; ').find(r => r.startsWith('csrf_token='))?.split('=')[1] || '';
             try {
                 const res = await fetch('/api/reset-password-secure', {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken},
                     body: JSON.stringify({ email, new_username: newUsername, new_password: pass, token: tempToken })
                 });
                 const data = await res.json();
@@ -406,9 +409,10 @@
 
             const btn = document.getElementById('btn-reg-submit');
             btn.disabled = true; btn.textContent = "جاري الإرسال...";
+            const csrfToken = document.cookie.split('; ').find(r => r.startsWith('csrf_token='))?.split('=')[1] || '';
             try {
                 const res = await fetch('/api/register-secure', {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken},
                     body: JSON.stringify(payload)
                 });
                 const data = await res.json();
@@ -430,9 +434,10 @@
 
             const btn = document.getElementById('btn-reg-verify');
             btn.disabled = true; btn.textContent = "جاري التفعيل...";
+            const csrfToken = document.cookie.split('; ').find(r => r.startsWith('csrf_token='))?.split('=')[1] || '';
             try {
                 const res = await fetch('/api/verify-register-otp', {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken},
                     body: JSON.stringify({ email: email, code: code })
                 });
                 const data = await res.json();
