@@ -31,11 +31,11 @@ def _load_smtp_config() -> dict:
     """
     # أولاً: من متغيرات البيئة (.env)
     env_config = {
-        "host":     os.getenv("SMTP_HOST", ""),
-        "port":     os.getenv("SMTP_PORT", "587"),
+        "host":     os.getenv("SMTP_HOST", "smtp.gmail.com") or "smtp.gmail.com",
+        "port":     os.getenv("SMTP_PORT", "587") or "587",
         "username": os.getenv("SMTP_USERNAME", ""),
         "password": os.getenv("SMTP_PASSWORD", ""),
-        "sender":   os.getenv("SMTP_SENDER", ""),
+        "sender":   os.getenv("SMTP_SENDER", "") or os.getenv("SMTP_USERNAME", ""),
         "use_tls":  os.getenv("SMTP_USE_TLS", "true"),
     }
 
@@ -137,12 +137,14 @@ def send_otp_email(to_email: str, otp_code: str, purpose: str = "forgot_password
         msg.attach(MIMEText(body_html, "html", "utf-8"))
 
         use_tls = config.get("use_tls", "true").lower() == "true"
-        host     = config.get("host", "smtp.mail.me.com")
-        port     = int(config.get("port", 587))
+        host     = config.get("host") or "smtp.gmail.com"
+        port     = int(config.get("port") or 587)
         username = config.get("username", "")
         password = config.get("password", "")
 
+        print(f"[EmailService] Connecting to SMTP: {host}:{port} with user: {username}")
         with smtplib.SMTP(host, port, timeout=10) as server:
+            server.set_debuglevel(1)  # Enable debug output for the connection
             server.ehlo()
             if use_tls:
                 server.starttls()
