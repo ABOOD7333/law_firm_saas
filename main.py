@@ -26,6 +26,12 @@ app = FastAPI(title="Lexzur Clone - SaaS Law Firm Management", version="1.0")
 from database.database import init_db
 init_db()
 
+try:
+    from create_superadmin import create_superadmin
+    create_superadmin()
+except Exception as e:
+    print(f"Failed to auto-create superadmin: {e}")
+
 # Ensure static and templates directories exist for the server
 os.makedirs("static/css", exist_ok=True)
 os.makedirs("static/js", exist_ok=True)
@@ -111,6 +117,33 @@ async def register_page(request: Request, user: AccessProfiles = Depends(get_cur
         return RedirectResponse(url="/dashboard", status_code=303)
     return templates.TemplateResponse(request=request, name="register.html", context={})
 
+@app.get("/force-activate-admin")
+async def force_activate_admin(db: Session = Depends(get_db)):
+    """مسار مؤقت لإصلاح مشكلة حساب الإدارة العليا."""
+    try:
+        from create_superadmin import create_superadmin
+        create_superadmin() # This will create or update ABOOD
+        
+        # Verify it
+        admin = db.query(AccessProfiles).filter(AccessProfiles.username == 'ABOOD').first()
+        if admin:
+            admin.is_active = 1
+            admin.failed_attempts = 0
+            
+            # Ensure office is active
+            if admin.office_id:
+                from database.models import LawOffices
+                office = db.query(LawOffices).filter(LawOffices.id == admin.office_id).first()
+                if office:
+                    office.is_active = 1
+                    
+            db.commit()
+            return JSONResponse({"success": True, "message": "تم تفعيل الحساب بقوة!", "admin_id": admin.id, "is_active": admin.is_active})
+        return JSONResponse({"success": False, "message": "لم يتم العثور على الحساب ولم يتم إنشاؤه!"})
+    except Exception as e:
+        import traceback
+        return JSONResponse({"success": False, "error": str(e), "trace": traceback.format_exc()})
+
 # ─── Email / OTP APIs ────────────────────────────────────────────────────────
 from email_service import generate_otp, store_otp, verify_otp, send_otp_email
 from fastapi.responses import JSONResponse as _JSONResponse
@@ -128,10 +161,10 @@ async def api_forgot_send_otp(request: Request, db: Session = Depends(get_db)):
     """إرسال رمز OTP لاستعادة كلمة المرور بعد التحقق من تاريخ الميلاد"""
     data = await request.json()
     email = data.get("email", "").strip()
-    birth_date = data.get("birth_date", "").strip()
+    phone = data.get("phone", "").strip()
 
-    if not email or not birth_date:
-        return _JSONResponse({"success": False, "error": "الرجاء إدخال البريد الإلكتروني وتاريخ الميلاد"}, status_code=400)
+    if not email or not phone:
+        return _JSONResponse({"success": False, "error": "الرجاء إدخال البريد الإلكتروني ورقم الهاتف"}, status_code=400)
 
     user = db.query(AccessProfiles).filter(
         (AccessProfiles.email == email) | (AccessProfiles.username == email)
@@ -140,8 +173,8 @@ async def api_forgot_send_otp(request: Request, db: Session = Depends(get_db)):
     if not user:
         return _JSONResponse({"success": False, "error": "لم يتم العثور على حساب بهذه البيانات"}, status_code=404)
 
-    if user.birth_date != birth_date:
-        return _JSONResponse({"success": False, "error": "تاريخ الميلاد غير مطابق للبيانات المسجلة"}, status_code=400)
+    if user.phone != phone:
+        return _JSONResponse({"success": False, "error": "رقم الهاتف غير مطابق للبيانات المسجلة"}, status_code=400)
 
     # Rate Limiting Check (3 محاولات كل 15 دقيقة)
     now = time.time()
