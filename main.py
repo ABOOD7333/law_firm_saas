@@ -938,6 +938,8 @@ async def edit_user(
     return RedirectResponse(url="/settings", status_code=303)
 
 
+_pending_registrations = {}
+
 @app.post("/api/register-secure")
 async def api_register_secure(request: Request, db: Session = Depends(get_db)):
     from fastapi.responses import JSONResponse as _J
@@ -947,7 +949,7 @@ async def api_register_secure(request: Request, db: Session = Depends(get_db)):
         username    = (data.get("username") or "").strip()
         name        = (data.get("name") or "").strip()
         phone       = (data.get("phone") or "").strip()
-        email       = (data.get("email") or "").strip()
+        email       = (data.get("email") or "").strip().lower()
         birth_date  = (data.get("birth_date") or "").strip()
         access_pin  = (data.get("access_pin") or "").strip()
         lawyer_name = (data.get("lawyer_name") or "").strip()
@@ -963,52 +965,29 @@ async def api_register_secure(request: Request, db: Session = Depends(get_db)):
         ).first():
             return _J({"success": False, "error": "البريد الإلكتروني، اسم المستخدم، أو رقم الهاتف مسجل مسبقاً"}, status_code=409)
 
-        # نعين المستخدم للمكتب الافتراضي (أو نقوم بإنشاء مكتب إذا لم يكن موجوداً)
-        office = db.query(LawOffices).first()
-        if not office:
-            office = LawOffices(name="المكتب الرئيسي", status_key="active", is_active=1)
-            db.add(office)
-            db.flush()
-
-        new_user = AccessProfiles(
-            name=name,
-            username=username,
-            email=email,
-            phone=phone,
-            birth_date=birth_date,
-            lawyer_name=lawyer_name if role == 'موكل' else None,
-            access_pin_hash=_hash_pin(access_pin),
-            role=role,
-            office_id=office.id,
-            is_active=0,          # غير مفعل حتى يؤكد البريد
-            email_verified=0,
-            state="draft",
-            failed_attempts=0,
-        )
-        db.add(new_user)
-        db.flush()
-
-        write_audit(
-            db, table_name="access_profiles", action_name="register",
-            actor_user_id=new_user.id, actor_name=name, office_id=office.id,
-            entity_type="user", entity_id=new_user.id, details=f"تسجيل حساب {role}"
-        )
-        db.commit()
-        
-        # إرسال رمز التحقق
+        # إرسال رمز التحقق أولاً بدون الحفظ في قاعدة البيانات
         code = generate_otp(6)
         store_otp(email, code)
         is_sent = send_otp_email(email, code, "register")
         
         if not is_sent:
-            # إذا فشل إرسال الإيميل، يمكننا التراجع عن إنشاء الحساب أو إخبار المستخدم
-            db.rollback()
             return _J({"success": False, "error": "فشل إرسال البريد الإلكتروني. تأكد من صحة الإعدادات."}, status_code=500)
             
-        app_logger.info(f"REGISTER_SECURE | office={office.id} | user={new_user.id} | {email}")
+        # حفظ البيانات مؤقتاً في الذاكرة حتى يتم التحقق
+        _pending_registrations[email] = {
+            "name": name,
+            "username": username,
+            "email": email,
+            "phone": phone,
+            "birth_date": birth_date,
+            "lawyer_name": lawyer_name,
+            "access_pin": access_pin,
+            "role": role
+        }
+        
+        app_logger.info(f"REGISTER_OTP_SENT | {email}")
         return _J({"success": True, "message": "تم إرسال رمز التحقق"})
     except Exception as exc:
-        db.rollback()
         app_logger.error(f"api_register_secure error: {exc}", exc_info=True)
         return _J({"success": False, "error": f"حدث خطأ داخلي: {str(exc)}"}, status_code=500)
 
@@ -1019,23 +998,59 @@ async def api_verify_register_otp(request: Request, db: Session = Depends(get_db
         data  = await request.json()
         email = (data.get("email") or "").strip().lower()
         code  = (data.get("code")  or "").strip()
+        
         if not email or not code:
             return _J({"success": False, "error": "البيانات غير مكتملة"}, status_code=400)
+            
         if not verify_otp(email, code):
             return _J({"success": False, "error": "رمز التحقق غير صحيح أو منتهي الصلاحية"}, status_code=400)
-        # تفعيل الحساب بعد التحقق
-        user = db.query(AccessProfiles).filter(
-            AccessProfiles.email == email,
-            AccessProfiles.email_verified == 0
-        ).first()
-        if user:
-            user.email_verified = 1
-            db.commit()
-            app_logger.info(f"EMAIL_VERIFIED | user={user.id} | {email}")
-        return _J({"success": True, "message": "تم التحقق بنجاح"})
+            
+        # استرجاع البيانات المؤقتة
+        pending_user = _pending_registrations.get(email)
+        if not pending_user:
+            return _J({"success": False, "error": "انتهت صلاحية جلسة التسجيل أو أنك تستخدم نافذة مختلفة، يرجى إعادة تعبئة البيانات"}, status_code=400)
+            
+        # الآن فقط نقوم بالحفظ في قاعدة البيانات
+        office = db.query(LawOffices).first()
+        if not office:
+            office = LawOffices(name="المكتب الرئيسي", status_key="active", is_active=1)
+            db.add(office)
+            db.flush()
+
+        new_user = AccessProfiles(
+            name=pending_user["name"],
+            username=pending_user["username"],
+            email=pending_user["email"],
+            phone=pending_user["phone"],
+            birth_date=pending_user["birth_date"],
+            lawyer_name=pending_user["lawyer_name"] if pending_user["role"] == 'موكل' else None,
+            access_pin_hash=_hash_pin(pending_user["access_pin"]),
+            role=pending_user["role"],
+            office_id=office.id,
+            is_active=1,  # مفعل مباشرة لأنه أثبت إيميله
+            email_verified=1,
+            state="draft",
+            failed_attempts=0,
+        )
+        db.add(new_user)
+        db.flush()
+
+        write_audit(
+            db, table_name="access_profiles", action_name="register",
+            actor_user_id=new_user.id, actor_name=pending_user["name"], office_id=office.id,
+            entity_type="user", entity_id=new_user.id, details=f"تسجيل حساب جديد وتأكيد البريد"
+        )
+        db.commit()
+        
+        # تنظيف الذاكرة
+        del _pending_registrations[email]
+        
+        app_logger.info(f"EMAIL_VERIFIED_AND_REGISTERED | user={new_user.id} | {email}")
+        return _J({"success": True, "message": "تم التحقق وإنشاء الحساب بنجاح"})
     except Exception as exc:
+        db.rollback()
         app_logger.error(f"verify_register_otp error: {exc}", exc_info=True)
-        return _J({"success": False, "error": "حدث خطأ داخلي"}, status_code=500)
+        return _J({"success": False, "error": f"حدث خطأ داخلي أثناء الحفظ: {str(exc)}"}, status_code=500)
 
 
 @app.post("/documents/add")
