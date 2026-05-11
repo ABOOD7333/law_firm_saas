@@ -67,7 +67,7 @@
 
 <!-- Add Case Modal -->
 <div id="addCaseModal" class="modal-overlay">
-    <div class="modal-content" style="width: 600px;">
+    <div class="modal-content" style="width: 100%; max-width: 600px;">
         <div class="modal-header">
             <h2>فتح قضية جديدة</h2>
             <button class="close-btn" onclick="closeAddCaseModal()"><i class="fa-solid fa-xmark"></i></button>
@@ -125,7 +125,7 @@
 
 <!-- Edit Case Modal -->
 <div id="editCaseModal" class="modal-overlay">
-    <div class="modal-content" style="width: 600px;">
+    <div class="modal-content" style="width: 100%; max-width: 600px;">
         <div class="modal-header">
             <h2>تعديل بيانات القضية</h2>
             <button class="close-btn" onclick="closeEditCaseModal()"><i class="fa-solid fa-xmark"></i></button>
@@ -211,6 +211,12 @@
 .action-btn { background: none; border: none; padding: 6px; cursor: pointer; border-radius: 4px; font-size: 1.1rem; }
 .view-btn { color: var(--primary-color); }
 .action-btn:hover { background-color: #f1f5f9; }
+
+@media (max-width: 768px) {
+    .form-row { grid-template-columns: 1fr; gap: 8px; }
+    .modal-content { max-height: 90vh; overflow-y: auto; margin: 16px; }
+    .page-header { flex-direction: column; align-items: flex-start !important; gap: 10px; }
+}
 </style>
 
 <script>

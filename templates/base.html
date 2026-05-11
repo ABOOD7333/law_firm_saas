@@ -6,15 +6,23 @@
     <title>{% block title %}LawSaaS{% endblock %}</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/css/dashboard.css">
+    <link rel="stylesheet" href="/static/css/dashboard.css?v=2.1">
     {% block head %}{% endblock %}
 </head>
 <body>
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
     <!-- Sidebar -->
     <aside class="sidebar">
-        <div class="sidebar-header">
-            <i class="fa-solid fa-scale-balanced logo-icon"></i>
-            <h2>LawSaaS</h2>
+        <div class="sidebar-header" style="justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <i class="fa-solid fa-scale-balanced logo-icon"></i>
+                <h2>LawSaaS</h2>
+            </div>
+            <button class="mobile-close-btn" onclick="toggleSidebar()" style="background:none; border:none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
         </div>
         <ul class="nav-menu">
             <li class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
@@ -127,10 +135,13 @@
     <main class="main-content">
         <!-- Topbar -->
         <header class="topbar">
+            <button class="mobile-menu-btn" onclick="toggleSidebar()" style="background:none; border:none; font-size: 1.5rem; cursor: pointer; color: var(--primary-color); margin-left: 10px;">
+                <i class="fa-solid fa-bars"></i>
+            </button>
             <div class="search-bar" onclick="window.location='/search'" style="cursor:pointer;">
                 <i class="fa-solid fa-search"></i>
                 <form action="/search" method="get" style="flex:1;display:flex;" onsubmit="event.stopPropagation();">
-                    <input type="text" name="q" placeholder="ابحث عن قضية، موكل، أو جلسة..." style="flex:1;border:none;background:transparent;outline:none;font-size:.95rem;font-family:'Cairo',sans-serif;" onclick="event.stopPropagation();">
+                    <input type="text" name="q" placeholder="ابحث..." style="flex:1;border:none;background:transparent;outline:none;font-size:.95rem;font-family:'Cairo',sans-serif;" onclick="event.stopPropagation();">
                 </form>
             </div>
             <div class="user-info">
@@ -155,6 +166,13 @@
 
     {% block scripts %}{% endblock %}
     
+    <script>
+        function toggleSidebar() {
+            document.querySelector('.sidebar').classList.toggle('open');
+            document.querySelector('.sidebar-overlay').classList.toggle('active');
+        }
+    </script>
+
     <!-- CSRF Protection Interceptor -->
     <script>
     document.addEventListener("DOMContentLoaded", () => {

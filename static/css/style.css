@@ -23,7 +23,7 @@ body {
     background-size: 400% 400%;
     animation: gradientBG 15s ease infinite;
     color: var(--text-main);
-    height: 100vh;
+    min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -244,11 +244,50 @@ body {
 }
 
 @media (max-width: 900px) {
-    .login-left {
-        display: none;
-    }
     .login-container {
-        height: 100vh;
+        flex-direction: column;
+        height: auto;
+        min-height: 100vh;
         border-radius: 0;
+        border: none;
+        overflow-y: auto;
+    }
+    .login-left {
+        display: flex;
+        flex: none;
+        padding: 3rem 1.5rem;
+        text-align: center;
+        align-items: center;
+    }
+    .login-left .logo {
+        margin-bottom: 1.5rem;
+        justify-content: center;
+    }
+    .login-left .branding h1 {
+        font-size: 2.2rem;
+    }
+    .login-left .branding p {
+        font-size: 1rem;
+        margin: 0 auto;
+    }
+    .login-right {
+        padding: 2.5rem 1.5rem;
+        flex: 1;
+    }
+}
+
+@media (max-width: 480px) {
+    .login-right {
+        padding: 1.5rem;
+    }
+    .login-form-container h2 {
+        font-size: 1.6rem;
+    }
+    .subtitle {
+        font-size: 0.95rem;
+        margin-bottom: 2rem;
+    }
+    .input-group input {
+        padding: 0.8rem 1rem;
     }
 }
