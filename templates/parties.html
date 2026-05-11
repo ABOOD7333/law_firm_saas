@@ -6,9 +6,14 @@
         <h1><i class="fa-solid fa-people-arrows" style="color: var(--primary-color);"></i> إدارة الأطراف</h1>
         <p>تسجيل أطراف القضايا — الموكلون، الخصوم، المستشارون، وسائر الأطراف المعنية.</p>
     </div>
-    <button class="btn-primary" onclick="document.getElementById('addPartyModal').style.display='flex'">
-        <i class="fa-solid fa-user-plus"></i> إضافة طرف جديد
-    </button>
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button class="btn-secondary" onclick="addNewRole()" style="background: white; color: var(--primary-color); border: 2px solid var(--primary-color); padding: 10px 20px; border-radius: 12px; font-weight: bold; cursor: pointer; font-family: 'Cairo', sans-serif;">
+            <i class="fa-solid fa-tags"></i> إضافة أدوار
+        </button>
+        <button class="btn-primary" onclick="document.getElementById('addPartyModal').style.display='flex'">
+            <i class="fa-solid fa-user-plus"></i> إضافة طرف جديد
+        </button>
+    </div>
 </div>
 
 <!-- Filters -->
@@ -115,7 +120,7 @@
                 </div>
                 <div>
                     <label style="display:block;margin-bottom:6px;font-weight:600;">الدور في القضية <span style="color:red">*</span></label>
-                    <select name="role_key" required style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+                    <select name="role_key" id="roleSelect" required style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
                         <option value="موكل">موكل</option>
                         <option value="خصم">خصم</option>
                         <option value="شاهد">شاهد</option>
@@ -240,6 +245,53 @@ function filterTable() {
         const matchRole = !role || rowRole === role;
         row.style.display = matchSearch && matchRole ? '' : 'none';
     });
+}
+
+// Custom Roles Logic
+document.addEventListener('DOMContentLoaded', () => {
+    loadCustomRoles();
+});
+
+function loadCustomRoles() {
+    const savedRoles = JSON.parse(localStorage.getItem('custom_party_roles') || '[]');
+    const selects = [document.getElementById('roleFilter'), document.getElementById('roleSelect'), document.getElementById('ep_role')];
+    
+    savedRoles.forEach(role => {
+        selects.forEach(select => {
+            if (select && !Array.from(select.options).some(opt => opt.value === role)) {
+                const option = new Option(role, role);
+                select.add(option);
+            }
+        });
+    });
+}
+
+function addNewRole() {
+    const newRole = prompt("أدخل اسم الدور الجديد (مثال: خبير، محكم، مترجم):");
+    if (newRole && newRole.trim() !== '') {
+        const role = newRole.trim();
+        const savedRoles = JSON.parse(localStorage.getItem('custom_party_roles') || '[]');
+        if (!savedRoles.includes(role)) {
+            savedRoles.push(role);
+            localStorage.setItem('custom_party_roles', JSON.stringify(savedRoles));
+            
+            // Add to all dropdowns immediately
+            const selects = [document.getElementById('roleFilter'), document.getElementById('roleSelect'), document.getElementById('ep_role')];
+            selects.forEach(select => {
+                if (select) {
+                    const option = new Option(role, role);
+                    select.add(option);
+                }
+            });
+            
+            alert("تمت إضافة الدور الجديد ('" + role + "') بنجاح إلى القوائم!");
+            // Optionally, open the add party modal with this role pre-selected
+            // document.getElementById('roleSelect').value = role;
+            // document.getElementById('addPartyModal').style.display='flex';
+        } else {
+            alert("هذا الدور موجود مسبقاً في القائمة!");
+        }
+    }
 }
 </script>
 {% endblock %}
