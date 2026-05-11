@@ -959,9 +959,9 @@ async def api_register_secure(request: Request, db: Session = Depends(get_db)):
             return _J({"success": False, "error": "كلمة المرور يجب أن تكون 6 أحرف/أرقام على الأقل"}, status_code=400)
 
         if db.query(AccessProfiles).filter(
-            (AccessProfiles.email == email) | (AccessProfiles.username == username)
+            (AccessProfiles.email == email) | (AccessProfiles.username == username) | (AccessProfiles.phone == phone)
         ).first():
-            return _J({"success": False, "error": "البريد الإلكتروني أو اسم المستخدم مسجل مسبقاً"}, status_code=409)
+            return _J({"success": False, "error": "البريد الإلكتروني، اسم المستخدم، أو رقم الهاتف مسجل مسبقاً"}, status_code=409)
 
         # نعين المستخدم للمكتب الافتراضي (أو نقوم بإنشاء مكتب إذا لم يكن موجوداً)
         office = db.query(LawOffices).first()
@@ -998,14 +998,19 @@ async def api_register_secure(request: Request, db: Session = Depends(get_db)):
         # إرسال رمز التحقق
         code = generate_otp(6)
         store_otp(email, code)
-        send_otp_email(email, code, "register")
+        is_sent = send_otp_email(email, code, "register")
         
+        if not is_sent:
+            # إذا فشل إرسال الإيميل، يمكننا التراجع عن إنشاء الحساب أو إخبار المستخدم
+            db.rollback()
+            return _J({"success": False, "error": "فشل إرسال البريد الإلكتروني. تأكد من صحة الإعدادات."}, status_code=500)
+            
         app_logger.info(f"REGISTER_SECURE | office={office.id} | user={new_user.id} | {email}")
         return _J({"success": True, "message": "تم إرسال رمز التحقق"})
     except Exception as exc:
         db.rollback()
         app_logger.error(f"api_register_secure error: {exc}", exc_info=True)
-        return _J({"success": False, "error": "حدث خطأ داخلي"}, status_code=500)
+        return _J({"success": False, "error": f"حدث خطأ داخلي: {str(exc)}"}, status_code=500)
 
 @app.post("/api/verify-register-otp")
 async def api_verify_register_otp(request: Request, db: Session = Depends(get_db)):
