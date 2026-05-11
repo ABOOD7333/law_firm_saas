@@ -599,7 +599,7 @@ button, .btn {
     display: none;
 }
 
-/* Mobile Responsive */
+/* Tablet & Mobile Responsive */
 @media (max-width: 992px) {
     .sidebar-overlay {
         display: none;
@@ -657,37 +657,66 @@ button, .btn {
     .profile-dropdown .username {
         display: none;
     }
+    /* Fix table clipping */
+    .content-section {
+        overflow: visible !important;
+        padding: 16px !important;
+    }
 }
+
+/* Strictly Mobile Responsive */
 @media (max-width: 768px) {
     .table-container {
         overflow-x: auto !important;
         -webkit-overflow-scrolling: touch;
+        border-radius: 12px;
     }
     .saas-table {
-        min-width: 700px;
+        min-width: 750px;
     }
     .dashboard-container {
-        padding: 20px 10px;
+        padding: 16px 10px;
     }
     .page-header {
         flex-direction: column;
         align-items: flex-start !important;
-        gap: 15px;
+        gap: 10px;
+        margin-bottom: 24px;
     }
     .page-header h1 {
-        font-size: 1.8rem;
+        font-size: 1.6rem;
     }
+    
+    /* Perfect Topbar for Mobile */
+    .topbar {
+        flex-wrap: wrap;
+        height: auto !important;
+        padding: 12px 16px;
+        gap: 12px;
+    }
+    .search-bar {
+        order: 3; /* Move search below icons */
+        width: 100%;
+        margin-right: 0;
+    }
+    .avatar {
+        height: 38px; width: 38px; font-size: 1rem;
+    }
+    .notification-btn {
+        height: 38px; width: 38px; font-size: 1rem;
+    }
+    
     /* Global Modal Fixes for Mobile */
     .modal-content {
         width: 95% !important;
         max-width: 100% !important;
         padding: 20px !important;
-        max-height: 90vh !important;
+        max-height: 85vh !important;
         overflow-y: auto !important;
         margin: 5vh auto !important;
     }
     /* Force form rows to stack vertically on mobile */
-    .form-row {
+    .form-row, .grid-2 {
         display: flex !important;
         flex-direction: column !important;
         gap: 12px !important;
@@ -696,13 +725,11 @@ button, .btn {
     .form-group {
         margin-bottom: 12px !important;
     }
-    /* Stats grid */
-    .stats-grid {
-        gap: 16px;
+    .form-group label {
+        font-size: 0.9rem;
     }
-    /* Topbar search bar */
-    .search-bar {
-        padding: 8px 12px;
+    .form-control {
+        padding: 10px;
     }
 }
 
