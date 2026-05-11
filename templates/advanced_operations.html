@@ -135,7 +135,7 @@
         <label>نوع القضية</label><select><option></option><option>عمالية</option><option>تجارية</option></select>
         <label>نوع القالب</label><select><option>general</option><option>pleading</option><option>execution</option><option>client_report</option><option>internal_note</option></select>
       </div>
-      <textarea rows="4" style="width:100%;border-radius:8px;border:1px solid var(--border-color);padding:10px;font-family:'Cairo';background:#f8fafc;margin-bottom:10px;" placeholder="استخدم {{ case.client_name }} وكتل if/for المبسطة."></textarea>
+      <textarea rows="4" style="width:100%;border-radius:8px;border:1px solid var(--border-color);padding:10px;font-family:'Cairo';background:#f8fafc;margin-bottom:10px;" placeholder="استخدم {{ '{{ case.client_name }}' }} وكتل if/for المبسطة."></textarea>
       <div style="display:flex;gap:10px;">
         <button class="action-btn" style="background:#27ae60;">حفظ القالب</button>
         <button class="action-btn" style="background:#2980b9;">توليد نسخة</button>
