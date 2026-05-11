@@ -144,7 +144,7 @@ def send_otp_email(to_email: str, otp_code: str, purpose: str = "forgot_password
 
         print(f"[EmailService] Connecting to SMTP: {host}:{port} with user: {username}")
         with smtplib.SMTP(host, port, timeout=10) as server:
-            server.set_debuglevel(1)  # Enable debug output for the connection
+            server.set_debuglevel(0)  # تم إيقاف الـ debug لمنع امتلاء سجلات السحابة
             server.ehlo()
             if use_tls:
                 server.starttls()
