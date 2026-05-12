@@ -568,6 +568,145 @@ body {
 }
 .status-pending::before { background-color: var(--warning); }
 
+/* ── أزرار الإجراءات في الجداول ── */
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    text-decoration: none;
+}
+
+.action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* أنواع أزرار الإجراءات */
+.action-btn.view-btn, a.action-btn.view-btn {
+    color: var(--primary-color);
+    background: rgba(79, 70, 229, 0.08);
+    border-color: rgba(79, 70, 229, 0.2);
+}
+.action-btn.view-btn:hover {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+}
+
+.action-btn.edit-btn {
+    color: var(--warning);
+    background: rgba(245, 158, 11, 0.08);
+    border-color: rgba(245, 158, 11, 0.2);
+}
+.action-btn.edit-btn:hover {
+    background: var(--warning);
+    color: white;
+    border-color: var(--warning);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.action-btn.delete-btn {
+    color: var(--danger);
+    background: rgba(244, 63, 94, 0.08);
+    border-color: rgba(244, 63, 94, 0.2);
+}
+.action-btn.delete-btn:hover {
+    background: var(--danger);
+    color: white;
+    border-color: var(--danger);
+    box-shadow: 0 4px 12px rgba(244, 63, 94, 0.3);
+}
+
+/* خلية الإجراءات في الجدول */
+.saas-table td:last-child {
+    display: table-cell;
+}
+
+.saas-table td .actions-cell,
+td[style*="display:flex"],
+td[style*="display: flex"] {
+    display: flex !important;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+}
+
+/* رأس عمود الإجراءات */
+.saas-table th:last-child {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+/* ── إصلاح شامل: جميع أزرار الإجراءات في أي جدول ── */
+.saas-table td button,
+.data-table td button,
+table td .action-btn,
+table td a.action-btn {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background: rgba(255,255,255,0.7);
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    margin: 0 2px;
+}
+
+/* التحقق من أن أزرار الإجراءات لا تظهر نقطة */
+.saas-table td button::before,
+.data-table td button::before {
+    display: none !important;
+}
+
+/* ألوان الأيقونات حسب النوع */
+.saas-table td button[title*="عرض"],
+.saas-table td a[title*="عرض"],
+.saas-table td button[title*="اللوحة"],
+.data-table td button[title*="عرض"] {
+    color: var(--primary-color);
+    background: rgba(79,70,229,0.08);
+    border-color: rgba(79,70,229,0.2);
+}
+
+.saas-table td button[title*="تعديل"],
+.data-table td button[title*="تعديل"] {
+    color: var(--warning);
+    background: rgba(245,158,11,0.08);
+    border-color: rgba(245,158,11,0.2);
+}
+
+.saas-table td button[title*="حذف"],
+.data-table td button[title*="حذف"] {
+    color: var(--danger);
+    background: rgba(244,63,94,0.08);
+    border-color: rgba(244,63,94,0.2);
+}
+
+.saas-table td button:hover,
+.data-table td button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+
+
 /* Custom Inputs & Buttons */
 input, select, textarea {
     background: rgba(255,255,255,0.7);
