@@ -45,7 +45,7 @@ async def conflict_check(
         LawParties.name.ilike(f"%{name}%")
     ).all()
     for p in parties:
-        case = db.query(LawCases).filter(LawCases.id == p.case_id).first()
+        case = db.query(LawCases).filter(LawCases.id == p.case_id, LawCases.office_id == office_id).first()
         results.append({
             "type": "طرف في قضية",
             "name": p.name,
@@ -59,7 +59,7 @@ async def conflict_check(
         LawClients.name.ilike(f"%{name}%")
     ).all()
     for c in clients:
-        case = db.query(LawCases).filter(LawCases.id == c.case_id).first()
+        case = db.query(LawCases).filter(LawCases.id == c.case_id, LawCases.office_id == office_id).first()
         results.append({
             "type": "موكل",
             "name": c.name,

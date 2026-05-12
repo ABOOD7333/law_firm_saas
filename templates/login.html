@@ -100,7 +100,8 @@
                     {{ error }}
                 </div>
                 {% endif %}
-                <form action="/" method="post">
+                <form action="/" method="post" id="login-form">
+                    <input type="hidden" name="csrf_token" id="csrf-field" value="">
                     <div class="input-group">
                         <label for="email">اسم المستخدم أو البريد الإلكتروني</label>
                         <input type="text" id="email" name="email" placeholder="أدخل اسم المستخدم أو البريد" required>
@@ -118,6 +119,13 @@
                     </div>
                     <button type="submit" class="btn-primary">تسجيل الدخول</button>
                 </form>
+                <script>
+                    // حقن CSRF Token من الكوكي قبل الإرسال
+                    document.getElementById('login-form').addEventListener('submit', function() {
+                        const token = document.cookie.split('; ').find(r => r.startsWith('csrf_token='))?.split('=')[1] || '';
+                        document.getElementById('csrf-field').value = token;
+                    });
+                </script>
                 <div class="form-footer">
                     <p>ليس لديك حساب؟ <a onclick="openModal('register-modal')">إنشاء حساب جديد</a></p>
                 </div>

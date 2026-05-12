@@ -49,6 +49,9 @@ async def team_page(request: Request, db: Session = Depends(get_db), user: Acces
 async def team_save(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     from fastapi.responses import JSONResponse
     if not user: return JSONResponse({"ok": False, "message": "غير مصرح"}, status_code=401)
+    if user.role not in _ADMIN_ROLES:
+        app_logger.warning(f"SECURITY | team_save blocked | actor={user.id}")
+        return JSONResponse({"ok": False, "message": "ليس لديك صلاحية لإضافة أو تعديل الأعضاء"}, status_code=403)
     try:
         import hashlib, json as _json
         data = await request.json()

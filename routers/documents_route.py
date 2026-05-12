@@ -54,11 +54,17 @@ async def add_document(
         allowed_exts = {'pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'txt'}
         if ext not in allowed_exts:
             return HTMLResponse(content=f"<script>alert('عذراً، نوع الملف غير مسموح به ({ext})'); window.history.back();</script>", status_code=400)
-            
+
+        # ── ثغرة DoS: التحقق من حجم الملف قبل الحفظ (حد أقصى 20MB) ──
+        MAX_SIZE_BYTES = 20 * 1024 * 1024  # 20 MB
+        file_bytes = await file.read()
+        if len(file_bytes) > MAX_SIZE_BYTES:
+            return HTMLResponse(content="<script>alert('حجم الملف يتجاوز الحد المسموح به (20 ميجابايت)'); window.history.back();</script>", status_code=400)
+
         filename = f"{uuid.uuid4().hex}.{ext}"
         path = os.path.join("static", "uploads", "documents", filename)
         with open(path, "wb") as f_out:
-            f_out.write(await file.read())
+            f_out.write(file_bytes)
         file_path_str = f"static/uploads/documents/{filename}"
 
     d = LawDocuments(case_id=case_id, office_id=user.office_id or 1,
@@ -91,11 +97,17 @@ async def edit_document(
             allowed_exts = {'pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'txt'}
             if ext not in allowed_exts:
                 return HTMLResponse(content=f"<script>alert('عذراً، نوع الملف غير مسموح به ({ext})'); window.history.back();</script>", status_code=400)
-                
+
+            # ── ثغرة DoS: التحقق من حجم الملف قبل الحفظ (حد أقصى 20MB) ──
+            MAX_SIZE_BYTES = 20 * 1024 * 1024  # 20 MB
+            file_bytes = await file.read()
+            if len(file_bytes) > MAX_SIZE_BYTES:
+                return HTMLResponse(content="<script>alert('حجم الملف يتجاوز الحد المسموح به (20 ميجابايت)'); window.history.back();</script>", status_code=400)
+
             filename = f"{uuid.uuid4().hex}.{ext}"
             path = os.path.join("static", "uploads", "documents", filename)
             with open(path, "wb") as f_out:
-                f_out.write(await file.read())
+                f_out.write(file_bytes)
             d.file_path = f"static/uploads/documents/{filename}"
 
         d.case_id = case_id

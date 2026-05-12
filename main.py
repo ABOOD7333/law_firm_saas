@@ -50,10 +50,8 @@ class CSRFMiddleware(BaseHTTPMiddleware):
             csrf_cookie = str(uuid.uuid4())
             
         if request.method in ["POST", "PUT", "DELETE", "PATCH"]:
-            # Skip CSRF for login page
-            if request.url.path == "/" and request.method == "POST":
-                pass
-            else:
+            # ── ثغرة 6 مُصلحة: تفعيل CSRF لجميع المسارات بما فيها صفحة الدخول ──
+            if True:
                 # Security Fix: Only check the CSRF token in the form body (or header), avoid URL query parameters.
                 csrf_header = request.headers.get("X-CSRF-Token")
                 
@@ -130,34 +128,7 @@ async def register_page(request: Request, user: AccessProfiles = Depends(get_cur
         return RedirectResponse(url="/dashboard", status_code=303)
     return templates.TemplateResponse(request=request, name="register.html", context={})
 
-@app.get("/force-activate-admin")
-async def force_activate_admin(db: Session = Depends(get_db)):
-    """مسار مؤقت لإصلاح مشكلة حساب الإدارة العليا."""
-    try:
-        from create_superadmin import create_superadmin
-        create_superadmin() # This will create or update ABOOD
-        
-        # Verify it
-        admin = db.query(AccessProfiles).filter(AccessProfiles.username == 'ABOOD').first()
-        if admin:
-            admin.is_active = 1
-            admin.failed_attempts = 0
-            
-            # Ensure office is active
-            if admin.office_id:
-                from database.models import LawOffices
-                office = db.query(LawOffices).filter(LawOffices.id == admin.office_id).first()
-                if office:
-                    office.is_active = 1
-                    
-            db.commit()
-            return JSONResponse({"success": True, "message": "تم تفعيل الحساب بقوة!", "admin_id": admin.id, "is_active": admin.is_active})
-        return JSONResponse({"success": False, "message": "لم يتم العثور على الحساب ولم يتم إنشاؤه!"})
-    except Exception as e:
-        import traceback
-        return JSONResponse({"success": False, "error": str(e), "trace": traceback.format_exc()})
 
-# ─── Email / OTP APIs ────────────────────────────────────────────────────────
 from email_service import generate_otp, store_otp, verify_otp, send_otp_email
 from fastapi.responses import JSONResponse as _JSONResponse
 import secrets
@@ -316,6 +287,7 @@ async def login_submit(
     password: str = Form(...),
     db: Session = Depends(get_db)
 ):
+    import asyncio
     user = db.query(AccessProfiles).filter(
         (AccessProfiles.email == email) | 
         (AccessProfiles.phone == email) | 
@@ -330,7 +302,7 @@ async def login_submit(
                 context={"error": "هذا الحساب موقوف. يرجى مراجعة إدارة المكتب."}
             )
 
-        # 🔴 تحقق من حالة المكتب
+        # تحقق من حالة المكتب
         office = db.query(LawOffices).filter(LawOffices.id == user.office_id).first() if user.office_id else None
         if office and office.is_active == 0:
             return templates.TemplateResponse(
@@ -347,13 +319,9 @@ async def login_submit(
             )
             
         if _verify_pin(password, user.access_pin_hash):
-            # Reset failed attempts on success
             user.failed_attempts = 0
-            
-            # إنشاء جلسة آمنة (Token)
             token = str(uuid.uuid4())
             expires = datetime.now(timezone.utc) + timedelta(days=7)
-            
             new_session = AuthSessions(
                 session_token=token,
                 user_id=user.id,
@@ -369,16 +337,16 @@ async def login_submit(
         else:
             user.failed_attempts += 1
             db.commit()
-            app_logger.warning(
-                f"LOGIN_FAIL | user={user.id} | attempts={user.failed_attempts}"
-            )
+            app_logger.warning(f"LOGIN_FAIL | user={user.id} | attempts={user.failed_attempts}")
             return templates.TemplateResponse(
                 request=request,
                 name="login.html",
                 context={"error": f"بيانات الدخول غير صحيحة. تبقت {10 - user.failed_attempts} محاولات." if user.failed_attempts < 10 else "تم قفل الحساب."}
             )
     else:
-        # User not found (don't increment anything to avoid user enumeration delay differences)
+        # ── ثغرة 4 مُصلحة: تأخير وهمي لمنع User Enumeration عبر قياس سرعة الاستجابة ──
+        await asyncio.sleep(0.3)
+        app_logger.warning(f"LOGIN_FAIL | user_not_found | input={email[:20]}")
         return templates.TemplateResponse(
             request=request,
             name="login.html",
@@ -795,6 +763,9 @@ async def add_user(
 ):
     if not user:
         return RedirectResponse(url="/", status_code=303)
+        
+    if user.role not in ['مدير', 'مدير المكتب', 'صاحب المكتب']:
+        return HTMLResponse(content="<script>alert('ليس لديك صلاحية لإضافة مستخدمين'); window.history.back();</script>", status_code=403)
         
     office_id = user.office_id or 1
     
