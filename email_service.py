@@ -93,7 +93,7 @@ def send_otp_email(to_email: str, otp_code: str, purpose: str = "forgot_password
     يعيد True عند النجاح، False عند الفشل.
     """
     config = _load_smtp_config()
-    if not config or not config.get("username"):
+    if not config:
         print("[EmailService] لا توجد إعدادات SMTP.")
         return False
 
@@ -130,31 +130,45 @@ def send_otp_email(to_email: str, otp_code: str, purpose: str = "forgot_password
         """
 
     try:
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = subject
-        msg["From"]    = config.get("sender", config.get("username", ""))
-        msg["To"]      = to_email
-        msg.attach(MIMEText(body_html, "html", "utf-8"))
+        import urllib.request
+        import json
 
-        use_tls = config.get("use_tls", "true").lower() == "true"
-        host     = config.get("host") or "smtp.gmail.com"
-        port     = int(config.get("port") or 587)
-        username = config.get("username", "")
-        password = config.get("password", "")
+        # Railway blocks SMTP ports. We use the powerful Brevo HTTP API!
+        url = "https://api.brevo.com/v3/smtp/email"
+        
+        # We need the API Key. We will try to read BREVO_API_KEY.
+        # If not found, we use the SMTP_PASSWORD if it starts with xkeysib.
+        api_key = os.getenv("BREVO_API_KEY")
+        if not api_key:
+            # Fallback to SMTP_PASSWORD in case user puts the API key there
+            api_key = config.get("password", "")
 
-        print(f"[EmailService] Connecting to SMTP: {host}:{port} with user: {username}")
-        with smtplib.SMTP(host, port, timeout=10) as server:
-            server.set_debuglevel(0)  # تم إيقاف الـ debug لمنع امتلاء سجلات السحابة
-            server.ehlo()
-            if use_tls:
-                server.starttls()
-                server.ehlo()
-            server.login(username, password)
-            server.sendmail(msg["From"], [to_email], msg.as_string())
+        sender_email = config.get("sender", "") or config.get("username", "")
 
-        print(f"[EmailService] ✅ OTP sent to {to_email}")
-        return True
+        payload = {
+            "sender": {"email": sender_email},
+            "to": [{"email": to_email}],
+            "subject": subject,
+            "htmlContent": body_html
+        }
 
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(url, data=data)
+        req.add_header("accept", "application/json")
+        req.add_header("api-key", api_key)
+        req.add_header("content-type", "application/json")
+
+        print(f"[EmailService] Sending email via Brevo HTTP API to {to_email}")
+        
+        with urllib.request.urlopen(req, timeout=10) as response:
+            res_body = response.read()
+            print(f"[EmailService] ✅ Email API response: {response.status}")
+            return True
+
+    except urllib.error.HTTPError as e:
+        err_msg = e.read().decode('utf-8')
+        print(f"[EmailService] ❌ HTTP Error sending email: {e.code} - {err_msg}")
+        return False
     except Exception as e:
-        print(f"[EmailService] ❌ Failed to send email: {e}")
+        print(f"[EmailService] ❌ Failed to send email via API: {e}")
         return False
