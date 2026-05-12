@@ -47,6 +47,26 @@
 .alert-box { padding:12px 16px; border-radius:10px; font-size:.88rem; font-weight:600; margin-bottom:16px; display:none; }
 .alert-success { background:#d1fae5; color:#065f46; border:1px solid #a7f3d0; }
 .alert-error   { background:#fee2e2; color:#7f1d1d; border:1px solid #fecaca; }
+
+/* ── أزرار الجدول ── */
+.tbl-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 10px; border: none; border-radius: 8px;
+  font-family: 'Cairo', sans-serif; font-size: 0.78rem;
+  font-weight: 700; cursor: pointer; transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.tbl-edit   { background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; }
+.tbl-edit:hover   { background:#1d4ed8; color:white; transform:translateY(-1px); box-shadow:0 3px 8px rgba(29,78,216,.3); }
+.tbl-toggle { background:#fef3c7; color:#b45309; border:1px solid #fde68a; }
+.tbl-toggle:hover { background:#d97706; color:white; transform:translateY(-1px); box-shadow:0 3px 8px rgba(217,119,6,.3); }
+.tbl-delete { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; }
+.tbl-delete:hover { background:#dc2626; color:white; transform:translateY(-1px); box-shadow:0 3px 8px rgba(220,38,38,.3); }
+
+/* بيل الحالة */
+.status-pill { display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border-radius:20px; font-size:0.78rem; font-weight:700; }
+.pill-active { background:#d1fae5; color:#065f46; }
+.pill-inactive { background:#fee2e2; color:#b91c1c; }
 </style>
 {% endblock %}
 
@@ -73,8 +93,9 @@
             <th>الاسم</th>
             <th>اسم الدخول</th>
             <th>الدور</th>
-            <th>نشط</th>
+            <th>الحالة</th>
             <th>آخر دخول</th>
+            <th style="text-align:center;">⚙️ الإجراءات</th>
           </tr>
         </thead>
         <tbody>
@@ -93,8 +114,26 @@
                 <span class="role-badge role-other">{{ m.role }}</span>
               {% endif %}
             </td>
-            <td><span class="active-dot {{ 'dot-on' if m.is_active else 'dot-off' }}"></span> {{ 'نعم' if m.is_active else 'لا' }}</td>
+            <td>
+              <span class="status-pill {{ 'pill-active' if m.is_active else 'pill-inactive' }}">
+                {{ '✅ نشط' if m.is_active else '🔴 موقوف' }}
+              </span>
+            </td>
             <td style="font-size:.78rem;color:var(--text-muted);">{{ (m.last_login_at or '—')[:16] }}</td>
+            <td style="text-align:center;">
+              <div style="display:flex;gap:6px;justify-content:center;align-items:center;">
+                <button class="tbl-btn tbl-edit" onclick="selectMember({{ m.id }}, this.closest('tr')); event.stopPropagation();" title="تعديل بيانات العضو">
+                  <i class="fa-solid fa-pen-to-square"></i> تعديل
+                </button>
+                <button class="tbl-btn tbl-toggle" onclick="quickToggle({{ m.id }}); event.stopPropagation();" title="إيقاف أو تفعيل الحساب">
+                  <i class="fa-solid fa-{{ 'ban' if m.is_active else 'circle-check' }}"></i>
+                  {{ 'إيقاف' if m.is_active else 'تفعيل' }}
+                </button>
+                <button class="tbl-btn tbl-delete" onclick="quickDelete({{ m.id }}, '{{ m.name }}'); event.stopPropagation();" title="حذف العضو نهائياً">
+                  <i class="fa-solid fa-trash-can"></i> حذف
+                </button>
+              </div>
+            </td>
           </tr>
           {% endfor %}
         </tbody>
@@ -206,11 +245,24 @@
         </div>
 
         <div class="btn-row">
-          <button type="submit" class="action-btn btn-save"><i class="fa-solid fa-floppy-disk"></i> حفظ العضو</button>
-          <button type="button" class="action-btn btn-clear" onclick="clearForm()"><i class="fa-solid fa-plus"></i> نموذج جديد</button>
-          <button type="button" class="action-btn btn-toggle" onclick="toggleMember()"><i class="fa-solid fa-toggle-on"></i> إيقاف/تفعيل</button>
-          <button type="button" class="action-btn btn-delete" onclick="deleteMember()"><i class="fa-solid fa-trash"></i> حذف</button>
+          <button type="submit" class="action-btn btn-save" title="حفظ بيانات العضو">
+            <i class="fa-solid fa-floppy-disk"></i> حفظ العضو
+          </button>
+          <button type="button" class="action-btn btn-clear" onclick="clearForm()" title="إنشاء عضو جديد">
+            <i class="fa-solid fa-user-plus"></i> عضو جديد
+          </button>
+          <button type="button" class="action-btn btn-toggle" onclick="toggleMember()" title="إيقاف أو تفعيل الحساب">
+            <i class="fa-solid fa-power-off"></i> إيقاف/تفعيل
+          </button>
+          <button type="button" class="action-btn btn-delete" onclick="deleteMember()" title="حذف العضو نهائياً">
+            <i class="fa-solid fa-trash-can"></i> حذف العضو
+          </button>
         </div>
+        <div style="margin-top:10px; padding:10px 14px; background:#f0f9ff; border-radius:10px; font-size:0.8rem; color:#0369a1; border:1px solid #bae6fd;">
+          <i class="fa-solid fa-circle-info" style="margin-left:6px;"></i>
+          <strong>كيفية الاستخدام:</strong> اضغط على اسم العضو من الجدول لتحميل بياناته، ثم قم بالتعديل واضغط "حفظ العضو".
+        </div>
+
       </form>
     </div>
   </div>
@@ -334,6 +386,30 @@ async function deleteMember() {
   if (!selectedId) { showAlert('اختر عضواً أولاً', 'error'); return; }
   if (!confirm('هل أنت متأكد من حذف هذا العضو؟')) return;
   const res = await fetch(`/api/team/delete/${selectedId}`, {method:'DELETE'});
+  const data = await res.json();
+  if (data.ok) { showAlert(data.message); setTimeout(()=>location.reload(), 1000); }
+  else showAlert(data.message, 'error');
+}
+
+async function quickToggle(id) {
+  const res = await fetch(`/api/team/toggle/${id}`, {method:'POST',
+    headers: {'X-CSRF-Token': document.cookie.split('; ').find(r=>r.startsWith('csrf_token='))?.split('=')[1]||''}
+  });
+  const data = await res.json();
+  if (data.ok) { showAlert(data.message); setTimeout(()=>location.reload(), 1000); }
+  else showAlert(data.message, 'error');
+}
+
+async function quickDelete(id, name) {
+  if (!confirm(`‏⚠️ تأكيد الحذف
+
+هل أنت متأكد من حذف العضو التالي:
+الاسم: ${name}
+
+هذا الإجراء لا يمكن التراجع عنه!`)) return;
+  const res = await fetch(`/api/team/delete/${id}`, {method:'DELETE',
+    headers: {'X-CSRF-Token': document.cookie.split('; ').find(r=>r.startsWith('csrf_token='))?.split('=')[1]||''}
+  });
   const data = await res.json();
   if (data.ok) { showAlert(data.message); setTimeout(()=>location.reload(), 1000); }
   else showAlert(data.message, 'error');

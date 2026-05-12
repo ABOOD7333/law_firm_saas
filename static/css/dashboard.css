@@ -872,3 +872,141 @@ button, .btn {
     }
 }
 
+
+/* ═══════════════════════════════════════════════════
+   🎨 نظام أزرار الإجراءات الشامل - يطبّق على كل الصفحات
+   ═══════════════════════════════════════════════════ */
+
+/* الزر الأساسي لكل الإجراءات */
+.action-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 5px !important;
+    padding: 6px 12px !important;
+    border-radius: 9px !important;
+    font-family: 'Cairo', sans-serif !important;
+    font-size: 0.82rem !important;
+    font-weight: 700 !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    white-space: nowrap !important;
+    text-decoration: none !important;
+    border: 1.5px solid transparent !important;
+    min-width: 36px;
+}
+
+/* ── أزرار حسب الوظيفة (via color style) ── */
+
+/* أزرار التعديل - أزرق */
+.action-btn.edit-btn,
+.action-btn[title*="تعديل"],
+.action-btn[title*="تحرير"] {
+    background: #eff6ff !important;
+    color: #1d4ed8 !important;
+    border-color: #bfdbfe !important;
+}
+.action-btn.edit-btn:hover,
+.action-btn[title*="تعديل"]:hover,
+.action-btn[title*="تحرير"]:hover {
+    background: #1d4ed8 !important;
+    color: white !important;
+    border-color: #1d4ed8 !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(29,78,216,.3) !important;
+}
+
+/* أزرار العرض - بنفسجي */
+.action-btn.view-btn,
+.action-btn[title*="عرض"],
+.action-btn[title*="اللوحة"],
+.action-btn[title*="تحميل"] {
+    background: #f5f3ff !important;
+    color: #6d28d9 !important;
+    border-color: #ddd6fe !important;
+}
+.action-btn.view-btn:hover,
+.action-btn[title*="عرض"]:hover,
+.action-btn[title*="اللوحة"]:hover,
+.action-btn[title*="تحميل"]:hover {
+    background: #6d28d9 !important;
+    color: white !important;
+    border-color: #6d28d9 !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(109,40,217,.3) !important;
+}
+
+/* أزرار الحذف - أحمر */
+.action-btn[title*="حذف"],
+.action-btn[style*="#ef4444"],
+.action-btn[style*="color:#ef4444"] {
+    background: #fef2f2 !important;
+    color: #dc2626 !important;
+    border-color: #fecaca !important;
+}
+.action-btn[title*="حذف"]:hover,
+.action-btn[style*="#ef4444"]:hover {
+    background: #dc2626 !important;
+    color: white !important;
+    border-color: #dc2626 !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(220,38,38,.3) !important;
+}
+
+/* أزرار الإيقاف/التفعيل - برتقالي */
+.action-btn[title*="إيقاف"],
+.action-btn[title*="تفعيل"] {
+    background: #fffbeb !important;
+    color: #b45309 !important;
+    border-color: #fde68a !important;
+}
+.action-btn[title*="إيقاف"]:hover,
+.action-btn[title*="تفعيل"]:hover {
+    background: #d97706 !important;
+    color: white !important;
+    border-color: #d97706 !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(217,119,6,.3) !important;
+}
+
+/* أزرار الاكتمال/الحفظ - أخضر */
+.action-btn[title*="مكتمل"],
+.action-btn[title*="حفظ"],
+.action-btn[style*="#10b981"] {
+    background: #f0fdf4 !important;
+    color: #047857 !important;
+    border-color: #a7f3d0 !important;
+}
+.action-btn[title*="مكتمل"]:hover,
+.action-btn[title*="حفظ"]:hover {
+    background: #047857 !important;
+    color: white !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(4,120,87,.3) !important;
+}
+
+/* إضافة نص تلقائي لأزرار الأيقونات فقط عبر tooltip بديل */
+.action-btn[title]:not([title=""]) {
+    position: relative;
+}
+
+/* خلية الإجراءات في جداول البيانات */
+td:has(.action-btn),
+.saas-table td:last-child,
+.data-table td:last-child {
+    white-space: nowrap;
+}
+
+/* حذف النقطة من status-badge داخل خلايا الإجراءات */
+td .action-btn::before {
+    display: none !important;
+    content: none !important;
+}
+
+/* تحسين عمود الإجراءات على الموبايل */
+@media (max-width: 768px) {
+    .action-btn {
+        padding: 5px 8px !important;
+        font-size: 0.75rem !important;
+    }
+}
