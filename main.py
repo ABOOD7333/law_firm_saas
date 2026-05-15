@@ -995,12 +995,11 @@ async def api_verify_register_otp(request: Request, db: Session = Depends(get_db
         if not pending_user:
             return _J({"success": False, "error": "انتهت صلاحية جلسة التسجيل أو أنك تستخدم نافذة مختلفة، يرجى إعادة تعبئة البيانات"}, status_code=400)
             
-        # الآن فقط نقوم بالحفظ في قاعدة البيانات
-        office = db.query(LawOffices).first()
-        if not office:
-            office = LawOffices(name="المكتب الرئيسي", status_key="active", is_active=1)
-            db.add(office)
-            db.flush()
+        # إنشاء مكتب جديد (مساحة عمل معزولة) لكل مستخدم يسجل من الخارج
+        office_name = f"مكتب {pending_user['name']}" if pending_user['role'] in ['صاحب مكتب', 'محامي'] else f"حساب {pending_user['name']}"
+        new_office = LawOffices(name=office_name, status_key="active", is_active=1)
+        db.add(new_office)
+        db.flush()
 
         new_user = AccessProfiles(
             name=pending_user["name"],
@@ -1011,7 +1010,7 @@ async def api_verify_register_otp(request: Request, db: Session = Depends(get_db
             lawyer_name=pending_user["lawyer_name"] if pending_user["role"] == 'موكل' else None,
             access_pin_hash=_hash_pin(pending_user["access_pin"]),
             role=pending_user["role"],
-            office_id=office.id,
+            office_id=new_office.id,
             is_active=1,  # مفعل مباشرة لأنه أثبت إيميله
             email_verified=1,
             state="draft",
@@ -1022,7 +1021,7 @@ async def api_verify_register_otp(request: Request, db: Session = Depends(get_db
 
         write_audit(
             db, table_name="access_profiles", action_name="register",
-            actor_user_id=new_user.id, actor_name=pending_user["name"], office_id=office.id,
+            actor_user_id=new_user.id, actor_name=pending_user["name"], office_id=new_office.id,
             entity_type="user", entity_id=new_user.id, details=f"تسجيل حساب جديد وتأكيد البريد"
         )
         db.commit()
