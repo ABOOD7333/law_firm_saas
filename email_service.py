@@ -130,45 +130,81 @@ def send_otp_email(to_email: str, otp_code: str, purpose: str = "forgot_password
         """
 
     try:
-        import urllib.request
-        import json
-
-        # Railway blocks SMTP ports. We use the powerful Brevo HTTP API!
-        url = "https://api.brevo.com/v3/smtp/email"
+        resend_key = os.getenv("RESEND_API_KEY")
+        brevo_key = os.getenv("BREVO_API_KEY")
         
-        # We need the API Key. We will try to read BREVO_API_KEY.
-        # If not found, we use the SMTP_PASSWORD if it starts with xkeysib.
-        api_key = os.getenv("BREVO_API_KEY")
-        if not api_key:
-            # Fallback to SMTP_PASSWORD in case user puts the API key there
-            api_key = config.get("password", "")
+        sender_email = config.get("sender", "") or config.get("username", "") or "noreply@lawsaas.com"
 
-        sender_email = config.get("sender", "") or config.get("username", "")
+        if resend_key:
+            import urllib.request
+            import json
+            url = "https://api.resend.com/emails"
+            # Resend requires specific format, usually a verified domain. 
+            # If onboarding@resend.dev is used, it only sends to the verified email.
+            from_email = sender_email if "@" in sender_email else "onboarding@resend.dev"
+            payload = {
+                "from": f"LawSaaS <{from_email}>",
+                "to": [to_email],
+                "subject": subject,
+                "html": body_html
+            }
+            data = json.dumps(payload).encode("utf-8")
+            req = urllib.request.Request(url, data=data)
+            req.add_header("Authorization", f"Bearer {resend_key}")
+            req.add_header("Content-Type", "application/json")
+            print(f"[EmailService] Sending via Resend API to {to_email}")
+            with urllib.request.urlopen(req, timeout=10) as response:
+                print(f"[EmailService] ✅ Resend API response: {response.status}")
+                return True
 
-        payload = {
-            "sender": {"email": sender_email},
-            "to": [{"email": to_email}],
-            "subject": subject,
-            "htmlContent": body_html
-        }
+        elif brevo_key or (config.get("password", "").startswith("xkeysib")):
+            api_key = brevo_key or config.get("password", "")
+            import urllib.request
+            import json
+            url = "https://api.brevo.com/v3/smtp/email"
+            payload = {
+                "sender": {"email": sender_email},
+                "to": [{"email": to_email}],
+                "subject": subject,
+                "htmlContent": body_html
+            }
+            data = json.dumps(payload).encode("utf-8")
+            req = urllib.request.Request(url, data=data)
+            req.add_header("accept", "application/json")
+            req.add_header("api-key", api_key)
+            req.add_header("content-type", "application/json")
+            print(f"[EmailService] Sending via Brevo API to {to_email}")
+            with urllib.request.urlopen(req, timeout=10) as response:
+                print(f"[EmailService] ✅ Brevo API response: {response.status}")
+                return True
 
-        data = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(url, data=data)
-        req.add_header("accept", "application/json")
-        req.add_header("api-key", api_key)
-        req.add_header("content-type", "application/json")
-
-        print(f"[EmailService] Sending email via Brevo HTTP API to {to_email}")
-        
-        with urllib.request.urlopen(req, timeout=10) as response:
-            res_body = response.read()
-            print(f"[EmailService] ✅ Email API response: {response.status}")
+        else:
+            # Fallback to standard SMTP (e.g., Gmail / Outlook / Namecheap)
+            import smtplib
+            from email.mime.text import MIMEText
+            from email.mime.multipart import MIMEMultipart
+            
+            smtp_host = config.get("host", "smtp.gmail.com")
+            port = int(config.get("port", 587))
+            
+            msg = MIMEMultipart()
+            msg['From'] = sender_email
+            msg['To'] = to_email
+            msg['Subject'] = subject
+            msg.attach(MIMEText(body_html, 'html'))
+            
+            print(f"[EmailService] Sending via Standard SMTP ({smtp_host}:{port}) to {to_email}")
+            
+            server = smtplib.SMTP(smtp_host, port)
+            server.ehlo()
+            server.starttls()
+            if config.get("username") and config.get("password"):
+                server.login(config.get("username"), config.get("password"))
+            server.send_message(msg)
+            server.quit()
+            print("[EmailService] ✅ Email sent successfully via SMTP.")
             return True
 
-    except urllib.error.HTTPError as e:
-        err_msg = e.read().decode('utf-8')
-        print(f"[EmailService] ❌ HTTP Error sending email: {e.code} - {err_msg}")
-        return False
     except Exception as e:
-        print(f"[EmailService] ❌ Failed to send email via API: {e}")
+        print(f"[EmailService] ❌ Failed to send email: {e}")
         return False
