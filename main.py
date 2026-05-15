@@ -139,6 +139,7 @@ _reset_tokens = {}
 # سجل بسيط لتتبع طلبات OTP لمنع إغراق الإيميل (Rate Limiting)
 import time
 _otp_rate_limit = {}
+_ip_rate_limit = {}  # لتتبع محاولات تسجيل الدخول الخاطئة لكل IP
 
 @app.post("/api/forgot-send-otp")
 async def api_forgot_send_otp(request: Request, db: Session = Depends(get_db)):
@@ -288,6 +289,17 @@ async def login_submit(
     db: Session = Depends(get_db)
 ):
     import asyncio
+    import time
+    
+    client_ip = request.client.host if request.client else "unknown"
+    now = time.time()
+    _ip_rate_limit[client_ip] = [t for t in _ip_rate_limit.get(client_ip, []) if now - t < 900]
+    if len(_ip_rate_limit[client_ip]) >= 15:
+        return templates.TemplateResponse(
+            request=request, name="login.html",
+            context={"error": "تم حظر عنوان الـ IP مؤقتاً بسبب كثرة المحاولات الخاطئة. يرجى الانتظار 15 دقيقة."}
+        )
+
     user = db.query(AccessProfiles).filter(
         (AccessProfiles.email == email) | 
         (AccessProfiles.phone == email) | 
@@ -337,6 +349,7 @@ async def login_submit(
         else:
             user.failed_attempts += 1
             db.commit()
+            _ip_rate_limit.setdefault(client_ip, []).append(now)
             app_logger.warning(f"LOGIN_FAIL | user={user.id} | attempts={user.failed_attempts}")
             return templates.TemplateResponse(
                 request=request,
@@ -346,6 +359,7 @@ async def login_submit(
     else:
         # ── ثغرة 4 مُصلحة: تأخير وهمي لمنع User Enumeration عبر قياس سرعة الاستجابة ──
         await asyncio.sleep(0.3)
+        _ip_rate_limit.setdefault(client_ip, []).append(now)
         app_logger.warning(f"LOGIN_FAIL | user_not_found | input={email[:20]}")
         return templates.TemplateResponse(
             request=request,
