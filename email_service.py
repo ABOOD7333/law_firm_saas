@@ -130,56 +130,30 @@ def send_otp_email(to_email: str, otp_code: str, purpose: str = "forgot_password
         """
 
     try:
-        resend_key = os.getenv("RESEND_API_KEY")
-        brevo_key = os.getenv("BREVO_API_KEY")
-        
-        sender_email = config.get("sender", "") or config.get("username", "") or "noreply@lawsaas.com"
+        sender_email = config.get("username", "noreply@lawsaas.com")
+        webhook_url = os.getenv("GMAIL_WEBHOOK_URL")
 
-        if resend_key:
+        # 1. إرسال عبر Webhook (لتجاوز حظر Railway للمنافذ)
+        if webhook_url:
             import urllib.request
             import json
-            url = "https://api.resend.com/emails"
-            # Resend requires specific format, usually a verified domain. 
-            # If onboarding@resend.dev is used, it only sends to the verified email.
-            from_email = sender_email if "@" in sender_email else "onboarding@resend.dev"
+            
             payload = {
-                "from": f"LawSaaS <{from_email}>",
-                "to": [to_email],
+                "to": to_email,
                 "subject": subject,
                 "html": body_html
             }
             data = json.dumps(payload).encode("utf-8")
-            req = urllib.request.Request(url, data=data)
-            req.add_header("Authorization", f"Bearer {resend_key}")
+            req = urllib.request.Request(webhook_url, data=data)
             req.add_header("Content-Type", "application/json")
-            print(f"[EmailService] Sending via Resend API to {to_email}")
-            with urllib.request.urlopen(req, timeout=10) as response:
-                print(f"[EmailService] ✅ Resend API response: {response.status}")
+            
+            print(f"[EmailService] Sending via Gmail Webhook to {to_email}")
+            with urllib.request.urlopen(req, timeout=15) as response:
+                print(f"[EmailService] ✅ Webhook response: {response.status}")
                 return True
 
-        elif brevo_key or (config.get("password", "").startswith("xkeysib")):
-            api_key = brevo_key or config.get("password", "")
-            import urllib.request
-            import json
-            url = "https://api.brevo.com/v3/smtp/email"
-            payload = {
-                "sender": {"email": sender_email},
-                "to": [{"email": to_email}],
-                "subject": subject,
-                "htmlContent": body_html
-            }
-            data = json.dumps(payload).encode("utf-8")
-            req = urllib.request.Request(url, data=data)
-            req.add_header("accept", "application/json")
-            req.add_header("api-key", api_key)
-            req.add_header("content-type", "application/json")
-            print(f"[EmailService] Sending via Brevo API to {to_email}")
-            with urllib.request.urlopen(req, timeout=10) as response:
-                print(f"[EmailService] ✅ Brevo API response: {response.status}")
-                return True
-
+        # 2. الإرسال بالطريقة العادية SMTP (تعمل محلياً أو إذا كان السيرفر مدفوعاً)
         else:
-            # Fallback to standard SMTP (e.g., Gmail / Outlook / Namecheap)
             import smtplib
             from email.mime.text import MIMEText
             from email.mime.multipart import MIMEMultipart
@@ -188,7 +162,7 @@ def send_otp_email(to_email: str, otp_code: str, purpose: str = "forgot_password
             port = int(config.get("port", 587))
             
             msg = MIMEMultipart()
-            msg['From'] = sender_email
+            msg['From'] = f"LawSaaS <{sender_email}>"
             msg['To'] = to_email
             msg['Subject'] = subject
             msg.attach(MIMEText(body_html, 'html'))
