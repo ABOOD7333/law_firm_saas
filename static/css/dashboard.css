@@ -1058,4 +1058,36 @@ td .action-btn::before {
         max-width: 100% !important;
         height: auto !important;
     }
+
+    /* CRITICAL FIX FOR HORIZONTAL OVERFLOW */
+    body, html {
+        overflow-x: hidden !important;
+        max-width: 100vw;
+    }
+    
+    .main-content {
+        min-width: 0 !important; /* Fixes flex child stretching */
+        width: 100% !important;
+        max-width: 100vw !important;
+    }
+
+    .dashboard-container {
+        padding: 15px 10px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Fix search bar not wrapping properly */
+    .topbar {
+        padding: 10px !important;
+        gap: 10px !important;
+    }
+    
+    .search-bar {
+        width: 100% !important;
+        flex: 1 1 100% !important;
+        margin-top: 5px !important;
+        order: 3 !important;
+        box-sizing: border-box !important;
+    }
 }
