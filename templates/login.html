@@ -142,16 +142,16 @@
             </div>
             <div id="forgot-alert" class="alert"></div>
             
-            <!-- الخطوة 1: البريد وتاريخ الميلاد -->
+            <!-- الخطوة 1: البريد ورقم الهاتف -->
             <div class="modal-step active" id="forgot-step-1">
-                <p style="color:#64748b; font-size:0.9rem; margin-bottom:20px;">أدخل البريد الإلكتروني وتاريخ الميلاد لإرسال رمز التحقق</p>
+                <p style="color:#64748b; font-size:0.9rem; margin-bottom:20px;">أدخل البريد الإلكتروني ورقم الهاتف لإرسال رمز التحقق</p>
                 <div class="form-group">
                     <label>البريد الإلكتروني</label>
                     <input type="email" id="forgot-email" placeholder="example@domain.com">
                 </div>
                 <div class="form-group">
-                    <label>تاريخ الميلاد</label>
-                    <input type="date" id="forgot-birth">
+                    <label>رقم الهاتف</label>
+                    <input type="tel" id="forgot-phone" placeholder="05xxxxxxxxx">
                 </div>
                 <button class="btn-submit" onclick="forgotSendOTP()" id="btn-forgot-send">إرسال رمز التحقق</button>
             </div>
@@ -302,8 +302,8 @@
         // ==================== FORGOT PASSWORD FLOW ====================
         async function forgotSendOTP() {
             const email = document.getElementById('forgot-email').value;
-            const birth = document.getElementById('forgot-birth').value;
-            if(!email || !birth) { showAlert('forgot-alert', 'الرجاء إدخال البريد وتاريخ الميلاد'); return; }
+            const phone = document.getElementById('forgot-phone').value;
+            if(!email || !phone) { showAlert('forgot-alert', 'الرجاء إدخال البريد الإلكتروني ورقم الهاتف'); return; }
             
             const btn = document.getElementById('btn-forgot-send');
             btn.disabled = true; btn.textContent = "جاري الإرسال...";
@@ -311,7 +311,7 @@
             try {
                 const res = await fetch('/api/forgot-send-otp', {
                     method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken},
-                    body: JSON.stringify({ email, birth_date: birth })
+                    body: JSON.stringify({ email, phone: phone })
                 });
                 const data = await res.json();
                 if(data.success) {
