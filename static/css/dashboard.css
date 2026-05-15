@@ -894,6 +894,16 @@ button, .btn {
     text-decoration: none !important;
     border: 1.5px solid transparent !important;
     min-width: 36px;
+    width: auto !important;
+    height: auto !important;
+}
+
+/* For icon-only buttons in tables, keep them square */
+.saas-table td .action-btn, 
+.data-table td .action-btn {
+    width: 34px !important;
+    height: 34px !important;
+    padding: 0 !important;
 }
 
 /* ── أزرار حسب الوظيفة (via color style) ── */
@@ -1015,8 +1025,15 @@ td .action-btn::before {
    📱 GLOBAL MOBILE RESPONSIVE FIXES (OVERRIDES INLINE STYLES)
    ═══════════════════════════════════════════════════ */
 @media (max-width: 992px) {
-    /* Override all inline grids that have columns */
-    div[style*="grid-template-columns"] {
+    /* Override KPI inline grids to 3 columns */
+    div[style*="repeat(4"], div[style*="repeat(3"], div[style*="repeat(auto-fit"] {
+        grid-template-columns: repeat(3, 1fr) !important;
+        display: grid !important;
+        flex-direction: unset !important;
+    }
+    
+    /* Keep forms and generic inline grids as 1 column */
+    div[style*="1fr 1fr"], div[style*="1fr"]:not([style*="repeat"]) {
         grid-template-columns: 1fr !important;
         display: flex !important;
         flex-direction: column !important;
@@ -1041,10 +1058,16 @@ td .action-btn::before {
     }
 
     /* Override grids with specific classes */
-    .grid-layout, .ref-layout, .stats-row, .kpi-grid, .team-grid {
+    .grid-layout, .ref-layout, .team-grid {
         grid-template-columns: 1fr !important;
         display: flex !important;
         flex-direction: column !important;
+    }
+    
+    .stats-row, .kpi-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+        display: grid !important;
+        flex-direction: unset !important;
     }
     
     .form-row, .grid-2 {
