@@ -1010,3 +1010,52 @@ td .action-btn::before {
         font-size: 0.75rem !important;
     }
 }
+
+/* ═══════════════════════════════════════════════════
+   📱 GLOBAL MOBILE RESPONSIVE FIXES (OVERRIDES INLINE STYLES)
+   ═══════════════════════════════════════════════════ */
+@media (max-width: 992px) {
+    /* Override all inline grids that have columns */
+    div[style*="grid-template-columns"] {
+        grid-template-columns: 1fr !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    
+    /* Global table wrapper fix for mobile */
+    .saas-table, table.members-table, table.data-table {
+        min-width: unset !important;
+        width: 100% !important;
+        display: block !important;
+        overflow-x: auto !important;
+        white-space: nowrap !important;
+        -webkit-overflow-scrolling: touch;
+        border: 0;
+    }
+    
+    .section-card {
+        padding: 15px !important;
+        margin-bottom: 15px !important;
+        width: 100% !important;
+        box-sizing: border-box;
+    }
+
+    /* Override grids with specific classes */
+    .grid-layout, .ref-layout, .stats-row, .kpi-grid, .team-grid {
+        grid-template-columns: 1fr !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    
+    .form-row, .grid-2 {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+    }
+    
+    /* Fix images or dynamic content breaking out */
+    img, video, iframe {
+        max-width: 100% !important;
+        height: auto !important;
+    }
+}

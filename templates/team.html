@@ -67,6 +67,18 @@
 .status-pill { display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border-radius:20px; font-size:0.78rem; font-weight:700; }
 .pill-active { background:#d1fae5; color:#065f46; }
 .pill-inactive { background:#fee2e2; color:#b91c1c; }
+
+/* Responsive adjustments for mobile */
+@media (max-width: 992px) {
+  .team-grid { grid-template-columns: 1fr !important; }
+  .office-card .meta { flex-direction: column; gap: 10px; }
+  .btn-row { justify-content: center; }
+  .perm-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 576px) {
+  .perm-grid { grid-template-columns: 1fr; }
+  .form-row { grid-template-columns: 1fr !important; display: flex; flex-direction: column; }
+}
 </style>
 {% endblock %}
 
@@ -87,6 +99,7 @@
   <div>
     <div class="section-card">
       <h3><i class="fa-solid fa-users" style="color:#6366f1;"></i> أعضاء الفريق</h3>
+      <div style="overflow-x: auto;">
       <table class="members-table" id="membersTable">
         <thead>
           <tr>
@@ -138,6 +151,7 @@
           {% endfor %}
         </tbody>
       </table>
+      </div>
     </div>
   </div>
 

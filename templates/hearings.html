@@ -55,7 +55,11 @@
                         {% endif %}
                     </td>
                     <td>
-                        <button class="action-btn" style="color: var(--primary-color);" title="تعديل" onclick="openEditHearingModal('{{ hearing.id }}', '{{ hearing.title }}', '{{ hearing.hearing_at }}', '{{ hearing.next_hearing_date or '' }}', '{{ hearing.status_key }}', '{{ hearing.case_id or '' }}')"><i class="fa-solid fa-pen"></i></button>
+                        <div style="display:flex;gap:5px;">
+                            <button class="action-btn" style="color:var(--primary-color);" title="تعديل" onclick="openEditHearingModal('{{ hearing.id }}', '{{ hearing.title }}', '{{ hearing.hearing_at }}', '{{ hearing.next_hearing_date or '' }}', '{{ hearing.status_key }}', '{{ hearing.case_id or '' }}')">
+                                <i class="fa-solid fa-pen-to-square"></i> تعديل
+                            </button>
+                        </div>
                     </td>
                 </tr>
                 {% else %}

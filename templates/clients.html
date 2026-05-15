@@ -35,8 +35,14 @@
                     <td>{{ client.email or '-' }}</td>
                     <td>{{ client.created_at.split(' ')[0] if client.created_at else '-' }}</td>
                     <td>
-                        <button class="action-btn view-btn" title="عرض التفاصيل"><i class="fa-solid fa-eye"></i></button>
-                        <button class="action-btn edit-btn" title="تعديل" onclick="openEditClientModal('{{ client.id }}', '{{ client.name }}', '{{ client.phone }}', '{{ client.national_id }}')"><i class="fa-solid fa-pen"></i></button>
+                        <div style="display:flex;gap:5px;flex-wrap:wrap;">
+                            <button class="action-btn view-btn" title="عرض التفاصيل">
+                                <i class="fa-solid fa-eye"></i> عرض
+                            </button>
+                            <button class="action-btn edit-btn" title="تعديل" onclick="openEditClientModal('{{ client.id }}', '{{ client.name }}', '{{ client.phone }}', '{{ client.national_id }}')">
+                                <i class="fa-solid fa-pen-to-square"></i> تعديل
+                            </button>
+                        </div>
                     </td>
                 </tr>
                 {% else %}

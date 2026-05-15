@@ -46,9 +46,15 @@
                         {% endif %}
                     </td>
                     <td>{{ case.created_at.split(' ')[0] if case.created_at else '-' }}</td>
-                    <td style="display:flex;gap:5px;">
-                        <a href="/cases/{{ case.id }}" class="action-btn view-btn" title="اللوحة الموحدة للقضية"><i class="fa-solid fa-folder-open"></i></a>
-                        <button class="action-btn" style="color:var(--primary-color);" title="تعديل القضية" onclick="openEditCaseModal('{{ case.id }}', '{{ case.title }}', '{{ case.case_number }}', '{{ case.law_clients[0].id if case.law_clients else '' }}', '{{ case.lead_lawyer_id or '' }}', '{{ case.status_key }}')"><i class="fa-solid fa-pen"></i></button>
+                    <td>
+                        <div style="display:flex;gap:5px;flex-wrap:wrap;">
+                            <a href="/cases/{{ case.id }}" class="action-btn view-btn" title="عرض القضية">
+                                <i class="fa-solid fa-folder-open"></i> عرض
+                            </a>
+                            <button class="action-btn" style="color:var(--primary-color);" title="تعديل القضية" onclick="openEditCaseModal('{{ case.id }}', '{{ case.title }}', '{{ case.case_number }}', '{{ case.law_clients[0].id if case.law_clients else '' }}', '{{ case.lead_lawyer_id or '' }}', '{{ case.status_key }}')">
+                                <i class="fa-solid fa-pen-to-square"></i> تعديل
+                            </button>
+                        </div>
                     </td>
                 </tr>
                 {% else %}
