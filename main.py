@@ -1007,9 +1007,9 @@ async def api_verify_register_otp(request: Request, db: Session = Depends(get_db
             email=pending_user["email"],
             phone=pending_user["phone"],
             birth_date=pending_user["birth_date"],
-            lawyer_name=pending_user["lawyer_name"] if pending_user["role"] == 'موكل' else None,
+            lawyer_name=None,
             access_pin_hash=_hash_pin(pending_user["access_pin"]),
-            role=pending_user["role"],
+            role='مدير',  # إعطاء صلاحيات مدير المكتب كاملة لكل من يسجل من الخارج
             office_id=new_office.id,
             is_active=1,  # مفعل مباشرة لأنه أثبت إيميله
             email_verified=1,
