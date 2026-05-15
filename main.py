@@ -386,14 +386,30 @@ async def dashboard_page(request: Request, db: Session = Depends(get_db), user: 
     if not user:
         return RedirectResponse(url="/", status_code=303)
     try:
+        # ── بوابة الموكلين (Client Portal) ──
+        if user.role == 'موكل':
+            client_records = db.query(LawClients).filter(
+                (LawClients.phone == user.phone) | (LawClients.email == user.email)
+            ).all()
+            case_ids = [c.case_id for c in client_records if c.case_id]
+            my_cases = db.query(LawCases).filter(LawCases.id.in_(case_ids), LawCases.is_deleted == 0).all() if case_ids else []
+            my_hearings = db.query(LawHearings).filter(
+                LawHearings.case_id.in_(case_ids),
+                LawHearings.status_key == 'pending'
+            ).order_by(LawHearings.hearing_at.asc()).limit(5).all() if case_ids else []
+            
+            return templates.TemplateResponse(
+                request=request, name="client_portal.html",
+                context={"user": user, "my_cases": my_cases, "my_hearings": my_hearings, "active_page": "dashboard"}
+            )
+            
+        # ── لوحة تحكم المحامين والمدراء ──
         office_id = user.office_id or 1
-        # My tasks (pending/in_progress)
         my_tasks = db.query(LawTasks).filter(
             LawTasks.assignee_user_id == user.id,
             LawTasks.status_key.in_(['pending', 'in_progress'])
         ).order_by(LawTasks.priority_level.asc()).limit(5).all()
         
-        # Counts for cards
         total_cases = db.query(LawCases).filter(LawCases.office_id == office_id).count()
         total_clients = db.query(LawClients).filter(LawClients.office_id == office_id).count()
         pending_tasks_count = db.query(LawTasks).filter(
@@ -406,6 +422,8 @@ async def dashboard_page(request: Request, db: Session = Depends(get_db), user: 
             context={"user": user, "active_page": "dashboard", "my_tasks": my_tasks, "total_cases": total_cases, "total_clients": total_clients, "pending_tasks_count": pending_tasks_count}
         )
     except Exception:
+        if user.role == 'موكل':
+            return templates.TemplateResponse(request=request, name="client_portal.html", context={"user": user, "my_cases": [], "my_hearings": [], "active_page": "dashboard"})
         return templates.TemplateResponse(request=request, name="dashboard.html", context={"user": user, "active_page": "dashboard", "my_tasks": [], "total_cases": 0, "total_clients": 0, "pending_tasks_count": 0})
 
 @app.get("/clients", response_class=HTMLResponse)

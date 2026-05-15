@@ -1,0 +1,379 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    /* -----------------------------------------------------
+       🌟 بوابة الموكلين - تصميم احترافي ومبتكر (Premium UI)
+       ----------------------------------------------------- */
+    .client-portal-wrapper {
+        font-family: 'Tajawal', sans-serif;
+        padding: 20px 10px;
+        animation: fadeIn 0.8s ease-out;
+    }
+
+    /* 1. الترحيب (Hero Section) - زجاجي (Glassmorphism) */
+    .hero-glass {
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.9));
+        border-radius: 24px;
+        padding: 40px;
+        color: white;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        margin-bottom: 40px;
+    }
+    
+    .hero-glass::before {
+        content: '';
+        position: absolute;
+        top: -50%; left: -50%;
+        width: 200%; height: 200%;
+        background: radial-gradient(circle, rgba(212, 175, 55, 0.15) 0%, transparent 60%);
+        pointer-events: none;
+    }
+
+    .hero-content {
+        position: relative;
+        z-index: 2;
+    }
+
+    .hero-title {
+        font-size: 2.2rem;
+        font-weight: 800;
+        margin-bottom: 10px;
+        background: linear-gradient(to right, #ffffff, #cbd5e1);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .hero-subtitle {
+        font-size: 1.1rem;
+        color: #94a3b8;
+        max-width: 600px;
+        line-height: 1.6;
+    }
+
+    .status-badge-gold {
+        background: linear-gradient(135deg, #D4AF37, #AA841F);
+        color: white;
+        padding: 6px 16px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: bold;
+        display: inline-block;
+        margin-bottom: 15px;
+        box-shadow: 0 4px 10px rgba(212, 175, 55, 0.3);
+    }
+
+    /* 2. الإحصائيات (Stats Grid) */
+    .client-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 20px;
+        margin-top: -30px;
+        padding: 0 20px;
+        position: relative;
+        z-index: 10;
+        margin-bottom: 40px;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 16px;
+        padding: 25px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        box-shadow: 0 10px 30px rgba(226, 232, 240, 0.8);
+        border: 1px solid #f1f5f9;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 35px rgba(212, 175, 55, 0.15);
+    }
+
+    .stat-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8rem;
+    }
+    .icon-blue { background: #e0f2fe; color: #0284c7; }
+    .icon-gold { background: #fef9c3; color: #ca8a04; }
+    .icon-green { background: #dcfce7; color: #16a34a; }
+
+    .stat-info h4 { margin: 0; font-size: 0.9rem; color: #64748b; font-weight: 600; }
+    .stat-info p { margin: 5px 0 0; font-size: 1.8rem; font-weight: 800; color: #0f172a; }
+
+    /* 3. شبكة المحتوى (Content Grid) */
+    .portal-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 30px;
+    }
+    @media (max-width: 900px) {
+        .portal-grid { grid-template-columns: 1fr; }
+    }
+
+    .portal-section {
+        background: white;
+        border-radius: 20px;
+        padding: 30px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.03);
+        border: 1px solid #f1f5f9;
+    }
+
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 25px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #f8fafc;
+    }
+
+    .section-header h3 {
+        margin: 0;
+        font-size: 1.3rem;
+        color: #1e293b;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .section-header h3 i { color: #D4AF37; }
+
+    /* 4. القضايا (Case Cards) */
+    .case-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 20px;
+        margin-bottom: 20px;
+        transition: all 0.3s;
+    }
+    .case-card:hover {
+        background: white;
+        border-color: #cbd5e1;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.04);
+    }
+
+    .case-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 15px;
+    }
+    .case-title { font-size: 1.15rem; font-weight: 700; color: #0f172a; margin: 0 0 5px; }
+    .case-num { font-size: 0.85rem; color: #64748b; background: #e2e8f0; padding: 3px 8px; border-radius: 6px; }
+    
+    .status-pill {
+        font-size: 0.8rem; padding: 4px 10px; border-radius: 20px; font-weight: bold;
+    }
+    .status-active { background: #dcfce7; color: #166534; }
+    .status-draft { background: #fef3c7; color: #92400e; }
+
+    /* شريط التقدم */
+    .progress-wrapper {
+        margin-top: 20px;
+    }
+    .progress-labels {
+        display: flex; justify-content: space-between; font-size: 0.85rem; color: #64748b; margin-bottom: 8px; font-weight: 600;
+    }
+    .progress-bar-bg {
+        width: 100%; height: 8px; background: #e2e8f0; border-radius: 10px; overflow: hidden;
+    }
+    .progress-bar-fill {
+        height: 100%; background: linear-gradient(90deg, #D4AF37, #fcd34d); border-radius: 10px;
+        width: 0%; transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* 5. الجلسات القادمة (Hearings List) */
+    .hearing-item {
+        display: flex;
+        gap: 15px;
+        padding: 15px 0;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .hearing-item:last-child { border-bottom: none; }
+    
+    .hearing-date-box {
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 12px;
+        width: 60px; height: 60px;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        flex-shrink: 0;
+    }
+    .hearing-date-box .day { font-size: 1.4rem; font-weight: 800; color: #1e40af; line-height: 1; }
+    .hearing-date-box .month { font-size: 0.75rem; color: #3b82f6; font-weight: bold; text-transform: uppercase; }
+
+    .hearing-details h4 { margin: 0 0 5px; font-size: 0.95rem; color: #1e293b; }
+    .hearing-details p { margin: 0; font-size: 0.8rem; color: #64748b; display: flex; align-items: center; gap: 5px; }
+
+    /* 6. الفواتير (Invoices - Coming Soon) */
+    .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: #94a3b8;
+    }
+    .empty-state i { font-size: 3rem; color: #cbd5e1; margin-bottom: 15px; }
+    .empty-state h4 { margin: 0 0 10px; color: #475569; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+
+<div class="client-portal-wrapper">
+    
+    <!-- Hero Section -->
+    <div class="hero-glass">
+        <div class="hero-content">
+            <div class="status-badge-gold">بوابة الموكلين (VIP)</div>
+            <h1 class="hero-title">أهلاً بك، {{ user.name }}</h1>
+            <p class="hero-subtitle">هذه بوابتك القانونية المخصصة. نحن هنا نضع كل تفاصيل قضاياك بين يديك بشفافية واحترافية تامة، لتبقى دائماً على اطلاع بكل جديد.</p>
+        </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="client-stats">
+        <div class="stat-card">
+            <div class="stat-icon icon-blue"><i class="fa-solid fa-scale-balanced"></i></div>
+            <div class="stat-info">
+                <h4>إجمالي القضايا</h4>
+                <p>{{ my_cases|length }}</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon icon-gold"><i class="fa-solid fa-gavel"></i></div>
+            <div class="stat-info">
+                <h4>الجلسات القادمة</h4>
+                <p>{{ my_hearings|length }}</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon icon-green"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+            <div class="stat-info">
+                <h4>المطالبات المالية</h4>
+                <p>0</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="portal-grid">
+        <!-- قسم القضايا -->
+        <div class="portal-section">
+            <div class="section-header">
+                <h3><i class="fa-solid fa-folder-open"></i> ملفات القضايا</h3>
+            </div>
+            
+            {% if my_cases %}
+                {% for case in my_cases %}
+                <div class="case-card">
+                    <div class="case-header">
+                        <div>
+                            <h4 class="case-title">{{ case.title }}</h4>
+                            <span class="case-num"><i class="fa-solid fa-hashtag"></i> {{ case.case_number }}</span>
+                        </div>
+                        <span class="status-pill {{ 'status-active' if case.status_key == 'active' else 'status-draft' }}">
+                            {{ 'نشطة' if case.status_key == 'active' else 'قيد الدراسة' }}
+                        </span>
+                    </div>
+                    
+                    <p style="font-size:0.9rem; color:#475569; margin-bottom: 15px;">{{ case.summary or 'لا يوجد وصف مختصر لهذه القضية.' }}</p>
+                    
+                    <div class="progress-wrapper">
+                        <div class="progress-labels">
+                            <span>نسبة الإنجاز المتوقعة</span>
+                            <span id="progress-text-{{ loop.index }}">0%</span>
+                        </div>
+                        <div class="progress-bar-bg">
+                            <!-- نسبة وهمية بناء على الحالة لأغراض العرض التوضيحي -->
+                            {% set progress = 75 if case.status_key == 'active' else 25 %}
+                            <div class="progress-bar-fill" data-width="{{ progress }}%"></div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <i class="fa-solid fa-folder-minus"></i>
+                    <h4>لا توجد قضايا مسجلة</h4>
+                    <p>لم يتم ربط أي قضايا بحسابك بعد. يرجى التواصل مع مكتب المحاماة.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- الشريط الجانبي للموكل (الجلسات + الفواتير) -->
+        <div style="display: flex; flex-direction: column; gap: 30px;">
+            
+            <!-- قسم الجلسات -->
+            <div class="portal-section">
+                <div class="section-header">
+                    <h3><i class="fa-solid fa-calendar-check"></i> الجلسات القادمة</h3>
+                </div>
+                
+                {% if my_hearings %}
+                    {% for h in my_hearings %}
+                    <div class="hearing-item">
+                        <div class="hearing-date-box">
+                            <span class="day">{{ h.hearing_at[8:10] }}</span>
+                            <span class="month">{{ h.hearing_at[5:7] }}</span>
+                        </div>
+                        <div class="hearing-details">
+                            <h4>{{ h.title }}</h4>
+                            <p><i class="fa-solid fa-gavel"></i> تابعة لقضية رقم {{ h.law_case.case_number }}</p>
+                            <p><i class="fa-regular fa-clock"></i> {{ h.hearing_at[:10] }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state" style="padding: 20px;">
+                        <i class="fa-regular fa-calendar-xmark" style="font-size: 2.5rem;"></i>
+                        <h4 style="font-size: 1rem;">لا توجد جلسات قريبة</h4>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- قسم الفواتير -->
+            <div class="portal-section" style="background: linear-gradient(135deg, #1e293b, #0f172a); color: white;">
+                <div class="section-header" style="border-bottom-color: rgba(255,255,255,0.1);">
+                    <h3 style="color: white;"><i class="fa-solid fa-receipt"></i> المطالبات المالية</h3>
+                </div>
+                <div class="empty-state" style="color: #94a3b8; padding: 20px;">
+                    <i class="fa-solid fa-file-circle-check" style="color: rgba(255,255,255,0.2);"></i>
+                    <h4 style="color: white; font-size: 1rem;">لا توجد فواتير مستحقة</h4>
+                    <p style="font-size: 0.85rem;">رصيدك الحالي ممتاز، لا توجد أي مطالبات مالية معلقة.</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    // تفعيل حركة شريط التقدم عند تحميل الصفحة
+    document.addEventListener("DOMContentLoaded", () => {
+        setTimeout(() => {
+            document.querySelectorAll('.progress-bar-fill').forEach((bar, index) => {
+                const width = bar.getAttribute('data-width');
+                bar.style.width = width;
+                const textEl = document.getElementById('progress-text-' + (index + 1));
+                if(textEl) {
+                    let current = 0;
+                    const target = parseInt(width);
+                    const interval = setInterval(() => {
+                        if(current >= target) clearInterval(interval);
+                        else { current++; textEl.textContent = current + '%'; }
+                    }, 20);
+                }
+            });
+        }, 300);
+    });
+</script>
+{% endblock %}
