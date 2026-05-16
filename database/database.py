@@ -66,5 +66,14 @@ def init_db():
     يُستخدم عند أول تشغيل أو في بيئات جديدة.
     """
     Base.metadata.create_all(bind=engine)
+    
+    # محاولة إضافة عمود username لو لم يكن موجوداً (تحديث تلقائي)
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE law_clients ADD COLUMN username TEXT;"))
+    except Exception:
+        pass  # العمود موجود مسبقاً أو لا يمكن إضافته
+        
     print(f"[Database] Connected to: {SQLALCHEMY_DATABASE_URL.split('?')[0]}")
     print(f"[Database] Tables initialized successfully.")
