@@ -1121,8 +1121,10 @@ async def api_verify_register_otp(request: Request, db: Session = Depends(get_db
             return _J({"success": False, "error": "انتهت صلاحية جلسة التسجيل أو أنك تستخدم نافذة مختلفة، يرجى إعادة تعبئة البيانات"}, status_code=400)
             
         # إنشاء مكتب جديد (مساحة عمل معزولة) لكل مستخدم يسجل من الخارج
+        from datetime import datetime, timezone, timedelta
+        sub_end = (datetime.now(timezone.utc) + timedelta(days=14)).replace(tzinfo=None).strftime("%Y-%m-%d %H:%M:%S")
         office_name = f"مكتب {pending_user['name']}" if pending_user['role'] in ['صاحب مكتب', 'محامي'] else f"حساب {pending_user['name']}"
-        new_office = LawOffices(name=office_name, status_key="active", is_active=1)
+        new_office = LawOffices(name=office_name, status_key="active", subscription_plan="trial", subscription_end=sub_end, is_active=1)
         db.add(new_office)
         db.flush()
 
@@ -1434,6 +1436,62 @@ app.include_router(executions.router)
 app.include_router(power_of_attorney.router)
 app.include_router(advanced_operations.router)
 app.include_router(superadmin.router)
+# ----------------------------------------------------------------------------
+# SaaS Subscription Routes
+# ----------------------------------------------------------------------------
+
+@app.get("/subscription")
+async def view_subscription(request: Request, db: Session = Depends(get_db)):
+    user = get_current_user(request, db)
+    if not user:
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url="/", status_code=303)
+        
+    office = db.query(LawOffices).filter(LawOffices.id == user.office_id).first() if user.office_id else None
+    
+    return templates.TemplateResponse("subscription.html", {
+        "request": request,
+        "user": user,
+        "office": office
+    })
+
+@app.post("/api/subscription/checkout")
+async def api_subscription_checkout(request: Request, db: Session = Depends(get_db)):
+    from fastapi.responses import JSONResponse as _J
+    user = get_current_user(request, db)
+    if not user:
+        return _J({"success": False, "error": "غير مصرح"}, status_code=403)
+        
+    # Only owner/manager can pay
+    if user.role not in ['مدير النظام', 'مدير', 'مدير المكتب']:
+        return _J({"success": False, "error": "غير مصرح لك بتجديد الاشتراك"}, status_code=403)
+        
+    data = await request.json()
+    plan = data.get("plan")
+    if plan not in ['monthly', 'yearly']:
+        return _J({"success": False, "error": "خطة غير صالحة"}, status_code=400)
+        
+    office = db.query(LawOffices).filter(LawOffices.id == user.office_id).first()
+    if not office:
+        return _J({"success": False, "error": "المكتب غير موجود"}, status_code=404)
+        
+    from datetime import datetime, timezone, timedelta
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    
+    receipt_base64 = data.get("receipt_base64")
+    if not receipt_base64:
+        return _J({"success": False, "error": "يرجى إرفاق صورة السند للتحقق من الدفع"}, status_code=400)
+        
+        
+    office.subscription_plan = plan
+    office.receipt_base64 = receipt_base64
+    office.receipt_status = 'pending'
+    db.commit()
+    
+    write_audit(db, "law_offices", "renew_subscription", user.id, user.name, office.id, "office", office.id, f"Renewed to {plan}")
+    
+    return _J({"success": True, "message": "تم إرسال السند بنجاح"})
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

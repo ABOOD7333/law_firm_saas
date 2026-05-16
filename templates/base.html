@@ -193,6 +193,18 @@
 
         <!-- Dynamic Page Content -->
         <div class="dashboard-container">
+            {% if user and user.subscription_plan == 'trial' %}
+            <div style="background: linear-gradient(90deg, #5c2d91, #8b5cf6); color: white; padding: 12px 20px; border-radius: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(92,45,145,0.2);">
+                <div>
+                    <i class="fa-solid fa-gift" style="margin-left: 8px; font-size: 1.2rem;"></i>
+                    <strong style="font-size: 1.05rem;">أنت الآن في فترة التجربة المجانية!</strong>
+                    <span style="opacity: 0.9; margin-right: 10px; font-size: 0.95rem;">متبقي لمكتبك {{ user.trial_days_left }} أيام.</span>
+                </div>
+                {% if user.role in ['مدير النظام', 'مدير', 'مدير المكتب', 'صاحب مكتب'] %}
+                <a href="/subscription" style="background: white; color: #5c2d91; padding: 6px 15px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 0.9rem; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">ترقية الآن</a>
+                {% endif %}
+            </div>
+            {% endif %}
             {% block content %}
             {% endblock %}
         </div>

@@ -43,7 +43,11 @@ async def superadmin_page(request: Request, db: Session = Depends(get_db), user:
                 "user_count": user_count,
                 "owner_name": owner.name if owner else "غير محدد",
                 "owner_email": owner.email if owner else "غير محدد",
-                "owner_phone": owner.phone if owner else "غير محدد"
+                "owner_phone": owner.phone if owner else "غير محدد",
+                "subscription_plan": getattr(office, 'subscription_plan', 'trial'),
+                "subscription_end": getattr(office, 'subscription_end', None),
+                "receipt_status": getattr(office, 'receipt_status', None),
+                "receipt_base64": getattr(office, 'receipt_base64', None)
             })
             
         return templates.TemplateResponse(request=request, name="superadmin.html", context={
@@ -77,4 +81,45 @@ async def toggle_office(office_id: int, request: Request, db: Session = Depends(
     except Exception as e:
         db.rollback()
         app_logger.error(f"Superadmin toggle error: {e}")
+        return JSONResponse({"success": False, "error": "حدث خطأ داخلي"}, status_code=500)
+
+@router.post("/api/superadmin/approve-receipt/{office_id}")
+async def approve_receipt(office_id: int, request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
+    if not user or not is_superadmin(user):
+        return JSONResponse({"success": False, "error": "غير مصرح لك بالقيام بهذا الإجراء"}, status_code=403)
+        
+    try:
+        data = await request.json()
+        action = data.get("action") # 'approve' or 'reject'
+        
+        office = db.query(LawOffices).filter(LawOffices.id == office_id).first()
+        if not office:
+            return JSONResponse({"success": False, "error": "المكتب غير موجود"}, status_code=404)
+            
+        if action == 'approve':
+            from datetime import datetime, timezone, timedelta
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
+            plan = getattr(office, 'subscription_plan', 'monthly')
+            if plan == 'yearly':
+                end_date = now + timedelta(days=365)
+            else:
+                end_date = now + timedelta(days=30)
+                
+            office.subscription_end = end_date.strftime("%Y-%m-%d %H:%M:%S")
+            office.receipt_status = 'approved'
+            office.receipt_base64 = None # Clear receipt to save space
+            office.is_active = 1 # Auto-activate if suspended
+            db.commit()
+            return JSONResponse({"success": True, "message": "تم اعتماد السند وتفعيل الاشتراك بنجاح"})
+            
+        elif action == 'reject':
+            office.receipt_status = 'rejected'
+            office.receipt_base64 = None
+            db.commit()
+            return JSONResponse({"success": True, "message": "تم رفض السند"})
+            
+        return JSONResponse({"success": False, "error": "إجراء غير صالح"}, status_code=400)
+    except Exception as e:
+        db.rollback()
+        app_logger.error(f"Superadmin receipt approval error: {e}")
         return JSONResponse({"success": False, "error": "حدث خطأ داخلي"}, status_code=500)

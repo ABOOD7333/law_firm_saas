@@ -67,13 +67,35 @@ def init_db():
     """
     Base.metadata.create_all(bind=engine)
     
-    # محاولة إضافة عمود username لو لم يكن موجوداً (تحديث تلقائي)
+    # محاولة إضافة الأعمدة الجديدة للتحديث التلقائي بدون تهيئة يدوية
     try:
         from sqlalchemy import text
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE law_clients ADD COLUMN username TEXT;"))
     except Exception:
-        pass  # العمود موجود مسبقاً أو لا يمكن إضافته
+        pass
+    
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE law_offices ADD COLUMN subscription_plan TEXT DEFAULT 'trial';"))
+    except Exception:
+        pass
+        
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE law_offices ADD COLUMN subscription_end TEXT;"))
+    except Exception:
+        pass
+        
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE law_offices ADD COLUMN receipt_base64 TEXT;"))
+            conn.execute(text("ALTER TABLE law_offices ADD COLUMN receipt_status TEXT;"))
+    except Exception:
+        pass
         
     print(f"[Database] Connected to: {SQLALCHEMY_DATABASE_URL.split('?')[0]}")
     print(f"[Database] Tables initialized successfully.")

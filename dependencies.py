@@ -46,12 +46,37 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
             office = db.query(LawOffices).filter(LawOffices.id == user.office_id).first()
             if office and office.is_active == 0:
                 return None
+            if office:
+                user.subscription_plan = getattr(office, 'subscription_plan', 'trial')
+                sub_end_str = getattr(office, 'subscription_end', None)
+                user.subscription_expired = False
+                user.trial_days_left = 0
+                if sub_end_str and user.subscription_plan != 'lifetime':
+                    try:
+                        sub_end = datetime.strptime(sub_end_str, "%Y-%m-%d %H:%M:%S")
+                        now_dt = datetime.strptime(now_str, "%Y-%m-%d %H:%M:%S")
+                        diff = (sub_end - now_dt).days
+                        if diff < 0:
+                            user.subscription_expired = True
+                        elif user.subscription_plan == 'trial':
+                            user.trial_days_left = diff
+                    except:
+                        pass
                 
         # ── حماية أمنية وتوزيع الصلاحيات (RBAC) ──
         path = request.url.path
         
         from fastapi.exceptions import HTTPException
         from fastapi import status
+
+        # Subscription Lock Check
+        is_api = path.startswith('/api/')
+        allowed_sub_paths = ['/subscription', '/logout', '/api/subscription/checkout']
+        if getattr(user, 'subscription_expired', False) and not any(path == p for p in allowed_sub_paths) and not path.startswith('/static'):
+            if is_api:
+                raise HTTPException(status_code=403, detail="Subscription Expired")
+            else:
+                raise HTTPException(status_code=status.HTTP_303_SEE_OTHER, headers={"Location": "/subscription"})
         
         # 1. الموكل (Client)
         if user.role == 'موكل':

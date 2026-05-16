@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الاشتراكات - LawSaaS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #5c2d91;
+            --primary-hover: #4338ca;
+            --bg: #f8fafc;
+            --card-bg: rgba(255, 255, 255, 0.85);
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+        }
+        body {
+            margin: 0; padding: 0;
+            font-family: 'Cairo', sans-serif;
+            background: linear-gradient(135deg, #e2e8f0 0%, #f8fafc 100%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .bg-shapes {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; overflow: hidden;
+        }
+        .shape {
+            position: absolute; filter: blur(80px); opacity: 0.5; border-radius: 50%;
+        }
+        .shape-1 { width: 400px; height: 400px; background: #c4b5fd; top: -100px; right: -100px; }
+        .shape-2 { width: 500px; height: 500px; background: #bae6fd; bottom: -150px; left: -100px; }
+
+        .container {
+            width: 90%; max-width: 1000px; margin: 40px auto;
+        }
+
+        .header {
+            text-align: center; margin-bottom: 40px;
+        }
+        .header h1 { font-size: 2.5rem; font-weight: 800; color: var(--primary); margin-bottom: 10px; }
+        .header p { font-size: 1.1rem; color: var(--text-muted); }
+
+        .alert-banner {
+            background: linear-gradient(90deg, #ef4444, #f59e0b);
+            color: white; padding: 15px 20px; border-radius: 12px;
+            text-align: center; font-weight: bold; margin-bottom: 30px;
+            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.3);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+
+        .plans {
+            display: flex; gap: 30px; justify-content: center; flex-wrap: wrap;
+        }
+        .plan-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 24px; padding: 40px 30px; width: 320px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease; position: relative;
+            display: flex; flex-direction: column;
+        }
+        .plan-card:hover {
+            transform: translateY(-10px); box-shadow: 0 30px 60px rgba(92, 45, 145, 0.15);
+            border-color: var(--primary);
+        }
+        .plan-card.popular {
+            border: 2px solid var(--primary); transform: scale(1.05);
+        }
+        .plan-card.popular:hover { transform: scale(1.05) translateY(-10px); }
+        
+        .badge {
+            position: absolute; top: -15px; left: 50%; transform: translateX(-50%);
+            background: var(--primary); color: white; padding: 6px 16px; border-radius: 20px;
+            font-size: 0.85rem; font-weight: bold; box-shadow: 0 4px 10px rgba(92, 45, 145, 0.3);
+        }
+
+        .plan-name { font-size: 1.5rem; font-weight: 800; margin-bottom: 10px; color: var(--text-main); }
+        .plan-price { font-size: 3rem; font-weight: 800; color: var(--primary); margin-bottom: 20px; display: flex; align-items: baseline; justify-content: center;}
+        .plan-price span { font-size: 1rem; color: var(--text-muted); font-weight: 600; margin-right: 5px; }
+
+        .features { list-style: none; padding: 0; margin: 0 0 30px 0; flex: 1; }
+        .features li { padding: 10px 0; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 10px; font-weight: 600; }
+        .features li i { color: #10b981; }
+
+        .btn-subscribe {
+            background: linear-gradient(135deg, #5c2d91, #4338ca);
+            color: white; border: none; padding: 15px; border-radius: 12px;
+            font-size: 1.1rem; font-weight: bold; font-family: inherit;
+            cursor: pointer; transition: 0.3s; width: 100%;
+            box-shadow: 0 8px 20px rgba(92, 45, 145, 0.2);
+        }
+        .btn-subscribe:hover { opacity: 0.9; transform: translateY(-2px); }
+
+        /* Checkout Modal */
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(10px);
+            display: none; align-items: center; justify-content: center; z-index: 1000;
+        }
+        .modal.active { display: flex; }
+        .checkout-box {
+            background: white; border-radius: 24px; width: 90%; max-width: 500px;
+            padding: 30px; box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+            position: relative; animation: slideUp 0.4s ease; max-height: 90vh; overflow-y: auto;
+        }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        
+        .checkout-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .checkout-header h3 { margin: 0; font-size: 1.4rem; color: var(--text-main); }
+        .close-modal { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #94a3b8; }
+        
+        .payment-methods {
+            display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;
+        }
+        .method-card {
+            background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 15px;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .method-card strong { color: var(--primary); font-size: 1.1rem;}
+
+        .card-element {
+            background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 15px;
+        }
+        .card-element input {
+            width: 100%; border: none; background: transparent; outline: none; font-family: inherit; font-size: 1rem;
+        }
+        
+        .btn-pay {
+            background: #10b981; color: white; border: none; width: 100%; padding: 16px; border-radius: 12px;
+            font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: 0.3s;
+        }
+        .btn-pay:hover { background: #059669; }
+        .btn-pay:disabled { background: #94a3b8; cursor: not-allowed; }
+
+        .loader { display: none; text-align: center; padding: 20px; }
+        .loader i { font-size: 3rem; color: #10b981; animation: spin 1s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        
+        .success-msg { display: none; text-align: center; color: #10b981; font-weight: bold; font-size: 1.2rem; }
+
+        .return-link { display: inline-block; margin-top: 20px; color: var(--primary); text-decoration: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="bg-shapes">
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>ترقية مساحة العمل</h1>
+            <p>اختر الباقة المناسبة لمكتبك واستمتع بجميع الميزات السحابية</p>
+        </div>
+
+        {% if office and office.receipt_status == 'pending' %}
+        <div class="alert-banner" style="background: linear-gradient(90deg, #10b981, #34d399);">
+            <i class="fa-solid fa-clock"></i>
+            تم استلام سند الدفع بنجاح. جاري مراجعته من قبل الإدارة وسوف يتم تفعيل حسابك قريباً.
+        </div>
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="/logout" class="btn-subscribe" style="display: inline-block; width: auto; padding: 10px 30px; text-decoration: none;">تسجيل الخروج</a>
+        </div>
+        {% else %}
+
+            {% if user.subscription_expired %}
+            <div class="alert-banner">
+                <i class="fa-solid fa-lock"></i>
+                عذراً، انتهت فترة التجربة المجانية لمكتبك. الرجاء تجديد الاشتراك للمتابعة.
+            </div>
+            {% elif office and office.subscription_plan == 'trial' %}
+            <div class="alert-banner" style="background: linear-gradient(90deg, #3b82f6, #8b5cf6);">
+                <i class="fa-solid fa-clock"></i>
+                أنت حالياً في فترة التجربة المجانية. متبقي لك {{ user.trial_days_left }} أيام.
+            </div>
+            {% endif %}
+
+            {% if user.role not in ['مدير النظام', 'مدير', 'مدير المكتب', 'صاحب مكتب'] %}
+            <div style="text-align: center; background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+                <i class="fa-solid fa-shield-halved" style="font-size: 4rem; color: #94a3b8; margin-bottom: 20px;"></i>
+                <h2>توقف النظام</h2>
+                <p style="color: #64748b; font-size: 1.1rem;">انتهت فترة اشتراك المكتب. يرجى التواصل مع مدير المكتب أو صاحب الصلاحية لتجديد الاشتراك.</p>
+                <a href="/logout" class="btn-subscribe" style="display: inline-block; width: auto; padding: 10px 30px; margin-top: 20px; text-decoration: none;">تسجيل الخروج</a>
+            </div>
+            {% else %}
+            <div class="plans">
+                <!-- Monthly Plan -->
+                <div class="plan-card">
+                    <div class="plan-name">الباقة الشهرية</div>
+                    <div class="plan-price">$49 <span>/ شهر</span></div>
+                    <ul class="features">
+                        <li><i class="fa-solid fa-check-circle"></i> عدد غير محدود من القضايا</li>
+                        <li><i class="fa-solid fa-check-circle"></i> إدارة الموكلين والجلسات</li>
+                        <li><i class="fa-solid fa-check-circle"></i> النظام المالي والفواتير</li>
+                        <li><i class="fa-solid fa-check-circle"></i> دعم فني على مدار الساعة</li>
+                    </ul>
+                    <button class="btn-subscribe" onclick="openCheckout('monthly', 49)">اشترك الآن</button>
+                </div>
+
+                <!-- Yearly Plan -->
+                <div class="plan-card popular">
+                    <div class="badge">الأكثر توفيراً (خصم 20%)</div>
+                    <div class="plan-name">الباقة السنوية</div>
+                    <div class="plan-price">$490 <span>/ سنة</span></div>
+                    <ul class="features">
+                        <li><i class="fa-solid fa-check-circle"></i> جميع ميزات الباقة الشهرية</li>
+                        <li><i class="fa-solid fa-check-circle"></i> توفير شهرين مجاناً</li>
+                        <li><i class="fa-solid fa-check-circle"></i> نسخ احتياطي تلقائي</li>
+                        <li><i class="fa-solid fa-check-circle"></i> مدير حساب مخصص</li>
+                    </ul>
+                    <button class="btn-subscribe" onclick="openCheckout('yearly', 490)">اشترك الآن</button>
+                </div>
+            </div>
+            {% endif %}
+
+        {% endif %}
+
+        {% if not user.subscription_expired and not (office and office.receipt_status == 'pending') %}
+        <div style="text-align: center;">
+            <a href="/dashboard" class="return-link"><i class="fa-solid fa-arrow-right"></i> العودة للوحة التحكم</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Checkout Modal -->
+    <div class="modal" id="checkoutModal">
+        <div class="checkout-box">
+            <div class="checkout-header">
+                <h3>الدفع وتجديد الاشتراك</h3>
+                <button class="close-modal" onclick="closeCheckout()">&times;</button>
+            </div>
+            
+            <div id="payment-form">
+                <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 15px;">الإجمالي للدفع: <strong style="color: #0f172a; font-size: 1.2rem;" id="checkout-total">$0</strong></p>
+
+                <div class="payment-methods">
+                    <div class="method-card">
+                        <strong><i class="fa-solid fa-building-columns"></i> للمحامين داخل اليمن:</strong>
+                        <span>عبر محفظة (فلوسك / جوالي / الكريمي)</span>
+                        <span style="font-size: 1.2rem; font-weight: bold; background: #e2e8f0; padding: 5px 10px; border-radius: 5px; text-align: center; letter-spacing: 2px;">782080495</span>
+                    </div>
+                    <div class="method-card">
+                        <strong><i class="fa-solid fa-globe"></i> للمحامين خارج اليمن:</strong>
+                        <span>عبر حوالة (ويسترن يونيون أو موني جرام). الرجاء التواصل مع الدعم الفني لأخذ اسم المستلم.</span>
+                    </div>
+                </div>
+
+                <div class="card-element">
+                    <label style="font-size: 0.9rem; color: var(--primary); display: block; margin-bottom: 10px; font-weight: bold;">
+                        <i class="fa-solid fa-file-invoice"></i> إرفاق صورة السند (الإيصال)
+                    </label>
+                    <input type="file" id="receiptFile" accept="image/*" style="padding: 10px 0;">
+                </div>
+
+                <button class="btn-pay" id="btn-submit" onclick="processPayment()">إرسال السند للتأكيد <i class="fa-solid fa-paper-plane"></i></button>
+            </div>
+
+            <div class="loader" id="payment-loader">
+                <i class="fa-solid fa-circle-notch"></i>
+                <p style="margin-top: 15px; font-weight: bold; color: var(--text-main);">جاري إرسال السند...</p>
+            </div>
+
+            <div class="success-msg" id="payment-success">
+                <i class="fa-solid fa-circle-check" style="font-size: 4rem; margin-bottom: 15px;"></i>
+                <p>تم إرسال السند بنجاح!</p>
+                <p style="font-size: 0.9rem; color: #64748b;">جاري مراجعته من الإدارة وسيتم تفعيل حسابك فوراً.</p>
+                <button onclick="window.location.reload()" class="btn-pay" style="margin-top: 15px;">حسناً</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedPlan = '';
+
+        function openCheckout(plan, price) {
+            selectedPlan = plan;
+            document.getElementById('checkout-total').innerText = '$' + price;
+            document.getElementById('checkoutModal').classList.add('active');
+        }
+
+        function closeCheckout() {
+            document.getElementById('checkoutModal').classList.remove('active');
+        }
+
+        async function processPayment() {
+            const fileInput = document.getElementById('receiptFile');
+            if (!fileInput.files[0]) {
+                alert('الرجاء إرفاق صورة سند التحويل أولاً.');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            
+            reader.onloadend = async function() {
+                const base64String = reader.result;
+                
+                document.getElementById('payment-form').style.display = 'none';
+                document.getElementById('payment-loader').style.display = 'block';
+
+                const csrfToken = document.cookie.split('; ').find(r => r.startsWith('csrf_token='))?.split('=')[1] || '';
+                
+                try {
+                    // We will just send it to checkout endpoint and the backend will process it as receipt upload
+                    const res = await fetch('/api/subscription/checkout', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken},
+                        body: JSON.stringify({ plan: selectedPlan, receipt_base64: base64String })
+                    });
+                    
+                    const data = await res.json();
+                    document.getElementById('payment-loader').style.display = 'none';
+                    
+                    if (data.success) {
+                        document.getElementById('payment-success').style.display = 'block';
+                    } else {
+                        alert(data.error);
+                        closeCheckout();
+                        document.getElementById('payment-form').style.display = 'block';
+                    }
+                } catch(e) {
+                    alert('حدث خطأ في الاتصال');
+                    closeCheckout();
+                    document.getElementById('payment-form').style.display = 'block';
+                    document.getElementById('payment-loader').style.display = 'none';
+                }
+            }
+            reader.readAsDataURL(file);
+        }
+    </script>
+</body>
+</html>
