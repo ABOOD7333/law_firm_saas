@@ -1474,16 +1474,11 @@ async def api_subscription_checkout(request: Request, db: Session = Depends(get_
         
     office = db.query(LawOffices).filter(LawOffices.id == user.office_id).first()
     if not office:
-            case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
-            if not case: return HTMLResponse(content="<script>alert('غير مصرح'); window.history.back();</script>", status_code=403)
+        pass
+        pass
             
-        task.title = title
-        task.description = description
-        task.case_id = case_id
-        task.assignee_user_id = assignee_user_id
-        task.due_at = due_at
-        task.priority_level = priority_level
-        task.status_key = status_key
+        pass
+        pass
         db.commit()
     return RedirectResponse(url="/tasks", status_code=303)
 
