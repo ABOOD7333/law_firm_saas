@@ -19,7 +19,8 @@
             <thead>
                 <tr>
                     <th>اسم الموكل</th>
-                    <th>رقم الهوية / السجل</th>
+                    <th>اسم المستخدم</th>
+                    <th>رقم القضية</th>
                     <th>رقم الهاتف</th>
                     <th>الإيميل</th>
                     <th>تاريخ الإضافة</th>
@@ -30,7 +31,8 @@
                 {% for client in clients %}
                 <tr>
                     <td><strong>{{ client.name }}</strong></td>
-                    <td>{{ client.national_id or '-' }}</td>
+                    <td><span style="background:#e2e8f0; padding:2px 8px; border-radius:10px; font-size:0.85rem;">{{ client.username or '-' }}</span></td>
+                    <td>{{ client.case_number or '-' }}</td>
                     <td dir="ltr" style="text-align: right;">{{ client.phone or '-' }}</td>
                     <td>{{ client.email or '-' }}</td>
                     <td>{{ client.created_at.split(' ')[0] if client.created_at else '-' }}</td>
@@ -39,7 +41,7 @@
                             <button class="action-btn view-btn" title="عرض التفاصيل">
                                 <i class="fa-solid fa-eye"></i> عرض
                             </button>
-                            <button class="action-btn edit-btn" title="تعديل" onclick="openEditClientModal('{{ client.id }}', '{{ client.name }}', '{{ client.phone }}', '{{ client.national_id }}')">
+                            <button class="action-btn edit-btn" title="تعديل" onclick="openEditClientModal('{{ client.id }}', '{{ client.name }}', '{{ client.username or '' }}', '{{ client.case_number or '' }}', '{{ client.phone }}', '{{ client.email }}')">
                                 <i class="fa-solid fa-pen-to-square"></i> تعديل
                             </button>
                         </div>
@@ -47,7 +49,7 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="6" style="text-align: center; padding: 30px; color: #64748b;">
+                    <td colspan="7" style="text-align: center; padding: 30px; color: #64748b;">
                         <i class="fa-solid fa-users" style="font-size: 3rem; margin-bottom: 10px; opacity: 0.5;"></i>
                         <br>
                         لا يوجد موكلين مضافين حتى الآن
@@ -68,9 +70,25 @@
         </div>
         <div class="modal-body">
             <form id="addClientForm" method="POST" action="/clients/add">
-                <div class="form-group">
-                    <label>الاسم الكامل (أو اسم الشركة) *</label>
-                    <input type="text" name="name" required class="form-control">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>الاسم الكامل (أو اسم الشركة) *</label>
+                        <input type="text" name="name" required class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>اسم المستخدم (للدخول) *</label>
+                        <input type="text" name="username" required class="form-control" dir="ltr">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>كلمة المرور *</label>
+                        <input type="text" name="password" required class="form-control" dir="ltr">
+                    </div>
+                    <div class="form-group">
+                        <label>رقم القضية *</label>
+                        <input type="text" name="case_number" required class="form-control">
+                    </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
@@ -78,13 +96,9 @@
                         <input type="text" name="phone" class="form-control">
                     </div>
                     <div class="form-group">
-                        <label>رقم الهوية / السجل التجاري</label>
-                        <input type="text" name="national_id" class="form-control">
+                        <label>البريد الإلكتروني</label>
+                        <input type="email" name="email" class="form-control">
                     </div>
-                </div>
-                <div class="form-group">
-                    <label>البريد الإلكتروني</label>
-                    <input type="email" name="email" class="form-control">
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="cancel-btn" onclick="closeAddClientModal()">إلغاء</button>
@@ -105,9 +119,25 @@
         <div class="modal-body">
             <form id="editClientForm" method="POST" action="/clients/edit">
                 <input type="hidden" name="client_id" id="edit_client_id">
-                <div class="form-group">
-                    <label>الاسم الكامل (أو اسم الشركة) *</label>
-                    <input type="text" name="name" id="edit_client_name" required class="form-control">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>الاسم الكامل (أو اسم الشركة) *</label>
+                        <input type="text" name="name" id="edit_client_name" required class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>اسم المستخدم</label>
+                        <input type="text" name="username" id="edit_client_username" required class="form-control" dir="ltr">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>كلمة المرور (اتركه فارغاً إذا لم ترد التغيير)</label>
+                        <input type="text" name="password" id="edit_client_password" class="form-control" dir="ltr">
+                    </div>
+                    <div class="form-group">
+                        <label>رقم القضية</label>
+                        <input type="text" name="case_number" id="edit_client_case_number" class="form-control">
+                    </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
@@ -115,8 +145,8 @@
                         <input type="text" name="phone" id="edit_client_phone" class="form-control">
                     </div>
                     <div class="form-group">
-                        <label>رقم الهوية / السجل التجاري</label>
-                        <input type="text" name="national_id" id="edit_client_national_id" class="form-control">
+                        <label>البريد الإلكتروني</label>
+                        <input type="email" name="email" id="edit_client_email" class="form-control">
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -199,11 +229,13 @@
     function openAddClientModal() { document.getElementById('addClientModal').classList.add('active'); }
     function closeAddClientModal() { document.getElementById('addClientModal').classList.remove('active'); }
     
-    function openEditClientModal(id, name, phone, national_id) {
+    function openEditClientModal(id, name, username, case_number, phone, email) {
         document.getElementById('edit_client_id').value = id;
         document.getElementById('edit_client_name').value = name;
+        document.getElementById('edit_client_username').value = username && username != 'None' ? username : '';
+        document.getElementById('edit_client_case_number').value = case_number && case_number != 'None' ? case_number : '';
         document.getElementById('edit_client_phone').value = phone && phone != 'None' ? phone : '';
-        document.getElementById('edit_client_national_id').value = national_id && national_id != 'None' ? national_id : '';
+        document.getElementById('edit_client_email').value = email && email != 'None' ? email : '';
         document.getElementById('editClientModal').classList.add('active');
     }
     function closeEditClientModal() { document.getElementById('editClientModal').classList.remove('active'); }

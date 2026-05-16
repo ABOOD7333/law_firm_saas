@@ -146,6 +146,7 @@ class LawClients(Base):
     phone: Mapped[Optional[str]] = mapped_column(Text)
     alt_phone: Mapped[Optional[str]] = mapped_column(Text)
     email: Mapped[Optional[str]] = mapped_column(Text)
+    username: Mapped[Optional[str]] = mapped_column(Text)
     national_id: Mapped[Optional[str]] = mapped_column(Text)
     photo_path: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))

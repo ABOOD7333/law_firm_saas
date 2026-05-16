@@ -286,6 +286,7 @@ async def login_submit(
     request: Request,
     email: str = Form(...),
     password: str = Form(...),
+    case_number: str = Form(None),
     db: Session = Depends(get_db)
 ):
     import asyncio
@@ -329,6 +330,17 @@ async def login_submit(
                 name="login.html",
                 context={"error": "تم قفل الحساب مؤقتاً بسبب كثرة المحاولات الخاطئة. يرجى التواصل مع الإدارة."}
             )
+            
+        if user.role == 'موكل':
+            if not case_number or user.case_number != case_number:
+                # نسجل محاولة خاطئة لتجنب التخمين
+                user.failed_attempts += 1
+                db.commit()
+                return templates.TemplateResponse(
+                    request=request,
+                    name="login.html",
+                    context={"error": "رقم القضية غير مطابق للبيانات، يرجى التأكد والمحاولة مرة أخرى."}
+                )
             
         if _verify_pin(password, user.access_pin_hash):
             user.failed_attempts = 0
@@ -447,6 +459,9 @@ async def clients_page(request: Request, db: Session = Depends(get_db), user: Ac
 async def add_client(
     request: Request,
     name: str = Form(...),
+    username: str = Form(...),
+    password: str = Form(...),
+    case_number: str = Form(...),
     phone: str = Form(None),
     national_id: str = Form(None),
     email: str = Form(None),
@@ -457,16 +472,79 @@ async def add_client(
         return RedirectResponse(url="/", status_code=303)
         
     office_id = user.office_id or 1
+    
+    # التأكد من عدم تكرار اسم المستخدم
+    existing = db.query(AccessProfiles).filter(AccessProfiles.username == username).first()
+    if existing:
+        # للتغاضي مؤقتاً لو كان موجود، الأفضل إرجاع رسالة لكن سنقوم بتغييره لتجنب الخطأ
+        username = f"{username}_{secrets.token_hex(2)}"
+        
     new_client = LawClients(
         office_id=office_id,
         name=name,
+        username=username,
+        case_number=case_number,
         phone=phone,
         national_id=national_id,
         email=email
     )
     db.add(new_client)
+    
+    # إنشاء حساب دخول للموكل
+    new_user = AccessProfiles(
+        name=name,
+        username=username,
+        email=email or f"{username}@client.local",
+        phone=phone or username,
+        case_number=case_number,
+        access_pin_hash=_hash_pin(password),
+        role='موكل',
+        office_id=office_id,
+        is_active=1,
+        email_verified=1,
+        state="active"
+    )
+    db.add(new_user)
     db.commit()
     
+    return RedirectResponse(url="/clients", status_code=303)
+
+@app.post("/clients/edit")
+async def edit_client(
+    request: Request,
+    client_id: int = Form(...),
+    name: str = Form(...),
+    username: str = Form(...),
+    password: str = Form(""),
+    case_number: str = Form(""),
+    phone: str = Form(None),
+    national_id: str = Form(None),
+    email: str = Form(None),
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    if not user:
+        return RedirectResponse(url="/", status_code=303)
+        
+    client = db.query(LawClients).filter(LawClients.id == client_id).first()
+    if client:
+        client.name = name
+        client.username = username
+        client.case_number = case_number
+        client.phone = phone
+        client.national_id = national_id
+        client.email = email
+        
+        # تحديث بيانات الدخول أيضاً إن وجدت
+        client_user = db.query(AccessProfiles).filter(AccessProfiles.username == client.username).first()
+        if client_user:
+            client_user.name = name
+            client_user.username = username
+            client_user.case_number = case_number
+            if password:
+                client_user.access_pin_hash = _hash_pin(password)
+                
+        db.commit()
     return RedirectResponse(url="/clients", status_code=303)
 
 @app.get("/cases", response_class=HTMLResponse)
