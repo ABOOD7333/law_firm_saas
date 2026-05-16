@@ -1681,13 +1681,13 @@ if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
 
         
-    office = db.query(LawOffices).filter(LawOffices.id == user.office_id).first() if user.office_id else None
+    # office = db.query(LawOffices).filter(LawOffices.id == user.office_id).first() if user.office_id else None
     
-    return templates.TemplateResponse("subscription.html", {
-        "request": request,
-        "user": user,
-        "office": office
-    })
+    # return templates.TemplateResponse("subscription.html", {
+    #     "request": request,
+    #     "user": user,
+    #     "office": office
+    # })
 
 @app.post("/api/subscription/checkout")
 async def api_subscription_checkout(request: Request, db: Session = Depends(get_db)):
