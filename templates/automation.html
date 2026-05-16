@@ -30,6 +30,46 @@
 .section-card { background:white; border-radius:14px; border:1px solid var(--border-color); padding:22px; margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,.04); }
 .section-card h3 { font-size:.95rem; font-weight:800; color:var(--secondary-color); margin:0 0 16px; display:flex; align-items:center; gap:8px; }
 .result-row { display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:8px; background:#f8fafc; margin-bottom:8px; font-size:.88rem; }
+
+/* تنسيق الورقة القانونية الرسمية */
+.legal-doc {
+    background: #fff;
+    padding: 30px 40px;
+    border: 1px solid #d1d5db;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    font-family: 'Times New Roman', Arial, sans-serif;
+    color: #111827;
+    line-height: 1.8;
+    text-align: justify;
+    margin-top: 15px;
+    position: relative;
+}
+.legal-doc::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    border: 3px double #9ca3af;
+    margin: 8px;
+    pointer-events: none;
+}
+.doc-header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #374151; padding-bottom: 15px; }
+.doc-header h2 { font-size: 1.6rem; font-weight: bold; margin: 0 0 10px; color: #111827; }
+.doc-header h3 { font-size: 1.2rem; margin: 0; font-weight: normal; }
+.doc-body p { font-size: 1.1rem; margin-bottom: 15px; text-justify: inter-word; }
+.doc-body strong { color: #000; }
+.doc-footer { margin-top: 50px; font-size: 1.1rem; }
+.doc-signatures { display: flex; justify-content: space-between; margin-top: 30px; padding: 0 20px; }
+.doc-signatures div { text-align: center; width: 40%; }
+.print-doc-btn { background: #10b981; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-family: 'Cairo'; display: flex; align-items: center; gap: 5px; }
+.print-doc-btn:hover { background: #059669; }
+
+@media print {
+    body * { visibility: hidden; }
+    #docModalBody, #docModalBody * { visibility: visible; }
+    #docModalBody { position: absolute; left: 0; top: 0; width: 100%; padding: 0; margin: 0; }
+    .legal-doc { box-shadow: none; border: none; padding: 0; }
+    .print-doc-btn { display: none !important; }
+}
 </style>
 
 <!-- Page Header -->
@@ -174,13 +214,16 @@
 </div>
 
 <!-- Doc Generate Modal -->
-<div id="docModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:1000;">
-    <div style="background:white;border-radius:14px;width:580px;max-width:95%;padding:28px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-            <h2 id="docModalTitle" style="margin:0;color:var(--secondary-color);"></h2>
-            <button onclick="document.getElementById('docModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+<div id="docModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);align-items:center;justify-content:center;z-index:1000;backdrop-filter: blur(4px);">
+    <div style="background:#f3f4f6;border-radius:14px;width:800px;max-width:95%;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 25px -5px rgba(0,0,0,.1);">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:20px 28px;background:white;border-bottom:1px solid #e5e7eb;">
+            <h2 id="docModalTitle" style="margin:0;color:var(--secondary-color);font-size:1.3rem;"></h2>
+            <div style="display:flex;gap:10px;">
+                <button class="print-doc-btn" onclick="window.print()"><i class="fa-solid fa-print"></i> طباعة الوثيقة</button>
+                <button onclick="document.getElementById('docModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#6b7280;">&times;</button>
+            </div>
         </div>
-        <div id="docModalBody"></div>
+        <div id="docModalBody" style="padding:28px;overflow-y:auto;flex-grow:1;"></div>
     </div>
 </div>
 
@@ -278,24 +321,203 @@ function generateDoc(type) {
     if (!selectedCaseData) { alert('اختر قضية أولاً من القائمة أعلاه'); return; }
     const fmt = document.getElementById('saveFormat').value;
     const modal = document.getElementById('docModal');
-    document.getElementById('docModalTitle').innerHTML = `<i class="fa-solid fa-file-circle-check" style="color:var(--primary-color);"></i> توليد ${type}`;
-    document.getElementById('docModalBody').innerHTML = `
-        <div style="background:#eff6ff;border-radius:10px;padding:16px;margin-bottom:16px;">
-            <p style="margin:0 0 6px;font-weight:700;">بيانات القضية المختارة:</p>
-            <p style="margin:0;font-size:.9rem;color:var(--text-muted);">
-                📁 ${selectedCaseData.number} — ${selectedCaseData.title}<br>
-                👤 الموكل: ${selectedCaseData.client || 'غير محدد'}<br>
-                🏛️ المحكمة: ${selectedCaseData.court || 'غير محدد'}
-            </p>
-        </div>
-        <div style="padding:20px;background:#f0fdf4;border-radius:10px;text-align:center;border:2px dashed #86efac;">
-            <i class="fa-solid fa-file-arrow-down" style="font-size:2.5rem;color:#10b981;margin-bottom:10px;display:block;"></i>
-            <p style="font-weight:700;color:#166534;margin:0 0 4px;">سيتم توليد ${type} بصيغة ${fmt}</p>
-            <p style="font-size:.85rem;color:var(--text-muted);margin:0;">هذه الميزة تتطلب تكامل محرك التوليد (قيد التطوير)</p>
-        </div>
-        <div style="display:flex;justify-content:flex-end;margin-top:16px;">
-            <button onclick="document.getElementById('docModal').style.display='none'" style="padding:10px 20px;background:#e2e8f0;border:none;border-radius:8px;cursor:pointer;font-family:'Cairo',sans-serif;font-weight:600;">إغلاق</button>
+    
+    document.getElementById('docModalTitle').innerHTML = `<i class="fa-solid fa-file-signature" style="color:var(--primary-color);"></i> معاينة: ${type}`;
+    
+    const today = new Date().toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
+    const client = selectedCaseData.client || '.................................';
+    const court = selectedCaseData.court || 'المحكمة المختصة';
+    const caseNum = selectedCaseData.number || '...............';
+    const title = selectedCaseData.title || '...............';
+    
+    let content = '';
+
+    if (type === 'توكيل') {
+        content = `
+        <div class="legal-doc">
+            <div class="doc-header">
+                <h2>عقد توكيل شرعي وقانوني</h2>
+                <h3>باسم الله الرحمن الرحيم</h3>
+            </div>
+            <div class="doc-body">
+                <p>إنه في يوم <strong>${today}</strong>، تم الاتفاق والتراضي بين كل من:</p>
+                <p><strong>الطرف الأول (الموكِّل):</strong> المكرم/ة <strong>${client}</strong>، بصفتهم المدعي/المدعى عليه في القضية المذكورة أدناه.</p>
+                <p><strong>الطرف الثاني (الوكيل):</strong> مكتب المحاماة والاستشارات القانونية.</p>
+                <p><strong>موضوع الوكالة:</strong> <br>بموجب هذا العقد، وكّل الطرف الأول الطرف الثاني توكيلاً شرعياً وقانونياً لتمثيله والمرافعة والمدافعة عنه في القضية رقم <strong>(${caseNum})</strong> المرفوعة لدى <strong>${court}</strong>، والمقيدة بعنوان: "<strong>${title}</strong>".</p>
+                <p><strong>الصلاحيات الممنوحة:</strong> <br>يحق للوكيل الحضور نيابة عن الموكل أمام كافة المحاكم واللجان القضائية وشبه القضائية، وسماع الدعاوى والرد عليها، والإقرار، والإنكار، والصلح، والتنازل، وإبراء الذمة، والطعن بالتزوير، وطلب اليمين وردها والامتناع عنها، وطلب القضاة وردهم، واستلام الأحكام وصكوكها، وتقديم اللوائح الاعتراضية، والاستئناف، ومذكرات التمييز، والالتماس وإعادة النظر.</p>
+                <p>وهذه وكالة مفوضة ومطلقة فيما يخص هذه القضية، سارية المفعول حتى صدور الحكم القطعي فيها.</p>
+            </div>
+            <div class="doc-footer">
+                <div class="doc-signatures">
+                    <div><strong>توقيع الطرف الأول (الموكل)</strong><br><br>....................................</div>
+                    <div><strong>توقيع الطرف الثاني (المحامي الوكيل)</strong><br><br>....................................</div>
+                </div>
+            </div>
         </div>`;
+    } else if (type === 'صحيفة') {
+        content = `
+        <div class="legal-doc">
+            <div class="doc-header">
+                <h2>صـحـيـفـة دعــوى</h2>
+                <h3>إلى مقام <strong>${court}</strong> الموقر</h3>
+            </div>
+            <div class="doc-body">
+                <p><strong>التاريخ:</strong> ${today}</p>
+                <p><strong>المدعي:</strong> <strong>${client}</strong>، ويمثله قانونياً مكتب المحاماة بموجب وكالة شرعية.</p>
+                <p><strong>المدعى عليه:</strong> ................................................................</p>
+                <p><strong>موضوع الدعوى:</strong> <strong>${title}</strong> (ملف القضية: ${caseNum})</p>
+                <p style="text-align:center; font-weight:bold; margin-top:30px;">أصحاب الفضيلة القضاة، حفظكم الله ورعاكم،</p>
+                <p>السلام عليكم ورحمة الله وبركاته، أما بعد:</p>
+                <p>نتقدم لفضيلتكم بهذه الدعوى نيابة عن موكلنا، وتتلخص وقائعها في الآتي:</p>
+                <p>1- (يتم سرد وقائع الدعوى هنا بالتفصيل وبشكل متسلسل).</p>
+                <p>2- وحيث أن المدعى عليه قد أخل بالتزاماته تجاه موكلنا، وحيث أن المادة (....) من نظام (....) تنص على (....).</p>
+                <p><strong>الطلبات:</strong> <br>بناءً على ما تقدم من وقائع وأسانيد قانونية، فإننا نلتمس من فضيلتكم الحكم بالآتي:</p>
+                <p>أولاً: إلزام المدعى عليه بـ .................................... <br>
+                ثانياً: تحميل المدعى عليه كافة الرسوم والمصاريف القضائية وأتعاب المحاماة.</p>
+                <p>ولفضيلتكم واسع النظر ووافر التقدير والاحترام.</p>
+            </div>
+            <div class="doc-footer">
+                <div style="text-align:left; padding-left:40px;">
+                    <strong>مقدم الدعوى (وكيل المدعي):</strong><br>
+                    مكتب المحاماة والاستشارات القانونية<br><br>
+                    التوقيع: ............................
+                </div>
+            </div>
+        </div>`;
+    } else if (type === 'مذكرة') {
+        content = `
+        <div class="legal-doc">
+            <div class="doc-header">
+                <h2>مُـذكّــرة دفــاع جـوابيـة</h2>
+                <h3>لدى <strong>${court}</strong> - الدائرة (.......)</h3>
+            </div>
+            <div class="doc-body">
+                <p><strong>في القضية رقم:</strong> ${caseNum}</p>
+                <p><strong>المقدمة من المدعى عليه:</strong> <strong>${client}</strong> (بواسطة وكيله الشرعي)</p>
+                <p><strong>ضد المدعي:</strong> ................................................................</p>
+                <p style="text-align:center; font-weight:bold; margin-top:30px;">أصحاب الفضيلة، حفظكم الله وسدد خطاكم،</p>
+                <p>السلام عليكم ورحمة الله وبركاته،</p>
+                <p>إشارة إلى دعوى المدعي الماثلة أمام فضيلتكم، والمقيدة تحت موضوع "<strong>${title}</strong>"، فإننا نرد عليها رداً داحضاً من الناحيتين الشكلية والموضوعية وفق الآتي:</p>
+                <p><strong>أولاً: من الناحية الشكلية (الدفوع الشكلية):</strong><br>
+                ندفع بعدم قبول الدعوى شكلاً لعدم اختصاص المحكمة الموقرة / أو لسقوط الحق بالتقادم بناءً على ...</p>
+                <p><strong>ثانياً: من الناحية الموضوعية:</strong><br>
+                ما ادعاه المدعي في صحيفة دعواه هو محض ادعاءات مرسلة تفتقر إلى الدليل المعتبر شرعاً ونظاماً. وحيث أن البينة على من ادعى، واليمين على من أنكر، وحيث أن موكلنا ينكر هذه الادعاءات جملة وتفصيلاً...</p>
+                <p><strong>بناءً عليه، نلتمس من فضيلتكم:</strong><br>
+                1- رد الدعوى شكلاً وموضوعاً لعدم ثبوت حق المدعي.<br>
+                2- إلزام المدعي بتعويض موكلنا عن الأضرار المادية والمعنوية جراء هذه الدعوى الكيدية.</p>
+                <p>والله يحفظكم ويرعاكم.</p>
+            </div>
+            <div class="doc-footer">
+                <div style="text-align:left; padding-left:40px;">
+                    <strong>وكيل المدعى عليه:</strong><br><br>
+                    التوقيع: ............................
+                </div>
+            </div>
+        </div>`;
+    } else if (type === 'استئناف') {
+        content = `
+        <div class="legal-doc">
+            <div class="doc-header">
+                <h2>لائـحـة اعـتـراضـيـة (اسـتـئـنـاف)</h2>
+                <h3>إلى مقام محكمة الاستئناف بـ(..........) الموقرة</h3>
+            </div>
+            <div class="doc-body">
+                <p><strong>المستأنف:</strong> <strong>${client}</strong></p>
+                <p><strong>المستأنف ضده:</strong> ........................................</p>
+                <p><strong>منطوق الحكم المعترض عليه:</strong> الصادر من <strong>${court}</strong> في القضية رقم <strong>${caseNum}</strong> وتاريخ .................... القاضي بـ (..........................).</p>
+                <p style="text-align:center; font-weight:bold; margin-top:30px;">أصحاب الفضيلة قضاة محكمة الاستئناف، حفظكم الله،</p>
+                <p>نتقدم لفضيلتكم بلائحتنا الاعتراضية هذه على الحكم المذكور أعلاه، حيث أن الحكم قد جانبه الصواب وشابه القصور في التسبيب والفساد في الاستدلال، وذلك للأسباب الجوهرية التالية:</p>
+                <p><strong>أسباب الاستئناف:</strong><br>
+                1- الخطأ في تكييف الواقعة وتطبيق النظام.<br>
+                2- تجاهل الدائرة الابتدائية للبينة القاطعة التي قدمناها في المذكرة بتاريخ ..... والتي تثبت حق موكلنا.<br>
+                3- (سرد باقي الأسباب والأسانيد القانونية التفصيلية...)</p>
+                <p><strong>الـطـلـبـات:</strong><br>
+                لكل ما تقدم، نلتمس من فضيلتكم التكرم بالآتي:<br>
+                أولاً: قبول الاستئناف شكلاً لتقديمه في الموعد النظامي.<br>
+                ثانياً: نقض الحكم الابتدائي المعترض عليه، والحكم مجدداً بـ (.........................).</p>
+            </div>
+            <div class="doc-footer">
+                <div style="text-align:left; padding-left:40px;">
+                    <strong>وكيل المستأنف:</strong><br><br>
+                    التوقيع: ............................
+                </div>
+            </div>
+        </div>`;
+    } else if (type === 'فاتورة') {
+        content = `
+        <div class="legal-doc" style="font-family:'Courier New', Courier, monospace; line-height:1.6;">
+            <div style="text-align:center; border-bottom:2px dashed #000; padding-bottom:15px; margin-bottom:20px;">
+                <h1 style="margin:0; font-size:2rem;">فاتورة أتعاب محاماة واستشارات</h1>
+                <p>رقم الفاتورة: INV-${Math.floor(Math.random()*10000)} | التاريخ: ${today}</p>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:30px;">
+                <div>
+                    <strong>بيانات المكتب:</strong><br>
+                    مكتب المحاماة للاستشارات<br>
+                    الرقم الضريبي: 300000000000003
+                </div>
+                <div style="text-align:left;">
+                    <strong>مفوترة إلى:</strong><br>
+                    المكرم/ة: ${client}<br>
+                    رقم القضية المرجعي: ${caseNum}
+                </div>
+            </div>
+            <table style="width:100%; border-collapse:collapse; margin-bottom:30px;">
+                <tr style="background:#f3f4f6; border-top:1px solid #000; border-bottom:1px solid #000;">
+                    <th style="padding:10px; text-align:right;">الوصف / الخدمة القانونية</th>
+                    <th style="padding:10px; text-align:center;">القيمة</th>
+                </tr>
+                <tr>
+                    <td style="padding:15px; border-bottom:1px solid #ddd;">الدفعة (المقدمة/الأخيرة) لأتعاب المحاماة في القضية: ${title} أمام ${court}.</td>
+                    <td style="padding:15px; border-bottom:1px solid #ddd; text-align:center;">15,000.00 ر.س</td>
+                </tr>
+                <tr>
+                    <td style="padding:15px; border-bottom:1px solid #ddd;">رسوم تقييد الدعوى ومصاريف إدارية أخرى.</td>
+                    <td style="padding:15px; border-bottom:1px solid #ddd; text-align:center;">1,500.00 ر.س</td>
+                </tr>
+            </table>
+            <div style="text-align:left; font-size:1.2rem;">
+                <p>الإجمالي الفرعي: 16,500.00 ر.س</p>
+                <p>ضريبة القيمة المضافة (15%): 2,475.00 ر.س</p>
+                <p><strong>الإجمالي المستحق: 18,975.00 ر.س</strong></p>
+            </div>
+            <div style="margin-top:40px; text-align:center; font-size:0.9rem; color:#666;">
+                <p>نرجو تحويل المبلغ إلى الحساب البنكي الآتي: SA00000000000000000000</p>
+                <p>شكراً لثقتكم بخدماتنا القانونية.</p>
+            </div>
+        </div>`;
+    } else if (type === 'تقرير') {
+        content = `
+        <div class="legal-doc">
+            <div class="doc-header">
+                <h2>تـقـريـر مـوجـز عـن حـالـة قـضـيـة</h2>
+                <h3>موجه إلى المكرم/ة: <strong>${client}</strong></h3>
+            </div>
+            <div class="doc-body">
+                <p><strong>تاريخ التقرير:</strong> ${today}</p>
+                <p><strong>بيانات القضية:</strong> القضية رقم (${caseNum}) — موضوعها: ${title}.</p>
+                <p><strong>الجهة الناظرة للدعوى:</strong> ${court}.</p>
+                <hr style="margin:20px 0; border:0; border-top:1px dashed #ccc;">
+                <p><strong>الوضع الحالي والمستجدات:</strong><br>
+                نفيدكم علماً بأنه قد تم حضور الجلسة الأخيرة المقررة من قبل الدائرة، وتم تقديم المذكرات الجوابية التي تفند ادعاءات الخصم بشكل قاطع. وقد طلبت الدائرة من الخصم تقديم رده في الجلسة القادمة المقررة بتاريخ (يحدد لاحقاً).</p>
+                <p><strong>الإجراءات القانونية المتخذة:</strong><br>
+                1- قيد الدعوى ومتابعة استلام التباليغ.<br>
+                2- إعداد وتقديم صحيفة الدعوى متضمنة الأسانيد النظامية.<br>
+                3- جاري متابعة تحديد موعد الجلسة القادمة لتقديم المذكرة الختامية تمهيداً لحجز القضية للحكم.</p>
+                <p><strong>التوصيات:</strong><br>
+                نأمل منكم تزويدنا بأي مستندات إضافية تم طلبها (إن وجدت) لتعزيز الموقف القانوني. سنقوم بتحديثكم فور صدور أي قرار من الدائرة.</p>
+                <p style="text-align:center; font-weight:bold; margin-top:40px;">مع خالص التحيات،،،</p>
+            </div>
+            <div class="doc-footer">
+                <div style="text-align:left; padding-left:40px;">
+                    <strong>القسم القانوني</strong><br>
+                    مكتب المحاماة والاستشارات<br>
+                </div>
+            </div>
+        </div>`;
+    }
+
+    document.getElementById('docModalBody').innerHTML = content;
     modal.style.display = 'flex';
 }
 
