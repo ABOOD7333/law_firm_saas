@@ -123,3 +123,38 @@ async def approve_receipt(office_id: int, request: Request, db: Session = Depend
         db.rollback()
         app_logger.error(f"Superadmin receipt approval error: {e}")
         return JSONResponse({"success": False, "error": "حدث خطأ داخلي"}, status_code=500)
+
+@router.get("/api/superadmin/fix-subscriptions")
+async def fix_legacy_subscriptions(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
+    if not user or not is_superadmin(user):
+        return JSONResponse({"success": False, "error": "غير مصرح"}, status_code=403)
+        
+    try:
+        from datetime import datetime, timezone, timedelta
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        trial_end = now + timedelta(days=14)
+        trial_end_str = trial_end.strftime("%Y-%m-%d %H:%M:%S")
+        
+        offices = db.query(LawOffices).all()
+        updated_count = 0
+        for off in offices:
+            owner = db.query(AccessProfiles).filter(AccessProfiles.id == off.owner_user_id).first() if off.owner_user_id else None
+            is_main = off.id == 1 or off.name == 'المكتب الرئيسي' or (owner and owner.username == 'ABOOD')
+            
+            if is_main:
+                off.subscription_plan = 'lifetime'
+                off.subscription_end = None
+                off.receipt_status = 'approved'
+            else:
+                off.subscription_plan = 'trial'
+                off.subscription_end = trial_end_str
+                off.receipt_status = None
+            
+            updated_count += 1
+            
+        db.commit()
+        return JSONResponse({"success": True, "message": f"تم تحديث اشتراكات {updated_count} مكتب بنجاح. المكتب الرئيسي أصبح مجاني دائماً والبقية تم إعطاؤهم 14 يوم من اليوم."})
+    except Exception as e:
+        db.rollback()
+        app_logger.error(f"Superadmin fix subscriptions error: {e}")
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)

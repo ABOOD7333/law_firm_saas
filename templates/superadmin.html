@@ -25,6 +25,9 @@
 <div class="card" style="margin-top: 2rem;">
     <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 1px solid #e2e8f0;">
         <h3 style="margin: 0; font-size: 1.25rem; color: #1e293b;">المكاتب المسجلة</h3>
+        <button onclick="fixSubscriptions()" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(245, 158, 11, 0.2);">
+            <i class="fas fa-magic"></i> اعتماد نظام الدفع للمكاتب القديمة
+        </button>
     </div>
     <div class="table-container" style="overflow-x: auto;">
         <table class="data-table" style="width: 100%; text-align: right; border-collapse: collapse;">
@@ -104,6 +107,21 @@
 </div>
 
 <script>
+async function fixSubscriptions() {
+    if(!confirm("تحذير: سيتم تحويل جميع المكاتب القديمة (باستثناء مكتبك) إلى النسخة التجريبية (14 يوم) ابتداءً من اليوم. هل تريد الاستمرار؟")) return;
+    
+    try {
+        const res = await fetch('/api/superadmin/fix-subscriptions', { method: 'GET' });
+        const data = await res.json();
+        
+        alert(data.message || data.error);
+        if(data.success) {
+            window.location.reload();
+        }
+    } catch(e) {
+        alert("حدث خطأ في الاتصال");
+    }
+}
 let currentOfficeId = null;
 
 function openReceiptModal(officeId, base64Str) {
