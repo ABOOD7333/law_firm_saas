@@ -47,4 +47,15 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
             if office and office.is_active == 0:
                 return None
                 
+        # ── حماية أمنية: منع الموكل من الدخول إلى أي واجهة غير مصرح بها ──
+        if user.role == 'موكل':
+            allowed_paths = ['/', '/dashboard', '/logout']
+            if not any(request.url.path == p for p in allowed_paths) and not request.url.path.startswith('/static'):
+                from fastapi.exceptions import HTTPException
+                from fastapi import status
+                raise HTTPException(
+                    status_code=status.HTTP_303_SEE_OTHER,
+                    headers={"Location": "/dashboard"}
+                )
+                
     return user

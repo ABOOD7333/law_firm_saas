@@ -26,8 +26,9 @@
         </div>
         <ul class="nav-menu">
             <li class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
-                <a href="/dashboard"><i class="fa-solid fa-chart-pie"></i> لوحة التحكم</a>
+                <a href="/dashboard"><i class="fa-solid fa-chart-pie"></i> {% if user and user.role == 'موكل' %}بوابتي (الرئيسية){% else %}لوحة التحكم{% endif %}</a>
             </li>
+            {% if not (user and user.role == 'موكل') %}
             <li class="nav-item {% if active_page == 'calendar' %}active{% endif %}">
                 <a href="/calendar"><i class="fa-solid fa-calendar-week"></i> التقويم القضائي</a>
             </li>
@@ -109,6 +110,7 @@
             <li class="nav-item {% if active_page == 'settings' %}active{% endif %}">
                 <a href="/settings"><i class="fa-solid fa-gear"></i> الإعدادات</a>
             </li>
+            {% endif %}
             {% if user and user.role == 'مدير' %}
             <li class="nav-item {% if active_page == 'activity' %}active{% endif %}" style="margin-top:8px;border-top:1px solid var(--border-color);padding-top:8px;">
                 <a href="/activity"><i class="fa-solid fa-chart-line"></i> نشاط الفريق</a>
@@ -138,12 +140,16 @@
             <button class="mobile-menu-btn" onclick="toggleSidebar()" style="background:none; border:none; font-size: 1.5rem; cursor: pointer; color: var(--primary-color); margin-left: 10px;">
                 <i class="fa-solid fa-bars"></i>
             </button>
+            {% if not (user and user.role == 'موكل') %}
             <div class="search-bar" onclick="window.location='/search'" style="cursor:pointer;">
                 <i class="fa-solid fa-search"></i>
                 <form action="/search" method="get" style="flex:1;display:flex;" onsubmit="event.stopPropagation();">
                     <input type="text" name="q" placeholder="ابحث..." style="flex:1;border:none;background:transparent;outline:none;font-size:.95rem;font-family:'Cairo',sans-serif;" onclick="event.stopPropagation();">
                 </form>
             </div>
+            {% else %}
+            <div style="flex:1;"></div>
+            {% endif %}
             <div class="user-info">
                 <button class="notification-btn">
                     <i class="fa-regular fa-bell"></i>
