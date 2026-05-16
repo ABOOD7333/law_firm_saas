@@ -40,7 +40,7 @@ async def poa_save(request: Request, db: Session = Depends(get_db), user: Access
         data = await request.json()
         rec_id = data.get("id")
         if rec_id:
-            r = db.query(LawPowerOfAttorney).filter(LawPowerOfAttorney.id == int(rec_id)).first()
+            r = db.query(LawPowerOfAttorney).filter(LawPowerOfAttorney.id == int(rec_id), LawPowerOfAttorney.office_id == (user.office_id or 1)).first()
             if not r: return JSONResponse({"ok": False, "message": "السجل غير موجود"})
             r.case_id = data.get("case_id")
             r.principal_name = data.get("principal_name")
@@ -67,7 +67,7 @@ async def poa_save(request: Request, db: Session = Depends(get_db), user: Access
 async def poa_delete(rec_id: int, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     from fastapi.responses import JSONResponse
     if not user: return JSONResponse({"ok": False, "message": "غير مصرح"}, status_code=401)
-    r = db.query(LawPowerOfAttorney).filter(LawPowerOfAttorney.id == rec_id).first()
+    r = db.query(LawPowerOfAttorney).filter(LawPowerOfAttorney.id == rec_id, LawPowerOfAttorney.office_id == (user.office_id or 1)).first()
     if r: db.delete(r); db.commit()
     return JSONResponse({"ok": True, "message": "تم الحذف"})
 

@@ -847,9 +847,14 @@ async def update_office(
     if not user:
         return RedirectResponse(url="/", status_code=303)
         
-    if office_id:
-        office = db.query(LawOffices).filter(LawOffices.id == office_id).first()
-        if office:
+    if user.role not in ['مدير', 'مدير المكتب', 'صاحب المكتب']:
+        return HTMLResponse(content="<script>alert('غير مصرح لك بتعديل بيانات المكتب'); window.history.back();</script>", status_code=403)
+        
+    office_id_to_update = office_id or user.office_id
+    if office_id_to_update:
+        office = db.query(LawOffices).filter(LawOffices.id == office_id_to_update).first()
+        # نتحقق أن المستخدم ينتمي لهذا المكتب قبل التعديل (أو أنه سوبر آدمن)
+        if office and (user.office_id == office.id or user.id == 1):
             office.name = name
             db.commit()
     else:
