@@ -229,15 +229,12 @@
                         <label>الاسم الكامل</label>
                         <input type="text" id="reg-name">
                     </div>
-                    <div class="form-group">
-                        <label>الدولة</label>
-                        <select id="reg-country" onchange="updateRegPhoneCode()" style="width: 100%; padding: 12px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-family: inherit; font-size: 0.95rem; background: #f8fafc; outline: none;"></select>
-                    </div>
-                    <div class="form-group">
+                    <div class="form-group" style="grid-column: 1 / -1;">
                         <label>رقم الهاتف</label>
-                        <div style="display: flex; gap: 8px;">
-                            <input type="text" id="reg-phone-code" readonly style="width: 105px; padding: 12px; text-align: left; direction: ltr; font-weight: bold; color: #475569; border: 1.5px solid #cbd5e1; border-radius: 10px; background: #f1f5f9; font-size: 1rem; cursor: not-allowed;">
-                            <input type="tel" id="reg-phone" style="flex: 1; padding: 12px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-family: inherit; font-size: 0.95rem; background: #f8fafc; outline: none;" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                        <div style="display: flex; border: 1.5px solid #cbd5e1; border-radius: 10px; overflow: hidden; background: #f8fafc; transition: 0.2s;" onfocusin="this.style.borderColor='#5c2d91'; this.style.boxShadow='0 0 0 4px rgba(92,45,145,0.1)'" onfocusout="this.style.borderColor='#cbd5e1'; this.style.boxShadow='none'">
+                            <select id="reg-country" onchange="updateRegPhoneCode()" style="max-width: 140px; padding: 12px 8px; border: none; border-left: 1px solid #cbd5e1; font-family: inherit; font-size: 0.95rem; background: #f1f5f9; outline: none; cursor: pointer;"></select>
+                            <input type="text" id="reg-phone-code" readonly style="width: 70px; padding: 12px 0; border: none; background: #f8fafc; text-align: center; direction: ltr; font-weight: bold; color: #5c2d91; outline: none; cursor: not-allowed;">
+                            <input type="tel" id="reg-phone" style="flex: 1; padding: 12px; border: none; background: transparent; font-family: inherit; font-size: 1rem; outline: none;" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                         </div>
                     </div>
                     <div class="form-group">
@@ -340,7 +337,7 @@
                 allCountries.forEach((c, index) => {
                     const option = document.createElement('option');
                     option.value = index;
-                    option.textContent = c.flag + " " + c.name + " (" + c.code + ")";
+                    option.textContent = c.flag + " " + c.name;
                     select.appendChild(option);
                 });
                 updateRegPhoneCode();
@@ -351,7 +348,7 @@
             const select = document.getElementById('reg-country');
             if (!select) return;
             const country = allCountries[select.value];
-            document.getElementById('reg-phone-code').value = country.flag + " " + country.code;
+            document.getElementById('reg-phone-code').value = country.code;
             const phoneInput = document.getElementById('reg-phone');
             phoneInput.maxLength = country.length;
             phoneInput.placeholder = "أدخل " + country.length + " أرقام فقط";
