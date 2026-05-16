@@ -6,7 +6,7 @@ import traceback
 from database.database import get_db
 from database.models import (
     AccessProfiles, LawCases, LawParties, LawClients,
-    LawHearings, LawTasks
+    LawHearings, LawTasks, LawTemplates
 )
 from dependencies import get_current_user, templates
 
@@ -92,4 +92,53 @@ async def case_timeline(
         events.append({"date": str(t.due_at or "")[:10], "type": "مهمة", "title": t.title or "مهمة", "status": t.status_key or ""})
     events.sort(key=lambda x: x["date"] or "")
     return JSONResponse({"events": events})
+
+@router.get("/api/templates/{template_key}")
+async def get_template(
+    template_key: str,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    from fastapi.responses import JSONResponse
+    if not user: return JSONResponse({"error": "unauthorized"}, status_code=401)
+    office_id = user.office_id or 1
+    tmpl = db.query(LawTemplates).filter(
+        LawTemplates.office_id == office_id, 
+        LawTemplates.template_key == template_key
+    ).first()
+    
+    return JSONResponse({"template_text": tmpl.template_text if tmpl else None})
+
+@router.post("/api/templates/update")
+async def update_template(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    from fastapi.responses import JSONResponse
+    if not user: return JSONResponse({"error": "unauthorized"}, status_code=401)
+    office_id = user.office_id or 1
+    data = await request.json()
+    template_key = data.get("template_key")
+    template_text = data.get("template_text")
+    
+    if not template_key or not template_text:
+        return JSONResponse({"error": "Missing data"}, status_code=400)
+        
+    tmpl = db.query(LawTemplates).filter(
+        LawTemplates.office_id == office_id, 
+        LawTemplates.template_key == template_key
+    ).first()
+    
+    if tmpl:
+        tmpl.template_text = template_text
+    else:
+        tmpl = LawTemplates(
+            office_id=office_id,
+            template_key=template_key,
+            template_text=template_text
+        )
+        db.add(tmpl)
+    db.commit()
+    return JSONResponse({"success": True})
 

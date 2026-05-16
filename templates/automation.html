@@ -199,6 +199,42 @@
         <button class="task-btn dark" onclick="sendReportByEmail()">
             <i class="fa-solid fa-paper-plane"></i> إرسال تقرير للموكل بالبريد
         </button>
+        
+        <!-- Row 5 (New Customization Button) -->
+        <div style="grid-column: 1 / -1; margin-top: 10px;">
+            <button class="task-btn" style="background:#2c3e50; font-size:1.05rem;" onclick="openTemplateEditor()">
+                <i class="fa-solid fa-pen-to-square"></i> تعديل صياغة النماذج وتخصيصها
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Template Editor Modal -->
+<div id="templateModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);align-items:center;justify-content:center;z-index:1000;backdrop-filter: blur(4px);">
+    <div style="background:#f3f4f6;border-radius:14px;width:900px;max-width:95%;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 25px -5px rgba(0,0,0,.1);">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:20px 28px;background:white;border-bottom:1px solid #e5e7eb;">
+            <h2 style="margin:0;color:var(--secondary-color);font-size:1.3rem;"><i class="fa-solid fa-pen-to-square" style="color:var(--primary-color);"></i> تعديل صياغة النماذج</h2>
+            <button onclick="document.getElementById('templateModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#6b7280;">&times;</button>
+        </div>
+        <div style="padding:28px;overflow-y:auto;flex-grow:1;display:flex;flex-direction:column;gap:15px;">
+            <label style="font-weight:600;font-size:.9rem;">اختر النموذج لتعديله:</label>
+            <select id="templateTypeSelect" onchange="loadTemplateForEditing()" style="padding:11px 14px;border:1.5px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;font-size:.9rem;">
+                <option value="توكيل">عقد توكيل</option>
+                <option value="فاتورة">فاتورة أتعاب</option>
+                <option value="صحيفة">صحيفة دعوى</option>
+                <option value="استئناف">استئناف</option>
+                <option value="مذكرة">مذكرة دفاع</option>
+                <option value="تقرير">تقرير دوري للموكل</option>
+            </select>
+            
+            <label style="font-weight:600;font-size:.9rem;margin-top:10px;">الصياغة الحالية (تنسيق HTML):</label>
+            <textarea id="templateTextEditor" style="width:100%;height:400px;padding:15px;border:1.5px solid var(--border-color);border-radius:8px;font-family:monospace;font-size:1rem;direction:ltr;text-align:left;"></textarea>
+            
+            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:15px;">
+                <button class="print-doc-btn" style="background:#6b7280;" onclick="document.getElementById('templateModal').style.display='none'">إلغاء</button>
+                <button class="print-doc-btn" style="background:#3b82f6;" onclick="saveTemplate()"><i class="fa-solid fa-save"></i> حفظ التعديلات</button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -317,33 +353,18 @@ async function showTimeline() {
     } catch(e) { cont.innerHTML = '<p style="color:red;text-align:center;">خطأ في التحميل</p>'; }
 }
 
-function generateDoc(type) {
-    if (!selectedCaseData) { alert('اختر قضية أولاً من القائمة أعلاه'); return; }
-    const fmt = document.getElementById('saveFormat').value;
-    const modal = document.getElementById('docModal');
-    
-    document.getElementById('docModalTitle').innerHTML = `<i class="fa-solid fa-file-signature" style="color:var(--primary-color);"></i> معاينة: ${type}`;
-    
-    const today = new Date().toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
-    const client = selectedCaseData.client || '.................................';
-    const court = selectedCaseData.court || 'المحكمة المختصة';
-    const caseNum = selectedCaseData.number || '...............';
-    const title = selectedCaseData.title || '...............';
-    
-    let content = '';
-
-    if (type === 'توكيل') {
-        content = `
+const rawTemplates = {
+    'توكيل': `
         <div class="legal-doc">
             <div class="doc-header">
                 <h2>عقد توكيل شرعي وقانوني</h2>
                 <h3>باسم الله الرحمن الرحيم</h3>
             </div>
             <div class="doc-body">
-                <p>إنه في يوم <strong>${today}</strong>، تم الاتفاق والتراضي بين كل من:</p>
-                <p><strong>الطرف الأول (الموكِّل):</strong> المكرم/ة <strong>${client}</strong>، بصفتهم المدعي/المدعى عليه في القضية المذكورة أدناه.</p>
+                <p>إنه في يوم <strong>\${today}</strong>، تم الاتفاق والتراضي بين كل من:</p>
+                <p><strong>الطرف الأول (الموكِّل):</strong> المكرم/ة <strong>\${client}</strong>، بصفتهم المدعي/المدعى عليه في القضية المذكورة أدناه.</p>
                 <p><strong>الطرف الثاني (الوكيل):</strong> مكتب المحاماة والاستشارات القانونية.</p>
-                <p><strong>موضوع الوكالة:</strong> <br>بموجب هذا العقد، وكّل الطرف الأول الطرف الثاني توكيلاً شرعياً وقانونياً لتمثيله والمرافعة والمدافعة عنه في القضية رقم <strong>(${caseNum})</strong> المرفوعة لدى <strong>${court}</strong>، والمقيدة بعنوان: "<strong>${title}</strong>".</p>
+                <p><strong>موضوع الوكالة:</strong> <br>بموجب هذا العقد، وكّل الطرف الأول الطرف الثاني توكيلاً شرعياً وقانونياً لتمثيله والمرافعة والمدافعة عنه في القضية رقم <strong>(\${caseNum})</strong> المرفوعة لدى <strong>\${court}</strong>، والمقيدة بعنوان: "<strong>\${title}</strong>".</p>
                 <p><strong>الصلاحيات الممنوحة:</strong> <br>يحق للوكيل الحضور نيابة عن الموكل أمام كافة المحاكم واللجان القضائية وشبه القضائية، وسماع الدعاوى والرد عليها، والإقرار، والإنكار، والصلح، والتنازل، وإبراء الذمة، والطعن بالتزوير، وطلب اليمين وردها والامتناع عنها، وطلب القضاة وردهم، واستلام الأحكام وصكوكها، وتقديم اللوائح الاعتراضية، والاستئناف، ومذكرات التمييز، والالتماس وإعادة النظر.</p>
                 <p>وهذه وكالة مفوضة ومطلقة فيما يخص هذه القضية، سارية المفعول حتى صدور الحكم القطعي فيها.</p>
             </div>
@@ -353,19 +374,18 @@ function generateDoc(type) {
                     <div><strong>توقيع الطرف الثاني (المحامي الوكيل)</strong><br><br>....................................</div>
                 </div>
             </div>
-        </div>`;
-    } else if (type === 'صحيفة') {
-        content = `
+        </div>`,
+    'صحيفة': `
         <div class="legal-doc">
             <div class="doc-header">
                 <h2>صـحـيـفـة دعــوى</h2>
-                <h3>إلى مقام <strong>${court}</strong> الموقر</h3>
+                <h3>إلى مقام <strong>\${court}</strong> الموقر</h3>
             </div>
             <div class="doc-body">
-                <p><strong>التاريخ:</strong> ${today}</p>
-                <p><strong>المدعي:</strong> <strong>${client}</strong>، ويمثله قانونياً مكتب المحاماة بموجب وكالة شرعية.</p>
+                <p><strong>التاريخ:</strong> \${today}</p>
+                <p><strong>المدعي:</strong> <strong>\${client}</strong>، ويمثله قانونياً مكتب المحاماة بموجب وكالة شرعية.</p>
                 <p><strong>المدعى عليه:</strong> ................................................................</p>
-                <p><strong>موضوع الدعوى:</strong> <strong>${title}</strong> (ملف القضية: ${caseNum})</p>
+                <p><strong>موضوع الدعوى:</strong> <strong>\${title}</strong> (ملف القضية: \${caseNum})</p>
                 <p style="text-align:center; font-weight:bold; margin-top:30px;">أصحاب الفضيلة القضاة، حفظكم الله ورعاكم،</p>
                 <p>السلام عليكم ورحمة الله وبركاته، أما بعد:</p>
                 <p>نتقدم لفضيلتكم بهذه الدعوى نيابة عن موكلنا، وتتلخص وقائعها في الآتي:</p>
@@ -383,21 +403,20 @@ function generateDoc(type) {
                     التوقيع: ............................
                 </div>
             </div>
-        </div>`;
-    } else if (type === 'مذكرة') {
-        content = `
+        </div>`,
+    'مذكرة': `
         <div class="legal-doc">
             <div class="doc-header">
                 <h2>مُـذكّــرة دفــاع جـوابيـة</h2>
-                <h3>لدى <strong>${court}</strong> - الدائرة (.......)</h3>
+                <h3>لدى <strong>\${court}</strong> - الدائرة (.......)</h3>
             </div>
             <div class="doc-body">
-                <p><strong>في القضية رقم:</strong> ${caseNum}</p>
-                <p><strong>المقدمة من المدعى عليه:</strong> <strong>${client}</strong> (بواسطة وكيله الشرعي)</p>
+                <p><strong>في القضية رقم:</strong> \${caseNum}</p>
+                <p><strong>المقدمة من المدعى عليه:</strong> <strong>\${client}</strong> (بواسطة وكيله الشرعي)</p>
                 <p><strong>ضد المدعي:</strong> ................................................................</p>
                 <p style="text-align:center; font-weight:bold; margin-top:30px;">أصحاب الفضيلة، حفظكم الله وسدد خطاكم،</p>
                 <p>السلام عليكم ورحمة الله وبركاته،</p>
-                <p>إشارة إلى دعوى المدعي الماثلة أمام فضيلتكم، والمقيدة تحت موضوع "<strong>${title}</strong>"، فإننا نرد عليها رداً داحضاً من الناحيتين الشكلية والموضوعية وفق الآتي:</p>
+                <p>إشارة إلى دعوى المدعي الماثلة أمام فضيلتكم، والمقيدة تحت موضوع "<strong>\${title}</strong>"، فإننا نرد عليها رداً داحضاً من الناحيتين الشكلية والموضوعية وفق الآتي:</p>
                 <p><strong>أولاً: من الناحية الشكلية (الدفوع الشكلية):</strong><br>
                 ندفع بعدم قبول الدعوى شكلاً لعدم اختصاص المحكمة الموقرة / أو لسقوط الحق بالتقادم بناءً على ...</p>
                 <p><strong>ثانياً: من الناحية الموضوعية:</strong><br>
@@ -413,18 +432,17 @@ function generateDoc(type) {
                     التوقيع: ............................
                 </div>
             </div>
-        </div>`;
-    } else if (type === 'استئناف') {
-        content = `
+        </div>`,
+    'استئناف': `
         <div class="legal-doc">
             <div class="doc-header">
                 <h2>لائـحـة اعـتـراضـيـة (اسـتـئـنـاف)</h2>
                 <h3>إلى مقام محكمة الاستئناف بـ(..........) الموقرة</h3>
             </div>
             <div class="doc-body">
-                <p><strong>المستأنف:</strong> <strong>${client}</strong></p>
+                <p><strong>المستأنف:</strong> <strong>\${client}</strong></p>
                 <p><strong>المستأنف ضده:</strong> ........................................</p>
-                <p><strong>منطوق الحكم المعترض عليه:</strong> الصادر من <strong>${court}</strong> في القضية رقم <strong>${caseNum}</strong> وتاريخ .................... القاضي بـ (..........................).</p>
+                <p><strong>منطوق الحكم المعترض عليه:</strong> الصادر من <strong>\${court}</strong> في القضية رقم <strong>\${caseNum}</strong> وتاريخ .................... القاضي بـ (..........................).</p>
                 <p style="text-align:center; font-weight:bold; margin-top:30px;">أصحاب الفضيلة قضاة محكمة الاستئناف، حفظكم الله،</p>
                 <p>نتقدم لفضيلتكم بلائحتنا الاعتراضية هذه على الحكم المذكور أعلاه، حيث أن الحكم قد جانبه الصواب وشابه القصور في التسبيب والفساد في الاستدلال، وذلك للأسباب الجوهرية التالية:</p>
                 <p><strong>أسباب الاستئناف:</strong><br>
@@ -442,13 +460,12 @@ function generateDoc(type) {
                     التوقيع: ............................
                 </div>
             </div>
-        </div>`;
-    } else if (type === 'فاتورة') {
-        content = `
+        </div>`,
+    'فاتورة': `
         <div class="legal-doc" style="font-family:'Courier New', Courier, monospace; line-height:1.6;">
             <div style="text-align:center; border-bottom:2px dashed #000; padding-bottom:15px; margin-bottom:20px;">
                 <h1 style="margin:0; font-size:2rem;">فاتورة أتعاب محاماة واستشارات</h1>
-                <p>رقم الفاتورة: INV-${Math.floor(Math.random()*10000)} | التاريخ: ${today}</p>
+                <p>رقم الفاتورة: INV-\${Math.floor(Math.random()*10000)} | التاريخ: \${today}</p>
             </div>
             <div style="display:flex; justify-content:space-between; margin-bottom:30px;">
                 <div>
@@ -458,8 +475,8 @@ function generateDoc(type) {
                 </div>
                 <div style="text-align:left;">
                     <strong>مفوترة إلى:</strong><br>
-                    المكرم/ة: ${client}<br>
-                    رقم القضية المرجعي: ${caseNum}
+                    المكرم/ة: \${client}<br>
+                    رقم القضية المرجعي: \${caseNum}
                 </div>
             </div>
             <table style="width:100%; border-collapse:collapse; margin-bottom:30px;">
@@ -468,7 +485,7 @@ function generateDoc(type) {
                     <th style="padding:10px; text-align:center;">القيمة</th>
                 </tr>
                 <tr>
-                    <td style="padding:15px; border-bottom:1px solid #ddd;">الدفعة (المقدمة/الأخيرة) لأتعاب المحاماة في القضية: ${title} أمام ${court}.</td>
+                    <td style="padding:15px; border-bottom:1px solid #ddd;">الدفعة (المقدمة/الأخيرة) لأتعاب المحاماة في القضية: \${title} أمام \${court}.</td>
                     <td style="padding:15px; border-bottom:1px solid #ddd; text-align:center;">15,000.00 ر.س</td>
                 </tr>
                 <tr>
@@ -485,18 +502,17 @@ function generateDoc(type) {
                 <p>نرجو تحويل المبلغ إلى الحساب البنكي الآتي: SA00000000000000000000</p>
                 <p>شكراً لثقتكم بخدماتنا القانونية.</p>
             </div>
-        </div>`;
-    } else if (type === 'تقرير') {
-        content = `
+        </div>`,
+    'تقرير': `
         <div class="legal-doc">
             <div class="doc-header">
                 <h2>تـقـريـر مـوجـز عـن حـالـة قـضـيـة</h2>
-                <h3>موجه إلى المكرم/ة: <strong>${client}</strong></h3>
+                <h3>موجه إلى المكرم/ة: <strong>\${client}</strong></h3>
             </div>
             <div class="doc-body">
-                <p><strong>تاريخ التقرير:</strong> ${today}</p>
-                <p><strong>بيانات القضية:</strong> القضية رقم (${caseNum}) — موضوعها: ${title}.</p>
-                <p><strong>الجهة الناظرة للدعوى:</strong> ${court}.</p>
+                <p><strong>تاريخ التقرير:</strong> \${today}</p>
+                <p><strong>بيانات القضية:</strong> القضية رقم (\${caseNum}) — موضوعها: \${title}.</p>
+                <p><strong>الجهة الناظرة للدعوى:</strong> \${court}.</p>
                 <hr style="margin:20px 0; border:0; border-top:1px dashed #ccc;">
                 <p><strong>الوضع الحالي والمستجدات:</strong><br>
                 نفيدكم علماً بأنه قد تم حضور الجلسة الأخيرة المقررة من قبل الدائرة، وتم تقديم المذكرات الجوابية التي تفند ادعاءات الخصم بشكل قاطع. وقد طلبت الدائرة من الخصم تقديم رده في الجلسة القادمة المقررة بتاريخ (يحدد لاحقاً).</p>
@@ -514,11 +530,85 @@ function generateDoc(type) {
                     مكتب المحاماة والاستشارات<br>
                 </div>
             </div>
-        </div>`;
+        </div>`
+};
+
+async function openTemplateEditor() {
+    document.getElementById('templateModal').style.display = 'flex';
+    loadTemplateForEditing();
+}
+
+async function loadTemplateForEditing() {
+    const type = document.getElementById('templateTypeSelect').value;
+    const editor = document.getElementById('templateTextEditor');
+    editor.value = "جاري التحميل...";
+    try {
+        const res = await fetch(\`/api/templates/\${encodeURIComponent(type)}\`).then(r=>r.json());
+        if (res && res.template_text) {
+            editor.value = res.template_text;
+        } else {
+            editor.value = rawTemplates[type] || '';
+        }
+    } catch(e) {
+        editor.value = rawTemplates[type] || '';
     }
+}
+
+async function saveTemplate() {
+    const type = document.getElementById('templateTypeSelect').value;
+    const text = document.getElementById('templateTextEditor').value;
+    
+    try {
+        const res = await fetch('/api/templates/update', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ template_key: type, template_text: text })
+        }).then(r=>r.json());
+        
+        if (res.success) {
+            alert('تم حفظ الصياغة بنجاح! سيتم استخدامها في التوليد القادم.');
+            document.getElementById('templateModal').style.display = 'none';
+        } else {
+            alert('حدث خطأ أثناء الحفظ.');
+        }
+    } catch(e) {
+        alert('حدث خطأ في الاتصال بخادم الحفظ.');
+    }
+}
+
+async function generateDoc(type) {
+    if (!selectedCaseData) { alert('اختر قضية أولاً من القائمة أعلاه'); return; }
+    const fmt = document.getElementById('saveFormat').value;
+    const modal = document.getElementById('docModal');
+    
+    document.getElementById('docModalTitle').innerHTML = \`<i class="fa-solid fa-file-signature" style="color:var(--primary-color);"></i> معاينة: \${type}\`;
+    
+    document.getElementById('docModalBody').innerHTML = '<p style="text-align:center;padding:50px;">جاري التوليد...</p>';
+    modal.style.display = 'flex';
+    
+    const today = new Date().toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
+    const client = selectedCaseData.client || '.................................';
+    const court = selectedCaseData.court || 'المحكمة المختصة';
+    const caseNum = selectedCaseData.number || '...............';
+    const title = selectedCaseData.title || '...............';
+    
+    let content = rawTemplates[type] || '';
+
+    try {
+        const res = await fetch(\`/api/templates/\${encodeURIComponent(type)}\`).then(r=>r.json());
+        if (res && res.template_text) {
+            content = res.template_text;
+        }
+    } catch(e) { console.error(e); }
+
+    content = content.replace(/\\$\\{today\\}/g, today)
+                     .replace(/\\$\\{client\\}/g, client)
+                     .replace(/\\$\\{court\\}/g, court)
+                     .replace(/\\$\\{caseNum\\}/g, caseNum)
+                     .replace(/\\$\\{title\\}/g, title)
+                     .replace(/\\$\\{Math\\.floor\\(Math\\.random\\(\\)\\*10000\\)\\}/g, Math.floor(Math.random()*10000));
 
     document.getElementById('docModalBody').innerHTML = content;
-    modal.style.display = 'flex';
 }
 
 function checkLimitations() {

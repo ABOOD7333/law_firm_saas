@@ -518,3 +518,12 @@ class LawRequestReceipt(Base):
     row_version: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text('1'))
 
     request: Mapped['LawRequest'] = relationship('LawRequest', back_populates='receipts')
+
+class LawTemplates(Base):
+    __tablename__ = 'law_templates'
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    office_id: Mapped[int] = mapped_column(ForeignKey('law_offices.id', ondelete='CASCADE'), index=True)
+    template_key: Mapped[str] = mapped_column(Text, nullable=False)
+    template_text: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+    updated_at: Mapped[Optional[str]] = mapped_column(Text)
