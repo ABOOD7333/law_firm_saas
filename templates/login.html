@@ -230,8 +230,15 @@
                         <input type="text" id="reg-name">
                     </div>
                     <div class="form-group">
+                        <label>الدولة</label>
+                        <select id="reg-country" onchange="updateRegPhoneCode()" style="width: 100%; padding: 12px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-family: inherit; font-size: 0.95rem; background: #f8fafc; outline: none;"></select>
+                    </div>
+                    <div class="form-group">
                         <label>رقم الهاتف</label>
-                        <input type="text" id="reg-phone">
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="reg-phone-code" readonly style="width: 105px; padding: 12px; text-align: left; direction: ltr; font-weight: bold; color: #475569; border: 1.5px solid #cbd5e1; border-radius: 10px; background: #f1f5f9; font-size: 1rem; cursor: not-allowed;">
+                            <input type="tel" id="reg-phone" style="flex: 1; padding: 12px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-family: inherit; font-size: 0.95rem; background: #f8fafc; outline: none;" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                        </div>
                     </div>
                     <div class="form-group">
                         <label>البريد الإلكتروني</label>
@@ -302,6 +309,56 @@
         }
 
         let tempToken = ""; // للحفاظ على التوكن بين الخطوات
+
+        const allCountries = [
+            { name: "اليمن", flag: "🇾🇪", code: "+967", length: 9 },
+            { name: "السعودية", flag: "🇸🇦", code: "+966", length: 9 },
+            { name: "مصر", flag: "🇪🇬", code: "+20", length: 10 },
+            { name: "الإمارات", flag: "🇦🇪", code: "+971", length: 9 },
+            { name: "الكويت", flag: "🇰🇼", code: "+965", length: 8 },
+            { name: "قطر", flag: "🇶🇦", code: "+974", length: 8 },
+            { name: "البحرين", flag: "🇧🇭", code: "+973", length: 8 },
+            { name: "عمان", flag: "🇴🇲", code: "+968", length: 8 },
+            { name: "الأردن", flag: "🇯🇴", code: "+962", length: 9 },
+            { name: "فلسطين", flag: "🇵🇸", code: "+970", length: 9 },
+            { name: "سوريا", flag: "🇸🇾", code: "+963", length: 9 },
+            { name: "لبنان", flag: "🇱🇧", code: "+961", length: 8 },
+            { name: "العراق", flag: "🇮🇶", code: "+964", length: 10 },
+            { name: "السودان", flag: "🇸🇩", code: "+249", length: 9 },
+            { name: "المغرب", flag: "🇲🇦", code: "+212", length: 9 },
+            { name: "الجزائر", flag: "🇩🇿", code: "+213", length: 9 },
+            { name: "تونس", flag: "🇹🇳", code: "+216", length: 8 },
+            { name: "ليبيا", flag: "🇱🇾", code: "+218", length: 9 },
+            { name: "موريتانيا", flag: "🇲🇷", code: "+222", length: 8 },
+            { name: "الولايات المتحدة", flag: "🇺🇸", code: "+1", length: 10 },
+            { name: "المملكة المتحدة", flag: "🇬🇧", code: "+44", length: 10 }
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const select = document.getElementById('reg-country');
+            if (select) {
+                allCountries.forEach((c, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = c.flag + " " + c.name + " (" + c.code + ")";
+                    select.appendChild(option);
+                });
+                updateRegPhoneCode();
+            }
+        });
+
+        function updateRegPhoneCode() {
+            const select = document.getElementById('reg-country');
+            if (!select) return;
+            const country = allCountries[select.value];
+            document.getElementById('reg-phone-code').value = country.flag + " " + country.code;
+            const phoneInput = document.getElementById('reg-phone');
+            phoneInput.maxLength = country.length;
+            phoneInput.placeholder = "أدخل " + country.length + " أرقام فقط";
+            if (phoneInput.value.length > country.length) {
+                phoneInput.value = phoneInput.value.substring(0, country.length);
+            }
+        }
 
         // ==================== FORGOT PASSWORD FLOW ====================
         async function forgotSendOTP() {
@@ -405,11 +462,13 @@
         }
 
         async function regSubmitForm() {
+            const rawCode = document.getElementById('reg-phone-code') ? document.getElementById('reg-phone-code').value : '';
+            const pureCode = rawCode.replace(/[^0-9+]/g, '');
             const payload = {
                 role: currentRole,
                 username: document.getElementById('reg-username').value,
                 name: document.getElementById('reg-name').value,
-                phone: document.getElementById('reg-phone').value,
+                phone: pureCode + document.getElementById('reg-phone').value,
                 email: document.getElementById('reg-email').value,
                 birth_date: document.getElementById('reg-birth').value,
                 access_pin: document.getElementById('reg-pass').value,

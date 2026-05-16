@@ -152,7 +152,7 @@
                     <div class="input-group">
                         <label>رقم الهاتف</label>
                         <div style="display: flex; gap: 8px;">
-                            <input type="text" id="phone-code" readonly style="width: 80px; background: #f8fafc; text-align: left; direction: ltr; font-weight: bold; color: var(--text-muted); border: 1.5px solid var(--border); border-radius: 12px;" value="+966">
+                            <input type="text" id="phone-code" readonly style="width: 100px; background: #f8fafc; text-align: left; direction: ltr; font-weight: bold; color: var(--text-muted); border: 1.5px solid var(--border); border-radius: 12px;" value="+966">
                             <input type="tel" id="phone" placeholder="أدخل رقم الهاتف" style="flex: 1;" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                         </div>
                     </div>
@@ -221,94 +221,94 @@
 
 <script>
 const allCountries = [
-    { name: "اليمن", code: "+967", length: 9 },
-    { name: "السعودية", code: "+966", length: 9 },
-    { name: "مصر", code: "+20", length: 10 },
-    { name: "الإمارات", code: "+971", length: 9 },
-    { name: "الكويت", code: "+965", length: 8 },
-    { name: "قطر", code: "+974", length: 8 },
-    { name: "البحرين", code: "+973", length: 8 },
-    { name: "عمان", code: "+968", length: 8 },
-    { name: "الأردن", code: "+962", length: 9 },
-    { name: "فلسطين", code: "+970", length: 9 },
-    { name: "سوريا", code: "+963", length: 9 },
-    { name: "لبنان", code: "+961", length: 8 },
-    { name: "العراق", code: "+964", length: 10 },
-    { name: "السودان", code: "+249", length: 9 },
-    { name: "المغرب", code: "+212", length: 9 },
-    { name: "الجزائر", code: "+213", length: 9 },
-    { name: "تونس", code: "+216", length: 8 },
-    { name: "ليبيا", code: "+218", length: 9 },
-    { name: "موريتانيا", code: "+222", length: 8 },
-    { name: "الصومال", code: "+252", length: 8 },
-    { name: "جيبوتي", code: "+253", length: 8 },
-    { name: "جزر القمر", code: "+269", length: 7 },
-    { name: "الولايات المتحدة", code: "+1", length: 10 },
-    { name: "كندا", code: "+1", length: 10 },
-    { name: "المملكة المتحدة", code: "+44", length: 10 },
-    { name: "تركيا", code: "+90", length: 10 },
-    { name: "فرنسا", code: "+33", length: 9 },
-    { name: "ألمانيا", code: "+49", length: 11 },
-    { name: "إسبانيا", code: "+34", length: 9 },
-    { name: "إيطاليا", code: "+39", length: 10 },
-    { name: "هولندا", code: "+31", length: 9 },
-    { name: "بلجيكا", code: "+32", length: 9 },
-    { name: "سويسرا", code: "+41", length: 9 },
-    { name: "النمسا", code: "+43", length: 10 },
-    { name: "السويد", code: "+46", length: 9 },
-    { name: "النرويج", code: "+47", length: 8 },
-    { name: "الدنمارك", code: "+45", length: 8 },
-    { name: "فنلندا", code: "+358", length: 10 },
-    { name: "روسيا", code: "+7", length: 10 },
-    { name: "أوكرانيا", code: "+380", length: 9 },
-    { name: "أستراليا", code: "+61", length: 9 },
-    { name: "نيوزيلندا", code: "+64", length: 9 },
-    { name: "الصين", code: "+86", length: 11 },
-    { name: "الهند", code: "+91", length: 10 },
-    { name: "باكستان", code: "+92", length: 10 },
-    { name: "بنغلاديش", code: "+880", length: 10 },
-    { name: "إندونيسيا", code: "+62", length: 11 },
-    { name: "ماليزيا", code: "+60", length: 9 },
-    { name: "سنغافورة", code: "+65", length: 8 },
-    { name: "اليابان", code: "+81", length: 10 },
-    { name: "كوريا الجنوبية", code: "+82", length: 10 },
-    { name: "الفلبين", code: "+63", length: 10 },
-    { name: "تايلاند", code: "+66", length: 9 },
-    { name: "فيتنام", code: "+84", length: 9 },
-    { name: "إيران", code: "+98", length: 10 },
-    { name: "أفغانستان", code: "+93", length: 9 },
-    { name: "البرازيل", code: "+55", length: 11 },
-    { name: "الأرجنتين", code: "+54", length: 10 },
-    { name: "المكسيك", code: "+52", length: 10 },
-    { name: "كولومبيا", code: "+57", length: 10 },
-    { name: "تشيلي", code: "+56", length: 9 },
-    { name: "بيرو", code: "+51", length: 9 },
-    { name: "فنزويلا", code: "+58", length: 10 },
-    { name: "جنوب أفريقيا", code: "+27", length: 9 },
-    { name: "نيجيريا", code: "+234", length: 10 },
-    { name: "كينيا", code: "+254", length: 9 },
-    { name: "إثيوبيا", code: "+251", length: 9 },
-    { name: "تنزانيا", code: "+255", length: 9 },
-    { name: "أوغندا", code: "+256", length: 9 },
-    { name: "غانا", code: "+233", length: 9 },
-    { name: "الكاميرون", code: "+237", length: 9 },
-    { name: "ساحل العاج", code: "+225", length: 10 },
-    { name: "السنغال", code: "+221", length: 9 },
-    { name: "مالي", code: "+223", length: 8 },
-    { name: "اليونان", code: "+30", length: 10 },
-    { name: "البرتغال", code: "+351", length: 9 },
-    { name: "بولندا", code: "+48", length: 9 },
-    { name: "رومانيا", code: "+40", length: 9 },
-    { name: "بلغاريا", code: "+359", length: 9 },
-    { name: "المجر", code: "+36", length: 9 },
-    { name: "التشيك", code: "+420", length: 9 },
-    { name: "أيرلندا", code: "+353", length: 9 },
-    { name: "كوبا", code: "+53", length: 8 },
-    { name: "جامايكا", code: "+1", length: 10 },
-    { name: "كوريا الشمالية", code: "+850", length: 10 },
-    { name: "آيسلندا", code: "+354", length: 7 },
-    { name: "قبرص", code: "+357", length: 8 },
-    { name: "مالطا", code: "+356", length: 8 }
+    { name: "اليمن", flag: "🇾🇪", code: "+967", length: 9 },
+    { name: "السعودية", flag: "🇸🇦", code: "+966", length: 9 },
+    { name: "مصر", flag: "🇪🇬", code: "+20", length: 10 },
+    { name: "الإمارات", flag: "🇦🇪", code: "+971", length: 9 },
+    { name: "الكويت", flag: "🇰🇼", code: "+965", length: 8 },
+    { name: "قطر", flag: "🇶🇦", code: "+974", length: 8 },
+    { name: "البحرين", flag: "🇧🇭", code: "+973", length: 8 },
+    { name: "عمان", flag: "🇴🇲", code: "+968", length: 8 },
+    { name: "الأردن", flag: "🇯🇴", code: "+962", length: 9 },
+    { name: "فلسطين", flag: "🇵🇸", code: "+970", length: 9 },
+    { name: "سوريا", flag: "🇸🇾", code: "+963", length: 9 },
+    { name: "لبنان", flag: "🇱🇧", code: "+961", length: 8 },
+    { name: "العراق", flag: "🇮🇶", code: "+964", length: 10 },
+    { name: "السودان", flag: "🇸🇩", code: "+249", length: 9 },
+    { name: "المغرب", flag: "🇲🇦", code: "+212", length: 9 },
+    { name: "الجزائر", flag: "🇩🇿", code: "+213", length: 9 },
+    { name: "تونس", flag: "🇹🇳", code: "+216", length: 8 },
+    { name: "ليبيا", flag: "🇱🇾", code: "+218", length: 9 },
+    { name: "موريتانيا", flag: "🇲🇷", code: "+222", length: 8 },
+    { name: "الصومال", flag: "🇸🇴", code: "+252", length: 8 },
+    { name: "جيبوتي", flag: "🇩🇯", code: "+253", length: 8 },
+    { name: "جزر القمر", flag: "🇰🇲", code: "+269", length: 7 },
+    { name: "الولايات المتحدة", flag: "🇺🇸", code: "+1", length: 10 },
+    { name: "كندا", flag: "🇨🇦", code: "+1", length: 10 },
+    { name: "المملكة المتحدة", flag: "🇬🇧", code: "+44", length: 10 },
+    { name: "تركيا", flag: "🇹🇷", code: "+90", length: 10 },
+    { name: "فرنسا", flag: "🇫🇷", code: "+33", length: 9 },
+    { name: "ألمانيا", flag: "🇩🇪", code: "+49", length: 11 },
+    { name: "إسبانيا", flag: "🇪🇸", code: "+34", length: 9 },
+    { name: "إيطاليا", flag: "🇮🇹", code: "+39", length: 10 },
+    { name: "هولندا", flag: "🇳🇱", code: "+31", length: 9 },
+    { name: "بلجيكا", flag: "🇧🇪", code: "+32", length: 9 },
+    { name: "سويسرا", flag: "🇨🇭", code: "+41", length: 9 },
+    { name: "النمسا", flag: "🇦🇹", code: "+43", length: 10 },
+    { name: "السويد", flag: "🇸🇪", code: "+46", length: 9 },
+    { name: "النرويج", flag: "🇳🇴", code: "+47", length: 8 },
+    { name: "الدنمارك", flag: "🇩🇰", code: "+45", length: 8 },
+    { name: "فنلندا", flag: "🇫🇮", code: "+358", length: 10 },
+    { name: "روسيا", flag: "🇷🇺", code: "+7", length: 10 },
+    { name: "أوكرانيا", flag: "🇺🇦", code: "+380", length: 9 },
+    { name: "أستراليا", flag: "🇦🇺", code: "+61", length: 9 },
+    { name: "نيوزيلندا", flag: "🇳🇿", code: "+64", length: 9 },
+    { name: "الصين", flag: "🇨🇳", code: "+86", length: 11 },
+    { name: "الهند", flag: "🇮🇳", code: "+91", length: 10 },
+    { name: "باكستان", flag: "🇵🇰", code: "+92", length: 10 },
+    { name: "بنغلاديش", flag: "🇧🇩", code: "+880", length: 10 },
+    { name: "إندونيسيا", flag: "🇮🇩", code: "+62", length: 11 },
+    { name: "ماليزيا", flag: "🇲🇾", code: "+60", length: 9 },
+    { name: "سنغافورة", flag: "🇸🇬", code: "+65", length: 8 },
+    { name: "اليابان", flag: "🇯🇵", code: "+81", length: 10 },
+    { name: "كوريا الجنوبية", flag: "🇰🇷", code: "+82", length: 10 },
+    { name: "الفلبين", flag: "🇵🇭", code: "+63", length: 10 },
+    { name: "تايلاند", flag: "🇹🇭", code: "+66", length: 9 },
+    { name: "فيتنام", flag: "🇻🇳", code: "+84", length: 9 },
+    { name: "إيران", flag: "🇮🇷", code: "+98", length: 10 },
+    { name: "أفغانستان", flag: "🇦🇫", code: "+93", length: 9 },
+    { name: "البرازيل", flag: "🇧🇷", code: "+55", length: 11 },
+    { name: "الأرجنتين", flag: "🇦🇷", code: "+54", length: 10 },
+    { name: "المكسيك", flag: "🇲🇽", code: "+52", length: 10 },
+    { name: "كولومبيا", flag: "🇨🇴", code: "+57", length: 10 },
+    { name: "تشيلي", flag: "🇨🇱", code: "+56", length: 9 },
+    { name: "بيرو", flag: "🇵🇪", code: "+51", length: 9 },
+    { name: "فنزويلا", flag: "🇻🇪", code: "+58", length: 10 },
+    { name: "جنوب أفريقيا", flag: "🇿🇦", code: "+27", length: 9 },
+    { name: "نيجيريا", flag: "🇳🇬", code: "+234", length: 10 },
+    { name: "كينيا", flag: "🇰🇪", code: "+254", length: 9 },
+    { name: "إثيوبيا", flag: "🇪🇹", code: "+251", length: 9 },
+    { name: "تنزانيا", flag: "🇹🇿", code: "+255", length: 9 },
+    { name: "أوغندا", flag: "🇺🇬", code: "+256", length: 9 },
+    { name: "غانا", flag: "🇬🇭", code: "+233", length: 9 },
+    { name: "الكاميرون", flag: "🇨🇲", code: "+237", length: 9 },
+    { name: "ساحل العاج", flag: "🇨🇮", code: "+225", length: 10 },
+    { name: "السنغال", flag: "🇸🇳", code: "+221", length: 9 },
+    { name: "مالي", flag: "🇲🇱", code: "+223", length: 8 },
+    { name: "اليونان", flag: "🇬🇷", code: "+30", length: 10 },
+    { name: "البرتغال", flag: "🇵🇹", code: "+351", length: 9 },
+    { name: "بولندا", flag: "🇵🇱", code: "+48", length: 9 },
+    { name: "رومانيا", flag: "🇷🇴", code: "+40", length: 9 },
+    { name: "بلغاريا", flag: "🇧🇬", code: "+359", length: 9 },
+    { name: "المجر", flag: "🇭🇺", code: "+36", length: 9 },
+    { name: "التشيك", flag: "🇨🇿", code: "+420", length: 9 },
+    { name: "أيرلندا", flag: "🇮🇪", code: "+353", length: 9 },
+    { name: "كوبا", flag: "🇨🇺", code: "+53", length: 8 },
+    { name: "جامايكا", flag: "🇯🇲", code: "+1", length: 10 },
+    { name: "كوريا الشمالية", flag: "🇰🇵", code: "+850", length: 10 },
+    { name: "آيسلندا", flag: "🇮🇸", code: "+354", length: 7 },
+    { name: "قبرص", flag: "🇨🇾", code: "+357", length: 8 },
+    { name: "مالطا", flag: "🇲🇹", code: "+356", length: 8 }
 ];
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -316,7 +316,7 @@ document.addEventListener('DOMContentLoaded', () => {
     allCountries.forEach((c, index) => {
         const option = document.createElement('option');
         option.value = index;
-        option.textContent = c.name + " (" + c.code + ")";
+        option.textContent = c.flag + " " + c.name + " (" + c.code + ")";
         select.appendChild(option);
     });
     updatePhoneCode();
@@ -325,7 +325,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function updatePhoneCode() {
     const select = document.getElementById('country');
     const country = allCountries[select.value];
-    document.getElementById('phone-code').value = country.code;
+    document.getElementById('phone-code').value = country.flag + " " + country.code;
     const phoneInput = document.getElementById('phone');
     phoneInput.maxLength = country.length;
     phoneInput.placeholder = "أدخل " + country.length + " أرقام فقط";
@@ -375,7 +375,8 @@ async function submitRegister() {
     if (pass !== confirm)  { alert('كلمتا المرور غير متطابقتين'); return; }
     if (!terms)            { alert('يرجى الموافقة على شروط الاستخدام'); return; }
 
-    const phoneCode = document.getElementById('phone-code').value || '';
+    const rawCode = document.getElementById('phone-code').value || '';
+    const phoneCode = rawCode.replace(/[^0-9+]/g, '');
     const phoneNum  = document.getElementById('phone').value || '';
     registeredEmail = document.getElementById('email').value.trim();
 
