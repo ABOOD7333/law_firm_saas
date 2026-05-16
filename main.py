@@ -526,7 +526,8 @@ async def edit_client(
     if not user:
         return RedirectResponse(url="/", status_code=303)
         
-    client = db.query(LawClients).filter(LawClients.id == client_id).first()
+    office_id = user.office_id or 1
+    client = db.query(LawClients).filter(LawClients.id == client_id, LawClients.office_id == office_id).first()
     if client:
         client.name = name
         client.username = username
@@ -536,7 +537,7 @@ async def edit_client(
         client.email = email
         
         # تحديث بيانات الدخول أيضاً إن وجدت
-        client_user = db.query(AccessProfiles).filter(AccessProfiles.username == client.username).first()
+        client_user = db.query(AccessProfiles).filter(AccessProfiles.username == client.username, AccessProfiles.office_id == office_id).first()
         if client_user:
             client_user.name = name
             client_user.username = username
@@ -608,7 +609,7 @@ async def add_case(
     db.commit()
     db.refresh(new_case)
     
-    client = db.query(LawClients).filter(LawClients.id == client_id).first()
+    client = db.query(LawClients).filter(LawClients.id == client_id, LawClients.office_id == office_id).first()
     if client:
         client.case_id = new_case.id
         client.case_number = new_case.case_number
@@ -924,7 +925,7 @@ async def add_user(
     
     return RedirectResponse(url="/settings", status_code=303)
 
-@app.post("/clients/edit")
+# REMOVED DUPLICATE: @app.post("/clients/edit")
 async def edit_client(
     request: Request,
     client_id: int = Form(...),
@@ -1164,7 +1165,7 @@ async def api_verify_register_otp(request: Request, db: Session = Depends(get_db
         return _J({"success": False, "error": f"حدث خطأ داخلي أثناء الحفظ: {str(exc)}"}, status_code=500)
 
 
-@app.post("/documents/add")
+# REMOVED DUPLICATE: @app.post("/documents/add")
 async def add_document(
     request: Request,
     case_id: int = Form(...),
@@ -1311,7 +1312,7 @@ async def update_task_status(
 async def activity_page(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     if not user:
         return RedirectResponse(url="/", status_code=303)
-    if user.role != 'مدير':
+    if user.role not in ['مدير', 'مدير المكتب', 'صاحب المكتب']:
         return RedirectResponse(url="/dashboard", status_code=303)
     try:
         office_id = user.office_id or 1
@@ -1473,20 +1474,263 @@ async def api_subscription_checkout(request: Request, db: Session = Depends(get_
         
     office = db.query(LawOffices).filter(LawOffices.id == user.office_id).first()
     if not office:
+            case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
+            if not case: return HTMLResponse(content="<script>alert('غير مصرح'); window.history.back();</script>", status_code=403)
+            
+        task.title = title
+        task.description = description
+        task.case_id = case_id
+        task.assignee_user_id = assignee_user_id
+        task.due_at = due_at
+        task.priority_level = priority_level
+        task.status_key = status_key
+        db.commit()
+    return RedirectResponse(url="/tasks", status_code=303)
+
+@app.post("/tasks/update_status")
+async def update_task_status(
+    request: Request,
+    task_id: int = Form(...),
+    status_key: str = Form(...),
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    if not user: return RedirectResponse(url="/", status_code=303)
+    office_id = user.office_id or 1
+    task = db.query(LawTasks).filter(LawTasks.id == task_id, LawTasks.office_id == office_id).first()
+    if task:
+        task.status_key = status_key
+        db.commit()
+    return RedirectResponse(url="/tasks", status_code=303)
+
+@app.get("/activity", response_class=HTMLResponse)
+async def activity_page(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
+    if not user:
+        return RedirectResponse(url="/", status_code=303)
+    if user.role not in ['مدير', 'مدير المكتب', 'صاحب المكتب']:
+        return RedirectResponse(url="/dashboard", status_code=303)
+    try:
+        office_id = user.office_id or 1
+        # Recent task activity - all tasks with their assignees
+        all_tasks = db.query(LawTasks).filter(LawTasks.office_id == office_id).order_by(LawTasks.created_at.desc()).limit(50).all()
+        all_users = db.query(AccessProfiles).filter(AccessProfiles.office_id == office_id).all()
+        users_map = {u.id: u for u in all_users}
+        
+        # Recent documents uploaded
+        recent_docs = db.query(LawDocuments).filter(LawDocuments.office_id == office_id).order_by(LawDocuments.created_at.desc()).limit(20).all()
+        
+# Build activity feed: merge tasks+docs ordered by date
+        activity_feed = []
+        for task in all_tasks:
+            assignee = users_map.get(task.assignee_user_id)
+            if task.status_key == 'in_progress':
+                activity_feed.append({
+                    'type': 'task_accepted',
+                    'icon': 'fa-circle-check',
+                    'color': '#3b82f6',
+                    'text': f"قبل {assignee.name if assignee else 'محامٍ'} مهمة: {task.title}",
+                    'sub': f"القضية: {task.law_case.title if task.law_case else 'مهمة عامة'}",
+                    'date': task.created_at[:16]
+                })
+            elif task.status_key == 'completed':
+                activity_feed.append({
+                    'type': 'task_done',
+                    'icon': 'fa-check-double',
+                    'color': '#10b981',
+                    'text': f"أتم {assignee.name if assignee else 'محامٍ'} مهمة: {task.title}",
+                    'sub': f"القضية: {task.law_case.title if task.law_case else 'مهمة عامة'}",
+                    'date': task.created_at[:16]
+                })
+            elif task.status_key == 'pending' and task.assignee_user_id:
+                activity_feed.append({
+                    'type': 'task_assigned',
+                    'icon': 'fa-user-tag',
+                    'color': '#f59e0b',
+                    'text': f"تم إسناد مهمة إلى {assignee.name if assignee else 'محامٍ'}: {task.title}",
+                    'sub': f"القضية: {task.law_case.title if task.law_case else 'مهمة عامة'}",
+                    'date': task.created_at[:16]
+                })
+        
+        for doc in recent_docs:
+            activity_feed.append({
+                'type': 'doc_uploaded',
+                'icon': 'fa-file-arrow-up',
+                'color': '#8b5cf6',
+                'text': f"رفع مستند: {doc.name}",
+                'sub': f"نوعه: {'{مذكرة' if doc.document_type_key == 'memo' else doc.document_type_key} – مرتبط بالقضية رقم {doc.case_id}",
+                'date': doc.created_at[:16]
+            })
+        
+        activity_feed.sort(key=lambda x: x['date'], reverse=True)
+        
+        # Task stats per user
+        team_stats = []
+        for u in all_users:
+            if u.role in ['محامٍ', 'مدير', 'إداري']:
+                user_tasks = [t for t in all_tasks if t.assignee_user_id == u.id]
+                team_stats.append({
+                    'user': u,
+                    'pending': len([t for t in user_tasks if t.status_key == 'pending']),
+                    'in_progress': len([t for t in user_tasks if t.status_key == 'in_progress']),
+                    'completed': len([t for t in user_tasks if t.status_key == 'completed']),
+                    'total': len(user_tasks)
+                })
+        
+        return templates.TemplateResponse(
+            request=request, name="activity.html",
+            context={"user": user, "activity_feed": activity_feed, "team_stats": team_stats, "active_page": "activity"}
+        )
+    except Exception:
+        import traceback
+        return _safe_error(traceback.format_exc())
+
+
+# ============ ROUTERS INTEGRATION ============
+from routers import parties
+from routers import pleadings
+from routers import judgments
+from routers import smart_search_route
+from routers import calendar_route
+from routers import reports_route
+from routers import notes
+from routers import correspondences
+from routers import documents_route
+from routers import api_case_recipients
+from routers import smart_automation_route
+from routers import timeline_route
+from routers import team_management
+from routers import reference_data
+from routers import login_log___sessions
+from routers import legal_references
+from routers import limitations
+from routers import timesheet
+from routers import expenses
+from routers import executions
+from routers import power_of_attorney
+from routers import advanced_operations
+from routers import superadmin
+app.include_router(parties.router)
+app.include_router(pleadings.router)
+app.include_router(judgments.router)
+app.include_router(smart_search_route.router)
+app.include_router(calendar_route.router)
+app.include_router(reports_route.router)
+app.include_router(notes.router)
+app.include_router(correspondences.router)
+app.include_router(documents_route.router)
+app.include_router(api_case_recipients.router)
+app.include_router(smart_automation_route.router)
+app.include_router(timeline_route.router)
+app.include_router(team_management.router)
+app.include_router(reference_data.router)
+app.include_router(login_log___sessions.router)
+app.include_router(legal_references.router)
+app.include_router(limitations.router)
+app.include_router(timesheet.router)
+app.include_router(expenses.router)
+app.include_router(executions.router)
+app.include_router(power_of_attorney.router)
+app.include_router(advanced_operations.router)
+app.include_router(superadmin.router)
+# ----------------------------------------------------------------------------
+# SaaS Subscription Routes
+# ----------------------------------------------------------------------------
+
+@app.get("/subscription")
+async def view_subscription(request: Request, db: Session = Depends(get_db)):
+    user = get_current_user(request, db)
+    if not user:
+        return RedirectResponse(url="/", status_code=303)
+    office = db.query(LawOffices).filter(LawOffices.id == user.office_id).first() if user.office_id else None
+    return templates.TemplateResponse("subscription.html", {"request": request, "user": user, "office": office})
+
+@app.post("/api/subscription/checkout")
+async def api_subscription_checkout(request: Request, db: Session = Depends(get_db)):
+    from fastapi.responses import JSONResponse as _J
+    user = get_current_user(request, db)
+    if not user:
+        return _J({"success": False, "error": "غير مصرح"}, status_code=403)
+    if user.role not in ['مدير النظام', 'مدير', 'مدير المكتب']:
+        return _J({"success": False, "error": "غير مصرح لك بتجديد الاشتراك"}, status_code=403)
+
+    data = await request.json()
+    plan = data.get("plan")
+    if plan not in ['monthly', 'yearly']:
+        return _J({"success": False, "error": "خطة غير صالحة"}, status_code=400)
+
+    office = db.query(LawOffices).filter(LawOffices.id == user.office_id).first()
+    if not office:
+        return _J({"success": False, "error": "المكتب غير موجود"}, status_code=404)
+
+    receipt_base64 = data.get("receipt_base64", "")
+    if not receipt_base64:
+        return _J({"success": False, "error": "يرجى إرفاق صورة السند للتحقق من الدفع"}, status_code=400)
+    # Security: تأكد أن الملف صورة حقيقية
+    allowed_prefixes = ('data:image/jpeg', 'data:image/jpg', 'data:image/png', 'data:image/gif', 'data:image/webp')
+    if not any(receipt_base64.startswith(p) for p in allowed_prefixes):
+        return _J({"success": False, "error": "يرجى رفع صورة فقط (JPG, PNG, WEBP)"}, status_code=400)
+    # Security: حجم الصورة لا يتجاوز 5MB
+    if len(receipt_base64) > 7_000_000:
+        return _J({"success": False, "error": "حجم الصورة كبير جداً. يرجى ضغطها قبل الرفع"}, status_code=400)
+
+    office.subscription_plan = plan
+    office.receipt_base64 = receipt_base64
+    office.receipt_status = 'pending'
+    db.commit()
+
+    write_audit(db, "law_offices", "upload_receipt", user.id, user.name, office.id, "office", office.id, f"Uploaded receipt for {plan}")
+    return _J({"success": True, "message": "تم إرسال السند بنجاح. سيتم تفعيل حسابك فور التأكيد."})
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+
+        
+    office = db.query(LawOffices).filter(LawOffices.id == user.office_id).first() if user.office_id else None
+    
+    return templates.TemplateResponse("subscription.html", {
+        "request": request,
+        "user": user,
+        "office": office
+    })
+
+@app.post("/api/subscription/checkout")
+async def api_subscription_checkout(request: Request, db: Session = Depends(get_db)):
+    from fastapi.responses import JSONResponse as _J
+    user = get_current_user(request, db)
+    if not user:
+        return _J({"success": False, "error": "غير مصرح"}, status_code=403)
+        
+    # Only owner/manager can pay
+    if user.role not in ['مدير النظام', 'مدير', 'مدير المكتب']:
+        return _J({"success": False, "error": "غير مصرح لك بتجديد الاشتراك"}, status_code=403)
+        
+    data = await request.json()
+    plan = data.get("plan")
+    if plan not in ['monthly', 'yearly']:
+        return _J({"success": False, "error": "خطة غير صالحة"}, status_code=400)
+        
+    office = db.query(LawOffices).filter(LawOffices.id == user.office_id).first()
+    if not office:
         return _J({"success": False, "error": "المكتب غير موجود"}, status_code=404)
         
     from datetime import datetime, timezone, timedelta
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     
-    receipt_base64 = data.get("receipt_base64")
+    receipt_base64 = data.get("receipt_base64", "")
     if not receipt_base64:
         return _J({"success": False, "error": "يرجى إرفاق صورة السند للتحقق من الدفع"}, status_code=400)
+    # Security: تأكد أن الملف صورة حقيقية وليس ملف تنفيذي
+    allowed_prefixes = ('data:image/jpeg', 'data:image/jpg', 'data:image/png', 'data:image/gif', 'data:image/webp')
+    if not any(receipt_base64.startswith(p) for p in allowed_prefixes):
+        return _J({"success": False, "error": "يرجى رفع صورة فقط (JPG, PNG, WEBP)"}, status_code=400)
+    # Security: حجم الصورة لا يتجاوز 5MB
+    if len(receipt_base64) > 7_000_000:
+        return _J({"success": False, "error": "حجم الصورة كبير جداً. يرجى ضغطها قبل الرفع"}, status_code=400)
         
         
     office.subscription_plan = plan
     office.receipt_base64 = receipt_base64
-    office.receipt_status = 'pending'
-    db.commit()
     
     write_audit(db, "law_offices", "renew_subscription", user.id, user.name, office.id, "office", office.id, f"Renewed to {plan}")
     
