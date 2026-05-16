@@ -196,12 +196,11 @@
           <div class="form-group">
             <label>الدور الوظيفي</label>
             <select id="fRole" onchange="onRoleChange()">
-              <option>صاحب المكتب</option>
-              <option>مدير المكتب</option>
-              <option selected>محامٍ</option>
-              <option>مساعد قانوني</option>
-              <option>موظف إداري</option>
-              <option>محاسب</option>
+              <option value="صاحب المكتب">صاحب المكتب (إدارة عليا)</option>
+              <option value="مدير المكتب">مدير المكتب (إدارة وصلاحيات كاملة)</option>
+              <option value="محامي" selected>محامي (إدارة قضاياه وجلساته فقط)</option>
+              <option value="سكرتير">سكرتير (إدارة المواعيد والمستندات)</option>
+              <option value="محاسب">محاسب (إدارة الشؤون المالية فقط)</option>
             </select>
           </div>
           <div class="form-group">
@@ -340,7 +339,7 @@ function clearForm() {
 
 function onRoleChange() {
   const role = document.getElementById('fRole').value;
-  const isLawyer = ['محامٍ','مدير المكتب'].includes(role);
+  const isLawyer = ['محامي','محامٍ','مدير المكتب'].includes(role);
   document.getElementById('caseAssignRow').style.display = isLawyer ? 'flex' : 'none';
 }
 
