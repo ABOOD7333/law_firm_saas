@@ -47,15 +47,28 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
             if office and office.is_active == 0:
                 return None
                 
-        # ── حماية أمنية: منع الموكل من الدخول إلى أي واجهة غير مصرح بها ──
+        # ── حماية أمنية وتوزيع الصلاحيات (RBAC) ──
+        path = request.url.path
+        
+        from fastapi.exceptions import HTTPException
+        from fastapi import status
+        
+        # 1. الموكل (Client)
         if user.role == 'موكل':
-            allowed_paths = ['/', '/dashboard', '/logout']
-            if not any(request.url.path == p for p in allowed_paths) and not request.url.path.startswith('/static'):
-                from fastapi.exceptions import HTTPException
-                from fastapi import status
-                raise HTTPException(
-                    status_code=status.HTTP_303_SEE_OTHER,
-                    headers={"Location": "/dashboard"}
-                )
+            allowed = ['/', '/dashboard', '/logout']
+            if not any(path == p for p in allowed) and not path.startswith('/static'):
+                raise HTTPException(status_code=status.HTTP_303_SEE_OTHER, headers={"Location": "/dashboard"})
+                
+        # 2. المحاسب (Accountant)
+        elif user.role == 'محاسب':
+            allowed_prefixes = ('/', '/dashboard', '/finance', '/expenses', '/timesheet', '/reports', '/clients', '/logout', '/static', '/api/finance', '/api/expenses', '/api/timesheets')
+            if not path.startswith(allowed_prefixes):
+                raise HTTPException(status_code=status.HTTP_303_SEE_OTHER, headers={"Location": "/dashboard"})
+
+        # 3. السكرتير والمحامي (Secretary & Lawyer)
+        elif user.role in ['سكرتير', 'محامي', 'محامٍ']:
+            forbidden_prefixes = ('/team', '/settings', '/finance', '/expenses', '/login_log', '/activity', '/api/team', '/api/settings', '/api/finance', '/api/expenses')
+            if path.startswith(forbidden_prefixes):
+                raise HTTPException(status_code=status.HTTP_303_SEE_OTHER, headers={"Location": "/dashboard"})
                 
     return user

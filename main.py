@@ -554,7 +554,13 @@ async def cases_page(request: Request, db: Session = Depends(get_db), user: Acce
         
     try:
         office_id = user.office_id or 1
-        cases = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0).order_by(LawCases.created_at.desc()).all()
+        query = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0)
+        
+        # تقييد المحامي برؤية قضاياه فقط
+        if user.role in ['محامي', 'محامٍ']:
+            query = query.filter(LawCases.lead_lawyer_id == user.id)
+            
+        cases = query.order_by(LawCases.created_at.desc()).all()
         clients = db.query(LawClients).filter(LawClients.office_id == office_id).all()
         lawyers = db.query(AccessProfiles).filter(AccessProfiles.office_id == office_id, AccessProfiles.role != "موكل").all()
         
@@ -621,6 +627,10 @@ async def case_details_page(case_id: int, request: Request, db: Session = Depend
         if not case:
             return HTMLResponse(content="القضية غير موجودة أو لا تملك صلاحية الوصول لها", status_code=404)
             
+        # منع المحامي من دخول قضية غير تابعة له
+        if user.role in ['محامي', 'محامٍ'] and case.lead_lawyer_id != user.id:
+            return HTMLResponse(content="<script>alert('غير مصرح لك بالدخول لهذه القضية'); window.location.href='/cases';</script>", status_code=403)
+            
         hearings = db.query(LawHearings).filter(LawHearings.case_id == case_id).order_by(LawHearings.hearing_at.desc()).all()
         lawyer = db.query(AccessProfiles).filter(AccessProfiles.id == case.lead_lawyer_id).first() if case.lead_lawyer_id else None
         
@@ -655,6 +665,10 @@ async def edit_case(
         
     office_id = user.office_id or 1
     case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
+    
+    if user.role in ['محامي', 'محامٍ'] and case and case.lead_lawyer_id != user.id:
+        return HTMLResponse(content="<script>alert('غير مصرح لك بتعديل هذه القضية'); window.history.back();</script>", status_code=403)
+        
     if case:
         case.title = title
         case.case_number = case_number
@@ -678,8 +692,18 @@ async def hearings_page(request: Request, db: Session = Depends(get_db), user: A
         
     try:
         office_id = user.office_id or 1
-        hearings = db.query(LawHearings).filter(LawHearings.office_id == office_id).order_by(LawHearings.hearing_at.desc()).all()
-        cases = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0).all()
+        
+        cases_query = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0)
+        hearings_query = db.query(LawHearings).filter(LawHearings.office_id == office_id)
+        
+        if user.role in ['محامي', 'محامٍ']:
+            cases_query = cases_query.filter(LawCases.lead_lawyer_id == user.id)
+            # Fetch cases IDs to filter hearings
+            lawyer_case_ids = [c.id for c in cases_query.all()]
+            hearings_query = hearings_query.filter(LawHearings.case_id.in_(lawyer_case_ids) if lawyer_case_ids else LawHearings.case_id == -1)
+            
+        hearings = hearings_query.order_by(LawHearings.hearing_at.desc()).all()
+        cases = cases_query.all()
         
         return templates.TemplateResponse(
             request=request, 
