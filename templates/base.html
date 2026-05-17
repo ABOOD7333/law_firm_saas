@@ -34,6 +34,105 @@
                 display: none !important;
             }
         }
+        
+        /* ═══════════════════════════════════════════════════
+           ✨ Modern Classic 2026 Buttons - Ultra Premium UI
+           ═══════════════════════════════════════════════════ */
+        /* Global Base */
+        button, .btn, .btn-primary, .primary-btn, .submit-btn, .cancel-btn {
+            font-family: 'Cairo', sans-serif !important;
+            position: relative;
+            overflow: hidden;
+            box-sizing: border-box !important;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+
+        /* Primary Button (Add, Save, Submit) */
+        .btn-primary, .primary-btn, .submit-btn {
+            background: linear-gradient(135deg, #1e293b, #0f172a) !important; /* Classic Dark Slate */
+            color: #ffffff !important;
+            border: 1px solid rgba(255,255,255,0.1) !important;
+            padding: 10px 24px !important;
+            border-radius: 10px !important;
+            font-weight: 700 !important;
+            font-size: 0.95rem !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 8px !important;
+            box-shadow: 0 4px 15px rgba(15, 23, 42, 0.25), inset 0 1px 0 rgba(255,255,255,0.1) !important;
+            cursor: pointer !important;
+            text-decoration: none !important;
+            max-width: 100% !important;
+            white-space: normal !important;
+            text-align: center;
+        }
+
+        .btn-primary:hover, .primary-btn:hover, .submit-btn:hover {
+            transform: translateY(-2px) !important;
+            background: linear-gradient(135deg, #0f172a, #020617) !important;
+            box-shadow: 0 8px 25px rgba(15, 23, 42, 0.4), inset 0 1px 0 rgba(255,255,255,0.15) !important;
+        }
+
+        .btn-primary:active, .primary-btn:active, .submit-btn:active {
+            transform: translateY(1px) !important;
+            box-shadow: 0 2px 10px rgba(15, 23, 42, 0.2) !important;
+        }
+
+        /* Cancel / Secondary Button */
+        .cancel-btn, .secondary-btn {
+            background: #f8fafc !important;
+            color: #475569 !important;
+            border: 1px solid #cbd5e1 !important;
+            padding: 10px 24px !important;
+            border-radius: 10px !important;
+            font-weight: 700 !important;
+            font-size: 0.95rem !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 8px !important;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important;
+            cursor: pointer !important;
+            max-width: 100% !important;
+        }
+
+        .cancel-btn:hover, .secondary-btn:hover {
+            background: #e2e8f0 !important;
+            color: #0f172a !important;
+            border-color: #94a3b8 !important;
+            transform: translateY(-1px) !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05) !important;
+        }
+
+        /* Action Buttons (Table Row Actions) */
+        .action-btn {
+            border-radius: 8px !important;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important;
+        }
+        
+        .action-btn:hover {
+            border-radius: 8px !important;
+        }
+
+        /* Mobile Layout Protector */
+        @media (max-width: 768px) {
+            .btn-primary, .primary-btn, .submit-btn, .cancel-btn {
+                padding: 10px 16px !important; /* Slightly smaller padding for small screens */
+                font-size: 0.9rem !important;
+            }
+            .page-header > div:last-child {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                width: 100%;
+            }
+            /* Prevent buttons from overflowing */
+            button {
+                max-width: 100% !important;
+                flex-shrink: 1 !important;
+            }
+        }
     </style>
     {% block head %}{% endblock %}
 </head>
