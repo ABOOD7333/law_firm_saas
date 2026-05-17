@@ -6,7 +6,35 @@
     <title>{% block title %}LawSaaS{% endblock %}</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/css/dashboard.css?v=2.5">
+    <link rel="stylesheet" href="/static/css/dashboard.css?v=2.6">
+    <style>
+        /* Core Mobile Menu Fix - Guaranteed to apply */
+        @media (max-width: 992px) {
+            .mobile-menu-btn {
+                display: inline-flex !important;
+                align-items: center;
+                justify-content: center;
+                width: 45px;
+                height: 45px;
+                background-color: rgba(79, 70, 229, 0.08) !important;
+                border-radius: 10px !important;
+                border: 1px solid rgba(79, 70, 229, 0.2) !important;
+                z-index: 100;
+            }
+            .mobile-menu-btn i {
+                font-size: 1.4rem;
+                color: var(--primary-color) !important;
+            }
+            .mobile-close-btn {
+                display: block !important;
+            }
+        }
+        @media (min-width: 993px) {
+            .mobile-menu-btn, .mobile-close-btn {
+                display: none !important;
+            }
+        }
+    </style>
     {% block head %}{% endblock %}
 </head>
 <body>
@@ -165,7 +193,7 @@
     <main class="main-content">
         <!-- Topbar -->
         <header class="topbar">
-            <button class="mobile-menu-btn" onclick="toggleSidebar()" style="background:none; border:none; font-size: 1.5rem; cursor: pointer; color: var(--primary-color); margin-left: 10px;">
+            <button class="mobile-menu-btn" onclick="toggleSidebar()" aria-label="القائمة الجانبية" title="القائمة الجانبية" style="cursor: pointer; margin-left: 10px;">
                 <i class="fa-solid fa-bars"></i>
             </button>
             {% if not (user and user.role == 'موكل') %}
