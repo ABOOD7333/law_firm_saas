@@ -543,7 +543,7 @@ async function loadTemplateForEditing() {
     const editor = document.getElementById('templateTextEditor');
     editor.value = "جاري التحميل...";
     try {
-        const res = await fetch(\`/api/templates/\${encodeURIComponent(type)}\`).then(r=>r.json());
+        const res = await fetch(`/api/templates/${encodeURIComponent(type)}`).then(r=>r.json());
         if (res && res.template_text) {
             editor.value = res.template_text;
         } else {
@@ -581,7 +581,7 @@ async function generateDoc(type) {
     const fmt = document.getElementById('saveFormat').value;
     const modal = document.getElementById('docModal');
     
-    document.getElementById('docModalTitle').innerHTML = \`<i class="fa-solid fa-file-signature" style="color:var(--primary-color);"></i> معاينة: \${type}\`;
+    document.getElementById('docModalTitle').innerHTML = `<i class="fa-solid fa-file-signature" style="color:var(--primary-color);"></i> معاينة: ${type}`;
     
     document.getElementById('docModalBody').innerHTML = '<p style="text-align:center;padding:50px;">جاري التوليد...</p>';
     modal.style.display = 'flex';
@@ -595,18 +595,18 @@ async function generateDoc(type) {
     let content = rawTemplates[type] || '';
 
     try {
-        const res = await fetch(\`/api/templates/\${encodeURIComponent(type)}\`).then(r=>r.json());
+        const res = await fetch(`/api/templates/${encodeURIComponent(type)}`).then(r=>r.json());
         if (res && res.template_text) {
             content = res.template_text;
         }
     } catch(e) { console.error(e); }
 
-    content = content.replace(/\\$\\{today\\}/g, today)
-                     .replace(/\\$\\{client\\}/g, client)
-                     .replace(/\\$\\{court\\}/g, court)
-                     .replace(/\\$\\{caseNum\\}/g, caseNum)
-                     .replace(/\\$\\{title\\}/g, title)
-                     .replace(/\\$\\{Math\\.floor\\(Math\\.random\\(\\)\\*10000\\)\\}/g, Math.floor(Math.random()*10000));
+    content = content.replace(/\$\{today\}/g, today)
+                     .replace(/\$\{client\}/g, client)
+                     .replace(/\$\{court\}/g, court)
+                     .replace(/\$\{caseNum\}/g, caseNum)
+                     .replace(/\$\{title\}/g, title)
+                     .replace(/\$\{Math\.floor\(Math\.random\(\)\*10000\)\}/g, Math.floor(Math.random()*10000));
 
     document.getElementById('docModalBody').innerHTML = content;
 }
