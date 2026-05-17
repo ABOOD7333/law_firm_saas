@@ -161,7 +161,7 @@
           </td>
           <td>
             {% if s.is_active %}
-            <button class="revoke-btn" onclick="revokeSession({{ s.id }}, this)">
+            <button class="revoke-btn" onclick="revokeSession('{{ s.id }}', this)">
               <i class="fa-solid fa-xmark"></i> إنهاء
             </button>
             {% else %}

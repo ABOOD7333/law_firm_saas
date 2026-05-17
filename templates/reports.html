@@ -56,6 +56,9 @@
     .progress-fill.danger { background: linear-gradient(90deg, #ef4444, #f87171); }
     .progress-text { font-size: 0.85rem; font-weight: 700; color: #475569; min-width: 35px; }
 
+    .text-emerald { color: #10b981 !important; }
+    .text-red { color: #ef4444 !important; }
+
     .print-btn { background: var(--primary-color); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
     .print-btn:hover { background: var(--secondary-color); transform: translateY(-1px); }
 
@@ -97,7 +100,7 @@
         </div>
         <div class="kpi-details">
             <h3>الخزينة (صافي الأرباح)</h3>
-            <p class="value" style="color: {% if net_profit >= 0 %}#10b981{% else %}#ef4444{% endif %};">
+            <p class="value {% if net_profit >= 0 %}text-emerald{% else %}text-red{% endif %}">
                 <span dir="ltr">{{ "{:,.2f}".format(net_profit) }}</span> <span style="font-size:1rem; color:var(--text-color);">ر.س</span>
             </p>
             <div class="sub-text positive"><i class="fa-solid fa-arrow-up-right-dots"></i> إجمالي الإيرادات: <span dir="ltr">{{ "{:,.2f}".format(total_income) }}</span></div>
@@ -240,6 +243,14 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- Hidden data blocks for JavaScript (prevents IDE syntax errors) -->
+<script id="incomeData" type="application/json">{{ income_data | tojson | safe }}</script>
+<script id="typeData" type="application/json">{{ cases_by_type | tojson | safe }}</script>
+<div style="display:none;" id="wonJudgments">{{ won_judgments }}</div>
+<div style="display:none;" id="lostJudgments">{{ lost_judgments }}</div>
+<div style="display:none;" id="doneTasks">{{ done_tasks_all }}</div>
+<div style="display:none;" id="totalTasks">{{ total_tasks }}</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Animate progress bars
@@ -253,8 +264,8 @@ document.addEventListener('DOMContentLoaded', function() {
     Chart.defaults.font.family = "'Cairo', sans-serif";
     Chart.defaults.color = "#64748b";
 
-    // Safely parse JSON data from Jinja (handling array of arrays OR array of dicts)
-    const incomeRaw = {{ income_data | tojson | safe }};
+    // Data safely loaded from HTML text to avoid IDE syntax errors
+    const incomeRaw = JSON.parse(document.getElementById('incomeData').textContent || '[]');
     const incomeLabels = incomeRaw.map(d => Array.isArray(d) ? d[0] : (d.month || ''));
     const incomeData = incomeRaw.map(d => Array.isArray(d) ? d[1] : (d.total || 0));
     
@@ -291,7 +302,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // 2. Cases by Type
-    const typeRaw = {{ cases_by_type | tojson | safe }};
+    const typeRaw = JSON.parse(document.getElementById('typeData').textContent || '[]');
     const typeLabels = typeRaw.map(d => Array.isArray(d) ? (d[0] || 'غير محدد') : (d.case_type_key || d.status_key || 'غير محدد'));
     const typeData = typeRaw.map(d => Array.isArray(d) ? d[1] : (d.cnt || 0));
     const colors = ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#ec4899', '#06b6d4', '#64748b'];
@@ -320,8 +331,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // 3. Judgments Success Rate
-    const won = {{ won_judgments }};
-    const lost = {{ lost_judgments }};
+    const won = Number(document.getElementById('wonJudgments').textContent || '0');
+    const lost = Number(document.getElementById('lostJudgments').textContent || '0');
     
     if (document.getElementById('judgmentsChart')) {
         new Chart(document.getElementById('judgmentsChart').getContext('2d'), {
@@ -347,8 +358,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // 4. Tasks Status
-    const tasksDone = {{ done_tasks_all }};
-    const tasksPending = {{ total_tasks }} - tasksDone;
+    const tasksDone = Number(document.getElementById('doneTasks').textContent || '0');
+    const tasksTotal = Number(document.getElementById('totalTasks').textContent || '0');
+    const tasksPending = tasksTotal - tasksDone;
     
     if (document.getElementById('tasksChart')) {
         new Chart(document.getElementById('tasksChart').getContext('2d'), {
