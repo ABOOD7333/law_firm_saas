@@ -361,10 +361,10 @@ const rawTemplates = {
                 <h3>باسم الله الرحمن الرحيم</h3>
             </div>
             <div class="doc-body">
-                <p>إنه في يوم <strong>\${today}</strong>، تم الاتفاق والتراضي بين كل من:</p>
-                <p><strong>الطرف الأول (الموكِّل):</strong> المكرم/ة <strong>\${client}</strong>، بصفتهم المدعي/المدعى عليه في القضية المذكورة أدناه.</p>
+                <p>إنه في يوم <strong>[تاريخ_اليوم]</strong>، تم الاتفاق والتراضي بين كل من:</p>
+                <p><strong>الطرف الأول (الموكِّل):</strong> المكرم/ة <strong>[اسم_الموكل]</strong>، بصفتهم المدعي/المدعى عليه في القضية المذكورة أدناه.</p>
                 <p><strong>الطرف الثاني (الوكيل):</strong> مكتب المحاماة والاستشارات القانونية.</p>
-                <p><strong>موضوع الوكالة:</strong> <br>بموجب هذا العقد، وكّل الطرف الأول الطرف الثاني توكيلاً شرعياً وقانونياً لتمثيله والمرافعة والمدافعة عنه في القضية رقم <strong>(\${caseNum})</strong> المرفوعة لدى <strong>\${court}</strong>، والمقيدة بعنوان: "<strong>\${title}</strong>".</p>
+                <p><strong>موضوع الوكالة:</strong> <br>بموجب هذا العقد، وكّل الطرف الأول الطرف الثاني توكيلاً شرعياً وقانونياً لتمثيله والمرافعة والمدافعة عنه في القضية رقم <strong>([رقم_القضية])</strong> المرفوعة لدى <strong>[اسم_المحكمة]</strong>، والمقيدة بعنوان: "<strong>[موضوع_القضية]</strong>".</p>
                 <p><strong>الصلاحيات الممنوحة:</strong> <br>يحق للوكيل الحضور نيابة عن الموكل أمام كافة المحاكم واللجان القضائية وشبه القضائية، وسماع الدعاوى والرد عليها، والإقرار، والإنكار، والصلح، والتنازل، وإبراء الذمة، والطعن بالتزوير، وطلب اليمين وردها والامتناع عنها، وطلب القضاة وردهم، واستلام الأحكام وصكوكها، وتقديم اللوائح الاعتراضية، والاستئناف، ومذكرات التمييز، والالتماس وإعادة النظر.</p>
                 <p>وهذه وكالة مفوضة ومطلقة فيما يخص هذه القضية، سارية المفعول حتى صدور الحكم القطعي فيها.</p>
             </div>
@@ -379,13 +379,13 @@ const rawTemplates = {
         <div class="legal-doc">
             <div class="doc-header">
                 <h2>صـحـيـفـة دعــوى</h2>
-                <h3>إلى مقام <strong>\${court}</strong> الموقر</h3>
+                <h3>إلى مقام <strong>[اسم_المحكمة]</strong> الموقر</h3>
             </div>
             <div class="doc-body">
-                <p><strong>التاريخ:</strong> \${today}</p>
-                <p><strong>المدعي:</strong> <strong>\${client}</strong>، ويمثله قانونياً مكتب المحاماة بموجب وكالة شرعية.</p>
+                <p><strong>التاريخ:</strong> [تاريخ_اليوم]</p>
+                <p><strong>المدعي:</strong> <strong>[اسم_الموكل]</strong>، ويمثله قانونياً مكتب المحاماة بموجب وكالة شرعية.</p>
                 <p><strong>المدعى عليه:</strong> ................................................................</p>
-                <p><strong>موضوع الدعوى:</strong> <strong>\${title}</strong> (ملف القضية: \${caseNum})</p>
+                <p><strong>موضوع الدعوى:</strong> <strong>[موضوع_القضية]</strong> (ملف القضية: [رقم_القضية])</p>
                 <p style="text-align:center; font-weight:bold; margin-top:30px;">أصحاب الفضيلة القضاة، حفظكم الله ورعاكم،</p>
                 <p>السلام عليكم ورحمة الله وبركاته، أما بعد:</p>
                 <p>نتقدم لفضيلتكم بهذه الدعوى نيابة عن موكلنا، وتتلخص وقائعها في الآتي:</p>
@@ -408,15 +408,15 @@ const rawTemplates = {
         <div class="legal-doc">
             <div class="doc-header">
                 <h2>مُـذكّــرة دفــاع جـوابيـة</h2>
-                <h3>لدى <strong>\${court}</strong> - الدائرة (.......)</h3>
+                <h3>لدى <strong>[اسم_المحكمة]</strong> - الدائرة (.......)</h3>
             </div>
             <div class="doc-body">
-                <p><strong>في القضية رقم:</strong> \${caseNum}</p>
-                <p><strong>المقدمة من المدعى عليه:</strong> <strong>\${client}</strong> (بواسطة وكيله الشرعي)</p>
+                <p><strong>في القضية رقم:</strong> [رقم_القضية]</p>
+                <p><strong>المقدمة من المدعى عليه:</strong> <strong>[اسم_الموكل]</strong> (بواسطة وكيله الشرعي)</p>
                 <p><strong>ضد المدعي:</strong> ................................................................</p>
                 <p style="text-align:center; font-weight:bold; margin-top:30px;">أصحاب الفضيلة، حفظكم الله وسدد خطاكم،</p>
                 <p>السلام عليكم ورحمة الله وبركاته،</p>
-                <p>إشارة إلى دعوى المدعي الماثلة أمام فضيلتكم، والمقيدة تحت موضوع "<strong>\${title}</strong>"، فإننا نرد عليها رداً داحضاً من الناحيتين الشكلية والموضوعية وفق الآتي:</p>
+                <p>إشارة إلى دعوى المدعي الماثلة أمام فضيلتكم، والمقيدة تحت موضوع "<strong>[موضوع_القضية]</strong>"، فإننا نرد عليها رداً داحضاً من الناحيتين الشكلية والموضوعية وفق الآتي:</p>
                 <p><strong>أولاً: من الناحية الشكلية (الدفوع الشكلية):</strong><br>
                 ندفع بعدم قبول الدعوى شكلاً لعدم اختصاص المحكمة الموقرة / أو لسقوط الحق بالتقادم بناءً على ...</p>
                 <p><strong>ثانياً: من الناحية الموضوعية:</strong><br>
@@ -440,9 +440,9 @@ const rawTemplates = {
                 <h3>إلى مقام محكمة الاستئناف بـ(..........) الموقرة</h3>
             </div>
             <div class="doc-body">
-                <p><strong>المستأنف:</strong> <strong>\${client}</strong></p>
+                <p><strong>المستأنف:</strong> <strong>[اسم_الموكل]</strong></p>
                 <p><strong>المستأنف ضده:</strong> ........................................</p>
-                <p><strong>منطوق الحكم المعترض عليه:</strong> الصادر من <strong>\${court}</strong> في القضية رقم <strong>\${caseNum}</strong> وتاريخ .................... القاضي بـ (..........................).</p>
+                <p><strong>منطوق الحكم المعترض عليه:</strong> الصادر من <strong>[اسم_المحكمة]</strong> في القضية رقم <strong>[رقم_القضية]</strong> وتاريخ .................... القاضي بـ (..........................).</p>
                 <p style="text-align:center; font-weight:bold; margin-top:30px;">أصحاب الفضيلة قضاة محكمة الاستئناف، حفظكم الله،</p>
                 <p>نتقدم لفضيلتكم بلائحتنا الاعتراضية هذه على الحكم المذكور أعلاه، حيث أن الحكم قد جانبه الصواب وشابه القصور في التسبيب والفساد في الاستدلال، وذلك للأسباب الجوهرية التالية:</p>
                 <p><strong>أسباب الاستئناف:</strong><br>
@@ -465,7 +465,7 @@ const rawTemplates = {
         <div class="legal-doc" style="font-family:'Courier New', Courier, monospace; line-height:1.6;">
             <div style="text-align:center; border-bottom:2px dashed #000; padding-bottom:15px; margin-bottom:20px;">
                 <h1 style="margin:0; font-size:2rem;">فاتورة أتعاب محاماة واستشارات</h1>
-                <p>رقم الفاتورة: INV-\${Math.floor(Math.random()*10000)} | التاريخ: \${today}</p>
+                <p>رقم الفاتورة: INV-[رقم_الفاتورة] | التاريخ: [تاريخ_اليوم]</p>
             </div>
             <div style="display:flex; justify-content:space-between; margin-bottom:30px;">
                 <div>
@@ -475,8 +475,8 @@ const rawTemplates = {
                 </div>
                 <div style="text-align:left;">
                     <strong>مفوترة إلى:</strong><br>
-                    المكرم/ة: \${client}<br>
-                    رقم القضية المرجعي: \${caseNum}
+                    المكرم/ة: [اسم_الموكل]<br>
+                    رقم القضية المرجعي: [رقم_القضية]
                 </div>
             </div>
             <table style="width:100%; border-collapse:collapse; margin-bottom:30px;">
@@ -485,7 +485,7 @@ const rawTemplates = {
                     <th style="padding:10px; text-align:center;">القيمة</th>
                 </tr>
                 <tr>
-                    <td style="padding:15px; border-bottom:1px solid #ddd;">الدفعة (المقدمة/الأخيرة) لأتعاب المحاماة في القضية: \${title} أمام \${court}.</td>
+                    <td style="padding:15px; border-bottom:1px solid #ddd;">الدفعة (المقدمة/الأخيرة) لأتعاب المحاماة في القضية: [موضوع_القضية] أمام [اسم_المحكمة].</td>
                     <td style="padding:15px; border-bottom:1px solid #ddd; text-align:center;">15,000.00 ر.س</td>
                 </tr>
                 <tr>
@@ -507,12 +507,12 @@ const rawTemplates = {
         <div class="legal-doc">
             <div class="doc-header">
                 <h2>تـقـريـر مـوجـز عـن حـالـة قـضـيـة</h2>
-                <h3>موجه إلى المكرم/ة: <strong>\${client}</strong></h3>
+                <h3>موجه إلى المكرم/ة: <strong>[اسم_الموكل]</strong></h3>
             </div>
             <div class="doc-body">
-                <p><strong>تاريخ التقرير:</strong> \${today}</p>
-                <p><strong>بيانات القضية:</strong> القضية رقم (\${caseNum}) — موضوعها: \${title}.</p>
-                <p><strong>الجهة الناظرة للدعوى:</strong> \${court}.</p>
+                <p><strong>تاريخ التقرير:</strong> [تاريخ_اليوم]</p>
+                <p><strong>بيانات القضية:</strong> القضية رقم ([رقم_القضية]) — موضوعها: [موضوع_القضية].</p>
+                <p><strong>الجهة الناظرة للدعوى:</strong> [اسم_المحكمة].</p>
                 <hr style="margin:20px 0; border:0; border-top:1px dashed #ccc;">
                 <p><strong>الوضع الحالي والمستجدات:</strong><br>
                 نفيدكم علماً بأنه قد تم حضور الجلسة الأخيرة المقررة من قبل الدائرة، وتم تقديم المذكرات الجوابية التي تفند ادعاءات الخصم بشكل قاطع. وقد طلبت الدائرة من الخصم تقديم رده في الجلسة القادمة المقررة بتاريخ (يحدد لاحقاً).</p>
@@ -601,12 +601,12 @@ async function generateDoc(type) {
         }
     } catch(e) { console.error(e); }
 
-    content = content.replace(/\$\{today\}/g, today)
-                     .replace(/\$\{client\}/g, client)
-                     .replace(/\$\{court\}/g, court)
-                     .replace(/\$\{caseNum\}/g, caseNum)
-                     .replace(/\$\{title\}/g, title)
-                     .replace(/\$\{Math\.floor\(Math\.random\(\)\*10000\)\}/g, Math.floor(Math.random()*10000));
+    content = content.replace(/\[تاريخ_اليوم\]/g, today)
+                     .replace(/\[اسم_الموكل\]/g, client)
+                     .replace(/\[اسم_المحكمة\]/g, court)
+                     .replace(/\[رقم_القضية\]/g, caseNum)
+                     .replace(/\[موضوع_القضية\]/g, title)
+                     .replace(/\[رقم_الفاتورة\]/g, Math.floor(Math.random()*10000));
 
     document.getElementById('docModalBody').innerHTML = content;
 }
