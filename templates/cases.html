@@ -8,9 +8,14 @@
         <h1>سجل القضايا</h1>
         <p>إدارة وتتبع سير القضايا في مكتبك بكل احترافية وسهولة.</p>
     </div>
-    <button class="primary-btn" onclick="openAddCaseModal()">
-        <i class="fa-solid fa-plus"></i> فتح قضية جديدة
-    </button>
+    <div style="display: flex; gap: 10px;">
+        <button class="btn" style="background: #f1f5f9; color: #334155; padding: 10px 20px; border-radius: 8px; font-weight: 700; border: 1px solid #cbd5e1; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-family: 'Cairo', sans-serif;" onclick="openReportModal()">
+            <i class="fa-solid fa-file-invoice"></i> التقارير
+        </button>
+        <button class="primary-btn" onclick="openAddCaseModal()">
+            <i class="fa-solid fa-plus"></i> فتح قضية جديدة
+        </button>
+    </div>
 </div>
 
 <div class="content-section">
@@ -188,6 +193,48 @@
         </div>
     </div>
 </div>
+
+<!-- Report Case Modal -->
+<div id="reportCaseModal" class="modal-overlay">
+    <div class="modal-content" style="width: 100%; max-width: 600px;">
+        <div class="modal-header">
+            <h2><i class="fa-solid fa-chart-pie" style="color: var(--primary-color);"></i> استخراج تقرير القضايا</h2>
+            <button class="close-btn" onclick="closeReportModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+            <form id="reportCaseForm" method="GET" action="/cases/export_report" target="_blank">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>رقم القضية (اتركه فارغاً للكل)</label>
+                        <input type="text" name="case_number" id="rep_case_number" class="form-control" autocomplete="off" oninput="matchCaseData('number')">
+                        <datalist id="rep_case_numbers_list"></datalist>
+                    </div>
+                    <div class="form-group">
+                        <label>اسم القضية (اتركه فارغاً للكل)</label>
+                        <input type="text" name="case_title" id="rep_case_title" class="form-control" autocomplete="off" oninput="matchCaseData('title')">
+                        <datalist id="rep_case_titles_list"></datalist>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>من تاريخ (بداية التقرير)</label>
+                        <input type="date" name="start_date" id="rep_start_date" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>إلى تاريخ (نهاية التقرير)</label>
+                        <input type="date" name="end_date" id="rep_end_date" class="form-control">
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="cancel-btn" onclick="closeReportModal()">إلغاء</button>
+                    <button type="submit" class="submit-btn" style="background: linear-gradient(135deg, #0f172a, #334155);"><i class="fa-solid fa-file-export"></i> تصدير التقرير</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 <style>
 /* Same Modal Styles as Clients Page are handled by inline and base CSS for now */
 .modal-overlay {
@@ -239,5 +286,72 @@
         document.getElementById('editCaseModal').classList.add('active');
     }
     function closeEditCaseModal() { document.getElementById('editCaseModal').classList.remove('active'); }
+
+    // Report Logic
+    const reportCasesList = [
+        {% for case in cases %}
+        {
+            number: "{{ case.case_number }}",
+            title: "{{ case.title }}",
+            created_at: "{{ case.created_at.split(' ')[0] if case.created_at else '' }}"
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    function openReportModal() {
+        document.getElementById('reportCaseModal').classList.add('active');
+        // Clear fields initially
+        document.getElementById('rep_case_number').value = '';
+        document.getElementById('rep_case_title').value = '';
+        document.getElementById('rep_start_date').value = '';
+        document.getElementById('rep_end_date').value = '';
+        
+        // Populate datalists
+        const dlNum = document.getElementById('rep_case_numbers_list');
+        const dlTitle = document.getElementById('rep_case_titles_list');
+        dlNum.innerHTML = '';
+        dlTitle.innerHTML = '';
+        
+        reportCasesList.forEach(c => {
+            let optNum = document.createElement('option');
+            optNum.value = c.number;
+            dlNum.appendChild(optNum);
+            
+            let optTitle = document.createElement('option');
+            optTitle.value = c.title;
+            dlTitle.appendChild(optTitle);
+        });
+        
+        document.getElementById('rep_case_number').setAttribute('list', 'rep_case_numbers_list');
+        document.getElementById('rep_case_title').setAttribute('list', 'rep_case_titles_list');
+    }
+
+    function closeReportModal() { document.getElementById('reportCaseModal').classList.remove('active'); }
+
+    function matchCaseData(source) {
+        const numInput = document.getElementById('rep_case_number');
+        const titleInput = document.getElementById('rep_case_title');
+        const startInput = document.getElementById('rep_start_date');
+        const endInput = document.getElementById('rep_end_date');
+        
+        let match = null;
+        if(source === 'number' && numInput.value) {
+            match = reportCasesList.find(c => c.number === numInput.value);
+            if(match) titleInput.value = match.title;
+        } else if(source === 'title' && titleInput.value) {
+            match = reportCasesList.find(c => c.title === titleInput.value);
+            if(match) numInput.value = match.number;
+        }
+        
+        if(match) {
+            // Fill dates
+            startInput.value = match.created_at;
+            let today = new Date().toISOString().split('T')[0];
+            endInput.value = today;
+        } else if (!numInput.value && !titleInput.value) {
+            startInput.value = '';
+            endInput.value = '';
+        }
+    }
 </script>
 {% endblock %}

@@ -504,18 +504,21 @@
                 const span = document.createElement('span');
                 span.textContent = title;
                 span.style.fontFamily = "'Cairo', sans-serif";
-                span.style.fontSize = "0.85rem";
-                span.style.fontWeight = "600";
+                span.style.fontSize = "0.8rem";
+                span.style.fontWeight = "700";
                 btn.appendChild(span);
                 
-                btn.style.display = 'inline-flex';
-                btn.style.alignItems = 'center';
-                btn.style.justifyContent = 'center';
-                btn.style.gap = '6px';
-                btn.style.padding = '6px 12px';
-                btn.style.borderRadius = '6px';
-                btn.style.width = 'auto';
-                btn.style.textDecoration = 'none';
+                // يجب استخدام setProperty مع important لكسر قواعد الـ CSS السابقة (34px)
+                btn.style.setProperty('display', 'inline-flex', 'important');
+                btn.style.setProperty('align-items', 'center', 'important');
+                btn.style.setProperty('justify-content', 'center', 'important');
+                btn.style.setProperty('gap', '4px', 'important');
+                btn.style.setProperty('padding', '6px 12px', 'important');
+                btn.style.setProperty('border-radius', '8px', 'important');
+                btn.style.setProperty('width', 'max-content', 'important');
+                btn.style.setProperty('min-width', 'auto', 'important');
+                btn.style.setProperty('height', 'auto', 'important');
+                btn.style.setProperty('text-decoration', 'none', 'important');
                 
                 btn.removeAttribute('title');
             }

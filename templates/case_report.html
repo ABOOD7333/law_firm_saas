@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تقرير القضايا | LawSaaS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #0f172a;
+            --secondary: #334155;
+            --accent: #3b82f6;
+            --success: #10b981;
+            --bg-body: #f8fafc;
+            --bg-card: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            line-height: 1.6;
+            padding: 2rem;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .report-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: var(--bg-card);
+            border-radius: 20px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        /* Header Section */
+        .report-header {
+            background: linear-gradient(135deg, var(--primary), #1e293b);
+            color: white;
+            padding: 3rem 2.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .report-header::before {
+            content: '';
+            position: absolute;
+            top: -50%; right: -20%;
+            width: 300px; height: 300px;
+            background: radial-gradient(circle, rgba(59,130,246,0.3) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .header-content h1 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.5px;
+        }
+
+        .header-content p {
+            color: #cbd5e1;
+            font-size: 1.1rem;
+        }
+
+        .header-meta {
+            text-align: left;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1.5rem;
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header-meta .meta-item {
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+        .header-meta .meta-item:last-child { margin-bottom: 0; }
+        .header-meta strong { color: #f8fafc; }
+
+        /* Summary Section */
+        .summary-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            padding: 2rem 2.5rem;
+            background: #ffffff;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .summary-card {
+            background: var(--bg-body);
+            padding: 1.5rem;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: transform 0.3s ease;
+        }
+
+        .summary-card:hover { transform: translateY(-3px); }
+
+        .summary-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .icon-blue { background: #eff6ff; color: #3b82f6; }
+        .icon-green { background: #f0fdf4; color: #10b981; }
+        .icon-purple { background: #faf5ff; color: #a855f7; }
+
+        .summary-info h3 { font-size: 1.8rem; font-weight: 800; color: var(--primary); line-height: 1; }
+        .summary-info span { font-size: 0.9rem; color: var(--text-muted); font-weight: 600; }
+
+        /* Case Block */
+        .case-block {
+            padding: 2.5rem;
+            border-bottom: 2px dashed var(--border);
+            page-break-inside: avoid;
+        }
+        .case-block:last-child { border-bottom: none; }
+
+        .case-title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 2rem;
+        }
+
+        .case-title {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .case-title i { color: var(--accent); }
+
+        .case-badge {
+            background: #f1f5f9;
+            color: var(--secondary);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            border: 1px solid #e2e8f0;
+        }
+
+        /* Data Tables */
+        .data-section {
+            margin-top: 1.5rem;
+            background: white;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .data-section-header {
+            background: #f8fafc;
+            padding: 12px 20px;
+            font-weight: 700;
+            color: var(--secondary);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .modern-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .modern-table th, .modern-table td {
+            padding: 12px 20px;
+            text-align: right;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 0.95rem;
+        }
+
+        .modern-table th {
+            font-weight: 600;
+            color: var(--text-muted);
+            background: #ffffff;
+        }
+
+        .modern-table tr:last-child td { border-bottom: none; }
+        
+        .modern-table tbody tr { transition: background 0.2s; }
+        .modern-table tbody tr:hover { background: #f8fafc; }
+
+        .empty-state {
+            padding: 20px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            font-weight: 600;
+            background: #ffffff;
+        }
+
+        /* Print Button */
+        .print-actions {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .btn-print {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.2);
+            transition: all 0.3s;
+        }
+        .btn-print:hover { transform: translateY(-2px); box-shadow: 0 15px 20px -3px rgba(15, 23, 42, 0.3); }
+
+        /* Print CSS */
+        @media print {
+            body { background: white; padding: 0; }
+            .report-container { box-shadow: none; border: none; max-width: 100%; }
+            .print-actions { display: none; }
+            .summary-card { break-inside: avoid; border: 1px solid #cbd5e1; }
+            .case-block { page-break-inside: avoid; border-bottom: 1px solid #cbd5e1; }
+            .report-header { 
+                background: white !important; 
+                color: black !important; 
+                border-bottom: 3px solid black; 
+                padding: 1rem 0;
+            }
+            .header-meta { background: transparent; border: none; padding: 0; color: black; }
+            .header-content p { color: #334155; }
+            .header-meta strong { color: black; }
+            .summary-icon { border: 1px solid #cbd5e1; }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            body { padding: 1rem; }
+            .report-header { flex-direction: column; gap: 1.5rem; text-align: center; }
+            .header-meta { text-align: center; width: 100%; }
+            .case-title-row { flex-direction: column; gap: 1rem; }
+            .modern-table th, .modern-table td { padding: 10px; font-size: 0.85rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="print-actions">
+        <button class="btn-print" onclick="window.print()">
+            <i class="fa-solid fa-print"></i> طباعة التقرير الشامل
+        </button>
+    </div>
+
+    <div class="report-container">
+        
+        <!-- Header -->
+        <header class="report-header">
+            <div class="header-content">
+                <h1>{{ office.name if office else 'مكتب المحاماة' }}</h1>
+                <p>تقرير النشاط القضائي الموحد</p>
+            </div>
+            <div class="header-meta">
+                <div class="meta-item">
+                    <span>مُصدر التقرير:</span> <strong>{{ user.name }}</strong>
+                </div>
+                <div class="meta-item">
+                    <span>تاريخ الإصدار:</span> <strong><script>document.write(new Date().toLocaleDateString('ar-SA'))</script></strong>
+                </div>
+                <div class="meta-item">
+                    <span>النطاق الزمني:</span> 
+                    <strong>
+                        {% if start_date and end_date %}
+                            من {{ start_date }} إلى {{ end_date }}
+                        {% elif start_date %}
+                            من {{ start_date }} وما بعد
+                        {% elif end_date %}
+                            حتى {{ end_date }}
+                        {% else %}
+                            سجل شامل (جميع التواريخ)
+                        {% endif %}
+                    </strong>
+                </div>
+                <div class="meta-item">
+                    <span>نوع التقرير:</span> 
+                    <strong>{{ 'قضية محددة' if is_single else 'شامل لجميع القضايا' }}</strong>
+                </div>
+            </div>
+        </header>
+
+        <!-- Analytics Summary -->
+        <div class="summary-bar">
+            <div class="summary-card">
+                <div class="summary-icon icon-blue"><i class="fa-solid fa-scale-balanced"></i></div>
+                <div class="summary-info">
+                    <h3>{{ cases_data|length }}</h3>
+                    <span>إجمالي القضايا المدرجة</span>
+                </div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-icon icon-purple"><i class="fa-solid fa-gavel"></i></div>
+                <div class="summary-info">
+                    <h3>{{ cases_data | map(attribute='hearings') | map('length') | sum }}</h3>
+                    <span>إجمالي الجلسات</span>
+                </div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-icon icon-green"><i class="fa-solid fa-list-check"></i></div>
+                <div class="summary-info">
+                    <h3>{{ cases_data | map(attribute='tasks') | map('length') | sum }}</h3>
+                    <span>إجمالي المهام المنجزة</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cases Loop -->
+        <div class="cases-wrapper">
+            {% for item in cases_data %}
+            <div class="case-block">
+                
+                <div class="case-title-row">
+                    <div class="case-title">
+                        <i class="fa-solid fa-folder-open"></i>
+                        {{ item.case.title }}
+                    </div>
+                    <div class="case-badge">
+                        رقم القضية: {{ item.case.case_number }}
+                    </div>
+                </div>
+
+                <!-- Hearings Data -->
+                <div class="data-section">
+                    <div class="data-section-header">
+                        <i class="fa-solid fa-gavel"></i> سجل الجلسات في النطاق الزمني
+                    </div>
+                    {% if item.hearings %}
+                    <table class="modern-table">
+                        <thead>
+                            <tr>
+                                <th>عنوان الجلسة</th>
+                                <th>تاريخ الجلسة</th>
+                                <th>الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for h in item.hearings %}
+                            <tr>
+                                <td>{{ h.title }}</td>
+                                <td><strong dir="ltr">{{ h.hearing_at.split(' ')[0] if h.hearing_at else '-' }}</strong></td>
+                                <td>
+                                    {% if h.status_key == 'pending' %}قادمة{% endif %}
+                                    {% if h.status_key == 'completed' %}مكتملة{% endif %}
+                                    {% if h.status_key == 'postponed' %}مؤجلة{% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="empty-state">لا توجد جلسات لهذه القضية في النطاق الزمني المحدد.</div>
+                    {% endif %}
+                </div>
+
+                <!-- Tasks Data -->
+                <div class="data-section">
+                    <div class="data-section-header">
+                        <i class="fa-solid fa-list-check" style="color: #10b981;"></i> المهام والإجراءات
+                    </div>
+                    {% if item.tasks %}
+                    <table class="modern-table">
+                        <thead>
+                            <tr>
+                                <th>المهمة</th>
+                                <th>تاريخ الإنشاء</th>
+                                <th>تاريخ الاستحقاق</th>
+                                <th>الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for t in item.tasks %}
+                            <tr>
+                                <td>{{ t.title }}</td>
+                                <td><strong dir="ltr">{{ t.created_at.split(' ')[0] }}</strong></td>
+                                <td><strong dir="ltr">{{ t.due_at.split(' ')[0] if t.due_at else '-' }}</strong></td>
+                                <td>
+                                    {% if t.status_key == 'pending' %}قيد الانتظار{% endif %}
+                                    {% if t.status_key == 'in_progress' %}قيد التنفيذ{% endif %}
+                                    {% if t.status_key == 'completed' %}مكتملة{% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="empty-state">لا توجد مهام لهذه القضية في النطاق الزمني المحدد.</div>
+                    {% endif %}
+                </div>
+
+            </div>
+            {% else %}
+            <div style="padding: 4rem 2rem; text-align: center; color: var(--text-muted);">
+                <i class="fa-solid fa-file-circle-xmark" style="font-size: 4rem; margin-bottom: 1rem; color: #cbd5e1;"></i>
+                <h2 style="font-size: 1.5rem; color: var(--secondary);">لا توجد بيانات متاحة</h2>
+                <p>لم يتم العثور على أي قضايا أو تعاملات تطابق محددات البحث (التاريخ / رقم القضية).</p>
+            </div>
+            {% endfor %}
+        </div>
+
+    </div>
+
+</body>
+</html>
