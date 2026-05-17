@@ -289,5 +289,113 @@
         }
     });
     </script>
+    <!-- Case Number Autocomplete & Prefix Script -->
+    <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+        // 1. Auto-fill Case Number prefix when opening add case modal
+        const oldOpenAddCaseModal = window.openAddCaseModal;
+        if (typeof oldOpenAddCaseModal === 'function') {
+            window.openAddCaseModal = function() {
+                oldOpenAddCaseModal();
+                let today = new Date();
+                let yyyy = today.getFullYear();
+                let mm = String(today.getMonth() + 1).padStart(2, '0');
+                let prefix = `${yyyy}-${mm}-`;
+                
+                let caseInput = document.querySelector('#addCaseForm input[name="case_number"]');
+                if (caseInput && !caseInput.value) {
+                    caseInput.value = prefix;
+                }
+            };
+        }
+
+        // 2. Fetch and apply case numbers datalist
+        const caseInputs = document.querySelectorAll('input[name="case_number"], input#case_number, input#edit_case_number, input#edit_client_case_number');
+        if(caseInputs.length > 0) {
+            try {
+                const res = await fetch("/api/case-numbers");
+                if(res.ok) {
+                    const numbers = await res.json();
+                    const datalist = document.createElement("datalist");
+                    datalist.id = "global-case-numbers";
+                    numbers.forEach(num => {
+                        const opt = document.createElement("option");
+                        opt.value = num;
+                        datalist.appendChild(opt);
+                    });
+                    document.body.appendChild(datalist);
+                    
+                    caseInputs.forEach(input => {
+                        input.setAttribute("list", "global-case-numbers");
+                        input.setAttribute("autocomplete", "off");
+                    });
+                }
+            } catch(e) {
+                console.error("Failed to load case numbers", e);
+            }
+        }
+    });
+    </script>
+    <!-- Reference Data Dynamic Loader -->
+    <script>
+    async function loadRefDataDropdown(refType, selectSelector) {
+        try {
+            const res = await fetch(`/api/refdata/list/${refType}`);
+            if (res.ok) {
+                const names = await res.json();
+                const selects = document.querySelectorAll(selectSelector);
+                selects.forEach(select => {
+                    // check if option exists, if not append it
+                    names.forEach(name => {
+                        let exists = false;
+                        for (let i = 0; i < select.options.length; i++) {
+                            if (select.options[i].value === name) {
+                                exists = true;
+                                break;
+                            }
+                        }
+                        if (!exists) {
+                            const opt = document.createElement("option");
+                            opt.value = name;
+                            opt.text = name;
+                            select.appendChild(opt);
+                        }
+                    });
+                });
+            }
+        } catch(e) { console.error("Error loading ref data", e); }
+    }
+
+    async function addCustomRefData(refType, selectSelector, promptMsg) {
+        const newVal = prompt(promptMsg || "أدخل النوع/الحالة الجديدة:");
+        if (!newVal || newVal.trim() === "") return;
+        
+        try {
+            const res = await fetch("/api/refdata/save", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ ref_type: refType, ref_name: newVal.trim() })
+            });
+            const data = await res.json();
+            if (data.ok) {
+                alert("تمت الإضافة بنجاح");
+                // Immediately add to all relevant selects
+                const selects = document.querySelectorAll(selectSelector);
+                selects.forEach(select => {
+                    const opt = document.createElement("option");
+                    opt.value = newVal.trim();
+                    opt.text = newVal.trim();
+                    select.appendChild(opt);
+                    // Optionally select it
+                    select.value = newVal.trim();
+                });
+            } else {
+                alert("حدث خطأ: " + data.message);
+            }
+        } catch(e) {
+            alert("حدث خطأ في الاتصال بالخادم");
+        }
+    }
+    </script>
 </body>
 </html>

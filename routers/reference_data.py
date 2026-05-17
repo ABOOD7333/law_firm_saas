@@ -65,4 +65,12 @@ async def refdata_delete(rec_id: int, db: Session = Depends(get_db), user: Acces
     db.delete(r); db.commit()
     return JSONResponse({"ok": True, "message": "تم الحذف بنجاح"})
 
+@router.get("/api/refdata/list/{ref_type}")
+async def refdata_list(ref_type: str, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
+    from fastapi.responses import JSONResponse
+    if not user: return JSONResponse([], status_code=401)
+    office_id = user.office_id or 1
+    records = db.query(LawReferenceData).filter(LawReferenceData.office_id == office_id, LawReferenceData.ref_type == ref_type).all()
+    return JSONResponse([r.ref_name for r in records])
+
 

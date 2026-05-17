@@ -438,6 +438,19 @@ async def dashboard_page(request: Request, db: Session = Depends(get_db), user: 
             return templates.TemplateResponse(request=request, name="client_portal.html", context={"user": user, "my_cases": [], "my_hearings": [], "active_page": "dashboard"})
         return templates.TemplateResponse(request=request, name="dashboard.html", context={"user": user, "active_page": "dashboard", "my_tasks": [], "total_cases": 0, "total_clients": 0, "pending_tasks_count": 0})
 
+@app.get("/api/case-numbers")
+async def get_case_numbers(db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
+    if not user:
+        return _JSONResponse([])
+    office_id = user.office_id or 1
+    query = db.query(LawCases.case_number).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0)
+    
+    if user.role in ['محامي', 'محامٍ'] and user.can_view_all_cases == 0:
+        query = query.filter(LawCases.lead_lawyer_id == user.id)
+        
+    case_numbers = [c[0] for c in query.all() if c[0]]
+    return _JSONResponse(case_numbers)
+
 @app.get("/clients", response_class=HTMLResponse)
 async def clients_page(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     if not user:

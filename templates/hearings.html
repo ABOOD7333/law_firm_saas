@@ -8,9 +8,14 @@
         <h1>سجل الجلسات</h1>
         <p>متابعة وتحديث مواعيد الجلسات والمهام القضائية</p>
     </div>
-    <button class="btn-primary" onclick="document.getElementById('addHearingModal').style.display='flex'">
-        <i class="fa-solid fa-plus"></i> إضافة جلسة جديدة
-    </button>
+    <div style="display:flex; gap:10px;">
+        <button class="btn-primary" style="background-color: var(--secondary-color);" onclick="addCustomRefData('hearing_status', 'select[name=\'status_key\']', 'أدخل حالة الجلسة الجديدة (مثال: محجوزة للحكم):')">
+            <i class="fa-solid fa-plus"></i> إضافة حالة جلسة
+        </button>
+        <button class="btn-primary" onclick="document.getElementById('addHearingModal').style.display='flex'">
+            <i class="fa-solid fa-plus"></i> إضافة جلسة جديدة
+        </button>
+    </div>
 </div>
 
 <div class="card" style="margin-top: 20px;">
@@ -182,5 +187,10 @@
         document.getElementById('edit_hearing_case_id').value = caseId;
         document.getElementById('editHearingModal').style.display = 'flex';
     }
+    
+    // Load dynamic hearing statuses on page load
+    document.addEventListener("DOMContentLoaded", () => {
+        loadRefDataDropdown('hearing_status', 'select[name="status_key"]');
+    });
 </script>
 {% endblock %}

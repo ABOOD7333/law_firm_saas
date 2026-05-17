@@ -6,9 +6,14 @@
         <h1><i class="fa-solid fa-scroll" style="color: var(--primary-color);"></i> المرافعات والمذكرات القانونية</h1>
         <p>إنشاء وإدارة صيغ المذكرات القانونية المرتبطة بالقضايا — مرافعات، ردود، طعون، وأكثر.</p>
     </div>
-    <button class="btn-primary" onclick="document.getElementById('addPleadingModal').style.display='flex'">
-        <i class="fa-solid fa-file-pen"></i> إضافة مرافعة جديدة
-    </button>
+    <div style="display:flex; gap:10px;">
+        <button class="btn-primary" style="background-color: var(--secondary-color);" onclick="addCustomRefData('pleading_type', 'select[name=\'pleading_type_key\']', 'أدخل نوع المذكرة الجديد (مثال: لائحة اعتراضية):')">
+            <i class="fa-solid fa-plus"></i> إضافة نوع المذكرة
+        </button>
+        <button class="btn-primary" onclick="document.getElementById('addPleadingModal').style.display='flex'">
+            <i class="fa-solid fa-file-pen"></i> إضافة مرافعة جديدة
+        </button>
+    </div>
 </div>
 
 <!-- Stats -->
@@ -253,5 +258,9 @@ function showContent(title, content) {
     document.getElementById('contentModalBody').textContent = content;
     document.getElementById('contentModal').style.display = 'flex';
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+    loadRefDataDropdown('pleading_type', 'select[name="pleading_type_key"]');
+});
 </script>
 {% endblock %}
