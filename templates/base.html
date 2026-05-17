@@ -495,6 +495,32 @@
             alert("حدث خطأ في الاتصال بالخادم");
         }
     }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // تحويل أزرار الإجراءات الفارغة (المربعات الصامتة) إلى أزرار مقروءة بأسماء واضحة لجميع واجهات النظام
+        document.querySelectorAll('.action-btn, a[class*="action-btn"], button[class*="action-btn"]').forEach(btn => {
+            const title = btn.getAttribute('title');
+            if (title && btn.textContent.trim() === '') {
+                const span = document.createElement('span');
+                span.textContent = title;
+                span.style.fontFamily = "'Cairo', sans-serif";
+                span.style.fontSize = "0.85rem";
+                span.style.fontWeight = "600";
+                btn.appendChild(span);
+                
+                btn.style.display = 'inline-flex';
+                btn.style.alignItems = 'center';
+                btn.style.justifyContent = 'center';
+                btn.style.gap = '6px';
+                btn.style.padding = '6px 12px';
+                btn.style.borderRadius = '6px';
+                btn.style.width = 'auto';
+                btn.style.textDecoration = 'none';
+                
+                btn.removeAttribute('title');
+            }
+        });
+    });
     </script>
 </body>
 </html>
