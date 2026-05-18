@@ -1104,6 +1104,8 @@ td .action-btn::before {
     .topbar {
         padding: 10px !important;
         gap: 10px !important;
+        flex-wrap: wrap !important;
+        height: auto !important;
     }
     
     .search-bar {

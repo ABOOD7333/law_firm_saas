@@ -6,7 +6,7 @@
     <title>{% block title %}LawSaaS{% endblock %}</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/css/dashboard.css?v=2.6">
+    <link rel="stylesheet" href="/static/css/dashboard.css?v=2.7">
     <style>
         /* Core Mobile Menu Fix - Guaranteed to apply */
         @media (max-width: 992px) {
@@ -32,6 +32,23 @@
         @media (min-width: 993px) {
             .mobile-menu-btn, .mobile-close-btn {
                 display: none !important;
+            }
+        }
+        
+        /* 🚨 Bulletproof Mobile Topbar Fix */
+        @media (max-width: 992px) {
+            .topbar {
+                flex-wrap: wrap !important;
+                height: auto !important;
+                padding: 10px !important;
+            }
+            .search-bar {
+                flex: 1 1 100% !important;
+                order: 3 !important;
+                margin-top: 10px !important;
+            }
+            .mobile-menu-btn {
+                flex-shrink: 0 !important;
             }
         }
         
@@ -291,7 +308,7 @@
     <!-- Main Content -->
     <main class="main-content">
         <!-- Topbar -->
-        <header class="topbar">
+        <header class="topbar" style="flex-wrap: wrap; height: auto; min-height: 80px; padding-top: 10px; padding-bottom: 10px;">
             <button class="mobile-menu-btn" onclick="toggleSidebar()" aria-label="القائمة الجانبية" title="القائمة الجانبية" style="cursor: pointer; margin-left: 10px;">
                 <i class="fa-solid fa-bars"></i>
             </button>
