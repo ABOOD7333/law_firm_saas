@@ -540,6 +540,66 @@
                 btn.removeAttribute('title');
             }
         });
+
+        // ── Autofill Country Code for Phone Inputs ──
+        const userPhone = "{{ user.phone if user else '' }}";
+        let defaultCode = "";
+        if (userPhone.startsWith("+")) {
+            const countryCodes = ["+20", "+212", "+213", "+216", "+218", "+222", "+249", "+252", "+253", "+269", "+961", "+962", "+963", "+964", "+965", "+966", "+967", "+968", "+970", "+971", "+973", "+974"];
+            for (let code of countryCodes) {
+                if (userPhone.startsWith(code)) {
+                    defaultCode = code;
+                    break;
+                }
+            }
+            if (!defaultCode) {
+                const match = userPhone.match(/^\+\d{1,3}/);
+                if (match) defaultCode = match[0];
+            }
+        }
+
+        if (defaultCode) {
+            function applyDefaultPhoneCode() {
+                const phoneInputs = document.querySelectorAll('input[name="phone"], input[name="mobile"], input[name="phone_number"], input[name="alt_phone"], input[type="tel"]');
+                phoneInputs.forEach(input => {
+                    // Only set if input is empty
+                    if (!input.value || input.value.trim() === "") {
+                        input.value = defaultCode;
+                        input.style.direction = "ltr";
+                        input.style.textAlign = "left";
+                    }
+                });
+            }
+            
+            // Apply immediately on page load
+            applyDefaultPhoneCode();
+            
+            // Re-apply when a modal is opened
+            const observer = new MutationObserver(mutations => {
+                mutations.forEach(mutation => {
+                    if (mutation.attributeName === "class" || mutation.attributeName === "style") {
+                        if (mutation.target.classList.contains("active") || mutation.target.style.display === "block") {
+                            setTimeout(applyDefaultPhoneCode, 50);
+                        }
+                    }
+                });
+            });
+            
+            document.querySelectorAll('.modal-overlay, .modal').forEach(modal => {
+                observer.observe(modal, { attributes: true });
+            });
+            
+            // Add focus event to inputs to handle edge cases where React/Alpine clears it
+            document.querySelectorAll('input[name="phone"], input[name="mobile"], input[name="phone_number"], input[name="alt_phone"], input[type="tel"]').forEach(input => {
+                input.addEventListener('focus', function() {
+                    if (!this.value || this.value.trim() === "") {
+                        this.value = defaultCode;
+                        this.style.direction = "ltr";
+                        this.style.textAlign = "left";
+                    }
+                });
+            });
+        }
     });
     </script>
 </body>
