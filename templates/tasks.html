@@ -88,7 +88,7 @@
                         <!-- Quick status update buttons -->
                         {% if task.status_key != 'completed' %}
                         <form action="/tasks/update_status" method="post" style="display: inline;">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get(\'csrf_token\', \'\') }}">
+    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
                             <input type="hidden" name="task_id" value="{{ task.id }}">
                             <input type="hidden" name="status_key" value="completed">
                             <button type="submit" class="action-btn" style="color: #10b981;" title="تحديد كمكتملة"><i class="fa-solid fa-check"></i></button>
@@ -118,7 +118,7 @@
         </div>
         
         <form action="/tasks/add" method="post">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get(\'csrf_token\', \'\') }}">
+    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
             <div class="form-group" style="margin-bottom: 15px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">عنوان المهمة <span style="color: red;">*</span></label>
                 <input type="text" name="title" required placeholder="مثال: كتابة مسودة الرد التمهيدي" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif;">
@@ -184,7 +184,7 @@
         </div>
         
         <form action="/tasks/edit" method="post">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get(\'csrf_token\', \'\') }}">
+    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
             <input type="hidden" name="task_id" id="edit_task_id">
             
             <div class="form-group" style="margin-bottom: 15px;">

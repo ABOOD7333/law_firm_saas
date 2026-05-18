@@ -46,7 +46,7 @@
     <h3><i class="fa-solid fa-pen-to-square" style="color:#6366f1;"></i> إضافة / تعديل إجراء تنفيذ</h3>
     <div id="alertBox" class="alert-box"></div>
     <form onsubmit="saveRecord(event)">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get(\'csrf_token\', \'\') }}">
+    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
       <input type="hidden" id="recId">
       <div class="form-group">
         <label>القضية <span style="color:#ef4444;">*</span></label>

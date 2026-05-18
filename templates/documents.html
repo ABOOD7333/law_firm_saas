@@ -115,7 +115,7 @@
                                 <i class="fa-solid fa-pen-to-square"></i> تعديل
                             </button>
                             <form action="/documents/delete" method="post" style="display:inline;" onsubmit="return confirm('حذف المستند؟')">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get(\'csrf_token\', \'\') }}">
+    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
                                 <input type="hidden" name="doc_id" value="{{ d.id }}">
                                 <button type="submit" class="action-btn" style="color:#ef4444;" title="حذف">
                                     <i class="fa-solid fa-trash-can"></i> حذف
@@ -143,7 +143,7 @@
             <button onclick="document.getElementById('addModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
         </div>
         <form action="/documents/add" method="post" enctype="multipart/form-data">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get(\'csrf_token\', \'\') }}">
+    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
             <div style="margin-bottom:14px;">
                 <label style="display:block;margin-bottom:6px;font-weight:600;">اسم المستند <span style="color:red">*</span></label>
                 <input type="text" name="name" required placeholder="مثال: عقد الوكالة القضائية" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
@@ -200,7 +200,7 @@
             <button onclick="document.getElementById('editModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
         </div>
         <form action="/documents/edit" method="post" enctype="multipart/form-data">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get(\'csrf_token\', \'\') }}">
+    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
             <input type="hidden" name="doc_id" id="edit_doc_id">
             <div style="margin-bottom:14px;">
                 <label style="display:block;margin-bottom:6px;font-weight:600;">اسم المستند <span style="color:red">*</span></label>

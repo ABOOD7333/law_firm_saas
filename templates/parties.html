@@ -88,7 +88,7 @@
                             <i class="fa-solid fa-pen"></i>
                         </button>
                         <form action="/parties/delete" method="post" style="display:inline;" onsubmit="return confirm('هل أنت متأكد من حذف هذا الطرف؟')">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get(\'csrf_token\', \'\') }}">
+    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
                             <input type="hidden" name="party_id" value="{{ party.id }}">
                             <input type="hidden" name="case_id" value="{{ party.case_id }}">
                             <button type="submit" class="action-btn" style="color:#ef4444;" title="حذف"><i class="fa-solid fa-trash"></i></button>
@@ -114,7 +114,7 @@
             <button onclick="document.getElementById('addPartyModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
         </div>
         <form action="/parties/add" method="post">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get(\'csrf_token\', \'\') }}">
+    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
                 <div>
                     <label style="display:block;margin-bottom:6px;font-weight:600;">الاسم الكامل <span style="color:red">*</span></label>
@@ -177,7 +177,7 @@
             <button onclick="document.getElementById('editPartyModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
         </div>
         <form action="/parties/edit" method="post">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get(\'csrf_token\', \'\') }}">
+    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
             <input type="hidden" name="party_id" id="ep_id">
             <input type="hidden" name="case_id" id="ep_case_id">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">

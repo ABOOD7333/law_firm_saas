@@ -8,7 +8,7 @@
 
 <!-- Search Bar -->
 <form action="/search" method="get" id="searchForm">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get(\'csrf_token\', \'\') }}">
+    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
     <div style="background:white;border-radius:16px;padding:25px;box-shadow:0 4px 20px rgba(0,0,0,.08);border:1px solid var(--border-color);margin-bottom:25px;">
         <div style="display:flex;gap:12px;align-items:center;margin-bottom:15px;">
             <div style="flex:1;display:flex;align-items:center;background:#f8fafc;border:2px solid {% if q %}var(--primary-color){% else %}var(--border-color){% endif %};border-radius:12px;padding:12px 18px;gap:12px;transition:border-color .2s;">

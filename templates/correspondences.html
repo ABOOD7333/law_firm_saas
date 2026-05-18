@@ -99,7 +99,7 @@
                             <i class="fa-solid fa-pen"></i>
                         </button>
                         <form action="/correspondences/delete" method="post" style="display:inline;" onsubmit="return confirm('حذف المراسلة؟')">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get(\'csrf_token\', \'\') }}">
+    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
                             <input type="hidden" name="corr_id" value="{{ c.id }}">
                             <button type="submit" class="action-btn" style="color:#ef4444;"><i class="fa-solid fa-trash"></i></button>
                         </form>
@@ -124,7 +124,7 @@
             <button onclick="document.getElementById('addModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
         </div>
         <form action="/correspondences/add" method="post" onsubmit="return validateForm()">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get(\'csrf_token\', \'\') }}">
+    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
             <!-- اتجاه + رقم خطاب -->
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
                 <div>
@@ -230,7 +230,7 @@
             <button onclick="document.getElementById('editModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
         </div>
         <form action="/correspondences/edit" method="post">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get(\'csrf_token\', \'\') }}">
+    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
             <input type="hidden" name="corr_id" id="ec_id">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
                 <div>

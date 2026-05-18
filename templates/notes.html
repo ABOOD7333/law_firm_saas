@@ -59,7 +59,7 @@
                     <i class="fa-solid fa-pen-to-square"></i> تعديل
                 </button>
                 <form action="/notes/delete" method="post" style="display:inline;" onsubmit="return confirm('حذف الملاحظة؟')">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get(\'csrf_token\', \'\') }}">
+    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
                     <input type="hidden" name="note_id" value="{{ note.id }}">
                     <button type="submit" class="action-btn" style="color:#ef4444;" title="حذف">
                         <i class="fa-solid fa-trash-can"></i> حذف
@@ -100,7 +100,7 @@
             <button onclick="document.getElementById('addModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
         </div>
         <form action="/notes/add" method="post">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get(\'csrf_token\', \'\') }}">
+    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
                 <div>
                     <label style="display:block;margin-bottom:6px;font-weight:600;">عنوان الملاحظة <span style="color:red">*</span></label>
@@ -146,7 +146,7 @@
             <button onclick="document.getElementById('editModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
         </div>
         <form action="/notes/edit" method="post">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get(\'csrf_token\', \'\') }}">
+    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
             <input type="hidden" name="note_id" id="en_id">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
                 <div>

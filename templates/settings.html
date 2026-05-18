@@ -24,7 +24,7 @@
         </h3>
         
         <form action="/settings/update_office" method="post">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get(\'csrf_token\', \'\') }}">
+    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
             <input type="hidden" name="office_id" value="{{ office.id if office else '' }}">
             
             <div class="form-group" style="margin-bottom: 15px;">
@@ -115,7 +115,7 @@
         </div>
         
         <form action="/settings/add_user" method="post">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get(\'csrf_token\', \'\') }}">
+    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                 <div class="form-group">
                     <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">الاسم الكامل <span style="color: red;">*</span></label>
@@ -175,7 +175,7 @@
         </div>
         
         <form action="/settings/edit_user" method="post">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get(\'csrf_token\', \'\') }}">
+    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
             <input type="hidden" name="user_id" id="edit_user_id">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                 <div class="form-group">

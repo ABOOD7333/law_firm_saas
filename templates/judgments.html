@@ -115,7 +115,7 @@
             <button onclick="document.getElementById('addJudgmentModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
         </div>
         <form action="/judgments/add" method="post">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get(\'csrf_token\', \'\') }}">
+    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
                 <div>
                     <label style="display:block;margin-bottom:6px;font-weight:600;">القضية <span style="color:red">*</span></label>
@@ -172,7 +172,7 @@
             <button onclick="document.getElementById('editJudgmentModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
         </div>
         <form action="/judgments/edit" method="post">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get(\'csrf_token\', \'\') }}">
+    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
             <input type="hidden" name="judgment_id" id="ej_id">
             <input type="hidden" name="case_id" id="ej_case_id">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">

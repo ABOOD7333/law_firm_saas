@@ -70,7 +70,7 @@
         </div>
         <div class="modal-body">
             <form id="addClientForm" method="POST" action="/clients/add">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get(\'csrf_token\', \'\') }}">
+    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
                 <div class="form-row">
                     <div class="form-group">
                         <label>الاسم الكامل (أو اسم الشركة) *</label>
@@ -119,7 +119,7 @@
         </div>
         <div class="modal-body">
             <form id="editClientForm" method="POST" action="/clients/edit">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get(\'csrf_token\', \'\') }}">
+    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
                 <input type="hidden" name="client_id" id="edit_client_id">
                 <div class="form-row">
                     <div class="form-group">
