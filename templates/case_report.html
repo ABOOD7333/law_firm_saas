@@ -286,9 +286,12 @@
                 <h1>{{ office.name if office else 'مكتب المحاماة' }}</h1>
                 <p>تقرير النشاط القضائي الموحد</p>
             </div>
+            <div class="header-center-icon" style="text-align: center; color: #cbd5e1; font-size: 4.5rem; opacity: 0.9;">
+                <i class="fa-solid fa-scale-balanced"></i>
+            </div>
             <div class="header-meta">
                 <div class="meta-item">
-                    <span>مُصدر التقرير:</span> <strong>{{ user.name }}</strong>
+                    <span>مُصدر التقرير:</span> <strong>{{ user.name }} ({{ user.role }})</strong>
                 </div>
                 <div class="meta-item">
                     <span>تاريخ الإصدار:</span> <strong><script>document.write(new Date().toLocaleDateString('ar-SA'))</script></strong>
