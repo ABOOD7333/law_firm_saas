@@ -633,10 +633,10 @@ async def add_case(
 @app.get("/cases/export_report", response_class=HTMLResponse)
 async def export_case_report(
     request: Request,
-    case_number: str = Query(None),
-    case_title: str = Query(None),
-    start_date: str = Query(None),
-    end_date: str = Query(None),
+    case_number: str = None,
+    case_title: str = None,
+    start_date: str = None,
+    end_date: str = None,
     db: Session = Depends(get_db),
     user: AccessProfiles = Depends(get_current_user)
 ):
