@@ -334,7 +334,14 @@
                 <div class="summary-icon icon-green"><i class="fa-solid fa-list-check"></i></div>
                 <div class="summary-info">
                     <h3>{{ cases_data | map(attribute='tasks') | map('length') | sum }}</h3>
-                    <span>إجمالي المهام المنجزة</span>
+                    <span>إجمالي المهام</span>
+                </div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-icon" style="background:#fef2f2; color:#ef4444;"><i class="fa-solid fa-file-contract"></i></div>
+                <div class="summary-info">
+                    <h3>{{ cases_data | map(attribute='documents') | map('length') | sum }}</h3>
+                    <span>المستندات والأوراق</span>
                 </div>
             </div>
         </div>
@@ -419,6 +426,35 @@
                     </table>
                     {% else %}
                     <div class="empty-state">لا توجد مهام لهذه القضية في النطاق الزمني المحدد.</div>
+                    {% endif %}
+                </div>
+
+                <!-- Documents Data -->
+                <div class="data-section">
+                    <div class="data-section-header">
+                        <i class="fa-solid fa-file-contract" style="color: #ef4444;"></i> المستندات والأوراق
+                    </div>
+                    {% if item.documents %}
+                    <table class="modern-table">
+                        <thead>
+                            <tr>
+                                <th>اسم المستند</th>
+                                <th>نوع المستند</th>
+                                <th>تاريخ الإضافة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for d in item.documents %}
+                            <tr>
+                                <td>{{ d.name }}</td>
+                                <td>{{ d.document_type_key }}</td>
+                                <td><strong dir="ltr">{{ d.created_at.split(' ')[0] }}</strong></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="empty-state">لا توجد مستندات لهذه القضية في النطاق الزمني المحدد.</div>
                     {% endif %}
                 </div>
 
