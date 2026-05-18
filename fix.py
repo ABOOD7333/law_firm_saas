@@ -25,9 +25,9 @@ async def export_case_report(
         query = query.filter(LawCases.lead_lawyer_id == user.id)
         
     if case_number:
-        query = query.filter(LawCases.case_number.like(f"%{case_number}%"))
+        query = query.filter(LawCases.case_number.like(f"%{str(case_number).replace(\'%\', \'\').replace(\'_\', \'\')}%"))
     elif case_title:
-        query = query.filter(LawCases.title.like(f"%{case_title}%"))
+        query = query.filter(LawCases.title.like(f"%{str(case_title).replace(\'%\', \'\').replace(\'_\', \'\')}%"))
         
     if start_date:
         query = query.filter(LawCases.created_at >= f"{start_date} 00:00:00")

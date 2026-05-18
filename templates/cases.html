@@ -85,6 +85,7 @@
         </div>
         <div class="modal-body">
             <form id="addCaseForm" method="POST" action="/cases/add">
+    <input type="hidden" name="csrf_token" value="{{ request.cookies.get(\'csrf_token\', \'\') }}">
                 <div class="form-row">
                     <div class="form-group">
                         <label>عنوان القضية الوصفي (مثال: نزاع تجاري) *</label>
@@ -144,6 +145,7 @@
         <div class="modal-body">
             <!-- The action targets the existing edit_case route in main.py -->
             <form id="editCaseForm" method="POST" action="">
+    <input type="hidden" name="csrf_token" value="{{ request.cookies.get(\'csrf_token\', \'\') }}">
                 <div class="form-row">
                     <div class="form-group">
                         <label>عنوان القضية الوصفي *</label>
@@ -203,6 +205,7 @@
         </div>
         <div class="modal-body">
             <form id="reportCaseForm" method="GET" action="/cases/export_report" target="_blank">
+    <input type="hidden" name="csrf_token" value="{{ request.cookies.get(\'csrf_token\', \'\') }}">
                 <div class="form-row">
                     <div class="form-group">
                         <label>رقم القضية (اتركه فارغاً للكل)</label>

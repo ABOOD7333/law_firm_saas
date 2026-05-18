@@ -161,6 +161,7 @@
       <h3><i class="fa-solid fa-user-pen" style="color:#6366f1;"></i> إنشاء أو تعديل عضو فريق</h3>
       <div id="alertBox" class="alert-box"></div>
       <form id="memberForm" onsubmit="saveMember(event)">
+    <input type="hidden" name="csrf_token" value="{{ request.cookies.get(\'csrf_token\', \'\') }}">
         <input type="hidden" id="memberId" value="">
         <div class="form-row">
           <div class="form-group">

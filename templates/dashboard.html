@@ -76,6 +76,7 @@
                     <div style="display: flex; flex-direction: column; gap: 6px; margin-right: 10px;">
                         {% if task.status_key == 'pending' %}
                         <form action="/tasks/update_status" method="post" style="display: inline;">
+    <input type="hidden" name="csrf_token" value="{{ request.cookies.get(\'csrf_token\', \'\') }}">
                             <input type="hidden" name="task_id" value="{{ task.id }}">
                             <input type="hidden" name="status_key" value="in_progress">
                             <button type="submit" style="background: #dbeafe; color: #1d4ed8; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-family: 'Cairo', sans-serif; font-size: 0.8rem; font-weight: 600; white-space: nowrap;">
@@ -84,6 +85,7 @@
                         </form>
                         {% elif task.status_key == 'in_progress' %}
                         <form action="/tasks/update_status" method="post" style="display: inline;">
+    <input type="hidden" name="csrf_token" value="{{ request.cookies.get(\'csrf_token\', \'\') }}">
                             <input type="hidden" name="task_id" value="{{ task.id }}">
                             <input type="hidden" name="status_key" value="completed">
                             <button type="submit" style="background: #dcfce7; color: #166534; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-family: 'Cairo', sans-serif; font-size: 0.8rem; font-weight: 600; white-space: nowrap;">

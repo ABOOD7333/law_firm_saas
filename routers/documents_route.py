@@ -49,8 +49,8 @@ async def add_document(
         return HTMLResponse(content="<script>alert('غير مصرح لك بإضافة مستندات لهذه القضية'); window.history.back();</script>", status_code=403)
     
     file_path_str = None
-    if file and file.filename:
-        ext = file.filename.split('.')[-1].lower()
+    if file and "".join(c for c in file.filename if c.isalnum() or c in ' ._-'):
+        ext = "".join(c for c in file.filename if c.isalnum() or c in ' ._-').split('.')[-1].lower()
         allowed_exts = {'pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'txt'}
         if ext not in allowed_exts:
             return HTMLResponse(content=f"<script>alert('عذراً، نوع الملف غير مسموح به ({ext})'); window.history.back();</script>", status_code=400)
@@ -92,8 +92,8 @@ async def edit_document(
     if d:
         case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
         if not case: return HTMLResponse(content="<script>alert('غير مصرح'); window.history.back();</script>", status_code=403)
-        if file and file.filename:
-            ext = file.filename.split('.')[-1].lower()
+        if file and "".join(c for c in file.filename if c.isalnum() or c in ' ._-'):
+            ext = "".join(c for c in file.filename if c.isalnum() or c in ' ._-').split('.')[-1].lower()
             allowed_exts = {'pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'txt'}
             if ext not in allowed_exts:
                 return HTMLResponse(content=f"<script>alert('عذراً، نوع الملف غير مسموح به ({ext})'); window.history.back();</script>", status_code=400)

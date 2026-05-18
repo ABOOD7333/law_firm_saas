@@ -92,7 +92,7 @@ app.add_middleware(CSRFMiddleware)
 # ─── Safe Error Handler ───────────────────────────────────────────────────────
 def _safe_error(tb_str: str = "") -> HTMLResponse:
     """يعرض تفاصيل الخطأ في التطوير فقط — يخفيها في الإنتاج."""
-    if os.getenv("APP_ENV", "development").lower() == "production":
+    if True: # SECURITY FIX: Never expose tracebacks
         return HTMLResponse(
             content="<div style='font-family:sans-serif;padding:40px;text-align:center;direction:rtl'>"
                     "<h2 style='color:#dc2626'>⚠️ حدث خطأ داخلي</h2>"
@@ -104,6 +104,28 @@ def _safe_error(tb_str: str = "") -> HTMLResponse:
         content=f"<pre dir='ltr' style='background:#1e1e1e;color:#f8f8f2;padding:20px;font-size:13px;overflow:auto'>{tb_str}</pre>",
         status_code=500
     )
+
+
+import time
+from fastapi.responses import JSONResponse
+
+_ip_login_attempts = {}
+
+class LoginRateLimitMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        if request.url.path in ["/api/login", "/api/superadmin-login"] and request.method == "POST":
+            ip = request.client.host or "127.0.0.1"
+            now = time.time()
+            attempts, last_time = _ip_login_attempts.get(ip, (0, 0))
+            if now - last_time < 300:
+                if attempts >= 10:
+                    return JSONResponse({"success": False, "error": "تم حظر الـ IP مؤقتاً بسبب كثرة المحاولات. انتظر 5 دقائق."}, status_code=429)
+            else:
+                attempts = 0
+            _ip_login_attempts[ip] = (attempts + 1, now)
+        return await call_next(request)
+
+app.add_middleware(LoginRateLimitMiddleware)
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -650,9 +672,9 @@ async def export_case_report(
         query = query.filter(LawCases.lead_lawyer_id == user.id)
         
     if case_number:
-        query = query.filter(LawCases.case_number.like(f"%{case_number}%"))
+        query = query.filter(LawCases.case_number.like(f"%{str(case_number).replace(\'%\', \'\').replace(\'_\', \'\')}%"))
     elif case_title:
-        query = query.filter(LawCases.title.like(f"%{case_title}%"))
+        query = query.filter(LawCases.title.like(f"%{str(case_title).replace(\'%\', \'\').replace(\'_\', \'\')}%"))
         
     if start_date:
         query = query.filter(LawCases.created_at >= f"{start_date} 00:00:00")
@@ -1261,9 +1283,9 @@ async def add_document(
     if not user: return RedirectResponse(url="/", status_code=303)
     
     file_path = None
-    if file and file.filename:
+    if file and "".join(c for c in file.filename if c.isalnum() or c in ' ._-'):
         import time
-        safe_filename = f"{int(time.time())}_{file.filename}"
+        safe_filename = f"{int(time.time())}_{"".join(c for c in file.filename if c.isalnum() or c in ' ._-')}"
         file_path = f"static/uploads/documents/{safe_filename}"
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
