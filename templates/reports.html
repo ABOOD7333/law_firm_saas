@@ -244,8 +244,8 @@
 
 {% block scripts %}
 <!-- Hidden data blocks for JavaScript (prevents IDE syntax errors) -->
-<script id="incomeData" type="application/json">{{ income_data | tojson | safe }}</script>
-<script id="typeData" type="application/json">{{ cases_by_type | tojson | safe }}</script>
+<div style="display:none;" id="incomeData" data-income="{{ income_data | tojson | forceescape }}"></div>
+<div style="display:none;" id="typeData" data-type="{{ cases_by_type | tojson | forceescape }}"></div>
 <div style="display:none;" id="wonJudgments">{{ won_judgments }}</div>
 <div style="display:none;" id="lostJudgments">{{ lost_judgments }}</div>
 <div style="display:none;" id="doneTasks">{{ done_tasks_all }}</div>
@@ -265,7 +265,7 @@ document.addEventListener('DOMContentLoaded', function() {
     Chart.defaults.color = "#64748b";
 
     // Data safely loaded from HTML text to avoid IDE syntax errors
-    const incomeRaw = JSON.parse(document.getElementById('incomeData').textContent || '[]');
+    const incomeRaw = JSON.parse(document.getElementById('incomeData').getAttribute('data-income') || '[]');
     const incomeLabels = incomeRaw.map(d => Array.isArray(d) ? d[0] : (d.month || ''));
     const incomeData = incomeRaw.map(d => Array.isArray(d) ? d[1] : (d.total || 0));
     
@@ -302,7 +302,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // 2. Cases by Type
-    const typeRaw = JSON.parse(document.getElementById('typeData').textContent || '[]');
+    const typeRaw = JSON.parse(document.getElementById('typeData').getAttribute('data-type') || '[]');
     const typeLabels = typeRaw.map(d => Array.isArray(d) ? (d[0] || 'غير محدد') : (d.case_type_key || d.status_key || 'غير محدد'));
     const typeData = typeRaw.map(d => Array.isArray(d) ? d[1] : (d.cnt || 0));
     const colors = ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#ec4899', '#06b6d4', '#64748b'];

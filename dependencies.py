@@ -82,18 +82,24 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
         if user.role == 'موكل':
             allowed = ['/', '/dashboard', '/logout']
             if not any(path == p for p in allowed) and not path.startswith('/static'):
+                if path.startswith('/api/'):
+                    raise HTTPException(status_code=403, detail="غير مصرح للموكلين بالوصول")
                 raise HTTPException(status_code=status.HTTP_303_SEE_OTHER, headers={"Location": "/dashboard"})
                 
         # 2. المحاسب (Accountant)
         elif user.role == 'محاسب':
             allowed_prefixes = ('/', '/dashboard', '/finance', '/expenses', '/timesheet', '/reports', '/clients', '/logout', '/static', '/api/finance', '/api/expenses', '/api/timesheets')
             if not path.startswith(allowed_prefixes):
+                if path.startswith('/api/'):
+                    raise HTTPException(status_code=403, detail="غير مصرح للمحاسبين بالوصول")
                 raise HTTPException(status_code=status.HTTP_303_SEE_OTHER, headers={"Location": "/dashboard"})
 
         # 3. السكرتير والمحامي (Secretary & Lawyer)
         elif user.role in ['سكرتير', 'محامي', 'محامٍ']:
-            forbidden_prefixes = ('/team', '/settings', '/finance', '/expenses', '/login_log', '/activity', '/api/team', '/api/settings', '/api/finance', '/api/expenses')
+            forbidden_prefixes = ('/team', '/settings', '/finance', '/expenses', '/login_log', '/activity', '/api/team', '/api/settings', '/api/finance', '/api/expenses', '/advanced_operations', '/reports', '/api/advanced')
             if path.startswith(forbidden_prefixes):
+                if path.startswith('/api/'):
+                    raise HTTPException(status_code=403, detail="غير مصرح لك بالقيام بهذا الإجراء")
                 raise HTTPException(status_code=status.HTTP_303_SEE_OTHER, headers={"Location": "/dashboard"})
                 
     return user

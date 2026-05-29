@@ -97,5 +97,12 @@ def init_db():
     except Exception:
         pass
         
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE access_profiles ADD COLUMN is_2fa_enabled INTEGER DEFAULT 0;"))
+    except Exception:
+        pass
+        
     print(f"[Database] Connected to: {SQLALCHEMY_DATABASE_URL.split('?')[0]}")
     print(f"[Database] Tables initialized successfully.")

@@ -84,7 +84,14 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                     
         response = await call_next(request)
         if not request.cookies.get("csrf_token"):
-            response.set_cookie("csrf_token", csrf_cookie, httponly=False) # Accessible by JS
+            is_secure = not (request.url.hostname in ["127.0.0.1", "localhost"])
+            response.set_cookie(
+                "csrf_token",
+                csrf_cookie,
+                httponly=False,
+                secure=is_secure,
+                samesite="Lax"
+            )
         return response
 
 app.add_middleware(CSRFMiddleware)
@@ -157,6 +164,7 @@ import secrets
 
 # مساحة لتخزين الرموز الآمنة مؤقتاً (يفضل Redis في الإنتاج)
 _reset_tokens = {}
+_temp_2fa_sessions = {}
 
 # سجل بسيط لتتبع طلبات OTP لمنع إغراق الإيميل (Rate Limiting)
 import time
@@ -366,6 +374,30 @@ async def login_submit(
             
         if _verify_pin(password, user.access_pin_hash):
             user.failed_attempts = 0
+            db.commit()
+            
+            # Check if 2FA is enabled for this user (1 indicates enabled)
+            if getattr(user, "is_2fa_enabled", 0) == 1:
+                temp_token = str(uuid.uuid4())
+                _temp_2fa_sessions[temp_token] = user.id
+                
+                otp_code = generate_otp(6)
+                store_otp(user.email, otp_code)
+                send_otp_email(user.email, otp_code, purpose="2fa")
+                
+                app_logger.info(f"LOGIN_2FA_TRIGGERED | user={user.id} | email={user.email}")
+                
+                response = RedirectResponse(url="/login-2fa", status_code=303)
+                response.set_cookie(
+                    key="temp_2fa_token",
+                    value=temp_token,
+                    httponly=True,
+                    max_age=300, # Valid for 5 minutes
+                    secure=not (request.url.hostname in ["127.0.0.1", "localhost"]),
+                    samesite="Lax"
+                )
+                return response
+            
             token = str(uuid.uuid4())
             expires = datetime.now(timezone.utc) + timedelta(days=7)
             new_session = AuthSessions(
@@ -377,8 +409,17 @@ async def login_submit(
             db.add(new_session)
             db.commit()
             app_logger.info(f"LOGIN_OK | user={user.id} | role={user.role} | office={user.office_id}")
+            
+            is_secure = not (request.url.hostname in ["127.0.0.1", "localhost"])
             response = RedirectResponse(url="/dashboard", status_code=303)
-            response.set_cookie(key="session_token", value=token, httponly=True, max_age=7*24*3600)
+            response.set_cookie(
+                key="session_token",
+                value=token,
+                httponly=True,
+                max_age=7*24*3600,
+                secure=is_secure,
+                samesite="Lax"
+            )
             return response
         else:
             user.failed_attempts += 1
@@ -414,6 +455,80 @@ async def logout(request: Request, db: Session = Depends(get_db)):
     response = RedirectResponse(url="/", status_code=303)
     response.delete_cookie("session_token")
     return response
+
+@app.get("/login-2fa", response_class=HTMLResponse)
+async def login_2fa_page(request: Request):
+    temp_token = request.cookies.get("temp_2fa_token")
+    if not temp_token or temp_token not in _temp_2fa_sessions:
+        return RedirectResponse(url="/", status_code=303)
+    return templates.TemplateResponse(request=request, name="login_2fa.html", context={})
+
+@app.post("/login-2fa")
+async def login_2fa_submit(
+    request: Request,
+    code: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    temp_token = request.cookies.get("temp_2fa_token")
+    if not temp_token or temp_token not in _temp_2fa_sessions:
+        return templates.TemplateResponse(request=request, name="login.html", context={"error": "انتهت صلاحية جلسة التحقق، يرجى تسجيل الدخول مجدداً."})
+        
+    user_id = _temp_2fa_sessions[temp_token]
+    user = db.query(AccessProfiles).filter(AccessProfiles.id == user_id).first()
+    if not user:
+        return RedirectResponse(url="/", status_code=303)
+        
+    if verify_otp(user.email, code.strip()):
+        # OTP is valid! Clean up temp session
+        del _temp_2fa_sessions[temp_token]
+        
+        # Issue real session token
+        token = str(uuid.uuid4())
+        expires = datetime.now(timezone.utc) + timedelta(days=7)
+        new_session = AuthSessions(
+            session_token=token,
+            user_id=user.id,
+            is_active=1,
+            expires_at=expires.strftime("%Y-%m-%d %H:%M:%S")
+        )
+        db.add(new_session)
+        db.commit()
+        
+        app_logger.info(f"LOGIN_OK_2FA | user={user.id} | role={user.role} | office={user.office_id}")
+        
+        # Enforce secure cookies dynamically based on hostname
+        is_secure = not (request.url.hostname in ["127.0.0.1", "localhost"])
+        
+        response = RedirectResponse(url="/dashboard", status_code=303)
+        response.delete_cookie("temp_2fa_token")
+        response.set_cookie(
+            key="session_token",
+            value=token,
+            httponly=True,
+            max_age=7*24*3600,
+            secure=is_secure,
+            samesite="Lax"
+        )
+        return response
+    else:
+        return templates.TemplateResponse(
+            request=request,
+            name="login_2fa.html",
+            context={"error": "رمز التحقق الثنائي غير صحيح أو منتهي الصلاحية."}
+        )
+
+@app.post("/settings/toggle-2fa")
+async def toggle_2fa(
+    request: Request,
+    enabled: int = Form(...),
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    if not user:
+        return RedirectResponse(url="/", status_code=303)
+    user.is_2fa_enabled = 1 if enabled == 1 else 0
+    db.commit()
+    return RedirectResponse(url="/settings", status_code=303)
 
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard_page(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
@@ -1012,6 +1127,10 @@ async def add_user(
         
     office_id = user.office_id or 1
     
+    ALLOWED_OFFICE_ROLES = {'مدير', 'محامي', 'محامٍ', 'سكرتير', 'محاسب', 'موكل'}
+    if role not in ALLOWED_OFFICE_ROLES:
+        return HTMLResponse(content="<script>alert('دور العضو المختار غير صالح'); window.history.back();</script>", status_code=400)
+    
     new_user = AccessProfiles(
         name=name,
         username=username,
@@ -1120,6 +1239,9 @@ async def edit_user(
 
     if target_user.id != user.id:
         # تعديل عضو آخر
+        ALLOWED_OFFICE_ROLES = {'مدير', 'محامي', 'محامٍ', 'سكرتير', 'محاسب', 'موكل'}
+        if role not in ALLOWED_OFFICE_ROLES:
+            return HTMLResponse(content="<script>alert('دور العضو المختار غير صالح'); window.history.back();</script>", status_code=400)
         target_user.name = name
         target_user.phone = phone
         target_user.email = email

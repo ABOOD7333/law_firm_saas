@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>التحقق الثنائي - نظام إدارة مكاتب المحاماة السحابي</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: #0f172a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            color: #f8fafc;
+        }
+        .verification-container {
+            background: #1e293b;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 450px;
+            padding: 40px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            border: 1px solid #334155;
+            animation: fadeIn 0.5s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+            font-weight: 800;
+            font-size: 1.6rem;
+            color: #fff;
+        }
+        .logo svg {
+            fill: #6366f1;
+        }
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+        p {
+            color: #94a3b8;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+        .input-group {
+            margin-bottom: 24px;
+            text-align: right;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: #cbd5e1;
+        }
+        .otp-input {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #475569;
+            border-radius: 12px;
+            background: #0f172a;
+            color: #fff;
+            font-size: 1.5rem;
+            font-weight: bold;
+            letter-spacing: 8px;
+            text-align: center;
+            outline: none;
+            transition: 0.3s;
+            font-family: inherit;
+        }
+        .otp-input:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
+        }
+        .btn-submit {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: white;
+            font-size: 1.05rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: 0.3s;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+            font-family: inherit;
+        }
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+        }
+        .alert {
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            background: #fca5a5;
+            color: #7f1d1d;
+            border: 1px solid #f87171;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 24px;
+            color: #94a3b8;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: 0.2s;
+        }
+        .back-link:hover {
+            color: #6366f1;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="verification-container">
+        <div class="logo">
+            <svg width="35" height="35" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="#6366f1"/>
+                <path d="M2 17L12 22L22 17" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M2 12L12 17L22 12" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>LawSaaS</span>
+        </div>
+        
+        <h2>التحقق الثنائي (2FA)</h2>
+        <p>تم تفعيل ميزة التحقق الثنائي لحسابك. يرجى إدخال الرمز المكون من 6 أرقام المرسل إلى بريدك الإلكتروني لإتمام تسجيل الدخول.</p>
+        
+        {% if error %}
+        <div class="alert">{{ error }}</div>
+        {% endif %}
+        
+        <form action="/login-2fa" method="post" id="otp-form">
+            <input type="hidden" name="csrf_token" id="csrf-field" value="">
+            <div class="input-group">
+                <label for="code">رمز التحقق</label>
+                <input type="text" id="code" name="code" class="otp-input" placeholder="000000" maxlength="6" required autocomplete="one-time-code" autofocus>
+            </div>
+            <button type="submit" class="btn-submit">تحقق ومتابعة</button>
+        </form>
+        
+        <a href="/logout" class="back-link">العودة لصفحة تسجيل الدخول</a>
+    </div>
+
+    <script>
+        // حقن CSRF Token من الكوكي قبل الإرسال
+        document.getElementById('otp-form').addEventListener('submit', function() {
+            const token = document.cookie.split('; ').find(r => r.startsWith('csrf_token='))?.split('=')[1] || '';
+            document.getElementById('csrf-field').value = token;
+        });
+        
+        // التحقق من إدخال الأرقام فقط
+        document.getElementById('code').addEventListener('input', function(e) {
+            this.value = this.value.replace(/[^0-9]/g, '');
+        });
+    </script>
+</body>
+</html>

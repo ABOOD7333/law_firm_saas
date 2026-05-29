@@ -54,6 +54,17 @@ async def session_revoke(session_id: int, db: Session = Depends(get_db), user: A
     if not user: return JSONResponse({"ok": False, "message": "غير مصرح"}, status_code=401)
     s = db.query(AuthSessions).filter(AuthSessions.id == session_id).first()
     if not s: return JSONResponse({"ok": False, "message": "الجلسة غير موجودة"})
+    
+    # 🔴 IDOR protection: Verify the target user belongs to the same office
+    target_user = db.query(AccessProfiles).filter(AccessProfiles.id == s.user_id).first()
+    if not target_user or target_user.office_id != user.office_id:
+        return JSONResponse({"ok": False, "message": "غير مصرح لك بإنهاء هذه الجلسة"}, status_code=403)
+        
+    # 🔴 Privilege restriction: Non-admins can only revoke their own sessions
+    _ADMIN_ROLES = {'مدير', 'مدير المكتب', 'صاحب المكتب'}
+    if user.role not in _ADMIN_ROLES and user.id != target_user.id:
+        return JSONResponse({"ok": False, "message": "غير مصرح لك بإنهاء جلسات الآخرين"}, status_code=403)
+        
     s.is_active = 0
     db.commit()
     return JSONResponse({"ok": True, "message": "تم إنهاء الجلسة"})

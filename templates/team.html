@@ -284,8 +284,9 @@
 {% endblock %}
 
 {% block scripts %}
+<div id="members-data-store" data-members="{{ members_json | forceescape }}" style="display: none;"></div>
 <script>
-const members = {{ members_json | safe }};
+const members = JSON.parse(document.getElementById('members-data-store').getAttribute('data-members'));
 let selectedId = null;
 
 function showAlert(msg, type='success') {

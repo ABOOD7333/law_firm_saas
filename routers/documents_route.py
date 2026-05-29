@@ -47,6 +47,10 @@ async def add_document(
     case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
     if not case:
         return HTMLResponse(content="<script>alert('غير مصرح لك بإضافة مستندات لهذه القضية'); window.history.back();</script>", status_code=403)
+        
+    # RBAC Check: Restrict lawyers to their assigned cases only if they cannot view all
+    if user.role in ['محامي', 'محامٍ'] and user.can_view_all_cases == 0 and case.lead_lawyer_id != user.id:
+        return HTMLResponse(content="<script>alert('غير مصرح لك بإضافة مستندات لهذه القضية'); window.history.back();</script>", status_code=403)
     
     file_path_str = None
     if file and "".join(c for c in file.filename if c.isalnum() or c in ' ._-'):
@@ -60,6 +64,11 @@ async def add_document(
         file_bytes = await file.read()
         if len(file_bytes) > MAX_SIZE_BYTES:
             return HTMLResponse(content="<script>alert('حجم الملف يتجاوز الحد المسموح به (20 ميجابايت)'); window.history.back();</script>", status_code=400)
+
+        # ── ثغرة MIME & Payload: التحقق من التوقيع الرقمي للملف (Magic Bytes) ──
+        from core.security import validate_file_signature
+        if not validate_file_signature(file_bytes, ext):
+            return HTMLResponse(content="<script>alert('فشل التحقق من أمان محتوى الملف. يرجى رفع ملف سليم وصحيح.'); window.history.back();</script>", status_code=400)
 
         filename = f"{uuid.uuid4().hex}.{ext}"
         path = os.path.join("static", "uploads", "documents", filename)
@@ -92,6 +101,11 @@ async def edit_document(
     if d:
         case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
         if not case: return HTMLResponse(content="<script>alert('غير مصرح'); window.history.back();</script>", status_code=403)
+        
+        # RBAC Check: Restrict lawyers to their assigned cases only if they cannot view all
+        if user.role in ['محامي', 'محامٍ'] and user.can_view_all_cases == 0 and case.lead_lawyer_id != user.id:
+            return HTMLResponse(content="<script>alert('غير مصرح لك بتعديل مستندات هذه القضية'); window.history.back();</script>", status_code=403)
+            
         if file and "".join(c for c in file.filename if c.isalnum() or c in ' ._-'):
             ext = "".join(c for c in file.filename if c.isalnum() or c in ' ._-').split('.')[-1].lower()
             allowed_exts = {'pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'txt'}
@@ -103,6 +117,11 @@ async def edit_document(
             file_bytes = await file.read()
             if len(file_bytes) > MAX_SIZE_BYTES:
                 return HTMLResponse(content="<script>alert('حجم الملف يتجاوز الحد المسموح به (20 ميجابايت)'); window.history.back();</script>", status_code=400)
+
+            # ── ثغرة MIME & Payload: التحقق من التوقيع الرقمي للملف (Magic Bytes) ──
+            from core.security import validate_file_signature
+            if not validate_file_signature(file_bytes, ext):
+                return HTMLResponse(content="<script>alert('فشل التحقق من أمان محتوى الملف. يرجى رفع ملف سليم وصحيح.'); window.history.back();</script>", status_code=400)
 
             filename = f"{uuid.uuid4().hex}.{ext}"
             path = os.path.join("static", "uploads", "documents", filename)
@@ -127,6 +146,11 @@ async def delete_document(
 ):
     if not user: return RedirectResponse(url="/", status_code=303)
     d = db.query(LawDocuments).filter(LawDocuments.id == doc_id, LawDocuments.office_id == (user.office_id or 1)).first()
-    if d: db.delete(d); db.commit()
+    if d:
+        # RBAC Check: Ensure lawyer owns the case referenced by the document
+        case = db.query(LawCases).filter(LawCases.id == d.case_id).first()
+        if case and user.role in ['محامي', 'محامٍ'] and user.can_view_all_cases == 0 and case.lead_lawyer_id != user.id:
+            return HTMLResponse(content="<script>alert('غير مصرح لك بحذف مستندات هذه القضية'); window.history.back();</script>", status_code=403)
+        db.delete(d); db.commit()
     return RedirectResponse(url="/documents", status_code=303)
 

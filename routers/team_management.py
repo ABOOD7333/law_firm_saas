@@ -68,6 +68,10 @@ async def team_save(request: Request, db: Session = Depends(get_db), user: Acces
         can_view  = int(data.get("can_view_all_cases", 0))
         record_id = data.get("id")
 
+        ALLOWED_OFFICE_ROLES = {'مدير', 'محامي', 'محامٍ', 'سكرتير', 'محاسب', 'موكل'}
+        if role not in ALLOWED_OFFICE_ROLES:
+            return JSONResponse({"ok": False, "message": "دور العضو المختار غير صالح"})
+
         if not all([name, username, phone, email]):
             return JSONResponse({"ok": False, "message": "يرجى تعبئة جميع الحقول الإلزامية"})
 

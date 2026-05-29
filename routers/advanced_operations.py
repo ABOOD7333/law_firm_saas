@@ -36,6 +36,10 @@ async def get_case_health(case_id: int, db: Session = Depends(get_db), user: Acc
     case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == user.office_id).first()
     if not case: return JSONResponse({"error": "Case not found"}, status_code=404)
     
+    # 🔴 IDOR protection: Restrict lawyers to their assigned cases
+    if user.role in ['محامي', 'محامٍ'] and user.can_view_all_cases == 0 and case.lead_lawyer_id != user.id:
+        return JSONResponse({"error": "Unauthorized access to case details"}, status_code=403)
+    
     factors = []
     score = 100
     

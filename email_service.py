@@ -114,6 +114,22 @@ def send_otp_email(to_email: str, otp_code: str, purpose: str = "forgot_password
             <p style="color: #94a3b8; font-size: 12px;">LawSaaS - نظام إدارة مكاتب المحاماة السحابي</p>
         </div>
         """
+    elif purpose == "2fa":
+        subject = "رمز التحقق الثنائي (2FA) - LawSaaS"
+        body_html = f"""
+        <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 500px; margin: auto; padding: 20px;">
+            <h2 style="color: #0f172a;">🔐 رمز التحقق الثنائي (2FA)</h2>
+            <p>مرحباً،</p>
+            <p>يرجى استخدام الرمز التالي لإتمام تسجيل الدخول إلى حسابك:</p>
+            <div style="background: #eff6ff; border: 2px solid #3b82f6; border-radius: 12px; padding: 20px; text-align: center; margin: 20px 0;">
+                <span style="font-size: 36px; font-weight: bold; letter-spacing: 12px; color: #1d4ed8;">{otp_code}</span>
+            </div>
+            <p style="color: #64748b; font-size: 14px;">⏰ صالح لمدة <strong>10 دقائق</strong> فقط.</p>
+            <p style="color: #64748b; font-size: 14px;">إذا لم تقم بطلب هذا الرمز، يرجى تغيير كلمة المرور الخاصة بك فوراً.</p>
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+            <p style="color: #94a3b8; font-size: 12px;">LawSaaS - نظام إدارة مكاتب المحاماة السحابي</p>
+        </div>
+        """
     else:  # register
         subject = "تأكيد إنشاء حسابك - LawSaaS"
         body_html = f"""

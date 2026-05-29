@@ -138,8 +138,9 @@
 {% endblock %}
 
 {% block scripts %}
+<div id="poa-data-store" data-records="{{ records_json | forceescape }}" style="display: none;"></div>
 <script>
-const allRecords = {{ records_json | safe }};
+const allRecords = JSON.parse(document.getElementById('poa-data-store').getAttribute('data-records'));
 let selectedId = null;
 
 function showAlert(msg, type='success') {

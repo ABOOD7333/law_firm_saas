@@ -30,6 +30,7 @@ class AccessProfiles(Base):
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'), index=True)
     is_active: Mapped[int] = mapped_column(Integer, CheckConstraint('is_active IN (0, 1)'), nullable=False, server_default=text('1'))
     can_view_all_cases: Mapped[int] = mapped_column(Integer, CheckConstraint('can_view_all_cases IN (0, 1)'), nullable=False, server_default=text('0'))
+    is_2fa_enabled: Mapped[int] = mapped_column(Integer, CheckConstraint('is_2fa_enabled IN (0, 1)'), nullable=False, server_default=text('0'))
     age: Mapped[Optional[int]] = mapped_column(Integer)
     birth_date: Mapped[Optional[str]] = mapped_column(Text, index=True)
     device_fingerprint: Mapped[Optional[str]] = mapped_column(Text, index=True)

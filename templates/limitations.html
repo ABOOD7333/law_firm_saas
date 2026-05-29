@@ -194,8 +194,9 @@
 {% endblock %}
 
 {% block scripts %}
+<div id="limitations-data-store" data-records="{{ records_json | forceescape }}" style="display: none;"></div>
 <script>
-const allRecords = {{ records_json | safe }};
+const allRecords = JSON.parse(document.getElementById('limitations-data-store').getAttribute('data-records'));
 let selectedId = null;
 
 function showAlert(msg, type='success') {

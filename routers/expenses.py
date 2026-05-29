@@ -36,10 +36,25 @@ async def expenses_save(request: Request, db: Session = Depends(get_db), user: A
     try:
         data = await request.json()
         rec_id = data.get("id")
+        case_id = data.get("case_id")
+        office_id = user.office_id or 1
+        
+        if case_id:
+            # Validate case ownership/office
+            case = db.query(LawCases).filter(LawCases.id == int(case_id), LawCases.office_id == office_id).first()
+            if not case:
+                return JSONResponse({"ok": False, "message": "القضية المحددة غير موجودة أو لا تتبع لمكتبك"})
+                
+            # Restrict lawyers to their assigned cases if not permitted to view all
+            if user.role in ['محامي', 'محامٍ'] and user.can_view_all_cases == 0 and case.lead_lawyer_id != user.id:
+                return JSONResponse({"ok": False, "message": "غير مصرح لك بإضافة أو تعديل مصاريف لهذه القضية"})
+        else:
+            return JSONResponse({"ok": False, "message": "يجب تحديد قضية مرتبطة"})
+
         if rec_id:
-            r = db.query(LawExpenses).filter(LawExpenses.id == int(rec_id), LawExpenses.office_id == (user.office_id or 1)).first()
+            r = db.query(LawExpenses).filter(LawExpenses.id == int(rec_id), LawExpenses.office_id == office_id).first()
             if not r: return JSONResponse({"ok": False, "message": "السجل غير موجود"})
-            r.case_id = data.get("case_id")
+            r.case_id = case_id
             r.title = data.get("title")
             r.amount = data.get("amount", 0)
             r.expense_at = data.get("expense_at")
@@ -47,7 +62,7 @@ async def expenses_save(request: Request, db: Session = Depends(get_db), user: A
             return JSONResponse({"ok": True, "message": "تم التعديل بنجاح"})
         else:
             new_r = LawExpenses(
-                office_id=user.office_id or 1, case_id=data.get("case_id"),
+                office_id=office_id, case_id=case_id,
                 title=data.get("title"), amount=data.get("amount", 0),
                 expense_at=data.get("expense_at")
             )
@@ -62,6 +77,11 @@ async def expenses_delete(rec_id: int, db: Session = Depends(get_db), user: Acce
     from fastapi.responses import JSONResponse
     if not user: return JSONResponse({"ok": False, "message": "غير مصرح"}, status_code=401)
     r = db.query(LawExpenses).filter(LawExpenses.id == rec_id, LawExpenses.office_id == (user.office_id or 1)).first()
-    if r: db.delete(r); db.commit()
+    if r:
+        # Check lawyer case visibility permission
+        case = db.query(LawCases).filter(LawCases.id == r.case_id).first()
+        if case and user.role in ['محامي', 'محامٍ'] and user.can_view_all_cases == 0 and case.lead_lawyer_id != user.id:
+            return JSONResponse({"ok": False, "message": "غير مصرح لك بحذف مصاريف هذه القضية"})
+        db.delete(r); db.commit()
     return JSONResponse({"ok": True, "message": "تم الحذف"})
 
