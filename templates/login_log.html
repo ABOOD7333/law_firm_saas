@@ -133,7 +133,7 @@
       <tbody id="sessionsTbody">
         {% for s in sessions %}
         <tr data-name="{{ s.user_name | lower }}" data-active="{{ s.is_active }}" data-role="{{ s.user_role }}" data-date="{{ (s.created_at or '')[:10] }}">
-          <td style="color:var(--text-muted);font-size:.78rem;">{{ s.id }}</td>
+          <td style="color:var(--text-muted);font-size:.78rem;">{{ loop.revindex }}</td>
           <td>
             <div style="display:flex;align-items:center;">
               <span class="avatar-sm">{{ s.user_name[0] if s.user_name else '?' }}</span>
