@@ -1639,9 +1639,11 @@ from routers import executions
 from routers import power_of_attorney
 from routers import advanced_operations
 from routers import superadmin
-from routers import mobile_api
+from routers import mobile_api, mobile_sync, mobile_biometrics
 app.include_router(parties.router)
 app.include_router(mobile_api.router)
+app.include_router(mobile_sync.router)
+app.include_router(mobile_biometrics.router)
 app.include_router(pleadings.router)
 app.include_router(judgments.router)
 app.include_router(smart_search_route.router)
@@ -1831,7 +1833,7 @@ from routers import executions
 from routers import power_of_attorney
 from routers import advanced_operations
 from routers import superadmin
-from routers import mobile_api
+from routers import mobile_api, mobile_sync, mobile_biometrics
 app.include_router(parties.router)
 app.include_router(pleadings.router)
 app.include_router(judgments.router)
@@ -1856,6 +1858,8 @@ app.include_router(power_of_attorney.router)
 app.include_router(advanced_operations.router)
 app.include_router(superadmin.router)
 app.include_router(mobile_api.router)
+app.include_router(mobile_sync.router)
+app.include_router(mobile_biometrics.router)
 # ----------------------------------------------------------------------------
 # SaaS Subscription Routes
 # ----------------------------------------------------------------------------

@@ -28,6 +28,8 @@ class AccessProfiles(Base):
     role: Mapped[str] = mapped_column(Text, nullable=False, server_default=text("'محامٍ'"))
     failed_attempts: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text('0'))
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'), index=True)
+    updated_at: Mapped[Optional[str]] = mapped_column(Text)
+    is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
     is_active: Mapped[int] = mapped_column(Integer, CheckConstraint('is_active IN (0, 1)'), nullable=False, server_default=text('1'))
     can_view_all_cases: Mapped[int] = mapped_column(Integer, CheckConstraint('can_view_all_cases IN (0, 1)'), nullable=False, server_default=text('0'))
     is_2fa_enabled: Mapped[int] = mapped_column(Integer, CheckConstraint('is_2fa_enabled IN (0, 1)'), nullable=False, server_default=text('0'))
@@ -70,6 +72,7 @@ class AuthSessions(Base):
     is_active: Mapped[int] = mapped_column(Integer, CheckConstraint('is_active IN (0, 1)'), nullable=False, server_default=text('1'))
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
     expires_at: Mapped[str] = mapped_column(Text, nullable=False)
+    refresh_token: Mapped[Optional[str]] = mapped_column(Text, unique=True, index=True)
 
 class AppSettings(Base):
     __tablename__ = 'app_settings'
@@ -151,6 +154,8 @@ class LawClients(Base):
     national_id: Mapped[Optional[str]] = mapped_column(Text)
     photo_path: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+    updated_at: Mapped[Optional[str]] = mapped_column(Text)
+    is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
 
     law_case: Mapped[Optional['LawCases']] = relationship('LawCases', back_populates='law_clients')
 
@@ -181,6 +186,8 @@ class LawParties(Base):
     address: Mapped[Optional[str]] = mapped_column(Text)
     is_active: Mapped[int] = mapped_column(Integer, CheckConstraint('is_active IN (0, 1)'), nullable=False, server_default=text('1'))
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+    updated_at: Mapped[Optional[str]] = mapped_column(Text)
+    is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
 
     law_case: Mapped['LawCases'] = relationship('LawCases', back_populates='law_parties')
 
@@ -196,6 +203,8 @@ class LawHearings(Base):
     result_summary: Mapped[Optional[str]] = mapped_column(Text)
     attachment_path: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+    updated_at: Mapped[Optional[str]] = mapped_column(Text)
+    is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
 
     law_case: Mapped['LawCases'] = relationship('LawCases', back_populates='law_hearings')
 
@@ -210,6 +219,8 @@ class LawDocuments(Base):
     file_path: Mapped[Optional[str]] = mapped_column(Text)
     notes: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+    updated_at: Mapped[Optional[str]] = mapped_column(Text)
+    is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
 
     law_case: Mapped['LawCases'] = relationship('LawCases', back_populates='law_documents')
 
@@ -226,6 +237,8 @@ class LawPleadings(Base):
     status_key: Mapped[str] = mapped_column(Text, server_default=text("'draft'"))
     lead_lawyer_id: Mapped[Optional[int]] = mapped_column(ForeignKey('access_profiles.id'))
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+    updated_at: Mapped[Optional[str]] = mapped_column(Text)
+    is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
 
     law_case: Mapped['LawCases'] = relationship('LawCases', back_populates='law_pleadings')
 
@@ -240,6 +253,8 @@ class LawJudgments(Base):
     status_key: Mapped[Optional[str]] = mapped_column(Text)
     judgment_text: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+    updated_at: Mapped[Optional[str]] = mapped_column(Text)
+    is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
 
     law_case: Mapped['LawCases'] = relationship('LawCases', back_populates='law_judgments')
 
@@ -254,6 +269,8 @@ class LawTransactions(Base):
     status_key: Mapped[str] = mapped_column(Text, server_default=text("'pending'"))
     notes: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+    updated_at: Mapped[Optional[str]] = mapped_column(Text)
+    is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
 
     law_case: Mapped['LawCases'] = relationship('LawCases', back_populates='law_transactions')
 
@@ -270,6 +287,8 @@ class LawTasks(Base):
     priority_level: Mapped[int] = mapped_column(Integer, server_default=text('2'))
     is_active: Mapped[int] = mapped_column(Integer, CheckConstraint('is_active IN (0, 1)'), nullable=False, server_default=text('1'))
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+    updated_at: Mapped[Optional[str]] = mapped_column(Text)
+    is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
 
     law_case: Mapped[Optional['LawCases']] = relationship('LawCases', back_populates='law_tasks')
 
@@ -283,6 +302,8 @@ class LawExecutions(Base):
     status_key: Mapped[str] = mapped_column(Text, server_default=text("'pending'"))
     request_date: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+    updated_at: Mapped[Optional[str]] = mapped_column(Text)
+    is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
 
     law_case: Mapped['LawCases'] = relationship('LawCases', back_populates='law_executions')
 
@@ -301,6 +322,8 @@ class LawCorrespondences(Base):
     needs_reply: Mapped[Optional[str]] = mapped_column(Text)
     reply_due_date: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+    updated_at: Mapped[Optional[str]] = mapped_column(Text)
+    is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
 
     law_case: Mapped['LawCases'] = relationship('LawCases', back_populates='law_correspondences')
 
@@ -313,6 +336,8 @@ class LawNotes(Base):
     note_type_key: Mapped[Optional[str]] = mapped_column(Text)
     content: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+    updated_at: Mapped[Optional[str]] = mapped_column(Text)
+    is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
 
     law_case: Mapped['LawCases'] = relationship('LawCases', back_populates='law_notes')
 
@@ -324,6 +349,8 @@ class LawLegalReferences(Base):
     title: Mapped[str] = mapped_column(Text, nullable=False)
     reference_url: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+    updated_at: Mapped[Optional[str]] = mapped_column(Text)
+    is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
 
     law_case: Mapped['LawCases'] = relationship('LawCases', back_populates='law_legal_references')
 
@@ -339,6 +366,8 @@ class LawLimitations(Base):
     status_key: Mapped[str] = mapped_column(Text, server_default=text("'active'"))
     notes: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+    updated_at: Mapped[Optional[str]] = mapped_column(Text)
+    is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
 
     law_case: Mapped['LawCases'] = relationship('LawCases', back_populates='law_limitations')
 
@@ -353,6 +382,8 @@ class LawPowerOfAttorney(Base):
     expiry_date: Mapped[Optional[str]] = mapped_column(Text)
     notes: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+    updated_at: Mapped[Optional[str]] = mapped_column(Text)
+    is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
 
     law_case: Mapped['LawCases'] = relationship('LawCases', back_populates='law_power_of_attorneys')
 
@@ -396,6 +427,8 @@ class LawExpenses(Base):
     amount: Mapped[float] = mapped_column(REAL, nullable=False)
     expense_at: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+    updated_at: Mapped[Optional[str]] = mapped_column(Text)
+    is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
 
     law_case: Mapped['LawCases'] = relationship('LawCases', back_populates='law_expenses')
 
@@ -409,6 +442,8 @@ class LawTimesheets(Base):
     billable_rate: Mapped[float] = mapped_column(REAL, server_default=text('0'))
     user_id: Mapped[int] = mapped_column(ForeignKey('access_profiles.id'))
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+    updated_at: Mapped[Optional[str]] = mapped_column(Text)
+    is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
 
     law_case: Mapped['LawCases'] = relationship('LawCases', back_populates='law_timesheets')
 
@@ -528,3 +563,19 @@ class LawTemplates(Base):
     template_text: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
     updated_at: Mapped[Optional[str]] = mapped_column(Text)
+
+class LawUserDevices(Base):
+    __tablename__ = 'law_user_devices'
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey('access_profiles.id', ondelete='CASCADE'), nullable=False)
+    device_id: Mapped[str] = mapped_column(Text, nullable=False, unique=True, index=True)
+    fcm_token: Mapped[Optional[str]] = mapped_column(Text)
+    biometric_public_key: Mapped[Optional[str]] = mapped_column(Text)
+    device_name: Mapped[Optional[str]] = mapped_column(Text)
+    last_active: Mapped[Optional[str]] = mapped_column(Text)
+    is_active: Mapped[int] = mapped_column(Integer, server_default=text('1'), nullable=False)
+    created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+    updated_at: Mapped[Optional[str]] = mapped_column(Text)
+    is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
+
+    user: Mapped['AccessProfiles'] = relationship('AccessProfiles')

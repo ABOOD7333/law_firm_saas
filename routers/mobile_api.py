@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 from database.database import get_db
-from database.models import AccessProfiles, AuthSessions, LawCases, LawDocuments, LawOffices
+from database.models import AccessProfiles, AuthSessions, LawCases, LawDocuments, LawOffices, LawClients, LawHearings, LawTasks
 from dependencies import get_current_user
 
 router = APIRouter(prefix="/api/mobile", tags=["Mobile API"])
@@ -189,31 +189,72 @@ async def get_dashboard_stats(db: Session = Depends(get_db), user: AccessProfile
         
     office_id = user.office_id or 1
     
-    # Query case statistics
-    total_cases = db.query(LawCases).filter(LawCases.office_id == office_id).count()
-    open_cases = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.status_key == 'نشط').count()
-    closed_cases = total_cases - open_cases
-    
+    if user.role == 'موكل':
+        client_records = db.query(LawClients).filter(
+            (LawClients.phone == user.phone) | (LawClients.email == user.email)
+        ).all()
+        case_ids = [c.case_id for c in client_records if c.case_id]
+        
+        total_cases = db.query(LawCases).filter(LawCases.id.in_(case_ids), LawCases.is_deleted == 0).count() if case_ids else 0
+        open_cases = db.query(LawCases).filter(LawCases.id.in_(case_ids), LawCases.status_key == 'نشط', LawCases.is_deleted == 0).count() if case_ids else 0
+        closed_cases = total_cases - open_cases
+        total_clients = 0
+        upcoming_hearings = db.query(LawHearings).filter(LawHearings.case_id.in_(case_ids), LawHearings.status_key == 'pending', LawHearings.is_deleted == 0).count() if case_ids else 0
+        pending_tasks = db.query(LawTasks).filter(LawTasks.case_id.in_(case_ids), LawTasks.status_key.in_(['pending', 'in_progress']), LawTasks.is_deleted == 0).count() if case_ids else 0
+    else:
+        total_cases = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0).count()
+        open_cases = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.status_key == 'نشط', LawCases.is_deleted == 0).count()
+        closed_cases = total_cases - open_cases
+        total_clients = db.query(LawClients).filter(LawClients.office_id == office_id, LawClients.is_deleted == 0).count()
+        upcoming_hearings = db.query(LawHearings).filter(LawHearings.office_id == office_id, LawHearings.status_key == 'pending', LawHearings.is_deleted == 0).count()
+        pending_tasks = db.query(LawTasks).filter(
+            LawTasks.assignee_user_id == user.id,
+            LawTasks.status_key.in_(['pending', 'in_progress']),
+            LawTasks.is_deleted == 0
+        ).count()
+        
     return {
         "total_cases": total_cases,
+        "total_clients": total_clients,
+        "upcoming_hearings": upcoming_hearings,
+        "pending_tasks": pending_tasks,
         "open_cases": open_cases,
         "closed_cases": closed_cases,
         "user_role": user.role
     }
 
 @router.get("/cases")
-async def get_cases(db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
+async def get_cases(
+    q: Optional[str] = None,
+    status: Optional[str] = None,
+    db: Session = Depends(get_db), 
+    user: AccessProfiles = Depends(get_current_user)
+):
     if not user:
         raise HTTPException(status_code=401, detail="غير مصرح")
         
     office_id = user.office_id or 1
     
     # Enforce lawyer visibility constraints
-    query = db.query(LawCases).filter(LawCases.office_id == office_id)
+    query = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0)
+    
     if user.role in ['محامي', 'محامٍ'] and getattr(user, "can_view_all_cases", 0) == 0:
-        query = query.filter(LawCases.assigned_lawyer_id == user.id)
+        query = query.filter(LawCases.lead_lawyer_id == user.id)
     elif user.role == 'موكل':
-        query = query.filter(LawCases.client_id == user.id)
+        # Mapped indirectly via LawClients
+        client_cases = db.query(LawClients.case_id).filter(LawClients.client_id == user.id).subquery()
+        query = query.filter(LawCases.id.in_(client_cases))
+        
+    if q:
+        query = query.filter(
+            or_(
+                LawCases.title.ilike(f"%{q}%"),
+                LawCases.case_number.ilike(f"%{q}%")
+            )
+        )
+        
+    if status:
+        query = query.filter(LawCases.status_key == status)
         
     cases = query.order_by(LawCases.created_at.desc()).all()
     
@@ -221,11 +262,77 @@ async def get_cases(db: Session = Depends(get_db), user: AccessProfiles = Depend
         "id": c.id,
         "case_number": c.case_number,
         "title": c.title,
-        "court_name": c.court_name,
         "status_key": c.status_key,
         "case_type_key": c.case_type_key,
-        "created_at": c.created_at[:10] if c.created_at else None
+        "summary": c.summary,
+        "estimated_fee": c.estimated_fee,
+        "created_at": c.created_at[:10] if c.created_at else None,
+        "updated_at": c.updated_at
     } for c in cases]
+
+class MobileCaseCreate(BaseModel):
+    title: str
+    case_number: str
+    summary: Optional[str] = None
+    case_type_key: Optional[str] = None
+    status_key: str = 'نشط'
+    estimated_fee: Optional[float] = 0.0
+
+@router.post("/cases")
+async def create_case(req: MobileCaseCreate, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
+    if not user:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    
+    office_id = user.office_id or 1
+    new_case = LawCases(
+        office_id=office_id,
+        case_number=req.case_number,
+        title=req.title,
+        summary=req.summary,
+        case_type_key=req.case_type_key,
+        status_key=req.status_key,
+        estimated_fee=req.estimated_fee,
+        created_by_user_id=user.id,
+        lead_lawyer_id=user.id if user.role in ['محامي', 'محامٍ'] else None,
+        is_active=1,
+        is_deleted=0
+    )
+    db.add(new_case)
+    db.commit()
+    db.refresh(new_case)
+    return {"success": True, "id": new_case.id}
+
+@router.put("/cases/{case_id}")
+async def update_case(case_id: int, req: MobileCaseCreate, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
+    if not user:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+        
+    case_obj = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == (user.office_id or 1)).first()
+    if not case_obj:
+        raise HTTPException(status_code=404, detail="غير موجود")
+        
+    case_obj.title = req.title
+    case_obj.case_number = req.case_number
+    case_obj.summary = req.summary
+    case_obj.case_type_key = req.case_type_key
+    case_obj.status_key = req.status_key
+    case_obj.estimated_fee = req.estimated_fee
+    
+    db.commit()
+    return {"success": True}
+
+@router.delete("/cases/{case_id}")
+async def delete_case(case_id: int, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
+    if not user:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+        
+    case_obj = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == (user.office_id or 1)).first()
+    if not case_obj:
+        raise HTTPException(status_code=404, detail="غير موجود")
+        
+    case_obj.is_deleted = 1
+    db.commit()
+    return {"success": True}
 
 @router.get("/documents")
 async def get_documents(db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
@@ -237,9 +344,10 @@ async def get_documents(db: Session = Depends(get_db), user: AccessProfiles = De
     # Fetch cases accessible by this user to filter documents
     cases_query = db.query(LawCases).filter(LawCases.office_id == office_id)
     if user.role in ['محامي', 'محامٍ'] and getattr(user, "can_view_all_cases", 0) == 0:
-        cases_query = cases_query.filter(LawCases.assigned_lawyer_id == user.id)
+        cases_query = cases_query.filter(LawCases.lead_lawyer_id == user.id)
     elif user.role == 'موكل':
-        cases_query = cases_query.filter(LawCases.client_id == user.id)
+        client_cases = db.query(LawClients.case_id).filter(LawClients.client_id == user.id).subquery()
+        cases_query = cases_query.filter(LawCases.id.in_(client_cases))
         
     accessible_case_ids = [c.id for c in cases_query.all()]
     
