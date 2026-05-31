@@ -65,7 +65,10 @@ def init_db():
     ينشئ كل الجداول إذا لم تكن موجودة.
     يُستخدم عند أول تشغيل أو في بيئات جديدة.
     """
-    Base.metadata.create_all(bind=engine)
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        print(f"[Database] Warning: create_all failed (likely table exists or dialect mismatch): {e}")
     
     # محاولة إضافة الأعمدة الجديدة للتحديث التلقائي بدون تهيئة يدوية
     try:

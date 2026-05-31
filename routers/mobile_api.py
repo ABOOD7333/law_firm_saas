@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
+from sqlalchemy import or_
 
 from database.database import get_db
 from database.models import AccessProfiles, AuthSessions, LawCases, LawDocuments, LawOffices, LawClients, LawHearings, LawTasks
