@@ -45,6 +45,9 @@ import uuid
 
 class CSRFMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        if request.url.path.startswith("/api/mobile"):
+            return await call_next(request)
+
         csrf_cookie = request.cookies.get("csrf_token")
         if not csrf_cookie:
             csrf_cookie = str(uuid.uuid4())
