@@ -140,8 +140,9 @@ app.add_middleware(LoginRateLimitMiddleware)
 from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
+    allow_origins=["http://localhost", "http://localhost:7882", "https://web-production-80e9e.up.railway.app"],
+    allow_origin_regex=r"https?://.*",
+    allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
     expose_headers=["*"],
