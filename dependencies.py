@@ -15,6 +15,11 @@ templates = Jinja2Templates(directory="templates")
 def get_current_user(request: Request, db: Session = Depends(get_db)):
     token = request.cookies.get("session_token")
     if not token:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+            
+    if not token:
         return None
 
     from datetime import datetime, timezone
