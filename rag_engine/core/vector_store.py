@@ -2,6 +2,14 @@
 ChromaDB Vector Store
 إدارة تخزين وبحث النصوص القانونية في قاعدة بيانات متجهة (Vector DB) محلية
 """
+# ChromaDB sqlite3 version override for production environment (Docker / Railway)
+try:
+    __import__('pysqlite3')
+    import sys
+    sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+except ImportError:
+    pass
+
 import chromadb
 from chromadb.config import Settings
 import uuid
