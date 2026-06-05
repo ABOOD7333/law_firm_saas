@@ -7,7 +7,7 @@ import pytesseract
 from PIL import Image
 import pdf2image
 from pathlib import Path
-from ..config import TESSERACT_CMD
+from ..config import TESSERACT_CMD, POPPLER_PATH
 
 # Configure Tesseract path for Windows
 if os.name == 'nt' and os.path.exists(TESSERACT_CMD):
@@ -23,7 +23,7 @@ class ArabicOCREngine:
         try:
             img = Image.open(image_path)
             # Custom config to improve Arabic extraction
-            custom_config = r'--oem 3 --psm 6'
+            custom_config = r'--oem 3 --psm 6 --tessdata-dir "' + str(Path(__file__).resolve().parent.parent / 'tessdata') + '"'
             text = pytesseract.image_to_string(img, lang=self.lang, config=custom_config)
             return self._clean_arabic_text(text)
         except Exception as e:
@@ -33,11 +33,11 @@ class ArabicOCREngine:
         """يحول ملف PDF ممسوح ضوئياً إلى صور ثم يستخرج النص"""
         try:
             # Note: poppler must be installed and in PATH for pdf2image to work
-            images = pdf2image.convert_from_path(pdf_path)
+            images = pdf2image.convert_from_path(pdf_path, poppler_path=POPPLER_PATH)
             full_text = []
             
             for i, img in enumerate(images):
-                custom_config = r'--oem 3 --psm 6'
+                custom_config = r'--oem 3 --psm 6 --tessdata-dir "' + str(Path(__file__).resolve().parent.parent / 'tessdata') + '"'
                 page_text = pytesseract.image_to_string(img, lang=self.lang, config=custom_config)
                 full_text.append(f"--- صفحة {i+1} ---\n{page_text}")
                 

@@ -30,6 +30,9 @@ CHUNK_OVERLAP = 200    # Overlap between chunks to maintain context
 # Windows path to Tesseract (if installed locally). Must be updated based on deployment.
 TESSERACT_CMD = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
+# Poppler path for PDF to Image conversion
+POPPLER_PATH = str(BASE_DIR.parent / "poppler" / "poppler-24.08.0" / "Library" / "bin")
+
 # Local LLM Settings (Ollama / HuggingFace)
 # Set to True if Ollama is running locally for summarization and drafting
 USE_LOCAL_LLM = False
