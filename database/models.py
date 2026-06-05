@@ -611,3 +611,35 @@ class AIKnowledge(Base):
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'), index=True)
     updated_at: Mapped[Optional[str]] = mapped_column(Text)
     is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
+
+# ===================================================
+# Ãœ«Ê· „Õ—ﬂ «·„⁄—›… RAG («·„—Õ·… «·À«‰Ì…)
+# ===================================================
+
+class KnowledgeDocument(Base):
+    __tablename__ = 'rag_knowledge_documents'
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    office_id: Mapped[int] = mapped_column(ForeignKey('law_offices.id', ondelete='CASCADE'), nullable=False, index=True)
+    file_name: Mapped[str] = mapped_column(Text, nullable=False)
+    file_path: Mapped[str] = mapped_column(Text, nullable=False)
+    file_type: Mapped[str] = mapped_column(Text, nullable=False) # pdf, docx, txt, img
+    category: Mapped[str] = mapped_column(Text, nullable=False, index=True) # «·ﬁ”„ «·ﬁ«‰Ê‰Ì
+    status: Mapped[str] = mapped_column(Text, nullable=False, server_default=text("'pending'")) # pending, indexing, indexed, failed
+    document_hash: Mapped[str] = mapped_column(Text, unique=True, index=True)
+    chunk_count: Mapped[int] = mapped_column(Integer, server_default=text('0'))
+    uploaded_by: Mapped[int] = mapped_column(ForeignKey('access_profiles.id'), nullable=False)
+    created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'), index=True)
+    updated_at: Mapped[Optional[str]] = mapped_column(Text)
+    is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
+
+
+class DocumentChunkMetadata(Base):
+    __tablename__ = 'rag_chunk_metadata'
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    document_id: Mapped[int] = mapped_column(ForeignKey('rag_knowledge_documents.id', ondelete='CASCADE'), nullable=False, index=True)
+    chunk_id: Mapped[str] = mapped_column(Text, nullable=False, unique=True, index=True) # ID in Vector DB
+    chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    article_number: Mapped[Optional[str]] = mapped_column(Text)
+    page_number: Mapped[Optional[int]] = mapped_column(Integer)
+    created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+

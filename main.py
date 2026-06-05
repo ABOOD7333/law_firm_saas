@@ -1682,7 +1682,9 @@ app.include_router(advanced_operations.router)
 app.include_router(superadmin.router)
 # ÇáãÓÇÚÏ ÇáĞßí ÇáŞÇäæäí Çáíãäí
 from routers import ai_assistant as ai_assistant_router
+from routers import rag_router
 app.include_router(ai_assistant_router.router)
+app.include_router(rag_router.router)
 # ----------------------------------------------------------------------------
 # SaaS Subscription Routes
 # ----------------------------------------------------------------------------
@@ -1992,3 +1994,10 @@ async def ai_assistant_page(request: Request, db: Session = Depends(get_db)):
     if not user:
         return RedirectResponse("/login", status_code=302)
     return templates.TemplateResponse("ai_assistant.html", {"request": request, "user": user})
+
+@app.get("/knowledge-admin")
+async def knowledge_admin_page(request: Request, db: Session = Depends(get_db)):
+    user = get_current_user(request, db)
+    if not user or user.role != 'ãÍÇãí':
+        return RedirectResponse("/login", status_code=302)
+    return templates.TemplateResponse("knowledge_admin.html", {"request": request, "user": user})
