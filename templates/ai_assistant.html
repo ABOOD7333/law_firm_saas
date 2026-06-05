@@ -1,0 +1,781 @@
+{% extends "base.html" %}
+{% block title %}المساعد الذكي القانوني{% endblock %}
+
+{% block content %}
+<style>
+/* ===== المساعد الذكي - تصميم احترافي ===== */
+.ai-page-wrapper {
+    display: flex;
+    height: calc(100vh - 70px);
+    gap: 0;
+    background: #f0f4f8;
+    overflow: hidden;
+}
+
+/* القائمة الجانبية */
+.ai-sidebar {
+    width: 280px;
+    background: linear-gradient(180deg, #1e3a5f 0%, #0f2341 100%);
+    display: flex;
+    flex-direction: column;
+    padding: 20px 0;
+    flex-shrink: 0;
+    overflow-y: auto;
+}
+
+.ai-sidebar-header {
+    padding: 0 20px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    text-align: center;
+}
+
+.ai-logo {
+    width: 60px; height: 60px;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 12px;
+    font-size: 28px;
+    box-shadow: 0 4px 20px rgba(79,70,229,0.4);
+}
+
+.ai-sidebar-header h3 {
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0 0 4px;
+}
+.ai-sidebar-header p {
+    color: rgba(255,255,255,0.5);
+    font-size: 11px;
+    margin: 0;
+}
+
+.ai-sidebar-section {
+    padding: 16px 20px 8px;
+    color: rgba(255,255,255,0.4);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.ai-mode-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    color: rgba(255,255,255,0.7);
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: right;
+    font-family: 'Cairo', sans-serif;
+    font-size: 13px;
+    border-right: 3px solid transparent;
+}
+
+.ai-mode-btn:hover, .ai-mode-btn.active {
+    background: rgba(79,70,229,0.2);
+    color: #fff;
+    border-right-color: #4f46e5;
+}
+
+.ai-mode-btn .mode-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.ai-quick-questions {
+    padding: 8px 12px;
+    margin-top: auto;
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.ai-quick-questions h4 {
+    color: rgba(255,255,255,0.5);
+    font-size: 11px;
+    margin: 0 0 8px;
+}
+
+.quick-q {
+    display: block;
+    padding: 6px 8px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 6px;
+    color: rgba(255,255,255,0.6);
+    font-size: 11px;
+    cursor: pointer;
+    margin-bottom: 4px;
+    transition: all 0.2s;
+    border: none;
+    width: 100%;
+    text-align: right;
+    font-family: 'Cairo', sans-serif;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.quick-q:hover {
+    background: rgba(79,70,229,0.3);
+    color: #fff;
+}
+
+/* منطقة الدردشة */
+.ai-chat-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #f8fafc;
+    overflow: hidden;
+}
+
+.ai-chat-header {
+    background: #fff;
+    padding: 16px 24px;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ai-status-dot {
+    width: 10px; height: 10px;
+    background: #22c55e;
+    border-radius: 50%;
+    animation: pulse-dot 2s infinite;
+}
+
+@keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(1.3); }
+}
+
+.ai-chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* رسائل الدردشة */
+.chat-message {
+    display: flex;
+    gap: 12px;
+    max-width: 85%;
+    animation: fadeInUp 0.3s ease;
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.chat-message.user-message {
+    flex-direction: row-reverse;
+    margin-right: auto;
+    margin-left: 0;
+    max-width: 75%;
+    align-self: flex-start;
+}
+
+.chat-message.ai-message {
+    align-self: flex-start;
+    max-width: 85%;
+}
+
+.msg-avatar {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.msg-avatar.ai-avatar {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+}
+
+.msg-avatar.user-avatar {
+    background: linear-gradient(135deg, #0ea5e9, #0284c7);
+}
+
+.msg-bubble {
+    padding: 14px 18px;
+    border-radius: 16px;
+    font-size: 14px;
+    line-height: 1.7;
+    position: relative;
+}
+
+.ai-message .msg-bubble {
+    background: #fff;
+    color: #1e293b;
+    border-bottom-right-radius: 4px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    border: 1px solid #e2e8f0;
+}
+
+.user-message .msg-bubble {
+    background: linear-gradient(135deg, #4f46e5, #6366f1);
+    color: #fff;
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 4px 12px rgba(79,70,229,0.3);
+}
+
+.msg-time {
+    font-size: 10px;
+    color: #94a3b8;
+    margin-top: 4px;
+    text-align: center;
+}
+
+/* مؤشر التحميل */
+.typing-indicator {
+    display: flex;
+    gap: 6px;
+    padding: 14px 18px;
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    width: fit-content;
+}
+
+.typing-dot {
+    width: 8px; height: 8px;
+    background: #94a3b8;
+    border-radius: 50%;
+    animation: typing 1.4s infinite;
+}
+
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typing {
+    0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+    40% { transform: scale(1.2); opacity: 1; }
+}
+
+/* حقل الإدخال */
+.ai-input-area {
+    background: #fff;
+    padding: 16px 24px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.ai-input-wrapper {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    background: #f8fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 12px 16px;
+    transition: border-color 0.2s;
+}
+
+.ai-input-wrapper:focus-within {
+    border-color: #4f46e5;
+    background: #fff;
+}
+
+.ai-text-input {
+    flex: 1;
+    border: none;
+    background: none;
+    outline: none;
+    font-family: 'Cairo', sans-serif;
+    font-size: 14px;
+    color: #1e293b;
+    resize: none;
+    max-height: 120px;
+    min-height: 24px;
+    line-height: 1.5;
+    direction: rtl;
+}
+
+.ai-text-input::placeholder { color: #94a3b8; }
+
+.ai-send-btn {
+    width: 42px; height: 42px;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    border: none;
+    border-radius: 12px;
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.ai-send-btn:hover { transform: scale(1.05); }
+.ai-send-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* الشاشة الترحيبية */
+.ai-welcome {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    text-align: center;
+}
+
+.ai-welcome-logo {
+    font-size: 80px;
+    margin-bottom: 20px;
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+.ai-welcome h2 {
+    font-size: 28px;
+    font-weight: 800;
+    color: #1e3a5f;
+    margin: 0 0 8px;
+}
+
+.ai-welcome p {
+    color: #64748b;
+    font-size: 15px;
+    margin: 0 0 32px;
+}
+
+.suggestions-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    max-width: 800px;
+    width: 100%;
+}
+
+.suggestion-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px;
+    cursor: pointer;
+    text-align: right;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.suggestion-card:hover {
+    border-color: #4f46e5;
+    background: #f5f3ff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(79,70,229,0.1);
+}
+
+.suggestion-card .s-icon { font-size: 22px; flex-shrink: 0; }
+.suggestion-card .s-text {
+    font-size: 13px;
+    color: #374151;
+    line-height: 1.4;
+}
+
+/* المستندات */
+.doc-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    padding: 20px;
+}
+
+.doc-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+}
+
+.doc-card:hover {
+    border-color: #4f46e5;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(79,70,229,0.15);
+}
+
+.doc-card .doc-icon { font-size: 32px; margin-bottom: 8px; }
+.doc-card .doc-name { font-size: 13px; font-weight: 600; color: #1e293b; }
+
+/* نتائج البحث القانوني */
+.law-result {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-right: 4px solid #4f46e5;
+    border-radius: 8px;
+    padding: 16px;
+    margin: 8px 0;
+}
+
+.law-result .law-title {
+    font-weight: 700;
+    color: #1e3a5f;
+    margin-bottom: 8px;
+}
+
+.law-result .law-text {
+    color: #374151;
+    font-size: 13px;
+    line-height: 1.8;
+}
+
+/* رسالة المستند الناتج */
+.document-output {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 12px;
+    font-family: 'Amiri', 'Cairo', serif;
+    white-space: pre-wrap;
+    font-size: 13px;
+    line-height: 2;
+    color: #1e293b;
+}
+
+.copy-btn {
+    background: #4f46e5;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+    cursor: pointer;
+    margin-top: 8px;
+    font-family: 'Cairo', sans-serif;
+    transition: all 0.2s;
+}
+
+.copy-btn:hover { background: #4338ca; }
+
+@media (max-width: 768px) {
+    .ai-sidebar { display: none; }
+    .suggestions-grid { grid-template-columns: 1fr 1fr; }
+    .doc-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+
+<div class="ai-page-wrapper">
+    <!-- القائمة الجانبية -->
+    <div class="ai-sidebar">
+        <div class="ai-sidebar-header">
+            <div class="ai-logo">⚖️</div>
+            <h3>المساعد الذكي القانوني</h3>
+            <p>مبني على القانون اليمني</p>
+        </div>
+
+        <div class="ai-sidebar-section">الأوضاع</div>
+
+        <button class="ai-mode-btn active" onclick="setMode('chat', this)">
+            <span class="mode-icon">💬</span>
+            محادثة ذكية
+        </button>
+        <button class="ai-mode-btn" onclick="setMode('law', this)">
+            <span class="mode-icon">📖</span>
+            بحث قانوني
+        </button>
+        <button class="ai-mode-btn" onclick="setMode('docs', this)">
+            <span class="mode-icon">📄</span>
+            صياغة مستندات
+        </button>
+        <button class="ai-mode-btn" onclick="setMode('stats', this)">
+            <span class="mode-icon">📊</span>
+            تحليل وإحصائيات
+        </button>
+
+        <div class="ai-sidebar-section" style="margin-top: 12px;">أسئلة سريعة</div>
+
+        <div class="ai-quick-questions">
+            <button class="quick-q" onclick="sendQuickQ(this.textContent)">⚖️ كم عدد القضايا المفتوحة؟</button>
+            <button class="quick-q" onclick="sendQuickQ(this.textContent)">📅 ما الجلسات غداً؟</button>
+            <button class="quick-q" onclick="sendQuickQ(this.textContent)">💰 ما إيرادات هذا الشهر؟</button>
+            <button class="quick-q" onclick="sendQuickQ(this.textContent)">📋 ما المهام المعلقة؟</button>
+            <button class="quick-q" onclick="sendQuickQ(this.textContent)">📊 نسبة نجاح القضايا</button>
+            <button class="quick-q" onclick="sendQuickQ(this.textContent)">🔍 ما المادة 100 من القانون المدني؟</button>
+        </div>
+    </div>
+
+    <!-- منطقة الدردشة -->
+    <div class="ai-chat-area">
+        <!-- رأس المساعد -->
+        <div class="ai-chat-header">
+            <div class="ai-status-dot"></div>
+            <div>
+                <div style="font-weight: 700; color: #1e293b;">المساعد الذكي القانوني اليمني</div>
+                <div style="font-size: 12px; color: #64748b;">متصل ومستعد للمساعدة</div>
+            </div>
+            <button onclick="clearChat()" style="margin-right: auto; background: none; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 12px; font-size: 12px; cursor: pointer; color: #64748b; font-family: 'Cairo', sans-serif;">
+                🗑️ مسح المحادثة
+            </button>
+        </div>
+
+        <!-- الرسائل -->
+        <div class="ai-chat-messages" id="chatMessages">
+            <!-- رسالة الترحيب -->
+            <div id="welcomeScreen" class="ai-welcome">
+                <div class="ai-welcome-logo">⚖️</div>
+                <h2>مساعدك القانوني الذكي</h2>
+                <p>مبني على القوانين اليمنية - يعرف قضاياك وجلساتك وموكليك</p>
+
+                <div class="suggestions-grid" id="suggestionsGrid">
+                    <!-- تُملأ بـ JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- حقل الإدخال -->
+        <div class="ai-input-area">
+            <div class="ai-input-wrapper">
+                <button class="ai-send-btn" id="sendBtn" onclick="sendMessage()">
+                    <i class="fas fa-paper-plane" style="transform: scaleX(-1);"></i>
+                </button>
+                <textarea
+                    id="chatInput"
+                    class="ai-text-input"
+                    placeholder="اسألني عن قضاياك، جلساتك، القوانين اليمنية، أو اطلب مني صياغة مستند قانوني..."
+                    rows="1"
+                    onkeydown="handleKeyDown(event)"
+                    oninput="autoResize(this)"
+                    dir="rtl"
+                ></textarea>
+                <div style="color: #94a3b8; font-size: 18px; flex-shrink: 0;">
+                    <i class="fas fa-microphone"></i>
+                </div>
+            </div>
+            <div style="font-size: 11px; color: #94a3b8; text-align: center; margin-top: 8px;">
+                اضغط Enter للإرسال • Shift+Enter للسطر الجديد
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentMode = 'chat';
+let isWaiting = false;
+
+// تحميل الاقتراحات
+window.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const res = await fetch('/api/ai/suggestions');
+        const data = await res.json();
+        if (data.success) {
+            const grid = document.getElementById('suggestionsGrid');
+            grid.innerHTML = data.suggestions.slice(0, 9).map(s => `
+                <div class="suggestion-card" onclick="sendQuickQ('${s.text.replace(/'/g, "\\'")}')">
+                    <span class="s-icon">${s.icon}</span>
+                    <span class="s-text">${s.text}</span>
+                </div>
+            `).join('');
+        }
+    } catch(e) {}
+});
+
+function setMode(mode, btn) {
+    currentMode = mode;
+    document.querySelectorAll('.ai-mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    if (mode === 'docs') {
+        // عرض قائمة المستندات
+        addAIMessage('📄 **المستندات القانونية المتاحة:**\n\nاختر نوع المستند الذي تريد إنشاءه:\n\n⚖️ صحيفة دعوى مدنية\n🛡️ مذكرة دفاع\n🏠 عقد بيع\n🔑 عقد إيجار\n🤝 عقد شراكة تجارية\n📋 وكالة قانونية\n⚠️ إنذار قانوني\n📄 طعن استئناف\n🔨 طلب تنفيذ حكم\n💼 عقد عمل\n💰 إقرار بدين\n🕊️ اتفاقية تسوية ودية\n📅 طلب تأجيل جلسة\n🧾 فاتورة أتعاب محاماة\n📊 ملخص وكشف حساب قضية\n\nاكتب اسم المستند الذي تريده وسأساعدك في إنشائه!');
+    } else if (mode === 'law') {
+        addAIMessage('📖 **وضع البحث القانوني**\n\nيمكنك:\n• البحث بالمادة القانونية: "ما المادة 150 من قانون المرافعات؟"\n• البحث بالموضوع: "ما عقوبة السرقة في اليمن؟"\n• البحث بالكلمة: "الإيجار" أو "الطلاق" أو "الشركة"\n\nما الذي تريد البحث عنه؟');
+    } else if (mode === 'stats') {
+        sendQuickQ('أعطني إحصائيات شاملة عن مكتبي');
+    }
+}
+
+function sendQuickQ(text) {
+    document.getElementById('chatInput').value = text;
+    sendMessage();
+}
+
+async function sendMessage() {
+    if (isWaiting) return;
+
+    const input = document.getElementById('chatInput');
+    const message = input.value.trim();
+    if (!message) return;
+
+    // إخفاء الترحيب
+    const welcome = document.getElementById('welcomeScreen');
+    if (welcome) welcome.remove();
+
+    // إضافة رسالة المستخدم
+    addUserMessage(message);
+    input.value = '';
+    autoResize(input);
+
+    // مؤشر التحميل
+    isWaiting = true;
+    document.getElementById('sendBtn').disabled = true;
+    const typingId = addTypingIndicator();
+
+    try {
+        const res = await fetch('/api/ai/chat', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({question: message})
+        });
+
+        const data = await res.json();
+        removeTypingIndicator(typingId);
+
+        if (data.success) {
+            addAIMessage(data.answer, data.time_ms);
+        } else {
+            addAIMessage(`❌ ${data.error || 'حدث خطأ، يرجى المحاولة مرة أخرى.'}`);
+        }
+    } catch (e) {
+        removeTypingIndicator(typingId);
+        addAIMessage('❌ تعذر الاتصال بالمساعد. تأكد من اتصالك بالإنترنت.');
+    }
+
+    isWaiting = false;
+    document.getElementById('sendBtn').disabled = false;
+    input.focus();
+}
+
+function addUserMessage(text) {
+    const now = new Date().toLocaleTimeString('ar-YE', {hour: '2-digit', minute: '2-digit'});
+    const html = `
+        <div class="chat-message user-message">
+            <div class="msg-avatar user-avatar">👤</div>
+            <div>
+                <div class="msg-bubble">${escapeHtml(text)}</div>
+                <div class="msg-time">${now}</div>
+            </div>
+        </div>
+    `;
+    appendMessage(html);
+}
+
+function addAIMessage(text, timeMs = null) {
+    const now = new Date().toLocaleTimeString('ar-YE', {hour: '2-digit', minute: '2-digit'});
+    const timeInfo = timeMs ? `<span style="color:#94a3b8;font-size:10px;"> • ${timeMs}ms</span>` : '';
+
+    // معالجة المستندات القانونية
+    let formattedText = formatMessage(text);
+
+    const html = `
+        <div class="chat-message ai-message">
+            <div class="msg-avatar ai-avatar">⚖️</div>
+            <div>
+                <div class="msg-bubble">${formattedText}</div>
+                <div class="msg-time">${now}${timeInfo}</div>
+            </div>
+        </div>
+    `;
+    appendMessage(html);
+}
+
+function formatMessage(text) {
+    // تحويل **bold** إلى HTML
+    text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    // تحويل الأسطر
+    text = text.replace(/\n/g, '<br>');
+    // اكتشاف المستندات القانونية (عندما يبدأ النص بـ "بسم الله")
+    if (text.includes('بسم الله الرحمن الرحيم')) {
+        const cleanText = text.replace(/<br>/g, '\n').replace(/<strong>(.*?)<\/strong>/g, '$1');
+        return `
+            <div>سأعرض لك المستند القانوني:</div>
+            <div class="document-output" id="docOutput">${cleanText}</div>
+            <button class="copy-btn" onclick="copyDocument()">📋 نسخ المستند</button>
+            <button class="copy-btn" style="background:#059669;margin-right:8px;" onclick="printDocument()">🖨️ طباعة</button>
+        `;
+    }
+    return text;
+}
+
+function addTypingIndicator() {
+    const id = 'typing_' + Date.now();
+    const html = `
+        <div class="chat-message ai-message" id="${id}">
+            <div class="msg-avatar ai-avatar">⚖️</div>
+            <div class="typing-indicator">
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            </div>
+        </div>
+    `;
+    appendMessage(html);
+    return id;
+}
+
+function removeTypingIndicator(id) {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+}
+
+function appendMessage(html) {
+    const container = document.getElementById('chatMessages');
+    container.insertAdjacentHTML('beforeend', html);
+    container.scrollTop = container.scrollHeight;
+}
+
+function clearChat() {
+    if (!confirm('هل تريد مسح المحادثة الحالية؟')) return;
+    const container = document.getElementById('chatMessages');
+    container.innerHTML = `
+        <div id="welcomeScreen" class="ai-welcome">
+            <div class="ai-welcome-logo">⚖️</div>
+            <h2>مساعدك القانوني الذكي</h2>
+            <p>مبني على القوانين اليمنية - يعرف قضاياك وجلساتك وموكليك</p>
+            <div class="suggestions-grid" id="suggestionsGrid"></div>
+        </div>
+    `;
+}
+
+function copyDocument() {
+    const el = document.getElementById('docOutput');
+    if (el) {
+        navigator.clipboard.writeText(el.textContent);
+        alert('✅ تم نسخ المستند!');
+    }
+}
+
+function printDocument() {
+    const el = document.getElementById('docOutput');
+    if (el) {
+        const w = window.open('', '_blank');
+        w.document.write(`<html dir="rtl"><head><style>body{font-family:'Amiri',serif;padding:40px;font-size:14px;line-height:2;}</style></head><body><pre>${el.textContent}</pre></body></html>`);
+        w.print();
+    }
+}
+
+function handleKeyDown(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+    }
+}
+
+function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function escapeHtml(text) {
+    return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+</script>
+
+{% endblock %}

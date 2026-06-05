@@ -1680,6 +1680,9 @@ app.include_router(executions.router)
 app.include_router(power_of_attorney.router)
 app.include_router(advanced_operations.router)
 app.include_router(superadmin.router)
+# «·„”«⁄œ «·–ﬂÌ «·ﬁ«‰Ê‰Ì «·Ì„‰Ì
+from routers import ai_assistant as ai_assistant_router
+app.include_router(ai_assistant_router.router)
 # ----------------------------------------------------------------------------
 # SaaS Subscription Routes
 # ----------------------------------------------------------------------------
@@ -1981,3 +1984,11 @@ async def api_subscription_checkout(request: Request, db: Session = Depends(get_
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+
+
+@app.get("/ai-assistant")
+async def ai_assistant_page(request: Request, db: Session = Depends(get_db)):
+    user = get_current_user(request, db)
+    if not user:
+        return RedirectResponse("/login", status_code=302)
+    return templates.TemplateResponse("ai_assistant.html", {"request": request, "user": user})

@@ -579,3 +579,35 @@ class LawUserDevices(Base):
     is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
 
     user: Mapped['AccessProfiles'] = relationship('AccessProfiles')
+
+
+# ===================================================
+# Ãœ«Ê· «·„”«⁄œ «·–ﬂÌ «·ﬁ«‰Ê‰Ì
+# ===================================================
+
+class AIChatHistory(Base):
+    __tablename__ = 'ai_chat_history'
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    office_id: Mapped[int] = mapped_column(ForeignKey('law_offices.id', ondelete='CASCADE'), nullable=False, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey('access_profiles.id', ondelete='CASCADE'), nullable=False, index=True)
+    question: Mapped[str] = mapped_column(Text, nullable=False)
+    answer: Mapped[str] = mapped_column(Text, nullable=False)
+    intent_type: Mapped[Optional[str]] = mapped_column(Text, index=True)
+    response_time_ms: Mapped[Optional[int]] = mapped_column(Integer)
+    created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'), index=True)
+    is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
+
+
+class AIKnowledge(Base):
+    __tablename__ = 'ai_knowledge'
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    office_id: Mapped[int] = mapped_column(ForeignKey('law_offices.id', ondelete='CASCADE'), nullable=False, index=True)
+    category: Mapped[str] = mapped_column(Text, nullable=False, index=True)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    keywords: Mapped[Optional[str]] = mapped_column(Text)
+    source: Mapped[Optional[str]] = mapped_column(Text)
+    created_by: Mapped[int] = mapped_column(ForeignKey('access_profiles.id'), nullable=False)
+    created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'), index=True)
+    updated_at: Mapped[Optional[str]] = mapped_column(Text)
+    is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
