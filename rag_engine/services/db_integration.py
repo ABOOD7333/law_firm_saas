@@ -7,18 +7,18 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime, date, timedelta
 
-# استيراد النماذج (نعتمد على أنه سيتم تمرير الجلسة Session من الـ router)
-from database.models import Cases, Clients, Hearings, Tasks
+# استيراد النماذج الحقيقية للمكتب
+from database.models import LawCases, LawClients, LawHearings, LawTasks
 
 class DBIntegrationService:
     
     @staticmethod
     def get_open_cases_count(db: Session, office_id: int) -> str:
         """كم عدد القضايا المفتوحة؟"""
-        count = db.query(Cases).filter(
-            Cases.office_id == office_id, 
-            Cases.is_deleted == 0,
-            Cases.status.in_(['مفتوحة', 'قيد الترافع', 'منظورة', 'نشطة']) # تقريب للحالات المفتوحة
+        count = db.query(LawCases).filter(
+            LawCases.office_id == office_id, 
+            LawCases.is_deleted == 0,
+            LawCases.status_key.notin_(['closed', 'مغلقة'])
         ).count()
         return f"عدد القضايا المفتوحة حالياً في المكتب هو: {count} قضية."
 
@@ -28,42 +28,41 @@ class DBIntegrationService:
         today = date.today()
         end_date = today + timedelta(days=days)
         
-        hearings = db.query(Hearings).filter(
-            Hearings.office_id == office_id,
-            Hearings.is_deleted == 0,
-            Hearings.hearing_date >= today.isoformat(),
-            Hearings.hearing_date <= end_date.isoformat()
-        ).order_by(Hearings.hearing_date).all()
+        hearings = db.query(LawHearings).filter(
+            LawHearings.office_id == office_id,
+            LawHearings.is_deleted == 0,
+            LawHearings.hearing_at >= today.isoformat(),
+            LawHearings.hearing_at <= end_date.isoformat() + " 23:59:59"
+        ).order_by(LawHearings.hearing_at).all()
         
         if not hearings:
             return f"ليس لديك أي جلسات مجدولة خلال الـ {days} أيام القادمة."
             
         result = [f"لديك {len(hearings)} جلسات خلال الـ {days} أيام القادمة:\n"]
         for h in hearings:
-            # افتراض وجود case_id أو ما شابه
-            result.append(f"- بتاريخ {h.hearing_date} الساعة {h.hearing_time}: {h.title}")
+            result.append(f"- بتاريخ {h.hearing_at}: {h.title}")
             
         return "\n".join(result)
 
     @staticmethod
     def get_pending_tasks(db: Session, office_id: int, user_id: int = None) -> str:
         """ما المهام المعلقة؟"""
-        query = db.query(Tasks).filter(
-            Tasks.office_id == office_id,
-            Tasks.is_deleted == 0,
-            Tasks.status != 'مكتملة'
+        query = db.query(LawTasks).filter(
+            LawTasks.office_id == office_id,
+            LawTasks.is_deleted == 0,
+            LawTasks.status_key.notin_(['completed', 'مكتملة'])
         )
         if user_id:
-            query = query.filter(Tasks.assigned_to == user_id)
+            query = query.filter(LawTasks.assignee_user_id == user_id)
             
-        tasks = query.order_by(Tasks.due_date).limit(5).all()
+        tasks = query.order_by(LawTasks.due_at).limit(5).all()
         
         if not tasks:
             return "ليس لديك أي مهام معلقة! أداء ممتاز."
             
         result = [f"المهام المعلقة (أهم 5):"]
         for t in tasks:
-            result.append(f"- {t.title} (مستحقة في {t.due_date})")
+            result.append(f"- {t.title} (مستحقة في {t.due_at})")
             
         return "\n".join(result)
 
