@@ -7,7 +7,7 @@ import uuid
 from pathlib import Path
 
 from database.database import get_db
-from database.models import User, KnowledgeDocument, DocumentChunkMetadata
+from database.models import AccessProfiles, KnowledgeDocument, DocumentChunkMetadata
 from dependencies import get_current_user
 
 # RAG Engine Imports
@@ -80,7 +80,7 @@ async def upload_knowledge_document(
     file: UploadFile = File(...),
     category: str = Form(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: AccessProfiles = Depends(get_current_user)
 ):
     """رفع مستند قانوني (قانون، حكم) إلى قاعدة المعرفة وفهرسته بالخلفية"""
     if not current_user:
@@ -130,7 +130,7 @@ async def upload_knowledge_document(
 @router.get("/documents")
 async def get_knowledge_documents(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: AccessProfiles = Depends(get_current_user)
 ):
     """عرض المستندات المرفوعة وحالتها"""
     if not current_user:
@@ -179,7 +179,7 @@ async def semantic_search(
 async def analyze_contract(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: AccessProfiles = Depends(get_current_user)
 ):
     """استخراج المعلومات الأساسية من عقد"""
     if not current_user:
