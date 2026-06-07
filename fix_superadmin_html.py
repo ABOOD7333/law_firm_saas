@@ -1,14 +1,12 @@
-{% extends "base.html" %}
+import sys
 
-{% block title %}لوحة تحكم المنصة (SuperAdmin){% endblock %}
+with open('templates/superadmin.html', 'rb') as f:
+    content = f.read().decode('utf-8')
 
-{% block content %}
-<div class="header-banner" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);">
-    <div class="banner-content">
-        <h1 style="color: white; font-size: 2rem;"><i class="fas fa-crown"></i> لوحة تحكم المنصة</h1>
-        <p style="color: #94a3b8; font-size: 1.1rem; margin-top: 8px;">خاص بصاحب النظام: إدارة جميع مكاتب المحاماة المسجلة</p>
-    </div>
-</div>
+# We'll insert the Payment Requests table right after the Offices table container
+offices_table_end = """    </div>\n</div>"""
+
+payment_table = """
 <!-- Payment Requests -->
 <div class="card" style="margin-top: 2rem;">
     <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 1px solid #e2e8f0;">
@@ -59,90 +57,29 @@
         </table>
     </div>
 </div>
+"""
 
+# Insert payment table
+if "طلبات الدفع (الاشتراكات)" not in content:
+    content = content.replace(offices_table_end, offices_table_end + payment_table, 1)
 
-<div class="dashboard-stats" style="margin-top: -30px; position: relative; z-index: 10;">
-    <div class="stat-card" style="box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);">
-        <div class="stat-icon" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">
-            <i class="fas fa-building"></i>
+# Now update the modal to include notes for rejection
+old_modal = """<!-- Receipt Modal -->
+<div id="receiptModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center;">
+    <div style="background: white; border-radius: 12px; width: 90%; max-width: 500px; padding: 20px; text-align: center;">
+        <h3 style="margin-top: 0;">مراجعة سند الدفع</h3>
+        <div style="width: 100%; max-height: 400px; overflow-y: auto; margin-bottom: 20px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 5px;">
+            <img id="receiptImage" src="" style="max-width: 100%; height: auto; border-radius: 4px;">
         </div>
-        <div class="stat-info">
-            <h3>إجمالي المكاتب</h3>
-            <div class="stat-value">{{ offices|length }}</div>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+            <button onclick="handleReceiptAction('approve')" style="background: #10b981; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; flex: 1;">تأكيد واعتماد السند</button>
+            <button onclick="handleReceiptAction('reject')" style="background: #ef4444; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; flex: 1;">رفض السند</button>
         </div>
+        <button onclick="closeReceiptModal()" style="margin-top: 15px; background: none; border: none; color: #64748b; cursor: pointer;">إغلاق النافذة</button>
     </div>
-</div>
+</div>"""
 
-<div class="card" style="margin-top: 2rem;">
-    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 1px solid #e2e8f0;">
-        <h3 style="margin: 0; font-size: 1.25rem; color: #1e293b;">المكاتب المسجلة</h3>
-        <button onclick="fixSubscriptions()" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(245, 158, 11, 0.2);">
-            <i class="fas fa-magic"></i> اعتماد نظام الدفع للمكاتب القديمة
-        </button>
-    </div>
-    <div class="table-container" style="overflow-x: auto;">
-        <table class="data-table" style="width: 100%; text-align: right; border-collapse: collapse;">
-            <thead>
-                <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
-                    <th style="padding: 15px; color: #475569;"># ID</th>
-                    <th style="padding: 15px; color: #475569;">اسم المكتب</th>
-                    <th style="padding: 15px; color: #475569;">صاحب المكتب</th>
-                    <th style="padding: 15px; color: #475569;">معلومات التواصل</th>
-                    <th style="padding: 15px; color: #475569;">عدد الحسابات</th>
-                    <th style="padding: 15px; color: #475569;">الاشتراك / الدفع</th>
-                    <th style="padding: 15px; color: #475569;">تاريخ التسجيل</th>
-                    <th style="padding: 15px; color: #475569;">الحالة</th>
-                    <th style="padding: 15px; color: #475569;">إجراء</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for off in offices %}
-                <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
-                    <td style="padding: 15px; font-weight: bold; color: #64748b;">{{ off.id }}</td>
-                    <td style="padding: 15px; font-weight: 700; color: #0f172a;">{{ off.name }}</td>
-                    <td style="padding: 15px; color: #334155;">{{ off.owner_name }}</td>
-                    <td style="padding: 15px;">
-                        <div style="font-size: 0.85rem; color: #64748b;">📧 {{ off.owner_email }}</div>
-                        <div style="font-size: 0.85rem; color: #64748b;">📱 {{ off.owner_phone }}</div>
-                    </td>
-                    <td style="padding: 15px; text-align: center;">
-                        <span style="background: #eff6ff; color: #3b82f6; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 0.85rem;">{{ off.user_count }}</span>
-                    </td>
-                    <td style="padding: 15px;">
-                        <div style="font-size: 0.85rem; font-weight: bold; color: #5c2d91; margin-bottom: 5px;">
-                            {{ "تجريبي" if off.subscription_plan == 'trial' else ("شهري" if off.subscription_plan == 'monthly' else "سنوي") }}
-                        </div>
-                        {% if off.receipt_status == 'pending' %}
-                            <button onclick="openReceiptModal({{ off.id }}, '{{ off.receipt_base64 }}')" style="background: #10b981; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; cursor: pointer;">عرض السند واعتماد</button>
-                        {% elif off.receipt_status == 'approved' %}
-                            <span style="color: #10b981; font-size: 0.8rem;"><i class="fa-solid fa-check-circle"></i> مدفوع</span>
-                        {% elif off.receipt_status == 'rejected' %}
-                            <span style="color: #ef4444; font-size: 0.8rem;"><i class="fa-solid fa-times-circle"></i> مرفوض</span>
-                        {% else %}
-                            <span style="color: #94a3b8; font-size: 0.8rem;">بانتظار الدفع</span>
-                        {% endif %}
-                    </td>
-                    <td style="padding: 15px; font-size: 0.9rem; color: #64748b;" dir="ltr">{{ off.created_at[:10] }}</td>
-                    <td style="padding: 15px;" id="status-cell-{{ off.id }}">
-                        {% if off.is_active == 1 %}
-                            <span class="status-badge" style="background: #dcfce7; color: #16a34a; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 600;">نشط</span>
-                        {% else %}
-                            <span class="status-badge" style="background: #fee2e2; color: #ef4444; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 600;">موقوف</span>
-                        {% endif %}
-                    </td>
-                    <td style="padding: 15px;">
-                        <button onclick="toggleOffice({{ off.id }})" id="btn-toggle-{{ off.id }}" class="btn-action" style="padding: 8px 16px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; {% if off.is_active == 1 %}background: #fee2e2; color: #dc2626;{% else %}background: #dcfce7; color: #16a34a;{% endif %}">
-                            {% if off.is_active == 1 %}إيقاف المكتب{% else %}تفعيل المكتب{% endif %}
-                        </button>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<!-- Receipt Modal -->
+new_modal = """<!-- Receipt Modal -->
 <div id="receiptModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; padding: 20px;">
     <div style="background: white; border-radius: 16px; width: 100%; max-width: 500px; padding: 24px; text-align: center; max-height: 90vh; overflow-y: auto;">
         <h3 style="margin-top: 0; font-size: 1.3rem; margin-bottom: 15px;">مراجعة سند الدفع</h3>
@@ -167,25 +104,50 @@
         
         <button onclick="closeReceiptModal()" style="margin-top: 15px; background: none; border: none; color: #64748b; cursor: pointer; font-weight: bold; text-decoration: underline;">إغلاق النافذة</button>
     </div>
-</div>
+</div>"""
 
-<script>
-async function fixSubscriptions() {
-    if(!confirm("تحذير: سيتم تحويل جميع المكاتب القديمة (باستثناء مكتبك) إلى النسخة التجريبية (14 يوم) ابتداءً من اليوم. هل تريد الاستمرار؟")) return;
+if old_modal in content:
+    content = content.replace(old_modal, new_modal)
+
+
+# Update JavaScript functions
+js_code_to_replace = """let currentOfficeId = null;
+
+function openReceiptModal(officeId, base64Str) {
+    currentOfficeId = officeId;
+    document.getElementById('receiptImage').src = base64Str;
+    document.getElementById('receiptModal').style.display = 'flex';
+}
+
+function closeReceiptModal() {
+    document.getElementById('receiptModal').style.display = 'none';
+    currentOfficeId = null;
+}
+
+async function handleReceiptAction(action) {
+    if (!confirm(action === 'approve' ? "هل أنت متأكد من صحة السند وتريد تفعيل الاشتراك؟" : "هل أنت متأكد من رفض السند؟")) return;
     
     try {
-        const res = await fetch('/api/superadmin/fix-subscriptions', { method: 'GET' });
+        const csrfToken = document.cookie.split('; ').find(r => r.startsWith('csrf_token='))?.split('=')[1] || '';
+        const res = await fetch('/api/superadmin/approve-receipt/' + currentOfficeId, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+            body: JSON.stringify({ action: action })
+        });
         const data = await res.json();
         
-        alert(data.message || data.error);
-        if(data.success) {
+        if (data.success) {
+            alert(data.message);
             window.location.reload();
+        } else {
+            alert(data.error || "حدث خطأ غير متوقع");
         }
     } catch(e) {
-        alert("حدث خطأ في الاتصال");
+        alert('خطأ في الاتصال');
     }
-}
-let currentPaymentId = null;
+}"""
+
+new_js_code = """let currentPaymentId = null;
 
 function openReceiptModal(paymentId, base64Str, status) {
     currentPaymentId = paymentId;
@@ -253,46 +215,11 @@ async function handleReceiptAction(action) {
     } catch(e) {
         alert('خطأ في الاتصال');
     }
-}
-async function toggleOffice(officeId) {
-    if(!confirm("هل أنت متأكد من تغيير حالة هذا المكتب؟ إيقاف المكتب سيمنع جميع منسوبيه من تسجيل الدخول.")) return;
-    
-    const btn = document.getElementById('btn-toggle-' + officeId);
-    const originalText = btn.innerText;
-    btn.innerText = "جاري...";
-    btn.disabled = true;
-    
-    try {
-        const csrfToken = document.cookie.split('; ').find(r => r.startsWith('csrf_token='))?.split('=')[1] || '';
-        const res = await fetch('/api/superadmin/toggle-office/' + officeId, {
-            method: 'POST',
-            headers: { 'X-CSRF-Token': csrfToken }
-        });
-        const data = await res.json();
-        
-        if (data.success) {
-            // Update UI dynamically
-            const cell = document.getElementById('status-cell-' + officeId);
-            if (data.is_active === 1) {
-                cell.innerHTML = '<span class="status-badge" style="background: #dcfce7; color: #16a34a; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 600;">نشط</span>';
-                btn.style.background = '#fee2e2';
-                btn.style.color = '#dc2626';
-                btn.innerText = 'إيقاف المكتب';
-            } else {
-                cell.innerHTML = '<span class="status-badge" style="background: #fee2e2; color: #ef4444; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 600;">موقوف</span>';
-                btn.style.background = '#dcfce7';
-                btn.style.color = '#16a34a';
-                btn.innerText = 'تفعيل المكتب';
-            }
-        } else {
-            alert(data.error || "حدث خطأ غير متوقع");
-            btn.innerText = originalText;
-        }
-    } catch (e) {
-        alert("فشل الاتصال بالخادم");
-        btn.innerText = originalText;
-    }
-    btn.disabled = false;
-}
-</script>
-{% endblock %}
+}"""
+
+if js_code_to_replace in content:
+    content = content.replace(js_code_to_replace, new_js_code)
+
+with open('templates/superadmin.html', 'wb') as f:
+    f.write(content.encode('utf-8'))
+print("Successfully patched superadmin.html")

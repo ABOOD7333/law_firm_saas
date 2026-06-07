@@ -23,9 +23,9 @@ class AccessProfiles(Base):
     email_verified: Mapped[int] = mapped_column(Integer, CheckConstraint('email_verified IN (0, 1)'), nullable=False, server_default=text('0'))
     reset_verified: Mapped[int] = mapped_column(Integer, CheckConstraint('reset_verified IN (0, 1)'), nullable=False, server_default=text('0'))
     state: Mapped[str] = mapped_column(Text, nullable=False, server_default=text("'draft'"))
-    protection_type: Mapped[str] = mapped_column(Text, nullable=False, server_default=text("'ربط الجهاز الحالي'"))
+    protection_type: Mapped[str] = mapped_column(Text, nullable=False, server_default=text("'Ø±Ø¨Ø· Ø§Ù„Ø¬Ù‡Ø§Ø² Ø§Ù„Ø­Ø§Ù„ÙŠ'"))
     preferred_theme: Mapped[str] = mapped_column(Text, nullable=False, server_default=text("'light'"))
-    role: Mapped[str] = mapped_column(Text, nullable=False, server_default=text("'محامٍ'"))
+    role: Mapped[str] = mapped_column(Text, nullable=False, server_default=text("'Ù…Ø­Ø§Ù…Ù�'"))
     failed_attempts: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text('0'))
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'), index=True)
     updated_at: Mapped[Optional[str]] = mapped_column(Text)
@@ -582,7 +582,7 @@ class LawUserDevices(Base):
 
 
 # ===================================================
-# ����� ������� ����� ��������
+# ÌÏÇæá ÇáãÓÇÚÏ ÇáÐßí ÇáÞÇäæäí
 # ===================================================
 
 class AIChatHistory(Base):
@@ -613,7 +613,7 @@ class AIKnowledge(Base):
     is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
 
 # ===================================================
-# ����� ���� ������� RAG (������� �������)
+# ÌÏÇæá ãÍÑß ÇáãÚÑÝÉ RAG (ÇáãÑÍáÉ ÇáËÇäíÉ)
 # ===================================================
 
 class KnowledgeDocument(Base):
@@ -623,7 +623,7 @@ class KnowledgeDocument(Base):
     file_name: Mapped[str] = mapped_column(Text, nullable=False)
     file_path: Mapped[str] = mapped_column(Text, nullable=False)
     file_type: Mapped[str] = mapped_column(Text, nullable=False) # pdf, docx, txt, img
-    category: Mapped[str] = mapped_column(Text, nullable=False, index=True) # ����� ��������
+    category: Mapped[str] = mapped_column(Text, nullable=False, index=True) # ÇáÞÓã ÇáÞÇäæäí
     status: Mapped[str] = mapped_column(Text, nullable=False, server_default=text("'pending'")) # pending, indexing, indexed, failed
     document_hash: Mapped[str] = mapped_column(Text, unique=True, index=True)
     chunk_count: Mapped[int] = mapped_column(Integer, server_default=text('0'))
@@ -642,4 +642,25 @@ class DocumentChunkMetadata(Base):
     article_number: Mapped[Optional[str]] = mapped_column(Text)
     page_number: Mapped[Optional[int]] = mapped_column(Integer)
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+
+
+# ============================================================
+# Payment Requests — طلبات الدفع بالتحويل البنكي
+# ============================================================
+class PaymentRequest(Base):
+    __tablename__ = 'payment_requests'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    office_id: Mapped[int] = mapped_column(ForeignKey('law_offices.id', ondelete='CASCADE'), nullable=False, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey('access_profiles.id', ondelete='SET NULL'), nullable=True)
+    plan: Mapped[str] = mapped_column(Text, nullable=False)           # 'monthly' | 'yearly'
+    amount: Mapped[Optional[float]] = mapped_column(REAL)             # المبلغ المدفوع
+    currency: Mapped[str] = mapped_column(Text, server_default=text("'USD'"))
+    transfer_ref: Mapped[Optional[str]] = mapped_column(Text)         # رقم مرجع التحويل
+    receipt_base64: Mapped[Optional[str]] = mapped_column(Text)       # صورة الإيصال
+    status: Mapped[str] = mapped_column(Text, server_default=text("'pending'"))  # pending|approved|rejected
+    admin_notes: Mapped[Optional[str]] = mapped_column(Text)          # ملاحظات الأدمن
+    submitted_at: Mapped[str] = mapped_column(Text, server_default=text('CURRENT_TIMESTAMP'))
+    reviewed_at: Mapped[Optional[str]] = mapped_column(Text)
+    reviewed_by: Mapped[Optional[int]] = mapped_column(Integer)
 

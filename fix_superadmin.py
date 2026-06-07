@@ -1,56 +1,19 @@
-from fastapi import APIRouter, Request, Depends, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
-from sqlalchemy.orm import Session
-import json
+import sys
 
-from database.database import get_db
-from database.models import AccessProfiles, LawOffices, PaymentRequest
-from dependencies import get_current_user, templates
-from core.logger import app_logger
+with open('routers/superadmin.py', 'rb') as f:
+    content = f.read().decode('utf-8')
 
-router = APIRouter()
+# 1. Add PaymentRequest import
+content = content.replace("from database.models import AccessProfiles, LawOffices", "from database.models import AccessProfiles, LawOffices, PaymentRequest")
 
-def is_superadmin(user: AccessProfiles):
-    # Only allow user ID 1 or a specific username to access the superadmin panel
-    if not user:
-        return False
-    if user.id == 1 or user.username == 'ABOOD':
-        return True
-    return False
+# 2. Add payment_requests query inside /superadmin route
+old_return = """        return templates.TemplateResponse(request=request, name="superadmin.html", context={
+            "user": user,
+            "active_page": "superadmin",
+            "offices": office_data
+        })"""
 
-@router.get("/superadmin", response_class=HTMLResponse)
-async def superadmin_page(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
-    if not user or not is_superadmin(user):
-        return RedirectResponse(url="/dashboard", status_code=303)
-    
-    try:
-        # Fetch all offices
-        offices = db.query(LawOffices).all()
-        
-        # Fetch the owner details for each office
-        office_data = []
-        for office in offices:
-            owner = db.query(AccessProfiles).filter(AccessProfiles.id == office.owner_user_id).first() if office.owner_user_id else None
-            # Count users in this office
-            user_count = db.query(AccessProfiles).filter(AccessProfiles.office_id == office.id).count()
-            
-            office_data.append({
-                "id": office.id,
-                "name": office.name,
-                "status_key": office.status_key,
-                "is_active": office.is_active,
-                "created_at": office.created_at,
-                "user_count": user_count,
-                "owner_name": owner.name if owner else "غير محدد",
-                "owner_email": owner.email if owner else "غير محدد",
-                "owner_phone": owner.phone if owner else "غير محدد",
-                "subscription_plan": getattr(office, 'subscription_plan', 'trial'),
-                "subscription_end": getattr(office, 'subscription_end', None),
-                "receipt_status": getattr(office, 'receipt_status', None),
-                "receipt_base64": getattr(office, 'receipt_base64', None)
-            })
-            
-        payment_requests = db.query(PaymentRequest).order_by(PaymentRequest.id.desc()).all()
+new_return = """        payment_requests = db.query(PaymentRequest).order_by(PaymentRequest.id.desc()).all()
         pr_data = []
         for pr in payment_requests:
             pr_office = db.query(LawOffices).filter(LawOffices.id == pr.office_id).first()
@@ -74,36 +37,52 @@ async def superadmin_page(request: Request, db: Session = Depends(get_db), user:
             "active_page": "superadmin",
             "offices": office_data,
             "payment_requests": pr_data
-        })
-    except Exception as e:
-        import traceback
-        app_logger.error(f"Superadmin page error: {e}\n{traceback.format_exc()}")
-        return HTMLResponse(content=f"An error occurred: {e}", status_code=500)
+        })"""
+content = content.replace(old_return, new_return)
 
-@router.post("/api/superadmin/toggle-office/{office_id}")
-async def toggle_office(office_id: int, request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
+# 3. Replace approve-receipt endpoint with approve-payment endpoint
+old_approve_endpoint = """@router.post("/api/superadmin/approve-receipt/{office_id}")
+async def approve_receipt(office_id: int, request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     if not user or not is_superadmin(user):
         return JSONResponse({"success": False, "error": "غير مصرح لك بالقيام بهذا الإجراء"}, status_code=403)
         
     try:
+        data = await request.json()
+        action = data.get("action") # 'approve' or 'reject'
+        
         office = db.query(LawOffices).filter(LawOffices.id == office_id).first()
         if not office:
             return JSONResponse({"success": False, "error": "المكتب غير موجود"}, status_code=404)
             
-        # Toggle status
-        office.is_active = 1 if office.is_active == 0 else 0
-        db.commit()
-        
-        status_text = "تفعيل" if office.is_active == 1 else "إيقاف"
-        app_logger.info(f"SUPERADMIN | Office {office.id} toggled to {office.is_active} by user {user.id}")
-        
-        return JSONResponse({"success": True, "message": f"تم {status_text} المكتب بنجاح", "is_active": office.is_active})
+        if action == 'approve':
+            from datetime import datetime, timezone, timedelta
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
+            plan = getattr(office, 'subscription_plan', 'monthly')
+            if plan == 'yearly':
+                end_date = now + timedelta(days=365)
+            else:
+                end_date = now + timedelta(days=30)
+                
+            office.subscription_end = end_date.strftime("%Y-%m-%d %H:%M:%S")
+            office.receipt_status = 'approved'
+            office.receipt_base64 = None # Clear receipt to save space
+            office.is_active = 1 # Auto-activate if suspended
+            db.commit()
+            return JSONResponse({"success": True, "message": "تم اعتماد السند وتفعيل الاشتراك بنجاح"})
+            
+        elif action == 'reject':
+            office.receipt_status = 'rejected'
+            office.receipt_base64 = None
+            db.commit()
+            return JSONResponse({"success": True, "message": "تم رفض السند"})
+            
+        return JSONResponse({"success": False, "error": "إجراء غير صالح"}, status_code=400)
     except Exception as e:
         db.rollback()
-        app_logger.error(f"Superadmin toggle error: {e}")
-        return JSONResponse({"success": False, "error": "حدث خطأ داخلي"}, status_code=500)
+        app_logger.error(f"Superadmin receipt approval error: {e}")
+        return JSONResponse({"success": False, "error": "حدث خطأ داخلي"}, status_code=500)"""
 
-@router.post("/api/superadmin/approve-payment/{payment_id}")
+new_approve_endpoint = """@router.post("/api/superadmin/approve-payment/{payment_id}")
 async def approve_payment(payment_id: int, request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     if not user or not is_superadmin(user):
         return JSONResponse({"success": False, "error": "غير مصرح لك بالقيام بهذا الإجراء"}, status_code=403)
@@ -143,13 +122,13 @@ async def approve_payment(payment_id: int, request: Request, db: Session = Depen
                 try:
                     from email_service import send_email_async
                     import asyncio
-                    html_content = f"""
+                    html_content = f\"\"\"
                     <div dir="rtl">
                         <h2 style="color: #10b981;">✅ تم تفعيل اشتراكك بنجاح</h2>
                         <p>شكراً لثقتك بنا في LawSaaS.</p>
                         <p>لقد تم تأكيد دفعتك وتفعيل باقتك ({payment.plan}).</p>
                     </div>
-                    """
+                    \"\"\"
                     asyncio.create_task(send_email_async(office_owner.email, "✅ تم تفعيل اشتراكك - LawSaaS", html_content))
                 except Exception:
                     pass
@@ -168,14 +147,14 @@ async def approve_payment(payment_id: int, request: Request, db: Session = Depen
                 try:
                     from email_service import send_email_async
                     import asyncio
-                    html_content = f"""
+                    html_content = f\"\"\"
                     <div dir="rtl">
                         <h2 style="color: #ef4444;">❌ لم يتم قبول طلب الدفع</h2>
                         <p>مرحباً، تم رفض إيصال الدفع الذي رفعته لسبب التالي:</p>
                         <p style="background: #f1f5f9; padding: 10px; border-radius: 5px;">{notes}</p>
                         <p>يرجى التأكد من بيانات التحويل والمحاولة مرة أخرى.</p>
                     </div>
-                    """
+                    \"\"\"
                     asyncio.create_task(send_email_async(office_owner.email, "❌ تنبيه بشأن طلب الدفع - LawSaaS", html_content))
                 except Exception:
                     pass
@@ -187,39 +166,10 @@ async def approve_payment(payment_id: int, request: Request, db: Session = Depen
     except Exception as e:
         db.rollback()
         app_logger.error(f"Superadmin payment approval error: {e}")
-        return JSONResponse({"success": False, "error": "حدث خطأ داخلي"}, status_code=500)
+        return JSONResponse({"success": False, "error": "حدث خطأ داخلي"}, status_code=500)"""
 
-@router.get("/api/superadmin/fix-subscriptions")
-async def fix_legacy_subscriptions(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
-    if not user or not is_superadmin(user):
-        return JSONResponse({"success": False, "error": "غير مصرح"}, status_code=403)
-        
-    try:
-        from datetime import datetime, timezone, timedelta
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
-        trial_end = now + timedelta(days=14)
-        trial_end_str = trial_end.strftime("%Y-%m-%d %H:%M:%S")
-        
-        offices = db.query(LawOffices).all()
-        updated_count = 0
-        for off in offices:
-            owner = db.query(AccessProfiles).filter(AccessProfiles.id == off.owner_user_id).first() if off.owner_user_id else None
-            is_main = off.id == 1 or off.name == 'المكتب الرئيسي' or (owner and owner.username == 'ABOOD')
-            
-            if is_main:
-                off.subscription_plan = 'lifetime'
-                off.subscription_end = None
-                off.receipt_status = 'approved'
-            else:
-                off.subscription_plan = 'trial'
-                off.subscription_end = trial_end_str
-                off.receipt_status = None
-            
-            updated_count += 1
-            
-        db.commit()
-        return JSONResponse({"success": True, "message": f"تم تحديث اشتراكات {updated_count} مكتب بنجاح. المكتب الرئيسي أصبح مجاني دائماً والبقية تم إعطاؤهم 14 يوم من اليوم."})
-    except Exception as e:
-        db.rollback()
-        app_logger.error(f"Superadmin fix subscriptions error: {e}")
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+content = content.replace(old_approve_endpoint, new_approve_endpoint)
+
+with open('routers/superadmin.py', 'wb') as f:
+    f.write(content.encode('utf-8'))
+print("Successfully patched superadmin.py")

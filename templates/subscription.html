@@ -4,337 +4,700 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>الاشتراكات - LawSaaS</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
             --primary: #5c2d91;
-            --primary-hover: #4338ca;
-            --bg: #f8fafc;
-            --card-bg: rgba(255, 255, 255, 0.85);
-            --text-main: #0f172a;
-            --text-muted: #64748b;
+            --primary-light: #7c3aed;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --bg: #f1f5f9;
+            --card: #ffffff;
+            --text: #0f172a;
+            --muted: #64748b;
+            --border: #e2e8f0;
         }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            margin: 0; padding: 0;
             font-family: 'Cairo', sans-serif;
-            background: linear-gradient(135deg, #e2e8f0 0%, #f8fafc 100%);
-            color: var(--text-main);
+            background: linear-gradient(135deg, #ede9fe 0%, #dbeafe 50%, #f0fdf4 100%);
             min-height: 100vh;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: var(--text);
         }
-        .bg-shapes {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; overflow: hidden;
+        .bg-orb {
+            position: fixed; border-radius: 50%; filter: blur(100px); opacity: 0.4; z-index: 0; pointer-events: none;
         }
-        .shape {
-            position: absolute; filter: blur(80px); opacity: 0.5; border-radius: 50%;
-        }
-        .shape-1 { width: 400px; height: 400px; background: #c4b5fd; top: -100px; right: -100px; }
-        .shape-2 { width: 500px; height: 500px; background: #bae6fd; bottom: -150px; left: -100px; }
+        .orb1 { width: 600px; height: 600px; background: #a78bfa; top: -200px; right: -200px; }
+        .orb2 { width: 500px; height: 500px; background: #60a5fa; bottom: -150px; left: -150px; }
+        .orb3 { width: 300px; height: 300px; background: #34d399; bottom: 100px; right: 100px; }
 
-        .container {
-            width: 90%; max-width: 1000px; margin: 40px auto;
+        .page-wrap {
+            position: relative; z-index: 1;
+            max-width: 1100px; margin: 0 auto;
+            padding: 40px 20px 80px;
         }
 
-        .header {
-            text-align: center; margin-bottom: 40px;
+        /* ── Header ── */
+        .page-header { text-align: center; margin-bottom: 50px; }
+        .page-header .logo {
+            display: inline-flex; align-items: center; gap: 10px;
+            font-size: 1.1rem; font-weight: 700; color: var(--primary);
+            background: white; padding: 8px 18px; border-radius: 30px;
+            box-shadow: 0 4px 15px rgba(92,45,145,0.15);
+            margin-bottom: 24px;
         }
-        .header h1 { font-size: 2.5rem; font-weight: 800; color: var(--primary); margin-bottom: 10px; }
-        .header p { font-size: 1.1rem; color: var(--text-muted); }
+        .page-header h1 {
+            font-size: 2.8rem; font-weight: 900;
+            background: linear-gradient(135deg, #5c2d91, #2563eb);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            margin-bottom: 12px;
+        }
+        .page-header p { font-size: 1.15rem; color: var(--muted); max-width: 550px; margin: 0 auto; }
 
+        /* ── Alert Banners ── */
         .alert-banner {
             background: linear-gradient(90deg, #ef4444, #f59e0b);
-            color: white; padding: 15px 20px; border-radius: 12px;
-            text-align: center; font-weight: bold; margin-bottom: 30px;
-            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.3);
-            animation: pulse 2s infinite;
+            color: white; padding: 16px 24px; border-radius: 16px;
+            text-align: center; font-weight: bold; font-size: 1.05rem;
+            margin-bottom: 35px;
+            box-shadow: 0 8px 25px rgba(239,68,68,0.3);
+            animation: gentlePulse 3s ease-in-out infinite;
         }
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.02); }
-            100% { transform: scale(1); }
+        .alert-pending {
+            background: linear-gradient(90deg, #10b981, #059669);
+            box-shadow: 0 8px 25px rgba(16,185,129,0.3);
+            animation: none;
+        }
+        .alert-trial { background: linear-gradient(90deg, #3b82f6, #8b5cf6); animation: none; }
+        @keyframes gentlePulse {
+            0%,100% { transform: scale(1); }
+            50% { transform: scale(1.01); }
         }
 
-        .plans {
-            display: flex; gap: 30px; justify-content: center; flex-wrap: wrap;
+        /* ── Plans Grid ── */
+        .plans-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 28px; margin-bottom: 50px;
         }
         .plan-card {
-            background: var(--card-bg);
-            backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.5);
-            border-radius: 24px; padding: 40px 30px; width: 320px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
-            transition: all 0.3s ease; position: relative;
+            background: white; border-radius: 28px;
+            padding: 40px 32px; position: relative;
+            border: 2px solid transparent;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.06);
+            transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
             display: flex; flex-direction: column;
         }
         .plan-card:hover {
-            transform: translateY(-10px); box-shadow: 0 30px 60px rgba(92, 45, 145, 0.15);
+            transform: translateY(-8px);
+            box-shadow: 0 25px 60px rgba(92,45,145,0.15);
             border-color: var(--primary);
         }
-        .plan-card.popular {
-            border: 2px solid var(--primary); transform: scale(1.05);
+        .plan-card.featured {
+            background: linear-gradient(145deg, #f5f3ff, #ede9fe);
+            border-color: var(--primary);
+            transform: scale(1.02);
         }
-        .plan-card.popular:hover { transform: scale(1.05) translateY(-10px); }
-        
-        .badge {
-            position: absolute; top: -15px; left: 50%; transform: translateX(-50%);
-            background: var(--primary); color: white; padding: 6px 16px; border-radius: 20px;
-            font-size: 0.85rem; font-weight: bold; box-shadow: 0 4px 10px rgba(92, 45, 145, 0.3);
+        .plan-card.featured:hover { transform: scale(1.02) translateY(-8px); }
+        .plan-badge {
+            position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+            background: linear-gradient(135deg, #5c2d91, #7c3aed);
+            color: white; padding: 6px 20px; border-radius: 25px;
+            font-size: 0.82rem; font-weight: 700;
+            box-shadow: 0 4px 15px rgba(92,45,145,0.4);
+            white-space: nowrap;
         }
-
-        .plan-name { font-size: 1.5rem; font-weight: 800; margin-bottom: 10px; color: var(--text-main); }
-        .plan-price { font-size: 3rem; font-weight: 800; color: var(--primary); margin-bottom: 20px; display: flex; align-items: baseline; justify-content: center;}
-        .plan-price span { font-size: 1rem; color: var(--text-muted); font-weight: 600; margin-right: 5px; }
-
-        .features { list-style: none; padding: 0; margin: 0 0 30px 0; flex: 1; }
-        .features li { padding: 10px 0; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 10px; font-weight: 600; }
-        .features li i { color: #10b981; }
-
+        .plan-icon {
+            width: 60px; height: 60px;
+            background: linear-gradient(135deg, #ede9fe, #dbeafe);
+            border-radius: 16px; display: flex; align-items: center; justify-content: center;
+            font-size: 1.6rem; margin-bottom: 20px;
+        }
+        .plan-name { font-size: 1.4rem; font-weight: 800; color: var(--text); margin-bottom: 6px; }
+        .plan-desc { font-size: 0.9rem; color: var(--muted); margin-bottom: 20px; }
+        .plan-price {
+            font-size: 3.2rem; font-weight: 900; color: var(--primary);
+            display: flex; align-items: baseline; gap: 6px; margin-bottom: 8px;
+        }
+        .plan-price .currency { font-size: 1.4rem; font-weight: 700; }
+        .plan-price .period { font-size: 1rem; color: var(--muted); font-weight: 600; }
+        .plan-saving {
+            display: inline-block; background: #dcfce7; color: #16a34a;
+            padding: 4px 12px; border-radius: 20px; font-size: 0.82rem; font-weight: 700;
+            margin-bottom: 24px;
+        }
+        .features-list { list-style: none; flex: 1; margin-bottom: 30px; }
+        .features-list li {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 0; border-bottom: 1px solid var(--border);
+            font-weight: 600; font-size: 0.95rem;
+        }
+        .features-list li:last-child { border-bottom: none; }
+        .features-list li .icon { color: var(--success); font-size: 1rem; flex-shrink: 0; }
         .btn-subscribe {
+            width: 100%; padding: 16px;
             background: linear-gradient(135deg, #5c2d91, #4338ca);
-            color: white; border: none; padding: 15px; border-radius: 12px;
-            font-size: 1.1rem; font-weight: bold; font-family: inherit;
-            cursor: pointer; transition: 0.3s; width: 100%;
-            box-shadow: 0 8px 20px rgba(92, 45, 145, 0.2);
+            color: white; border: none; border-radius: 14px;
+            font-size: 1.1rem; font-weight: 700; font-family: inherit;
+            cursor: pointer; transition: all 0.3s;
+            box-shadow: 0 6px 20px rgba(92,45,145,0.3);
         }
-        .btn-subscribe:hover { opacity: 0.9; transform: translateY(-2px); }
+        .btn-subscribe:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(92,45,145,0.4); }
 
-        /* Checkout Modal */
-        .modal {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(10px);
-            display: none; align-items: center; justify-content: center; z-index: 1000;
+        /* ── Bank Info Box ── */
+        .bank-info-section {
+            background: white; border-radius: 24px;
+            padding: 36px 32px; margin-bottom: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.06);
+            border: 1px solid var(--border);
         }
-        .modal.active { display: flex; }
-        .checkout-box {
-            background: white; border-radius: 24px; width: 90%; max-width: 500px;
-            padding: 30px; box-shadow: 0 25px 50px rgba(0,0,0,0.2);
-            position: relative; animation: slideUp 0.4s ease; max-height: 90vh; overflow-y: auto;
+        .bank-info-section h3 {
+            font-size: 1.3rem; font-weight: 800; color: var(--text);
+            margin-bottom: 6px;
+            display: flex; align-items: center; gap: 10px;
         }
-        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        
-        .checkout-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .checkout-header h3 { margin: 0; font-size: 1.4rem; color: var(--text-main); }
-        .close-modal { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #94a3b8; }
-        
-        .payment-methods {
-            display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;
+        .bank-info-section > p { color: var(--muted); font-size: 0.95rem; margin-bottom: 24px; }
+        .bank-card {
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            border-radius: 18px; padding: 28px;
+            color: white; position: relative; overflow: hidden;
+            margin-bottom: 16px;
         }
-        .method-card {
-            background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 15px;
-            display: flex; flex-direction: column; gap: 10px;
+        .bank-card::before {
+            content: ''; position: absolute; top: -50%; right: -50%;
+            width: 200%; height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 60%);
         }
-        .method-card strong { color: var(--primary); font-size: 1.1rem;}
+        .bank-card-header {
+            display: flex; align-items: center; gap: 12px;
+            margin-bottom: 20px;
+        }
+        .bank-logo {
+            width: 48px; height: 48px; background: rgba(255,255,255,0.15);
+            border-radius: 12px; display: flex; align-items: center; justify-content: center;
+            font-size: 1.4rem;
+        }
+        .bank-card-header div .bank-name { font-size: 1.1rem; font-weight: 700; }
+        .bank-card-header div .bank-sub { font-size: 0.82rem; color: rgba(255,255,255,0.6); }
+        .bank-field { margin-bottom: 14px; }
+        .bank-field label { display: block; font-size: 0.78rem; color: rgba(255,255,255,0.55); font-weight: 600; margin-bottom: 5px; letter-spacing: 0.5px; text-transform: uppercase; }
+        .bank-field .value {
+            display: flex; align-items: center; justify-content: space-between;
+            background: rgba(255,255,255,0.08); border-radius: 10px;
+            padding: 10px 14px; font-size: 1.05rem; font-weight: 700; letter-spacing: 1px;
+        }
+        .copy-btn {
+            background: rgba(255,255,255,0.15); border: none; color: white;
+            padding: 5px 10px; border-radius: 7px; cursor: pointer; font-size: 0.8rem;
+            transition: background 0.2s;
+        }
+        .copy-btn:hover { background: rgba(255,255,255,0.3); }
+        .bank-fields-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .steps-list { list-style: none; }
+        .steps-list li {
+            display: flex; align-items: flex-start; gap: 14px;
+            padding: 12px 0; border-bottom: 1px solid var(--border);
+        }
+        .steps-list li:last-child { border-bottom: none; }
+        .step-num {
+            width: 30px; height: 30px; flex-shrink: 0;
+            background: linear-gradient(135deg, #5c2d91, #7c3aed);
+            color: white; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.85rem; font-weight: 800;
+        }
+        .step-text { font-size: 0.95rem; font-weight: 600; color: var(--text); padding-top: 4px; }
 
-        .card-element {
-            background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 15px;
+        /* ── My Requests Table ── */
+        .requests-section {
+            background: white; border-radius: 24px;
+            padding: 28px 32px; margin-bottom: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.06);
         }
-        .card-element input {
-            width: 100%; border: none; background: transparent; outline: none; font-family: inherit; font-size: 1rem;
+        .requests-section h3 { font-size: 1.2rem; font-weight: 800; margin-bottom: 20px; }
+        .req-table { width: 100%; border-collapse: collapse; }
+        .req-table th { background: #f8fafc; padding: 12px 15px; text-align: right; font-size: 0.85rem; color: var(--muted); border-bottom: 2px solid var(--border); }
+        .req-table td { padding: 14px 15px; border-bottom: 1px solid #f1f5f9; font-size: 0.92rem; }
+        .badge-status {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 5px 12px; border-radius: 20px; font-size: 0.82rem; font-weight: 700;
         }
-        
-        .btn-pay {
-            background: #10b981; color: white; border: none; width: 100%; padding: 16px; border-radius: 12px;
-            font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: 0.3s;
-        }
-        .btn-pay:hover { background: #059669; }
-        .btn-pay:disabled { background: #94a3b8; cursor: not-allowed; }
+        .badge-pending { background: #fef3c7; color: #b45309; }
+        .badge-approved { background: #dcfce7; color: #16a34a; }
+        .badge-rejected { background: #fee2e2; color: #dc2626; }
 
-        .loader { display: none; text-align: center; padding: 20px; }
-        .loader i { font-size: 3rem; color: #10b981; animation: spin 1s linear infinite; }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-        
-        .success-msg { display: none; text-align: center; color: #10b981; font-weight: bold; font-size: 1.2rem; }
+        /* ── Modal ── */
+        .modal-overlay {
+            position: fixed; inset: 0;
+            background: rgba(15,23,42,0.75); backdrop-filter: blur(8px);
+            display: none; align-items: center; justify-content: center;
+            z-index: 1000; padding: 20px;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal-box {
+            background: white; border-radius: 24px;
+            width: 100%; max-width: 560px; max-height: 90vh;
+            overflow-y: auto; padding: 32px;
+            animation: slideUp 0.35s cubic-bezier(0.4,0,0.2,1);
+            box-shadow: 0 25px 60px rgba(0,0,0,0.25);
+        }
+        @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .modal-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 24px; padding-bottom: 18px; border-bottom: 1px solid var(--border);
+        }
+        .modal-title { font-size: 1.3rem; font-weight: 800; color: var(--text); }
+        .modal-close { background: #f1f5f9; border: none; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 1.1rem; color: var(--muted); display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        .modal-close:hover { background: var(--border); }
+        .plan-summary {
+            background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+            border-radius: 14px; padding: 16px 20px; margin-bottom: 20px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .plan-summary .label { font-size: 0.9rem; color: var(--muted); }
+        .plan-summary .amount { font-size: 1.8rem; font-weight: 900; color: var(--primary); }
+        .form-group { margin-bottom: 18px; }
+        .form-label {
+            display: block; font-size: 0.88rem; font-weight: 700;
+            color: var(--text); margin-bottom: 8px;
+        }
+        .form-label .required { color: var(--danger); margin-right: 3px; }
+        .form-input {
+            width: 100%; padding: 12px 14px;
+            border: 1.5px solid var(--border); border-radius: 10px;
+            font-family: inherit; font-size: 0.95rem; color: var(--text);
+            transition: border 0.2s; outline: none;
+            background: #f8fafc;
+        }
+        .form-input:focus { border-color: var(--primary); background: white; }
+        .upload-zone {
+            border: 2px dashed var(--border); border-radius: 14px;
+            padding: 28px; text-align: center; cursor: pointer;
+            transition: all 0.25s; background: #f8fafc;
+        }
+        .upload-zone:hover { border-color: var(--primary); background: #f5f3ff; }
+        .upload-zone .icon { font-size: 2.5rem; color: var(--primary); margin-bottom: 10px; }
+        .upload-zone p { font-weight: 600; color: var(--muted); font-size: 0.9rem; }
+        .upload-preview {
+            display: none; margin-top: 12px; position: relative;
+        }
+        .upload-preview img { max-width: 100%; max-height: 200px; border-radius: 10px; border: 1px solid var(--border); }
+        .btn-submit {
+            width: 100%; padding: 16px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white; border: none; border-radius: 14px;
+            font-size: 1.1rem; font-weight: 700; font-family: inherit;
+            cursor: pointer; transition: all 0.3s; margin-top: 6px;
+            box-shadow: 0 6px 20px rgba(16,185,129,0.3);
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+        }
+        .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(16,185,129,0.4); }
+        .btn-submit:disabled { background: #94a3b8; cursor: not-allowed; transform: none; box-shadow: none; }
 
-        .return-link { display: inline-block; margin-top: 20px; color: var(--primary); text-decoration: none; font-weight: bold; }
+        .loader-state, .success-state { display: none; text-align: center; padding: 30px 0; }
+        .loader-state i { font-size: 3rem; color: var(--primary); animation: spin 1s linear infinite; }
+        .success-state i { font-size: 4rem; color: var(--success); margin-bottom: 16px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .return-link {
+            display: inline-flex; align-items: center; gap: 8px;
+            color: var(--primary); font-weight: 700; text-decoration: none;
+            font-size: 1rem; margin-top: 10px;
+            transition: gap 0.2s;
+        }
+        .return-link:hover { gap: 12px; }
+
+        @media (max-width: 600px) {
+            .page-header h1 { font-size: 2rem; }
+            .bank-fields-grid { grid-template-columns: 1fr; }
+            .plans-grid { grid-template-columns: 1fr; }
+            .plan-card.featured { transform: scale(1); }
+        }
     </style>
 </head>
 <body>
-    <div class="bg-shapes">
-        <div class="shape shape-1"></div>
-        <div class="shape shape-2"></div>
-    </div>
+    <div class="bg-orb orb1"></div>
+    <div class="bg-orb orb2"></div>
+    <div class="bg-orb orb3"></div>
 
-    <div class="container">
-        <div class="header">
-            <h1>ترقية مساحة العمل</h1>
-            <p>اختر الباقة المناسبة لمكتبك واستمتع بجميع الميزات السحابية</p>
+    <div class="page-wrap">
+
+        <!-- Header -->
+        <div class="page-header">
+            <div class="logo"><i class="fa-solid fa-scale-balanced"></i> LawSaaS</div>
+            <h1>اختر خطتك وابدأ رحلتك</h1>
+            <p>نظام إدارة مكاتب المحاماة الأكثر تطوراً في العالم العربي</p>
         </div>
 
-        {% if office and office.receipt_status == 'pending' %}
-        <div class="alert-banner" style="background: linear-gradient(90deg, #10b981, #34d399);">
-            <i class="fa-solid fa-clock"></i>
-            تم استلام سند الدفع بنجاح. جاري مراجعته من قبل الإدارة وسوف يتم تفعيل حسابك قريباً.
+        <!-- Pending Banner -->
+        {% if pending_request %}
+        <div class="alert-banner alert-pending" style="margin-bottom: 30px;">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            طلب دفعك قيد المراجعة — سيتم تفعيل حسابك خلال 24 ساعة من تأكيد التحويل.
         </div>
-        <div style="text-align: center; margin-top: 30px;">
-            <a href="/logout" class="btn-subscribe" style="display: inline-block; width: auto; padding: 10px 30px; text-decoration: none;">تسجيل الخروج</a>
+        {% endif %}
+
+        <!-- Expiry / Trial Banners -->
+        {% if user.subscription_expired %}
+        <div class="alert-banner">
+            <i class="fa-solid fa-lock"></i>
+            انتهت فترة التجربة المجانية. جدّد اشتراكك الآن للمتابعة.
         </div>
+        {% elif office and office.subscription_plan == 'trial' %}
+        <div class="alert-banner alert-trial">
+            <i class="fa-solid fa-hourglass-half"></i>
+            أنت في فترة التجربة المجانية — متبقي {{ user.trial_days_left }} يوم.
+        </div>
+        {% endif %}
+
+        <!-- Non-admin block -->
+        {% if user.role not in ['مدير النظام', 'مدير', 'مدير المكتب', 'صاحب مكتب', 'صاحب المكتب'] %}
+        <div style="background: white; padding: 50px; border-radius: 24px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.06);">
+            <i class="fa-solid fa-shield-halved" style="font-size: 3.5rem; color: #94a3b8; margin-bottom: 20px;"></i>
+            <h2 style="margin-bottom: 10px;">انتهى اشتراك المكتب</h2>
+            <p style="color: var(--muted);">تواصل مع مدير مكتبك لتجديد الاشتراك.</p>
+            <a href="/logout" style="display: inline-block; margin-top: 20px; padding: 12px 30px; background: var(--primary); color: white; border-radius: 12px; text-decoration: none; font-weight: 700;">تسجيل الخروج</a>
+        </div>
+
         {% else %}
 
-            {% if user.subscription_expired %}
-            <div class="alert-banner">
-                <i class="fa-solid fa-lock"></i>
-                عذراً، انتهت فترة التجربة المجانية لمكتبك. الرجاء تجديد الاشتراك للمتابعة.
-            </div>
-            {% elif office and office.subscription_plan == 'trial' %}
-            <div class="alert-banner" style="background: linear-gradient(90deg, #3b82f6, #8b5cf6);">
-                <i class="fa-solid fa-clock"></i>
-                أنت حالياً في فترة التجربة المجانية. متبقي لك {{ user.trial_days_left }} أيام.
-            </div>
-            {% endif %}
-
-            {% if user.role not in ['مدير النظام', 'مدير', 'مدير المكتب', 'صاحب مكتب'] %}
-            <div style="text-align: center; background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
-                <i class="fa-solid fa-shield-halved" style="font-size: 4rem; color: #94a3b8; margin-bottom: 20px;"></i>
-                <h2>توقف النظام</h2>
-                <p style="color: #64748b; font-size: 1.1rem;">انتهت فترة اشتراك المكتب. يرجى التواصل مع مدير المكتب أو صاحب الصلاحية لتجديد الاشتراك.</p>
-                <a href="/logout" class="btn-subscribe" style="display: inline-block; width: auto; padding: 10px 30px; margin-top: 20px; text-decoration: none;">تسجيل الخروج</a>
-            </div>
-            {% else %}
-            <div class="plans">
-                <!-- Monthly Plan -->
-                <div class="plan-card">
-                    <div class="plan-name">الباقة الشهرية</div>
-                    <div class="plan-price">$49 <span>/ شهر</span></div>
-                    <ul class="features">
-                        <li><i class="fa-solid fa-check-circle"></i> عدد غير محدود من القضايا</li>
-                        <li><i class="fa-solid fa-check-circle"></i> إدارة الموكلين والجلسات</li>
-                        <li><i class="fa-solid fa-check-circle"></i> النظام المالي والفواتير</li>
-                        <li><i class="fa-solid fa-check-circle"></i> دعم فني على مدار الساعة</li>
-                    </ul>
-                    <button class="btn-subscribe" onclick="openCheckout('monthly', 49)">اشترك الآن</button>
+        <!-- Plans -->
+        <div class="plans-grid">
+            <!-- Monthly -->
+            <div class="plan-card">
+                <div class="plan-icon">📅</div>
+                <div class="plan-name">الخطة الشهرية</div>
+                <div class="plan-desc">مرونة كاملة، ادفع شهراً بشهر</div>
+                <div class="plan-price">
+                    <span class="currency">$</span>49.99
+                    <span class="period">/ شهر</span>
                 </div>
+                <ul class="features-list">
+                    <li><i class="fa-solid fa-check-circle icon"></i> عدد غير محدود من القضايا</li>
+                    <li><i class="fa-solid fa-check-circle icon"></i> إدارة الموكلين والجلسات</li>
+                    <li><i class="fa-solid fa-check-circle icon"></i> النظام المالي والفواتير</li>
+                    <li><i class="fa-solid fa-check-circle icon"></i> المساعد الذكي (RAG)</li>
+                    <li><i class="fa-solid fa-check-circle icon"></i> دعم فني متواصل</li>
+                </ul>
+                <button class="btn-subscribe" onclick="openPayModal('monthly', 49.99)">
+                    <i class="fa-solid fa-rocket"></i> ابدأ الآن
+                </button>
+            </div>
 
-                <!-- Yearly Plan -->
-                <div class="plan-card popular">
-                    <div class="badge">الأكثر توفيراً (خصم 20%)</div>
-                    <div class="plan-name">الباقة السنوية</div>
-                    <div class="plan-price">$490 <span>/ سنة</span></div>
-                    <ul class="features">
-                        <li><i class="fa-solid fa-check-circle"></i> جميع ميزات الباقة الشهرية</li>
-                        <li><i class="fa-solid fa-check-circle"></i> توفير شهرين مجاناً</li>
-                        <li><i class="fa-solid fa-check-circle"></i> نسخ احتياطي تلقائي</li>
-                        <li><i class="fa-solid fa-check-circle"></i> مدير حساب مخصص</li>
-                    </ul>
-                    <button class="btn-subscribe" onclick="openCheckout('yearly', 490)">اشترك الآن</button>
+            <!-- Yearly -->
+            <div class="plan-card featured">
+                <div class="plan-badge">⭐ الأكثر توفيراً — وفّر شهرين!</div>
+                <div class="plan-icon">🏆</div>
+                <div class="plan-name">الخطة السنوية</div>
+                <div class="plan-desc">سعر أفضل، استقرار أكثر</div>
+                <div class="plan-price">
+                    <span class="currency">$</span>499.99
+                    <span class="period">/ سنة</span>
+                </div>
+                <div class="plan-saving">توفير ~100$ مقارنة بالشهري</div>
+                <ul class="features-list">
+                    <li><i class="fa-solid fa-check-circle icon"></i> جميع ميزات الخطة الشهرية</li>
+                    <li><i class="fa-solid fa-check-circle icon"></i> أولوية في الدعم الفني</li>
+                    <li><i class="fa-solid fa-check-circle icon"></i> نسخ احتياطي تلقائي يومي</li>
+                    <li><i class="fa-solid fa-check-circle icon"></i> تقارير متقدمة حصرية</li>
+                    <li><i class="fa-solid fa-check-circle icon"></i> مدير حساب مخصص</li>
+                </ul>
+                <button class="btn-subscribe" onclick="openPayModal('yearly', 499.99)">
+                    <i class="fa-solid fa-crown"></i> اشترك السنوية
+                </button>
+            </div>
+        </div>
+
+        <!-- Bank Info -->
+        <div class="bank-info-section">
+            <h3><i class="fa-solid fa-building-columns" style="color: var(--primary);"></i> بيانات التحويل البنكي</h3>
+            <p>حوّل المبلغ إلى الحساب التالي ثم ارفع صورة الإيصال وسيتم التفعيل خلال 24 ساعة</p>
+
+            <div class="bank-card">
+                <div class="bank-card-header">
+                    <div class="bank-logo">🏦</div>
+                    <div>
+                        <div class="bank-name">بنك الكريمي الإسلامي</div>
+                        <div class="bank-sub">Al-Kuraimi Islamic Bank — Yemen</div>
+                    </div>
+                </div>
+                <div class="bank-fields-grid">
+                    <div class="bank-field">
+                        <label>اسم صاحب الحساب</label>
+                        <div class="value" style="font-size: 0.88rem; letter-spacing: 0;">
+                            عبدالله محمد العليمي
+                        </div>
+                    </div>
+                    <div class="bank-field">
+                        <label>رقم الحساب (USD)</label>
+                        <div class="value">
+                            <span id="acc-num">3079083282</span>
+                            <button class="copy-btn" onclick="copyText('3079083282', this)">
+                                <i class="fa-solid fa-copy"></i> نسخ
+                            </button>
+                        </div>
+                    </div>
+                    <div class="bank-field">
+                        <label>العملة</label>
+                        <div class="value">دولار أمريكي (USD)</div>
+                    </div>
+                    <div class="bank-field">
+                        <label>البنك</label>
+                        <div class="value" style="font-size: 0.88rem; letter-spacing: 0;">بنك الكريمي — اليمن</div>
+                    </div>
                 </div>
             </div>
-            {% endif %}
 
-        {% endif %}
+            <h3 style="margin-top: 28px; margin-bottom: 16px; font-size: 1.1rem;">
+                <i class="fa-solid fa-list-ol" style="color: var(--primary);"></i> خطوات الاشتراك
+            </h3>
+            <ul class="steps-list">
+                <li>
+                    <div class="step-num">1</div>
+                    <div class="step-text">اختر خطتك (شهرية أو سنوية) وانقر "ابدأ الآن"</div>
+                </li>
+                <li>
+                    <div class="step-num">2</div>
+                    <div class="step-text">حوّل المبلغ إلى رقم الحساب أعلاه عبر تطبيق بنك الكريمي أو أي تطبيق دفع</div>
+                </li>
+                <li>
+                    <div class="step-num">3</div>
+                    <div class="step-text">ارفع صورة واضحة لإيصال التحويل وأدخل رقم مرجع العملية</div>
+                </li>
+                <li>
+                    <div class="step-num">4</div>
+                    <div class="step-text">سيتم مراجعة طلبك وتفعيل اشتراكك خلال 24 ساعة</div>
+                </li>
+            </ul>
+        </div>
 
-        {% if not user.subscription_expired and not (office and office.receipt_status == 'pending') %}
-        <div style="text-align: center;">
-            <a href="/dashboard" class="return-link"><i class="fa-solid fa-arrow-right"></i> العودة للوحة التحكم</a>
+        <!-- My Payment Requests -->
+        {% if payment_requests %}
+        <div class="requests-section">
+            <h3><i class="fa-solid fa-receipt" style="color: var(--primary);"></i> طلباتي السابقة</h3>
+            <div style="overflow-x: auto;">
+                <table class="req-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>الخطة</th>
+                            <th>المبلغ</th>
+                            <th>رقم المرجع</th>
+                            <th>التاريخ</th>
+                            <th>الحالة</th>
+                            <th>ملاحظة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for req in payment_requests %}
+                        <tr>
+                            <td style="color: var(--muted); font-weight: 700;">{{ req.id }}</td>
+                            <td>{{ "شهرية" if req.plan == "monthly" else "سنوية" }}</td>
+                            <td style="font-weight: 700;">${{ req.amount or '—' }}</td>
+                            <td style="font-family: monospace;">{{ req.transfer_ref or '—' }}</td>
+                            <td style="color: var(--muted); font-size: 0.85rem;" dir="ltr">{{ req.submitted_at[:10] if req.submitted_at else '—' }}</td>
+                            <td>
+                                {% if req.status == 'pending' %}
+                                <span class="badge-status badge-pending"><i class="fa-solid fa-clock"></i> قيد المراجعة</span>
+                                {% elif req.status == 'approved' %}
+                                <span class="badge-status badge-approved"><i class="fa-solid fa-check"></i> مُفعَّل</span>
+                                {% else %}
+                                <span class="badge-status badge-rejected"><i class="fa-solid fa-times"></i> مرفوض</span>
+                                {% endif %}
+                            </td>
+                            <td style="font-size: 0.85rem; color: var(--muted);">{{ req.admin_notes or '—' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
         {% endif %}
+
+        {% endif %}
+
+        <div style="text-align: center; margin-top: 20px;">
+            <a href="/dashboard" class="return-link">
+                <i class="fa-solid fa-arrow-right"></i> العودة للوحة التحكم
+            </a>
+        </div>
     </div>
 
-    <!-- Checkout Modal -->
-    <div class="modal" id="checkoutModal">
-        <div class="checkout-box">
-            <div class="checkout-header">
-                <h3>الدفع وتجديد الاشتراك</h3>
-                <button class="close-modal" onclick="closeCheckout()">&times;</button>
-            </div>
-            
-            <div id="payment-form">
-                <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 15px;">الإجمالي للدفع: <strong style="color: #0f172a; font-size: 1.2rem;" id="checkout-total">$0</strong></p>
-
-                <div class="payment-methods">
-                    <div class="method-card">
-                        <strong><i class="fa-solid fa-building-columns"></i> للمحامين داخل اليمن:</strong>
-                        <span>عبر محفظة (فلوسك / جوالي / الكريمي)</span>
-                        <span style="font-size: 1.2rem; font-weight: bold; background: #e2e8f0; padding: 5px 10px; border-radius: 5px; text-align: center; letter-spacing: 2px;">782080495</span>
-                    </div>
-                    <div class="method-card">
-                        <strong><i class="fa-solid fa-globe"></i> للمحامين خارج اليمن:</strong>
-                        <span>عبر حوالة (ويسترن يونيون أو موني جرام). الرجاء التواصل مع الدعم الفني لأخذ اسم المستلم.</span>
-                    </div>
+    <!-- Payment Modal -->
+    <div class="modal-overlay" id="payModal">
+        <div class="modal-box">
+            <!-- Form State -->
+            <div id="form-state">
+                <div class="modal-header">
+                    <div class="modal-title" id="modal-title">رفع إيصال الدفع</div>
+                    <button class="modal-close" onclick="closePayModal()"><i class="fa-solid fa-xmark"></i></button>
                 </div>
 
-                <div class="card-element">
-                    <label style="font-size: 0.9rem; color: var(--primary); display: block; margin-bottom: 10px; font-weight: bold;">
-                        <i class="fa-solid fa-file-invoice"></i> إرفاق صورة السند (الإيصال)
+                <div class="plan-summary">
+                    <div>
+                        <div class="label">المبلغ المطلوب تحويله</div>
+                        <div style="font-size: 0.85rem; color: var(--muted); margin-top: 3px;" id="modal-plan-label"></div>
+                    </div>
+                    <div class="amount" id="modal-amount">$0</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        رقم مرجع التحويل <span class="required">*</span>
+                        <span style="font-size: 0.78rem; color: var(--muted); font-weight: 500;">(الرقم الذي يظهر في إيصال التحويل)</span>
                     </label>
-                    <input type="file" id="receiptFile" accept="image/*" style="padding: 10px 0;">
+                    <input type="text" id="transfer-ref" class="form-input" placeholder="مثال: TXN123456789" />
                 </div>
 
-                <button class="btn-pay" id="btn-submit" onclick="processPayment()">إرسال السند للتأكيد <i class="fa-solid fa-paper-plane"></i></button>
+                <div class="form-group">
+                    <label class="form-label">
+                        صورة الإيصال <span class="required">*</span>
+                    </label>
+                    <div class="upload-zone" id="upload-zone" onclick="document.getElementById('receipt-file').click()">
+                        <div class="icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+                        <p>انقر لرفع صورة الإيصال</p>
+                        <p style="font-size: 0.8rem; margin-top: 4px; color: #94a3b8;">JPG, PNG, WEBP — حد أقصى 5MB</p>
+                    </div>
+                    <input type="file" id="receipt-file" accept="image/*" style="display:none" onchange="previewImage(this)">
+                    <div class="upload-preview" id="upload-preview">
+                        <img id="preview-img" src="" alt="معاينة الإيصال">
+                        <button onclick="clearImage()" style="position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; font-size: 0.9rem;">✕</button>
+                    </div>
+                </div>
+
+                <button class="btn-submit" id="submit-btn" onclick="submitPayment()">
+                    <i class="fa-solid fa-paper-plane"></i>
+                    إرسال طلب الاشتراك
+                </button>
             </div>
 
-            <div class="loader" id="payment-loader">
+            <!-- Loading State -->
+            <div class="loader-state" id="loader-state">
                 <i class="fa-solid fa-circle-notch"></i>
-                <p style="margin-top: 15px; font-weight: bold; color: var(--text-main);">جاري إرسال السند...</p>
+                <p style="margin-top: 16px; font-weight: 700; color: var(--muted);">جاري إرسال طلبك...</p>
             </div>
 
-            <div class="success-msg" id="payment-success">
-                <i class="fa-solid fa-circle-check" style="font-size: 4rem; margin-bottom: 15px;"></i>
-                <p>تم إرسال السند بنجاح!</p>
-                <p style="font-size: 0.9rem; color: #64748b;">جاري مراجعته من الإدارة وسيتم تفعيل حسابك فوراً.</p>
-                <button onclick="window.location.reload()" class="btn-pay" style="margin-top: 15px;">حسناً</button>
+            <!-- Success State -->
+            <div class="success-state" id="success-state">
+                <i class="fa-solid fa-circle-check" style="color: var(--success);"></i>
+                <h3 style="margin-bottom: 10px;">تم إرسال طلبك بنجاح!</h3>
+                <p style="color: var(--muted); margin-bottom: 24px;">
+                    سيتم مراجعة إيصالك وتفعيل اشتراكك خلال <strong>24 ساعة</strong>.
+                    ستصلك رسالة تأكيد على بريدك الإلكتروني.
+                </p>
+                <button onclick="window.location.reload()" style="padding: 12px 30px; background: var(--primary); color: white; border: none; border-radius: 12px; font-weight: 700; font-family: inherit; cursor: pointer; font-size: 1rem;">
+                    حسناً
+                </button>
             </div>
         </div>
     </div>
 
     <script>
         let selectedPlan = '';
+        let selectedAmount = 0;
 
-        function openCheckout(plan, price) {
+        function openPayModal(plan, amount) {
             selectedPlan = plan;
-            document.getElementById('checkout-total').innerText = '$' + price;
-            document.getElementById('checkoutModal').classList.add('active');
+            selectedAmount = amount;
+            document.getElementById('modal-title').textContent = plan === 'monthly' ? 'اشتراك شهري' : 'اشتراك سنوي';
+            document.getElementById('modal-plan-label').textContent = plan === 'monthly' ? 'الخطة الشهرية' : 'الخطة السنوية';
+            document.getElementById('modal-amount').textContent = '$' + amount;
+            document.getElementById('payModal').classList.add('open');
         }
 
-        function closeCheckout() {
-            document.getElementById('checkoutModal').classList.remove('active');
+        function closePayModal() {
+            document.getElementById('payModal').classList.remove('open');
         }
 
-        async function processPayment() {
-            const fileInput = document.getElementById('receiptFile');
+        function previewImage(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    document.getElementById('preview-img').src = e.target.result;
+                    document.getElementById('upload-preview').style.display = 'block';
+                    document.getElementById('upload-zone').style.display = 'none';
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function clearImage() {
+            document.getElementById('receipt-file').value = '';
+            document.getElementById('preview-img').src = '';
+            document.getElementById('upload-preview').style.display = 'none';
+            document.getElementById('upload-zone').style.display = 'block';
+        }
+
+        function copyText(text, btn) {
+            navigator.clipboard.writeText(text).then(() => {
+                btn.innerHTML = '<i class="fa-solid fa-check"></i> تم!';
+                setTimeout(() => btn.innerHTML = '<i class="fa-solid fa-copy"></i> نسخ', 2000);
+            });
+        }
+
+        async function submitPayment() {
+            const transferRef = document.getElementById('transfer-ref').value.trim();
+            const fileInput = document.getElementById('receipt-file');
+
+            if (!transferRef) {
+                alert('الرجاء إدخال رقم مرجع التحويل.');
+                return;
+            }
             if (!fileInput.files[0]) {
-                alert('الرجاء إرفاق صورة سند التحويل أولاً.');
+                alert('الرجاء رفع صورة الإيصال.');
                 return;
             }
 
             const file = fileInput.files[0];
+            if (file.size > 6 * 1024 * 1024) {
+                alert('حجم الصورة كبير جداً. الحد الأقصى 5MB.');
+                return;
+            }
+
             const reader = new FileReader();
-            
             reader.onloadend = async function() {
-                const base64String = reader.result;
-                
-                document.getElementById('payment-form').style.display = 'none';
-                document.getElementById('payment-loader').style.display = 'block';
+                const base64 = reader.result;
+
+                document.getElementById('form-state').style.display = 'none';
+                document.getElementById('loader-state').style.display = 'block';
 
                 const csrfToken = document.cookie.split('; ').find(r => r.startsWith('csrf_token='))?.split('=')[1] || '';
-                
+
                 try {
-                    // We will just send it to checkout endpoint and the backend will process it as receipt upload
                     const res = await fetch('/api/subscription/checkout', {
                         method: 'POST',
-                        headers: {'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken},
-                        body: JSON.stringify({ plan: selectedPlan, receipt_base64: base64String })
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                        body: JSON.stringify({
+                            plan: selectedPlan,
+                            amount: selectedAmount,
+                            transfer_ref: transferRef,
+                            receipt_base64: base64
+                        })
                     });
-                    
+
                     const data = await res.json();
-                    document.getElementById('payment-loader').style.display = 'none';
-                    
+                    document.getElementById('loader-state').style.display = 'none';
+
                     if (data.success) {
-                        document.getElementById('payment-success').style.display = 'block';
+                        document.getElementById('success-state').style.display = 'block';
                     } else {
-                        alert(data.error);
-                        closeCheckout();
-                        document.getElementById('payment-form').style.display = 'block';
+                        alert(data.error || 'حدث خطأ غير متوقع');
+                        document.getElementById('form-state').style.display = 'block';
                     }
                 } catch(e) {
-                    alert('حدث خطأ في الاتصال');
-                    closeCheckout();
-                    document.getElementById('payment-form').style.display = 'block';
-                    document.getElementById('payment-loader').style.display = 'none';
+                    document.getElementById('loader-state').style.display = 'none';
+                    document.getElementById('form-state').style.display = 'block';
+                    alert('حدث خطأ في الاتصال. حاول مجدداً.');
                 }
-            }
+            };
             reader.readAsDataURL(file);
         }
+
+        // Close modal on overlay click
+        document.getElementById('payModal').addEventListener('click', function(e) {
+            if (e.target === this) closePayModal();
+        });
     </script>
 </body>
 </html>
