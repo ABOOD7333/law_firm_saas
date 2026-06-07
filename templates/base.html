@@ -176,8 +176,10 @@
             {% set not_client = user and user.role != 'ظ…ظˆظƒظ„' %}
 
             <li class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
-                <a href="/knowledge-admin"><i class="fa-solid fa-brain"></i> إدارة المعرفة (RAG)</a>
-                <a href="/ai-assistant"><i class="fa-solid fa-robot"></i> المساعد الذكي ?</a>
+                <a href="/knowledge-admin"><i class="fa-solid fa-brain"></i> إدارة المعرفة (RAG)</a>
+
+                <a href="/ai-assistant"><i class="fa-solid fa-robot"></i> المساعد الذكي ?</a>
+
                 <a href="/dashboard"><i class="fa-solid fa-chart-pie"></i> {% if user and user.role == 'ظ…ظˆظƒظ„' %}ط¨ظˆط§ط¨طھظٹ (ط§ظ„ط±ط¦ظٹط³ظٹط©){% else %}ظ„ظˆط­ط© ط§ظ„طھط­ظƒظ…{% endif %}</a>
             </li>
             
@@ -631,6 +633,7 @@
 </style>
 <a href="/ai-assistant" class="ai-float-btn" title="المساعد الذكي القانوني">
     ??<div class="ai-float-badge"></div>
-</a>
+</a>
+
 </body>
 </html>
