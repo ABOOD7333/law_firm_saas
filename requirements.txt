@@ -32,12 +32,15 @@ python-dotenv==1.1.0
 # --- Production Servers ---
 gunicorn==21.2.0
 # --- RAG & AI Assistant (Local Offline) ---
-chromadb==0.4.24
-sentence-transformers==2.5.1
+# chromadb 0.4.x is incompatible with NumPy 2.0 (np.float_ removed)
+# Using 0.5.x which supports NumPy 2.0+
+chromadb==0.5.23
+sentence-transformers==3.0.1
 pytesseract==0.3.10
 pdfplumber==0.11.0
 pdf2image==1.17.0
 python-docx==1.1.0
-langchain-text-splitters==0.0.1
+langchain-text-splitters==0.3.8
 pysqlite3-binary
+numpy<2.0
 

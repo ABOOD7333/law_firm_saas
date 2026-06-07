@@ -11,7 +11,6 @@ except ImportError:
     pass
 
 import chromadb
-from chromadb.config import Settings
 import uuid
 from typing import List, Dict, Any
 
@@ -22,10 +21,11 @@ from .chunker import chunker
 class VectorStore:
     def __init__(self):
         # Initialize ChromaDB client in persistent mode (saves to disk)
+        # chromadb 0.5.x: Settings is no longer needed for basic setup
         self.client = chromadb.PersistentClient(
             path=str(VECTOR_DB_DIR),
-            settings=Settings(anonymized_telemetry=False)
         )
+
         
         # Get or create the collection
         self.collection = self.client.get_or_create_collection(
