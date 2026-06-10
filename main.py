@@ -1530,22 +1530,6 @@ async def edit_task(
         task.case_id = case_id
         task.assignee_user_id = assignee_user_id
         task.due_at = due_at
-        task.priority_level = priority_level
-        task.status_key = status_key
-        db.commit()
-    return RedirectResponse(url="/tasks", status_code=303)
-
-@app.post("/tasks/update_status")
-async def update_task_status(
-    request: Request,
-    task_id: int = Form(...),
-    status_key: str = Form(...),
-    db: Session = Depends(get_db),
-    user: AccessProfiles = Depends(get_current_user)
-):
-    if not user: return RedirectResponse(url="/", status_code=303)
-    office_id = user.office_id or 1
-    task = db.query(LawTasks).filter(LawTasks.id == task_id, LawTasks.office_id == office_id).first()
     if task:
         task.status_key = status_key
         db.commit()
