@@ -20,10 +20,10 @@ from .chunker import chunker
 
 class VectorStore:
     def __init__(self):
-        # Initialize ChromaDB client in persistent mode (saves to disk)
-        # chromadb 0.5.x: Settings is no longer needed for basic setup
+        from chromadb.config import Settings
         self.client = chromadb.PersistentClient(
             path=str(VECTOR_DB_DIR),
+            settings=Settings(anonymized_telemetry=False)
         )
 
         
