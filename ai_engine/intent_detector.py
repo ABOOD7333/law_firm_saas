@@ -496,6 +496,13 @@ class IntentDetector:
         if case_match:
             entities["case_number"] = case_match.group(1)
 
+        # اسم شخص/موكل
+        name_match = self.patterns["person_name"].search(original)
+        if name_match:
+            name = name_match.group(1).strip()
+            name = re.sub(r"^(?:باسم|بي اسم|ب اسم|اسمه|اسمها|يدعي|يدعى)\s+", "", name)
+            entities["client_name"] = name.strip()
+
         # كلمات دالة على الزمن
         entities["time_context"] = self._extract_time_context(normalized)
 

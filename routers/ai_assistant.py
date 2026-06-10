@@ -127,10 +127,20 @@ async def ai_chat(request: Request, db: Session = Depends(get_db), current_user:
 
         elif intent.type == "generate_document":
             # توليد مستند
-            doc_type = intent.document_type or doc_generator.detect_document_type(question)
+            doc_type = None
+            detected = doc_generator.detect_document_type(question)
+            if detected and doc_generator.get_document_info(detected):
+                doc_type = detected
+            
+            if not doc_type and intent.document_type:
+                if doc_generator.get_document_info(intent.document_type):
+                    doc_type = intent.document_type
+
             if doc_type:
                 fields_msg = doc_generator.get_fields_questions(doc_type)
-                answer = f"📄 سأُنشئ لك **{doc_generator.get_document_info(doc_type)['name']}**\n\n{fields_msg}"
+                info = doc_generator.get_document_info(doc_type)
+                doc_name = info["name"] if info else "المستند"
+                answer = f"📄 سأُنشئ لك **{doc_name}**\n\n{fields_msg}"
             else:
                 answer = doc_generator.get_documents_menu()
 
