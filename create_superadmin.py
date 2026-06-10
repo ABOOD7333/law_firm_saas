@@ -49,6 +49,7 @@ def create_superadmin():
             db.commit()
             print("✅ تم إنشاء حساب الإدارة العليا (SuperAdmin) بنجاح!")
         else:
+            admin.role = "مدير"
             admin.access_pin_hash = hash_pin("admin123456")
             admin.is_active = 1
             admin.failed_attempts = 0

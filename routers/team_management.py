@@ -76,12 +76,28 @@ async def team_save(request: Request, db: Session = Depends(get_db), user: Acces
             return JSONResponse({"ok": False, "message": "يرجى تعبئة جميع الحقول الإلزامية"})
 
         # Check duplicate username
-        dup = db.query(AccessProfiles).filter(
+        dup_username = db.query(AccessProfiles).filter(
             AccessProfiles.username == username,
             AccessProfiles.id != (int(record_id) if record_id else -1)
         ).first()
-        if dup:
+        if dup_username:
             return JSONResponse({"ok": False, "message": f"اسم الدخول '{username}' مستخدم مسبقاً"})
+
+        # Check duplicate phone
+        dup_phone = db.query(AccessProfiles).filter(
+            AccessProfiles.phone == phone,
+            AccessProfiles.id != (int(record_id) if record_id else -1)
+        ).first()
+        if dup_phone:
+            return JSONResponse({"ok": False, "message": f"رقم الهاتف '{phone}' مستخدم مسبقاً لعضو آخر"})
+
+        # Check duplicate email
+        dup_email = db.query(AccessProfiles).filter(
+            AccessProfiles.email == email,
+            AccessProfiles.id != (int(record_id) if record_id else -1)
+        ).first()
+        if dup_email:
+            return JSONResponse({"ok": False, "message": f"البريد الإلكتروني '{email}' مستخدم مسبقاً لعضو آخر"})
 
         if record_id:
             m = db.query(AccessProfiles).filter(AccessProfiles.id == int(record_id), AccessProfiles.office_id == office_id).first()
