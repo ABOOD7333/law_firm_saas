@@ -104,6 +104,7 @@ class ResponseBuilder:
         db_data: Optional[Dict],
         search_results: Optional[List],
         entities: dict,
+        user_name: str = "",
     ) -> str:
         """
         يبني الرد المناسب بناءً على نوع الاستعلام والبيانات.
@@ -113,6 +114,7 @@ class ResponseBuilder:
             db_data: بيانات قاعدة البيانات (من DBQueryEngine)
             search_results: نتائج البحث القانوني (من LegalSearchEngine)
             entities: الكيانات المستخرجة من السؤال
+            user_name: اسم المستخدم لتهنئته أو تحيته
 
         Returns:
             str: نص الرد المنسق
@@ -120,7 +122,7 @@ class ResponseBuilder:
         try:
             # ─── ردود لا تحتاج بيانات ───
             if intent_type == "greeting":
-                return self._build_greeting_response()
+                return self._build_greeting_response(user_name)
 
             if intent_type == "help":
                 return self._build_help_response()
