@@ -1,21 +1,39 @@
 import psycopg2
-import sys
 
-sys.stdout.reconfigure(encoding='utf-8')
-url = 'postgresql://postgres:CpgDcHxPvpbGJtHOcfFGvQjjivCvJGYc@viaduct.proxy.rlwy.net:38311/railway'
-conn = psycopg2.connect(url, connect_timeout=10)
-conn.autocommit = True
+conn = psycopg2.connect('postgresql://postgres:CpgDcHxPvpbGJtHOcfFGvQjjivCvJGYc@viaduct.proxy.rlwy.net:38311/railway')
 cur = conn.cursor()
 
-cur.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
-tables = [row[0] for row in cur.fetchall()]
+# List all tables
+cur.execute("SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name")
+tables = [r[0] for r in cur.fetchall()]
+print('=== TABLES IN RAILWAY DB ===')
+for t in tables:
+    print(' -', t)
 
-for table in tables:
-    try:
-        cur.execute(f'ALTER TABLE {table} ADD COLUMN IF NOT EXISTS updated_at TEXT;')
-        cur.execute(f'ALTER TABLE {table} ADD COLUMN IF NOT EXISTS is_deleted INTEGER DEFAULT 0 NOT NULL;')
-        print(f'Added columns to {table}')
-    except Exception as e:
-        print(f'Error adding to {table}: {e}')
+print('\n=== CHECKING payment_requests ===')
+if 'payment_requests' in tables:
+    print('payment_requests table EXISTS!')
+else:
+    print('payment_requests table MISSING - This is likely the problem!')
+    print('\nCreating it now...')
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS payment_requests (
+            id SERIAL PRIMARY KEY,
+            office_id INTEGER NOT NULL REFERENCES law_offices(id) ON DELETE CASCADE,
+            user_id INTEGER REFERENCES access_profiles(id) ON DELETE SET NULL,
+            plan TEXT NOT NULL,
+            amount REAL,
+            currency TEXT DEFAULT 'USD',
+            transfer_ref TEXT,
+            receipt_base64 TEXT,
+            status TEXT DEFAULT 'pending',
+            admin_notes TEXT,
+            submitted_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            reviewed_at TEXT,
+            reviewed_by INTEGER
+        )
+    """)
+    conn.commit()
+    print('Table created successfully!')
 
-print('Done fixing all tables!')
+conn.close()

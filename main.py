@@ -299,7 +299,7 @@ def _verify_pin(pin: str, stored_hash: str) -> bool:
     import hmac, base64
     if not stored_hash or not pin:
         return False
-    normalized = pin.translate(str.maketrans("ظ ظ،ظ¢ظ£ظ¤ظ¥ظ¦ظ§ظ¨ظ©غ°غ±غ²غ³غ´غµغ¶غ·غ¸غ¹", "01234567890123456789")).strip()
+    normalized = pin.translate(str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", "01234567890123456789")).strip()
     try:
         if stored_hash.startswith('pbkdf2:sha256:'):
             parts = stored_hash.split('$')

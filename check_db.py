@@ -1,25 +1,20 @@
-import sqlite3
-conn = sqlite3.connect('law_firm.db')
-cursor = conn.cursor()
+import psycopg2
 
-# عرض كل الجداول
-cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
-tables = cursor.fetchall()
-print('الجداول:', [t[0] for t in tables])
+conn = psycopg2.connect('postgresql://postgres:CpgDcHxPvpbGJtHOcfFGvQjjivCvJGYc@viaduct.proxy.rlwy.net:38311/railway')
+cur = conn.cursor()
 
-# عرض جميع المكاتب
-print('\n=== المكاتب ===')
-cursor.execute('SELECT * FROM law_offices')
-offices = cursor.fetchall()
-cols = [desc[0] for desc in cursor.description]
-print('الاعمدة:', cols)
-for o in offices:
-    print(' ', o)
+# Check the ABOOD user
+cur.execute("SELECT id, username, email, role, is_active, failed_attempts, office_id FROM access_profiles WHERE username='ABOOD' OR email='ABOOD'")
+rows = cur.fetchall()
+print('=== ABOOD USER ===')
+for r in rows:
+    print(f'  id={r[0]}, username={r[1]}, email={r[2]}, role={r[3]}, active={r[4]}, fails={r[5]}, office={r[6]}')
 
-print('\n=== المستخدمون ===')
-cursor.execute('SELECT id, username, name, role, office_id, is_active FROM access_profiles')
-users = cursor.fetchall()
-for u in users:
-    print(' ', u)
+# Check offices
+cur.execute("SELECT id, name, is_active, subscription_plan FROM law_offices LIMIT 5")
+rows = cur.fetchall()
+print('\n=== OFFICES ===')
+for r in rows:
+    print(f'  id={r[0]}, name={r[1]}, active={r[2]}, plan={r[3]}')
 
 conn.close()
