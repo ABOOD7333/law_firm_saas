@@ -10,7 +10,7 @@ from dependencies import get_current_user, templates
 from core.logger import app_logger
 from core.audit import write_audit
 
-_ADMIN_ROLES = {'مدير', 'مدير المكتب', 'صاحب المكتب'}
+_ADMIN_ROLES = {'مدير', 'مدير المكتب', 'صاحب المكتب', 'مدير النظام'}
 
 router = APIRouter()
 

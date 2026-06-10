@@ -169,7 +169,7 @@
             </button>
         </div>
         <ul class="nav-menu">
-            {% set is_admin = user and user.role in ['صاحب المكتب', 'مدير المكتب', 'مدير'] %}
+            {% set is_admin = user and user.role in ['صاحب المكتب', 'مدير المكتب', 'مدير', 'مدير النظام'] %}
             {% set is_lawyer = user and user.role in ['محامي', 'محامٍ'] %}
             {% set is_sec = user and user.role == 'سكرتير' %}
             {% set is_acc = user and user.role == 'محاسب' %}

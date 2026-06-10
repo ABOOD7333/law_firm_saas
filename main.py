@@ -2048,7 +2048,7 @@ async def edit_hearing(
 
 # الأدوار المسموح لها بإدارة المستخدمين
 
-_ADMIN_ROLES = {'مدير', 'مدير المكتب', 'صاحب المكتب'}
+_ADMIN_ROLES = {'مدير', 'مدير المكتب', 'صاحب المكتب', 'مدير النظام'}
 
 @app.post("/settings/edit_user")
 
@@ -3006,26 +3006,17 @@ async def api_subscription_checkout(request: Request, db: Session = Depends(get_
     return _J({"success": True, "message": "تم إرسال السند بنجاح"})
 
 @app.get("/ai-assistant")
-
 async def ai_assistant_page(request: Request, db: Session = Depends(get_db)):
-
     user = get_current_user(request, db)
-
     if not user:
-
-        return RedirectResponse("/login", status_code=302)
-
+        return RedirectResponse("/", status_code=302)
     return templates.TemplateResponse("ai_assistant.html", {"request": request, "user": user})
 
 @app.get("/knowledge-admin")
-
 async def knowledge_admin_page(request: Request, db: Session = Depends(get_db)):
-
     user = get_current_user(request, db)
-
-    if not user or user.role != 'محامي':
-        return RedirectResponse("/login", status_code=302)
-
+    if not user or user.role in ['موكل']:
+        return RedirectResponse("/", status_code=302)
     return templates.TemplateResponse("knowledge_admin.html", {"request": request, "user": user})
 
 @app.post("/debug-login-test")

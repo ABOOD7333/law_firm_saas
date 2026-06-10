@@ -61,7 +61,7 @@ async def session_revoke(session_id: int, db: Session = Depends(get_db), user: A
         return JSONResponse({"ok": False, "message": "غير مصرح لك بإنهاء هذه الجلسة"}, status_code=403)
         
     # 🔴 Privilege restriction: Non-admins can only revoke their own sessions
-    _ADMIN_ROLES = {'مدير', 'مدير المكتب', 'صاحب المكتب'}
+    _ADMIN_ROLES = {'مدير', 'مدير المكتب', 'صاحب المكتب', 'مدير النظام'}
     if user.role not in _ADMIN_ROLES and user.id != target_user.id:
         return JSONResponse({"ok": False, "message": "غير مصرح لك بإنهاء جلسات الآخرين"}, status_code=403)
         
