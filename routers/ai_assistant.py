@@ -27,7 +27,13 @@ def _get_ai_engine(db: Session, user):
         return {
             "intent": IntentDetector(),
             "search": LegalSearchEngine(),
-            "db": DBQueryEngine(db, user.office_id, user.id),
+            "db": DBQueryEngine(
+                db, 
+                user.office_id, 
+                user.id, 
+                user_role=getattr(user, 'role', 'مدير'), 
+                can_view_all_cases=getattr(user, 'can_view_all_cases', 1)
+            ),
             "response": ResponseBuilder(),
             "docs": DocumentGenerator(),
         }
@@ -36,25 +42,18 @@ def _get_ai_engine(db: Session, user):
 
 
 @router.post("/chat")
-async def ai_chat(request: Request, db: Session = Depends(get_db)):
+async def ai_chat(request: Request, db: Session = Depends(get_db), current_user: AccessProfiles = Depends(get_current_user)):
     """
     المساعد الذكي - يُجيب على أسئلة المستخدم
     """
     start_time = time.time()
     try:
-        # التحقق من الجلسة
-        session_token = request.cookies.get("session_token")
-        if not session_token:
+        if not current_user:
             return JSONResponse({"success": False, "error": "غير مسجل الدخول"}, status_code=401)
 
-        from main import _active_sessions
-        session = _active_sessions.get(session_token)
-        if not session:
-            return JSONResponse({"success": False, "error": "الجلسة منتهية"}, status_code=401)
-
-        user_id = session.get("user_id")
-        office_id = session.get("office_id")
-        user_name = session.get("name", "")
+        user_id = current_user.id
+        office_id = current_user.office_id
+        user_name = current_user.name
 
         data = await request.json()
         question = (data.get("question") or data.get("message") or "").strip()
@@ -76,7 +75,13 @@ async def ai_chat(request: Request, db: Session = Depends(get_db)):
 
             intent_detector = IntentDetector()
             search_engine = LegalSearchEngine()
-            db_engine = DBQueryEngine(db, office_id, user_id)
+            db_engine = DBQueryEngine(
+                db, 
+                office_id, 
+                user_id, 
+                user_role=getattr(current_user, 'role', 'مدير'), 
+                can_view_all_cases=getattr(current_user, 'can_view_all_cases', 1)
+            )
             response_builder = ResponseBuilder()
             doc_generator = DocumentGenerator()
 
@@ -163,17 +168,11 @@ async def ai_chat(request: Request, db: Session = Depends(get_db)):
 
 
 @router.post("/generate-document")
-async def generate_document(request: Request, db: Session = Depends(get_db)):
+async def generate_document(request: Request, db: Session = Depends(get_db), current_user: AccessProfiles = Depends(get_current_user)):
     """توليد مستند قانوني من القالب"""
     try:
-        session_token = request.cookies.get("session_token")
-        if not session_token:
+        if not current_user:
             return JSONResponse({"success": False, "error": "غير مسجل الدخول"}, status_code=401)
-
-        from main import _active_sessions
-        session = _active_sessions.get(session_token)
-        if not session:
-            return JSONResponse({"success": False, "error": "الجلسة منتهية"}, status_code=401)
 
         data = await request.json()
         doc_code = data.get("doc_code", "")
@@ -198,20 +197,14 @@ async def generate_document(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/history")
-async def get_chat_history(request: Request, db: Session = Depends(get_db)):
+async def get_chat_history(request: Request, db: Session = Depends(get_db), current_user: AccessProfiles = Depends(get_current_user)):
     """جلب سجل المحادثات"""
     try:
-        session_token = request.cookies.get("session_token")
-        if not session_token:
+        if not current_user:
             return JSONResponse({"success": False, "error": "غير مسجل الدخول"}, status_code=401)
 
-        from main import _active_sessions
-        session = _active_sessions.get(session_token)
-        if not session:
-            return JSONResponse({"success": False, "error": "الجلسة منتهية"}, status_code=401)
-
-        user_id = session.get("user_id")
-        office_id = session.get("office_id")
+        user_id = current_user.id
+        office_id = current_user.office_id
 
         history = db.query(AIChatHistory).filter(
             AIChatHistory.office_id == office_id,
@@ -256,22 +249,16 @@ async def get_suggestions(request: Request):
 
 
 @router.post("/knowledge/add")
-async def add_knowledge(request: Request, db: Session = Depends(get_db)):
+async def add_knowledge(request: Request, db: Session = Depends(get_db), current_user: AccessProfiles = Depends(get_current_user)):
     """إضافة معرفة قانونية مخصصة (أحكام، تعاميم، ...)"""
     try:
-        session_token = request.cookies.get("session_token")
-        if not session_token:
+        if not current_user:
             return JSONResponse({"success": False, "error": "غير مسجل الدخول"}, status_code=401)
-
-        from main import _active_sessions
-        session = _active_sessions.get(session_token)
-        if not session:
-            return JSONResponse({"success": False, "error": "الجلسة منتهية"}, status_code=401)
 
         data = await request.json()
         knowledge = AIKnowledge(
-            office_id=session["office_id"],
-            created_by=session["user_id"],
+            office_id=current_user.office_id,
+            created_by=current_user.id,
             category=data.get("category", "أخرى"),
             title=data.get("title", ""),
             content=data.get("content", ""),
@@ -287,20 +274,14 @@ async def add_knowledge(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/knowledge/list")
-async def list_knowledge(request: Request, db: Session = Depends(get_db)):
+async def list_knowledge(request: Request, db: Session = Depends(get_db), current_user: AccessProfiles = Depends(get_current_user)):
     """عرض قاعدة المعرفة المخصصة للمكتب"""
     try:
-        session_token = request.cookies.get("session_token")
-        if not session_token:
+        if not current_user:
             return JSONResponse({"success": False, "error": "غير مسجل الدخول"}, status_code=401)
 
-        from main import _active_sessions
-        session = _active_sessions.get(session_token)
-        if not session:
-            return JSONResponse({"success": False, "error": "الجلسة منتهية"}, status_code=401)
-
         items = db.query(AIKnowledge).filter(
-            AIKnowledge.office_id == session["office_id"],
+            AIKnowledge.office_id == current_user.office_id,
             AIKnowledge.is_deleted == 0
         ).order_by(AIKnowledge.created_at.desc()).all()
 

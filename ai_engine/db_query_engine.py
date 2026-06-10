@@ -46,10 +46,96 @@ class DBQueryEngine:
     لمكتب المحاماة ويُجيب على أي سؤال متعلق بالبيانات.
     """
 
-    def __init__(self, db: Session, office_id: int, user_id: int):
+    def __init__(self, db: Session, office_id: int, user_id: int, user_role: str = 'مدير', can_view_all_cases: int = 1):
         self.db = db
         self.office_id = office_id
         self.user_id = user_id
+        self.user_role = user_role
+        self.can_view_all_cases = can_view_all_cases
+
+    def _apply_case_visibility_filter(self, query):
+        if self.user_role == 'موكل':
+            user = self.db.query(AccessProfiles).filter(AccessProfiles.id == self.user_id).first()
+            if user:
+                client_records = self.db.query(LawClients).filter(
+                    (LawClients.phone == user.phone) | (LawClients.email == user.email)
+                ).all()
+                case_ids = [c.case_id for c in client_records if c.case_id]
+                if case_ids:
+                    return query.filter(LawCases.id.in_(case_ids))
+            return query.filter(LawCases.id == -1)
+            
+        elif self.user_role in ['محامي', 'محامٍ'] and self.can_view_all_cases == 0:
+            return query.filter(LawCases.lead_lawyer_id == self.user_id)
+            
+        elif self.user_role == 'محاسب':
+            return query.filter(LawCases.id == -1)
+            
+        return query
+
+    def _apply_hearing_visibility_filter(self, query, joined_case=False):
+        if self.user_role == 'محاسب':
+            return query.filter(LawHearings.id == -1)
+            
+        if self.user_role == 'موكل':
+            user = self.db.query(AccessProfiles).filter(AccessProfiles.id == self.user_id).first()
+            if user:
+                client_records = self.db.query(LawClients).filter(
+                    (LawClients.phone == user.phone) | (LawClients.email == user.email)
+                ).all()
+                case_ids = [c.case_id for c in client_records if c.case_id]
+                if case_ids:
+                    return query.filter(LawHearings.case_id.in_(case_ids))
+            return query.filter(LawHearings.id == -1)
+            
+        if self.user_role in ['محامي', 'محامٍ'] and self.can_view_all_cases == 0:
+            if joined_case:
+                return query.filter(LawCases.lead_lawyer_id == self.user_id)
+            else:
+                return query.join(LawCases, LawHearings.case_id == LawCases.id).filter(LawCases.lead_lawyer_id == self.user_id)
+                
+        return query
+
+    def _apply_task_visibility_filter(self, query):
+        if self.user_role == 'محاسب':
+            return query.filter(LawTasks.id == -1)
+            
+        if self.user_role == 'موكل':
+            user = self.db.query(AccessProfiles).filter(AccessProfiles.id == self.user_id).first()
+            if user:
+                client_records = self.db.query(LawClients).filter(
+                    (LawClients.phone == user.phone) | (LawClients.email == user.email)
+                ).all()
+                case_ids = [c.case_id for c in client_records if c.case_id]
+                if case_ids:
+                    return query.filter(LawTasks.case_id.in_(case_ids))
+            return query.filter(LawTasks.id == -1)
+            
+        if self.user_role in ['محامي', 'محامٍ'] and self.can_view_all_cases == 0:
+            return query.outerjoin(LawCases, LawTasks.case_id == LawCases.id).filter(
+                or_(
+                    LawTasks.assignee_user_id == self.user_id,
+                    LawCases.lead_lawyer_id == self.user_id
+                )
+            )
+            
+        return query
+
+    def _apply_client_visibility_filter(self, query):
+        if self.user_role == 'موكل':
+            user = self.db.query(AccessProfiles).filter(AccessProfiles.id == self.user_id).first()
+            if user:
+                return query.filter(
+                    (LawClients.phone == user.phone) | (LawClients.email == user.email)
+                )
+            return query.filter(LawClients.id == -1)
+            
+        if self.user_role in ['محامي', 'محامٍ'] and self.can_view_all_cases == 0:
+            return query.join(LawCases, LawClients.case_id == LawCases.id).filter(
+                LawCases.lead_lawyer_id == self.user_id
+            )
+            
+        return query
 
     # ══════════════════════════════════════════
     # 1. إحصائيات القضايا
@@ -61,6 +147,7 @@ class DBQueryEngine:
             LawCases.office_id == self.office_id,
             LawCases.is_deleted == 0,
         )
+        base = self._apply_case_visibility_filter(base)
 
         total = base.count()
         open_cases = base.filter(
@@ -87,9 +174,8 @@ class DBQueryEngine:
         by_type_rows = (
             self.db.query(LawCases.case_type_key, func.count(LawCases.id))
             .filter(LawCases.office_id == self.office_id, LawCases.is_deleted == 0)
-            .group_by(LawCases.case_type_key)
-            .all()
         )
+        by_type_rows = self._apply_case_visibility_filter(by_type_rows).group_by(LawCases.case_type_key).all()
         by_type = {row[0] or "غير محدد": row[1] for row in by_type_rows}
 
         # القضايا المضافة اليوم
@@ -110,15 +196,15 @@ class DBQueryEngine:
 
     def get_case_by_number(self, case_number: str) -> Optional[Dict]:
         """الحصول على تفاصيل قضية بواسطة رقمها"""
-        case = (
+        query = (
             self.db.query(LawCases)
             .filter(
                 LawCases.office_id == self.office_id,
                 LawCases.case_number == case_number.strip(),
                 LawCases.is_deleted == 0,
             )
-            .first()
         )
+        case = self._apply_case_visibility_filter(query).first()
         if not case:
             return None
 
@@ -138,12 +224,15 @@ class DBQueryEngine:
 
     def get_recent_cases(self, limit: int = 10) -> List[Dict]:
         """آخر القضايا المضافة"""
-        cases = (
+        query = (
             self.db.query(LawCases)
             .filter(
                 LawCases.office_id == self.office_id,
                 LawCases.is_deleted == 0,
             )
+        )
+        cases = (
+            self._apply_case_visibility_filter(query)
             .order_by(LawCases.created_at.desc())
             .limit(limit)
             .all()
@@ -166,7 +255,7 @@ class DBQueryEngine:
     def get_today_hearings(self) -> List[Dict]:
         """جلسات اليوم"""
         today_str = _today_str()
-        hearings = (
+        query = (
             self.db.query(LawHearings)
             .join(LawCases, LawHearings.case_id == LawCases.id)
             .filter(
@@ -174,24 +263,22 @@ class DBQueryEngine:
                 LawHearings.is_deleted == 0,
                 func.date(LawHearings.hearing_at) == today_str,
             )
-            .order_by(LawHearings.hearing_at)
-            .all()
         )
+        hearings = self._apply_hearing_visibility_filter(query, joined_case=True).order_by(LawHearings.hearing_at).all()
         return [self._format_hearing(h) for h in hearings]
 
     def get_tomorrow_hearings(self) -> List[Dict]:
         """جلسات الغد"""
         tomorrow = (date.today() + timedelta(days=1)).isoformat()
-        hearings = (
+        query = (
             self.db.query(LawHearings)
             .filter(
                 LawHearings.office_id == self.office_id,
                 LawHearings.is_deleted == 0,
                 func.date(LawHearings.hearing_at) == tomorrow,
             )
-            .order_by(LawHearings.hearing_at)
-            .all()
         )
+        hearings = self._apply_hearing_visibility_filter(query, joined_case=False).order_by(LawHearings.hearing_at).all()
         return [self._format_hearing(h) for h in hearings]
 
     def get_upcoming_hearings(self, days: int = 7) -> List[Dict]:
@@ -200,7 +287,7 @@ class DBQueryEngine:
         end_date = (today + timedelta(days=days)).isoformat()
         today_str = today.isoformat()
 
-        hearings = (
+        query = (
             self.db.query(LawHearings)
             .filter(
                 LawHearings.office_id == self.office_id,
@@ -208,9 +295,8 @@ class DBQueryEngine:
                 func.date(LawHearings.hearing_at) >= today_str,
                 func.date(LawHearings.hearing_at) <= end_date,
             )
-            .order_by(LawHearings.hearing_at)
-            .all()
         )
+        hearings = self._apply_hearing_visibility_filter(query, joined_case=False).order_by(LawHearings.hearing_at).all()
         return [self._format_hearing(h) for h in hearings]
 
     def get_hearings_this_week(self) -> List[Dict]:
@@ -228,7 +314,7 @@ class DBQueryEngine:
             next_month = today.replace(month=today.month + 1, day=1)
         month_end = (next_month - timedelta(days=1)).isoformat()
 
-        hearings = (
+        query = (
             self.db.query(LawHearings)
             .filter(
                 LawHearings.office_id == self.office_id,
@@ -236,9 +322,8 @@ class DBQueryEngine:
                 func.date(LawHearings.hearing_at) >= month_start,
                 func.date(LawHearings.hearing_at) <= month_end,
             )
-            .order_by(LawHearings.hearing_at)
-            .all()
         )
+        hearings = self._apply_hearing_visibility_filter(query, joined_case=False).order_by(LawHearings.hearing_at).all()
         return [self._format_hearing(h) for h in hearings]
 
     def _format_hearing(self, h: LawHearings) -> Dict:
@@ -276,6 +361,7 @@ class DBQueryEngine:
             LawClients.office_id == self.office_id,
             LawClients.is_deleted == 0,
         )
+        base = self._apply_client_visibility_filter(base)
 
         total = base.count()
 
@@ -292,7 +378,7 @@ class DBQueryEngine:
     def search_clients(self, keyword: str) -> List[Dict]:
         """البحث في الموكلين"""
         kw = f"%{keyword.strip()}%"
-        clients = (
+        query = (
             self.db.query(LawClients)
             .filter(
                 LawClients.office_id == self.office_id,
@@ -303,9 +389,8 @@ class DBQueryEngine:
                     LawClients.national_id.ilike(kw),
                 ),
             )
-            .limit(20)
-            .all()
         )
+        clients = self._apply_client_visibility_filter(query).limit(20).all()
         return [
             {
                 "id": c.id,
@@ -325,6 +410,17 @@ class DBQueryEngine:
 
     def get_finance_summary(self) -> Dict:
         """ملخص مالي شامل"""
+        if self.user_role not in ['مدير', 'مدير المكتب', 'صاحب المكتب', 'مدير النظام', 'محاسب']:
+            return {
+                "total_income": 0.0,
+                "pending_income": 0.0,
+                "total_expenses": 0.0,
+                "net_profit": 0.0,
+                "this_month_income": 0.0,
+                "this_year_income": 0.0,
+                "message": "غير مصرح لك بالاطلاع على البيانات المالية للمكتب."
+            }
+
         # الإيرادات (المعاملات المالية المكتملة)
         income_row = (
             self.db.query(func.sum(LawTransactions.amount))
@@ -402,6 +498,16 @@ class DBQueryEngine:
 
     def get_finance_by_period(self, start_date: str, end_date: str) -> Dict:
         """الملخص المالي لفترة محددة"""
+        if self.user_role not in ['مدير', 'مدير المكتب', 'صاحب المكتب', 'مدير النظام', 'محاسب']:
+            return {
+                "period_start": start_date,
+                "period_end": end_date,
+                "income": 0.0,
+                "expenses": 0.0,
+                "net": 0.0,
+                "message": "غير مصرح لك بالاطلاع على البيانات المالية للمكتب."
+            }
+
         income = (
             self.db.query(func.sum(LawTransactions.amount))
             .filter(
@@ -439,37 +545,37 @@ class DBQueryEngine:
 
     def get_pending_tasks(self) -> List[Dict]:
         """جميع المهام المعلقة"""
-        tasks = (
+        query = (
             self.db.query(LawTasks)
             .filter(
                 LawTasks.office_id == self.office_id,
                 LawTasks.is_deleted == 0,
                 LawTasks.status_key.in_(["pending", "in_progress", "open"]),
             )
-            .order_by(LawTasks.due_at.asc().nullslast(), LawTasks.priority_level.desc())
-            .all()
         )
+        query = self._apply_task_visibility_filter(query)
+        tasks = query.order_by(LawTasks.due_at.asc().nullslast(), LawTasks.priority_level.desc()).all()
         return [self._format_task(t) for t in tasks]
 
     def get_today_tasks(self) -> List[Dict]:
         """مهام اليوم"""
         today_str = _today_str()
-        tasks = (
+        query = (
             self.db.query(LawTasks)
             .filter(
                 LawTasks.office_id == self.office_id,
                 LawTasks.is_deleted == 0,
                 func.date(LawTasks.due_at) == today_str,
             )
-            .order_by(LawTasks.priority_level.desc())
-            .all()
         )
+        query = self._apply_task_visibility_filter(query)
+        tasks = query.order_by(LawTasks.priority_level.desc()).all()
         return [self._format_task(t) for t in tasks]
 
     def get_overdue_tasks(self) -> List[Dict]:
         """المهام المتأخرة (استحقت وقتها)"""
         today_str = _today_str()
-        tasks = (
+        query = (
             self.db.query(LawTasks)
             .filter(
                 LawTasks.office_id == self.office_id,
@@ -478,9 +584,9 @@ class DBQueryEngine:
                 LawTasks.due_at < today_str,
                 LawTasks.due_at.isnot(None),
             )
-            .order_by(LawTasks.due_at.asc())
-            .all()
         )
+        query = self._apply_task_visibility_filter(query)
+        tasks = query.order_by(LawTasks.due_at.asc()).all()
         return [self._format_task(t) for t in tasks]
 
     def _format_task(self, t: LawTasks) -> Dict:
@@ -502,7 +608,7 @@ class DBQueryEngine:
     def search_cases(self, keyword: str) -> List[Dict]:
         """البحث في القضايا بكلمة مفتاحية"""
         kw = f"%{keyword.strip()}%"
-        cases = (
+        query = (
             self.db.query(LawCases)
             .filter(
                 LawCases.office_id == self.office_id,
@@ -515,10 +621,9 @@ class DBQueryEngine:
                     LawCases.case_type_key.ilike(kw),
                 ),
             )
-            .order_by(LawCases.created_at.desc())
-            .limit(20)
-            .all()
         )
+        query = self._apply_case_visibility_filter(query)
+        cases = query.order_by(LawCases.created_at.desc()).limit(20).all()
         return [
             {
                 "case_number": c.case_number,
@@ -533,17 +638,16 @@ class DBQueryEngine:
 
     def search_cases_by_type(self, case_type: str) -> List[Dict]:
         """جلب القضايا حسب النوع"""
-        cases = (
+        query = (
             self.db.query(LawCases)
             .filter(
                 LawCases.office_id == self.office_id,
                 LawCases.is_deleted == 0,
                 LawCases.case_type_key.ilike(f"%{case_type}%"),
             )
-            .order_by(LawCases.created_at.desc())
-            .limit(20)
-            .all()
         )
+        query = self._apply_case_visibility_filter(query)
+        cases = query.order_by(LawCases.created_at.desc()).limit(20).all()
         return [
             {
                 "case_number": c.case_number,
@@ -561,49 +665,70 @@ class DBQueryEngine:
     def get_performance_stats(self) -> Dict:
         """إحصائيات أداء المكتب الشاملة"""
         # إجمالي الأحكام
-        total_judgments = (
+        total_judgments_query = (
             self.db.query(LawJudgments)
             .join(LawCases, LawJudgments.case_id == LawCases.id)
             .filter(
                 LawJudgments.office_id == self.office_id,
                 LawJudgments.is_deleted == 0,
             )
-            .count()
         )
+        total_judgments_query = self._apply_case_visibility_filter(total_judgments_query)
+        total_judgments = total_judgments_query.count()
 
         # أحكام لصالح الموكل
-        won = (
+        won_query = (
             self.db.query(LawJudgments)
+            .join(LawCases, LawJudgments.case_id == LawCases.id)
             .filter(
                 LawJudgments.office_id == self.office_id,
                 LawJudgments.is_deleted == 0,
                 LawJudgments.status_key.in_(["won", "approved", "favorable", "granted"]),
             )
-            .count()
         )
+        won_query = self._apply_case_visibility_filter(won_query)
+        won = won_query.count()
 
         success_rate = round((won / total_judgments * 100), 1) if total_judgments > 0 else 0.0
 
         # إجمالي ساعات العمل
-        hours_row = (
+        hours_query = (
             self.db.query(func.sum(LawTimesheets.duration_hours))
             .filter(
                 LawTimesheets.office_id == self.office_id,
                 LawTimesheets.is_deleted == 0,
             )
-            .scalar()
         )
+        if self.user_role == 'موكل':
+            user = self.db.query(AccessProfiles).filter(AccessProfiles.id == self.user_id).first()
+            if user:
+                client_records = self.db.query(LawClients).filter(
+                    (LawClients.phone == user.phone) | (LawClients.email == user.email)
+                ).all()
+                case_ids = [c.case_id for c in client_records if c.case_id]
+                if case_ids:
+                    hours_query = hours_query.filter(LawTimesheets.case_id.in_(case_ids))
+                else:
+                    hours_query = hours_query.filter(LawTimesheets.id == -1)
+            else:
+                hours_query = hours_query.filter(LawTimesheets.id == -1)
+        elif self.user_role in ['محامي', 'محامٍ'] and self.can_view_all_cases == 0:
+            hours_query = hours_query.filter(LawTimesheets.user_id == self.user_id)
+        
+        hours_row = hours_query.scalar()
         total_hours = float(hours_row or 0)
 
         # عدد الأطراف في القضايا
-        total_parties = (
+        parties_query = (
             self.db.query(LawParties)
+            .join(LawCases, LawParties.case_id == LawCases.id)
             .filter(
                 LawParties.office_id == self.office_id,
                 LawParties.is_deleted == 0,
             )
-            .count()
         )
+        parties_query = self._apply_case_visibility_filter(parties_query)
+        total_parties = parties_query.count()
 
         # قضايا منتهية
         cases_stats = self.get_cases_stats()
@@ -651,8 +776,9 @@ class DBQueryEngine:
         end_date = (date.today() + timedelta(days=days)).isoformat()
 
         from database.models import LawLimitations
-        lims = (
+        query = (
             self.db.query(LawLimitations)
+            .join(LawCases, LawLimitations.case_id == LawCases.id)
             .filter(
                 LawLimitations.office_id == self.office_id,
                 LawLimitations.is_deleted == 0,
@@ -660,9 +786,9 @@ class DBQueryEngine:
                 LawLimitations.due_date <= end_date,
                 LawLimitations.status_key == "active",
             )
-            .order_by(LawLimitations.due_date.asc())
-            .all()
         )
+        query = self._apply_case_visibility_filter(query)
+        lims = query.order_by(LawLimitations.due_date.asc()).all()
 
         result = []
         for lim in lims:
