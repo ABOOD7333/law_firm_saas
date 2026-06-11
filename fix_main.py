@@ -106,7 +106,17 @@ async def api_subscription_checkout(request: Request, db: Session = Depends(get_
     except Exception as e:
         pass
 
-    write_audit(db, "payment_requests", "submit_payment", user.id, user.name, new_req.id, "office", office.id, f"Submitted payment request for {plan}")
+    write_audit(
+        db,
+        table_name="payment_requests",
+        action_name="submit_payment",
+        actor_user_id=user.id,
+        actor_name=user.name,
+        office_id=office.id,
+        entity_type="payment_request",
+        entity_id=new_req.id,
+        details=f"Submitted payment request for {plan}"
+    )
     
     return _J({"success": True, "message": "تم إرسال السند بنجاح"})
 
