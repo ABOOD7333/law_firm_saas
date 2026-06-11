@@ -41,6 +41,99 @@ def _get_ai_engine(db: Session, user):
         return None
 
 
+def _handle_conversational_query(question: str, user_name: str = ""):
+    """يعالج الأسئلة العامة والدردشة البسيطة فوراً وبشكل مباشر"""
+    import re
+    from datetime import datetime, timedelta, timezone
+
+    # تطبيع وتحضير السؤال للمقارنة
+    q = question.strip().lower()
+    # توحيد الهمزات والتاء المربوطة والألف المقصورة وإزالة الحركات والرموز
+    q = re.sub(r"[أإآ]", "ا", q)
+    q = re.sub(r"ى", "ي", q)
+    q = re.sub(r"ة", "ه", q)
+    q = re.sub(r"[\u064B-\u065F]", "", q)
+    q = re.sub(r"[؟\?!،,\.\-\_]", " ", q)
+    q = " ".join(q.split())
+
+    # 1. الأسئلة عن الصحة والحال (كيف حالك / ايش اخبارك / إلخ)
+    wellness_keywords = [
+        "كيف حالك", "كيف الحال", "كيفك", "شلونك", "شخبارك", "ايش اخبارك", "ايش الاخبار",
+        "كيف امورك", "علومك", "شخبارك اليوم", "كيف حالك اليوم", "ايش اخبارك اليوم",
+        "شلون الصحه", "كيف الصحه", "كيف صحتك", "ايش علومك", "ايش مسوي"
+    ]
+    if any(kw in q for kw in wellness_keywords):
+        return f"الحمد لله أنا بخير وعافية، شكراً لسؤالك يا {user_name if user_name else 'عزيزي'}! 😊 أتمنى أن تكون بأفضل حال وصحة. كيف يمكنني مساعدتك اليوم؟"
+
+    # 2. الأسئلة عن اليوم والتاريخ
+    arabic_weekdays = {
+        0: "الإثنين",
+        1: "الثلاثاء",
+        2: "الأربعاء",
+        3: "الخميس",
+        4: "الجمعة",
+        5: "السبت",
+        6: "الأحد",
+    }
+    arabic_months = {
+        1: "يناير", 2: "فبراير", 3: "مارس", 4: "أبريل",
+        5: "مايو", 6: "يونيو", 7: "يوليو", 8: "أغسطس",
+        9: "سبتمبر", 10: "أكتوبر", 11: "نوفمبر", 12: "ديسمبر",
+    }
+    
+    # توقيت اليمن ومكة المكرمة (UTC + 3)
+    utc_now = datetime.now(timezone.utc)
+    ast_now = utc_now + timedelta(hours=3)
+    weekday_name = arabic_weekdays.get(ast_now.weekday(), "")
+    month_name = arabic_months.get(ast_now.month, "")
+    date_str = f"{weekday_name}، {ast_now.day} {month_name} {ast_now.year}م"
+
+    # تاريخ اليوم / كم تاريخ اليوم / ما هو تاريخ اليوم
+    date_keywords = [
+        "تاريخ اليوم", "كم تاريخ اليوم", "ما تاريخ اليوم", "ما هو تاريخ اليوم",
+        "ايش تاريخ اليوم", "التاريخ كم", "كم التاريخ", "تاريخ كم اليوم"
+    ]
+    # ماهو اليوم / ما هو اليوم / ايش اليوم / اليوم ايش
+    day_keywords = [
+        "ماهو اليوم", "ما هو اليوم", "ايش اليوم", "اليوم ايش", "اليوم هو ايش", 
+        "اليوم ايش هو", "ايش يصادف اليوم", "ماذا يصادف اليوم"
+    ]
+
+    if any(kw in q for kw in date_keywords):
+        return f"📅 تاريخ اليوم هو: **{date_str}**"
+        
+    if any(kw in q for kw in day_keywords):
+        return f"📅 اليوم هو يوم **{weekday_name}**"
+
+    # 3. التعريف بالهوية (من أنت)
+    identity_keywords = [
+        "من انت", "من أنت", "مين انت", "مين أنت", "وش انت", "من تكون", "من تكوني", 
+        "ماذا تكون", "ما هو عملك", "ما عملك", "ما وظيفتك", "ما هي وظيفتك", "من صممك", "من صنعك"
+    ]
+    if any(kw in q for kw in identity_keywords):
+        return (
+            "🤖 أنا المساعد الذكي القانوني لمنصة **LawSaaS**.\n\n"
+            "لقد تم تصميمي خصيصاً لمساعدتك في إدارة مكتب المحاماة الخاص بك بكل كفاءة وسهولة. "
+            "أستطيع الاستعلام عن قضاياك وجلساتك وموكلينك، والبحث في القوانين اليمنية، وصياغة مختلف أنواع العقود والمستندات القانونية."
+        )
+
+    # 4. الشكر والتقدير
+    gratitude_keywords = [
+        "شكرا", "شكراً", "مشكور", "تسلم", "يعطيك العافيه", "يعطيك العافية", "جزاك الله", "شكرا لك"
+    ]
+    if any(kw in q for kw in gratitude_keywords) and len(q.split()) <= 3:
+        return "العفو! أنا في الخدمة دائماً. إذا كان لديك أي استفسار آخر أو مهمة تريد مني إنجازها، فأنا جاهز بالكامل. 🌸"
+
+    # 5. التوديع
+    farewell_keywords = [
+        "مع السلامه", "مع السلامة", "في امان الله", "في أمان الله", "باي", "خروج", "وداعا"
+    ]
+    if any(kw in q for kw in farewell_keywords) and len(q.split()) <= 3:
+        return "في أمان الله وحفظه! أتمنى لك يوماً سعيداً وموفقاً. 👋 إذا احتجت إليّ مجدداً، فقط اكتب لي وسأكون في خدمتك."
+
+    return None
+
+
 @router.post("/chat")
 async def ai_chat(request: Request, db: Session = Depends(get_db), current_user: AccessProfiles = Depends(get_current_user)):
     """
@@ -60,6 +153,18 @@ async def ai_chat(request: Request, db: Session = Depends(get_db), current_user:
 
         if not question:
             return JSONResponse({"success": False, "error": "السؤال فارغ"}, status_code=400)
+
+        # فحص ومعالجة الأسئلة العامة والدردشة البسيطة فوراً (مثل: كيف حالك، كم التاريخ، إلخ)
+        conv_response = _handle_conversational_query(question, user_name)
+        if conv_response:
+            _save_chat(db, office_id, user_id, question, conv_response, "greeting")
+            elapsed = int((time.time() - start_time) * 1000)
+            return JSONResponse({
+                "success": True,
+                "answer": conv_response,
+                "intent": "greeting",
+                "time_ms": elapsed
+            })
 
         # الحد الأقصى لطول السؤال
         if len(question) > 2000:

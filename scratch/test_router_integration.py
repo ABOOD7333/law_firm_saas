@@ -49,6 +49,33 @@ def run_tests():
     assert "سحر الهطامي" in data["answer"], f"Expected 'سحر الهطامي' in answer, got: {data['answer']}"
     print("✅ Client Name Search passed!")
     
+    # Test 1.5: Conversational QA, Wellness, Date and Identity
+    print("Testing Conversational QA ('كيف حالك اليوم')...")
+    resp = client.post("/api/ai/chat", json={"question": "كيف حالك اليوم"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "بخير وعافية" in data["answer"]
+    assert "لا توجد جلسات" not in data["answer"]
+    
+    print("Testing Date Query ('كم تاريخ اليوم')...")
+    resp = client.post("/api/ai/chat", json={"question": "كم تاريخ اليوم"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "تاريخ اليوم هو" in data["answer"] or "2026" in data["answer"]
+    
+    print("Testing Day Query ('ماهو اليوم')...")
+    resp = client.post("/api/ai/chat", json={"question": "ماهو اليوم"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "اليوم هو يوم" in data["answer"]
+    
+    print("Testing Identity Query ('من أنت')...")
+    resp = client.post("/api/ai/chat", json={"question": "من أنت"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "المساعد الذكي القانوني" in data["answer"]
+    print("✅ Conversational QA tests passed!")
+    
     # Test 2: Document Intent Detection & Form Fields Return
     print("Testing Document Form Fields request ('عقد إيجار')...")
     resp = client.post("/api/ai/chat", json={"question": "صياغة عقد إيجار"})
