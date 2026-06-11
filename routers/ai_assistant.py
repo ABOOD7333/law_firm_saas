@@ -98,20 +98,28 @@ async def ai_chat(request: Request, db: Session = Depends(get_db), current_user:
         db_data = None
         search_results = None
 
-        # أ. إذا كانت النية استعلام عن موكل ولكن لم يتم استخراج الاسم بالـ Regex
-        # نقوم بمحاولة البحث الموحد لمطابقة اسم الموكل دلالياً/بالمقارنة
-        if intent.type == "query_clients" and "client_name" not in intent.entities:
-            unified_results = _unified_assistant_search(db, office_id, question)
-            if unified_results["clients"]:
-                answer = _format_unified_search_response(unified_results, question)
-                _save_chat(db, office_id, user_id, question, answer, intent.type)
-                elapsed = int((time.time() - start_time) * 1000)
-                return JSONResponse({
-                    "success": True,
-                    "answer": answer,
-                    "intent": intent.type,
-                    "time_ms": elapsed
-                })
+        # أ. إذا كانت النية استعلام عن موكل
+        # نقوم بالاستعلام، وإذا لم نجد نتائج بالاسم الدقيق أو لم يستخرج بالـ Regex،
+        # نستخدم البحث الموحد لمطابقة اسم الموكل دلالياً/بالأجزاء
+        if intent.type == "query_clients":
+            if "client_name" in intent.entities:
+                try:
+                    db_data = db_engine.answer_query(intent.type, intent.entities)
+                except Exception as e:
+                    db_data = {"error": str(e)}
+
+            if not db_data or not db_data.get("success") or not db_data.get("data"):
+                unified_results = _unified_assistant_search(db, office_id, question)
+                if unified_results["clients"]:
+                    answer = _format_unified_search_response(unified_results, question)
+                    _save_chat(db, office_id, user_id, question, answer, intent.type)
+                    elapsed = int((time.time() - start_time) * 1000)
+                    return JSONResponse({
+                        "success": True,
+                        "answer": answer,
+                        "intent": intent.type,
+                        "time_ms": elapsed
+                    })
 
         # ب. إذا كانت النية استشارة عامة أو غير معروفة، نستخدم البحث الموحد الذكي مباشرة
         if intent.type in ["unknown", "legal_advice"]:
@@ -129,11 +137,12 @@ async def ai_chat(request: Request, db: Session = Depends(get_db), current_user:
         if intent.type in ["query_cases", "query_hearings", "query_clients",
                             "query_finance", "query_tasks", "analyze_stats",
                             "search_case"]:
-            # استعلام قاعدة البيانات
-            try:
-                db_data = db_engine.answer_query(intent.type, intent.entities)
-            except Exception as e:
-                db_data = {"error": str(e)}
+            # استعلام قاعدة البيانات (إذا لم نكن قد قمنا بالاستعلام بالفعل)
+            if not (intent.type == "query_clients" and db_data is not None):
+                try:
+                    db_data = db_engine.answer_query(intent.type, intent.entities)
+                except Exception as e:
+                    db_data = {"error": str(e)}
 
         elif intent.type == "search_law":
             # البحث في القوانين اليمنية

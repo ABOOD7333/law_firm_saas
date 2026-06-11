@@ -113,7 +113,7 @@ for filepath in py_files:
     if ".like(f\"%" in new_content:
         new_content = re.sub(
             r'\.like\(f"(.*?)%\{(.*?)\}%(.*?)"\)',
-            r'.like(f"\1%{str(\2).replace('%', '').replace('_', '')}%\3")',
+            r'.like(f"\1%{str(\2).replace("%", "").replace("_", "")}%\3")',
             new_content
         )
 
