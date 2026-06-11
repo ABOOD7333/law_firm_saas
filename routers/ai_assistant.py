@@ -657,16 +657,29 @@ def _format_unified_search_response(results: dict, query: str) -> str:
                 lines.append(f"  *ملخص:* {cs.summary[:150]}")
             lines.append("")
             
-    # 3. القوانين اليمنية المطابقة
+    # 3. القوانين اليمنية المطابقة وأدلة المنصة
     if results["laws"]:
-        lines.append("⚖️ **المواد القانونية المرتبطة في القانون اليمني:**")
-        lines.append("─────────────────────────")
-        for i, law in enumerate(results["laws"], 1):
-            lines.append(f"**{i}. {law['law']} - مادة ({law['article']})**")
-            if law.get("title"):
-                lines.append(f"   📌 *{law['title']}*")
-            lines.append(f"   📜 {law['text']}")
-            lines.append("")
+        # تقسيم النتائج إلى قوانين وأدلة تشغيل النظام
+        yemeni_laws = [l for l in results["laws"] if l.get("category") != "إرشاد النظام"]
+        system_guides = [l for l in results["laws"] if l.get("category") == "إرشاد النظام"]
+
+        if yemeni_laws:
+            lines.append("⚖️ **المواد القانونية المرتبطة في القانون اليمني:**")
+            lines.append("─────────────────────────")
+            for i, law in enumerate(yemeni_laws, 1):
+                lines.append(f"**{i}. {law['law']} - مادة ({law['article']})**")
+                if law.get("title"):
+                    lines.append(f"   📌 *{law['title']}*")
+                lines.append(f"   📜 {law['text']}")
+                lines.append("")
+
+        if system_guides:
+            lines.append("💻 **دليل استخدام وتشغيل المنصة:**")
+            lines.append("─────────────────────────")
+            for i, guide in enumerate(system_guides, 1):
+                lines.append(f"**{i}. {guide['title']}**")
+                lines.append(f"   📜 {guide['text']}")
+                lines.append("")
             
     # 4. المعرفة المخصصة للمكتب
     if results["custom_knowledge"]:
@@ -691,13 +704,8 @@ def _format_unified_search_response(results: dict, query: str) -> str:
             
     if not lines:
         return (
-            "🤔 لم أتمكن من فهم سؤالك بشكل كامل أو العثور على بيانات مطابقة له في النظام أو القوانين.\n\n"
-            "💡 **جرّب أحد هذه الأوامر:**\n"
-            "• كم عدد القضايا المفتوحة؟\n"
-            "• ما جلسات اليوم؟\n"
-            "• المادة 55 من قانون العمل\n"
-            "• صياغة عقد إيجار\n"
-            "• المهام المعلقة"
+            "عذراً، أنا مساعد قانوني مخصص للقوانين والتشريعات اليمنية وإدارة مكتب المحاماة فقط. "
+            "لا يمكنني الإجابة على الأسئلة العامة أو الخارجة عن هذا النطاق."
         )
         
     return "\n".join(lines)
