@@ -2898,11 +2898,13 @@ app.include_router(superadmin.router)
 
 from routers import ai_assistant as ai_assistant_router
 
-from routers import rag_router
-
 app.include_router(ai_assistant_router.router)
 
-app.include_router(rag_router.router)
+try:
+    from routers import rag_router
+    app.include_router(rag_router.router)
+except ImportError as e:
+    print(f"[RAG] تحذير: تعذر تحميل RAG Engine ({e}). سيعمل النظام بدون ميزة تحليل المستندات.")
 
 # ----------------------------------------------------------------------------
 

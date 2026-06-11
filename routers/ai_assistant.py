@@ -226,10 +226,19 @@ async def ai_chat(request: Request, db: Session = Depends(get_db), current_user:
                         "time_ms": elapsed
                     })
 
-        # ب. إذا كانت النية استشارة عامة أو غير معروفة، نستخدم البحث الموحد الذكي مباشرة
+        # ب. إذا كانت النية استشارة عامة أو غير معروفة، نستخدم Gemini مع سياق محلي
         if intent.type in ["unknown", "legal_advice"]:
+            # جمع سياق محلي أولاً
             unified_results = _unified_assistant_search(db, office_id, question)
-            answer = _format_unified_search_response(unified_results, question)
+            local_context = _build_local_context(unified_results)
+            
+            # إرسال لـ Gemini مع السياق المحلي
+            answer = _ask_gemini(question, local_context, user_name)
+            
+            # إذا فشل Gemini، استخدم الطريقة القديمة
+            if not answer:
+                answer = _format_unified_search_response(unified_results, question)
+            
             _save_chat(db, office_id, user_id, question, answer, intent.type)
             elapsed = int((time.time() - start_time) * 1000)
             return JSONResponse({
@@ -266,6 +275,20 @@ async def ai_chat(request: Request, db: Session = Depends(get_db), current_user:
                     search_results = (search_results or []) + custom_results
             except Exception as e:
                 search_results = []
+
+            # إذا لم نجد نتائج محلية كافية، نرسل لـ Gemini
+            if not search_results:
+                local_context = None
+                answer = _ask_gemini(question, local_context, user_name)
+                if answer:
+                    _save_chat(db, office_id, user_id, question, answer, intent.type)
+                    elapsed = int((time.time() - start_time) * 1000)
+                    return JSONResponse({
+                        "success": True,
+                        "answer": answer,
+                        "intent": intent.type,
+                        "time_ms": elapsed
+                    })
 
         elif intent.type == "generate_document":
             # توليد مستند
@@ -309,6 +332,12 @@ async def ai_chat(request: Request, db: Session = Depends(get_db), current_user:
             entities=intent.entities,
             user_name=user_name
         )
+
+        # 3.5. إذا كان الرد هو "لم أتمكن من فهم سؤالك"، نرسل لـ Gemini
+        if "لم أتمكن من فهم سؤالك" in answer or "لا يمكنني الإجابة" in answer:
+            gemini_answer = _ask_gemini(question, None, user_name)
+            if gemini_answer:
+                answer = gemini_answer
 
         # 4. حفظ المحادثة
         elapsed = int((time.time() - start_time) * 1000)
@@ -466,6 +495,45 @@ async def list_knowledge(request: Request, db: Session = Depends(get_db), curren
 # ==============================
 # دوال مساعدة
 # ==============================
+
+def _ask_gemini(question: str, local_context: str = None, user_name: str = "") -> str:
+    """يرسل السؤال لـ Gemini ويعيد الإجابة الذكية"""
+    try:
+        from ai_engine.llm_service import get_gemini_assistant
+        gemini = get_gemini_assistant()
+        if not gemini.is_available:
+            return None
+        return gemini.ask(question, local_context, user_name)
+    except Exception as e:
+        print(f"Gemini error: {e}")
+        return None
+
+
+def _build_local_context(unified_results: dict) -> str:
+    """يبني نص السياق المحلي من نتائج البحث الموحد لإرساله مع السؤال لـ Gemini"""
+    parts = []
+    
+    if unified_results.get("clients"):
+        parts.append("موكلون مطابقون في النظام:")
+        for c in unified_results["clients"]:
+            parts.append(f"  - {c['name']} | هاتف: {c['phone']} | قضية: {c.get('case_title', 'لا يوجد')}")
+    
+    if unified_results.get("cases"):
+        parts.append("قضايا مطابقة:")
+        for cs in unified_results["cases"]:
+            parts.append(f"  - [{cs.case_number}] {cs.title} | الحالة: {cs.status_key}")
+    
+    if unified_results.get("laws"):
+        parts.append("مواد قانونية يمنية ذات صلة:")
+        for law in unified_results["laws"]:
+            parts.append(f"  - {law['law']} مادة ({law['article']}): {law['text'][:200]}")
+    
+    if unified_results.get("custom_knowledge"):
+        parts.append("معرفة مخصصة للمكتب:")
+        for item in unified_results["custom_knowledge"]:
+            parts.append(f"  - {item['article_number']}: {item['article_text'][:200]}")
+    
+    return "\n".join(parts) if parts else None
 
 def _save_chat(db: Session, office_id: int, user_id: int,
                question: str, answer: str, intent_type: str):
