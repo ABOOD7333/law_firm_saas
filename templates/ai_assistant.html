@@ -592,11 +592,48 @@ function setMode(mode, btn) {
     document.querySelectorAll('.ai-mode-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
 
+    // إخفاء شاشة الترحيب
+    const welcome = document.getElementById('welcomeScreen');
+    if (welcome) welcome.remove();
+
     if (mode === 'docs') {
-        // عرض قائمة المستندات
-        addAIMessage('📄 **المستندات القانونية المتاحة:**\n\nاختر نوع المستند الذي تريد إنشاءه:\n\n⚖️ صحيفة دعوى مدنية\n🛡️ مذكرة دفاع\n🏠 عقد بيع\n🔑 عقد إيجار\n🤝 عقد شراكة تجارية\n📋 وكالة قانونية\n⚠️ إنذار قانوني\n📄 طعن استئناف\n🔨 طلب تنفيذ حكم\n💼 عقد عمل\n💰 إقرار بدين\n🕊️ اتفاقية تسوية ودية\n📅 طلب تأجيل جلسة\n🧾 فاتورة أتعاب محاماة\n📊 ملخص وكشف حساب قضية\n\nاكتب اسم المستند الذي تريده وسأساعدك في إنشائه!');
+        const docs = [
+            {code: "civil_lawsuit", name: "صحيفة دعوى مدنية", icon: "⚖️"},
+            {code: "defense_memo", name: "مذكرة دفاع", icon: "🛡️"},
+            {code: "sale_contract", name: "عقد بيع", icon: "🏠"},
+            {code: "lease_contract", name: "عقد إيجار", icon: "🔑"},
+            {code: "partnership_contract", name: "عقد شراكة تجارية", icon: "🤝"},
+            {code: "power_of_attorney", name: "وكالة قانونية", icon: "📋"},
+            {code: "legal_warning", name: "إنذار قانوني", icon: "⚠️"},
+            {code: "appeal", name: "طعن استئناف", icon: "📄"},
+            {code: "execution_request", name: "طلب تنفيذ حكم", icon: "🔨"},
+            {code: "employment_contract", name: "عقد عمل", icon: "💼"},
+            {code: "debt_acknowledgment", name: "إقرار بدين", icon: "💰"},
+            {code: "settlement_agreement", name: "اتفاقية تسوية ودية", icon: "🕊️"},
+            {code: "hearing_postponement", name: "طلب تأجيل جلسة", icon: "📅"},
+            {code: "legal_invoice", name: "فاتورة أتعاب محاماة", icon: "🧾"},
+            {code: "case_statement", name: "ملخص وكشف حساب قضية", icon: "📊"}
+        ];
+
+        addAIMessage('📄 **صياغة المستندات القانونية:**\n\nاختر نوع المستند الذي تريد صياغته من الخيارات أدناه أو اكتب اسمه:');
+        
+        let gridHtml = '<div class="doc-grid" style="margin-top: 12px; margin-bottom: 12px;">';
+        docs.forEach(d => {
+            gridHtml += `
+                <div class="doc-card" onclick="sendQuickQ('${d.name}')">
+                    <div class="doc-icon">${d.icon}</div>
+                    <div class="doc-name">${d.name}</div>
+                </div>
+            `;
+        });
+        gridHtml += '</div>';
+        
+        const container = document.getElementById('chatMessages');
+        container.insertAdjacentHTML('beforeend', gridHtml);
+        container.scrollTop = container.scrollHeight;
+
     } else if (mode === 'law') {
-        addAIMessage('📖 **وضع البحث القانوني**\n\nيمكنك:\n• البحث بالمادة القانونية: "ما المادة 150 من قانون المرافعات؟"\n• البحث بالموضوع: "ما عقوبة السرقة في اليمن؟"\n• البحث بالكلمة: "الإيجار" أو "الطلاق" أو "الشركة"\n\nما الذي تريد البحث عنه؟');
+        addAIMessage('📖 **وضع البحث القانوني**\n\nيمكنك:\n• البحث بالمادة القانونية: "ما المادة 150 من القانون المدني؟"\n• البحث بالموضوع: "ما عقوبة السرقة في القانون اليمني؟"\n• البحث بالكلمة: "الايجار" أو "الطلاق" أو "الشركات"\n\nما الذي تريد البحث عنه؟');
     } else if (mode === 'stats') {
         sendQuickQ('أعطني إحصائيات شاملة عن مكتبي');
     }
@@ -639,7 +676,11 @@ async function sendMessage() {
         removeTypingIndicator(typingId);
 
         if (data.success) {
-            addAIMessage(data.answer, data.time_ms);
+            if (data.doc_type && data.form_fields) {
+                renderInteractiveForm(data.doc_type, data.form_fields, data.answer);
+            } else {
+                addAIMessage(data.answer, data.time_ms);
+            }
         } else {
             addAIMessage(`❌ ${data.error || 'حدث خطأ، يرجى المحاولة مرة أخرى.'}`);
         }
@@ -651,6 +692,102 @@ async function sendMessage() {
     isWaiting = false;
     document.getElementById('sendBtn').disabled = false;
     input.focus();
+}
+
+function renderInteractiveForm(doc_code, fields, answer) {
+    const now = new Date().toLocaleTimeString('ar-YE', {hour: '2-digit', minute: '2-digit'});
+    
+    // بناء حقول النموذج التفاعلي
+    let fieldsHtml = '';
+    for (const [key, label] of Object.entries(fields)) {
+        fieldsHtml += `
+            <div style="margin-bottom: 12px; text-align: right;">
+                <label style="display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 4px;">${label}</label>
+                <input type="text" name="${key}" class="doc-field-input" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 13px; outline: none; box-sizing: border-box; transition: border-color 0.2s;" onfocus="this.style.borderColor='#4f46e5'" onblur="this.style.borderColor='#cbd5e1'" />
+            </div>
+        `;
+    }
+    
+    const formId = 'form_' + Date.now();
+    const html = `
+        <div class="chat-message ai-message">
+            <div class="msg-avatar ai-avatar">⚖️</div>
+            <div style="width: 100%; max-width: 500px;">
+                <div class="msg-bubble" style="background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                    <div style="font-weight: 800; font-size: 15px; color: #1e3a5f; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+                        📝 نموذج إدخال بيانات المستند
+                    </div>
+                    <div style="font-size: 12px; color: #64748b; margin-bottom: 16px; line-height: 1.4;">
+                        يرجى تعبئة الحقول أدناه لتوليد المستند القانوني المطلوب بشكل فوري وتلقائي:
+                    </div>
+                    <form id="${formId}">
+                        ${fieldsHtml}
+                    </form>
+                    <button class="copy-btn" style="width: 100%; margin-top: 12px; background: linear-gradient(135deg, #4f46e5, #7c3aed); border-radius: 8px; padding: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(79,70,229,0.2);" onclick="submitDocForm('${doc_code}', '${formId}', this)">
+                        📄 صياغة وتوليد المستند
+                    </button>
+                </div>
+                <div class="msg-time">${now}</div>
+            </div>
+        </div>
+    `;
+    
+    appendMessage(html);
+}
+
+async function submitDocForm(doc_code, formId, btn) {
+    const form = document.getElementById(formId);
+    if (!form) return;
+    
+    const inputs = form.querySelectorAll('.doc-field-input');
+    const fields = {};
+    let hasEmpty = false;
+    
+    inputs.forEach(input => {
+        const val = input.value.trim();
+        fields[input.name] = val;
+        if (!val) {
+            input.style.borderColor = '#ef4444';
+            hasEmpty = true;
+        } else {
+            input.style.borderColor = '#cbd5e1';
+        }
+    });
+    
+    if (hasEmpty) {
+        alert('⚠️ يرجى ملء جميع الحقول المطلوبة لضمان صياغة قانونية دقيقة للمستند.');
+        return;
+    }
+    
+    // تعطيل الحقول وعرض حالة التحميل
+    inputs.forEach(i => i.disabled = true);
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '⏳ جاري صياغة المستند...';
+    
+    try {
+        const res = await fetch('/api/ai/generate-document', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({doc_code: doc_code, fields: fields})
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+            addAIMessage(data.document);
+        } else {
+            alert(`❌ فشل توليد المستند: ${data.error}`);
+            inputs.forEach(i => i.disabled = false);
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    } catch(e) {
+        alert('❌ حدث خطأ في الاتصال بالخادم أثناء صياغة المستند.');
+        inputs.forEach(i => i.disabled = false);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
 }
 
 function addUserMessage(text) {
