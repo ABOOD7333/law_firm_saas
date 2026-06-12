@@ -21,7 +21,7 @@ import os
 
 from sqlalchemy.orm import Session
 from database.database import get_db, init_db
-from database.models import (AccessProfiles, AuthSessions, LawClients, LawCases, LawOffices,
+from database.models import (AccessProfiles, AuthSessions, AuthVerificationTokens, LawClients, LawCases, LawOffices,
     LawHearings, LawTransactions, LawExpenses, LawDocuments, LawTasks, PaymentRequest)
 import shutil
 
@@ -329,8 +329,6 @@ import secrets
 # مساحة لتخزين الرموز الآمنة مؤقتاً (يفضل Redis في الإنتاج)
 
 _reset_tokens = {}
-
-_temp_2fa_sessions = {}
 
 # سجل بسيط لتتبع طلبات OTP لمنع إغراق الإيميل (Rate Limiting)
 
@@ -696,15 +694,21 @@ async def login_submit(
             # Check if 2FA is enabled for this user (1 indicates enabled)
 
             if getattr(user, "is_2fa_enabled", 0) == 1:
-
                 temp_token = str(uuid.uuid4())
-
-                _temp_2fa_sessions[temp_token] = user.id
+                
+                # [SECURITY FIX MED-01] تخزين جلسة التحقق المؤقتة بقاعدة البيانات بدلاً من الذاكرة لبيئة stateless
+                expires = datetime.now(timezone.utc) + timedelta(minutes=5)
+                new_token = AuthVerificationTokens(
+                    user_id=user.id,
+                    token_hash=temp_token,
+                    token_type="web_2fa_session",
+                    expires_at=expires.strftime("%Y-%m-%d %H:%M:%S")
+                )
+                db.add(new_token)
+                db.commit()
 
                 otp_code = generate_otp(6)
-
                 store_otp(user.email, otp_code)
-
                 send_otp_email(user.email, otp_code, purpose="2fa")
 
                 app_logger.info(f"LOGIN_2FA_TRIGGERED | user={user.id} | email={user.email}")
@@ -728,6 +732,13 @@ async def login_submit(
                 )
 
                 return response
+
+            # [SECURITY FIX LOW-01] تدوير الجلسة بتعطيل الجلسات السابقة النشطة
+            db.query(AuthSessions).filter(
+                AuthSessions.user_id == user.id,
+                AuthSessions.is_active == 1
+            ).update({"is_active": 0})
+            db.commit()
 
             token = str(uuid.uuid4())
 
@@ -839,11 +850,20 @@ async def logout(request: Request, db: Session = Depends(get_db)):
 
 @app.get("/login-2fa", response_class=HTMLResponse)
 
-async def login_2fa_page(request: Request):
+async def login_2fa_page(request: Request, db: Session = Depends(get_db)):
 
     temp_token = request.cookies.get("temp_2fa_token")
+    now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    db_token = None
+    if temp_token:
+        db_token = db.query(AuthVerificationTokens).filter(
+            AuthVerificationTokens.token_hash == temp_token,
+            AuthVerificationTokens.token_type == "web_2fa_session",
+            AuthVerificationTokens.expires_at > now_str,
+            AuthVerificationTokens.consumed_at.is_(None)
+        ).first()
 
-    if not temp_token or temp_token not in _temp_2fa_sessions:
+    if not db_token:
 
         return RedirectResponse(url="/", status_code=303)
 
@@ -862,12 +882,21 @@ async def login_2fa_submit(
 ):
 
     temp_token = request.cookies.get("temp_2fa_token")
+    now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    db_token = None
+    if temp_token:
+        db_token = db.query(AuthVerificationTokens).filter(
+            AuthVerificationTokens.token_hash == temp_token,
+            AuthVerificationTokens.token_type == "web_2fa_session",
+            AuthVerificationTokens.expires_at > now_str,
+            AuthVerificationTokens.consumed_at.is_(None)
+        ).first()
 
-    if not temp_token or temp_token not in _temp_2fa_sessions:
+    if not db_token:
 
         return templates.TemplateResponse(request=request, name="login.html", context={"error": "انتهت صلاحية جلسة التحقق، يرجى تسجيل الدخول مجدداً."})
 
-    user_id = _temp_2fa_sessions[temp_token]
+    user_id = db_token.user_id
 
     user = db.query(AccessProfiles).filter(AccessProfiles.id == user_id).first()
 
@@ -877,9 +906,16 @@ async def login_2fa_submit(
 
     if verify_otp(user.email, code.strip()):
 
-        # OTP is valid! Clean up temp session
+        # OTP is valid! Clean up temp session in DB
+        db_token.consumed_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+        db.commit()
 
-        del _temp_2fa_sessions[temp_token]
+        # [SECURITY FIX LOW-01] تدوير الجلسة بتعطيل الجلسات السابقة النشطة للمستخدم
+        db.query(AuthSessions).filter(
+            AuthSessions.user_id == user.id,
+            AuthSessions.is_active == 1
+        ).update({"is_active": 0})
+        db.commit()
 
         # Issue real session token
 

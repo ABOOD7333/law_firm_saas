@@ -9,13 +9,10 @@ from pydantic import BaseModel
 from sqlalchemy import or_
 
 from database.database import get_db
-from database.models import AccessProfiles, AuthSessions, LawCases, LawDocuments, LawOffices, LawClients, LawHearings, LawTasks
+from database.models import AccessProfiles, AuthSessions, AuthVerificationTokens, LawCases, LawDocuments, LawOffices, LawClients, LawHearings, LawTasks
 from dependencies import get_current_user
 
 router = APIRouter(prefix="/api/mobile", tags=["Mobile API"])
-
-# Store temporary mobile 2FA sessions in RAM (valid for 5 minutes)
-_mobile_temp_2fa_sessions = {}
 
 class LoginRequest(BaseModel):
     email: str
@@ -87,7 +84,17 @@ async def login(req: LoginRequest, db: Session = Depends(get_db)):
         # Check 2FA
         if getattr(user, "is_2fa_enabled", 0) == 1:
             temp_token = str(uuid.uuid4())
-            _mobile_temp_2fa_sessions[temp_token] = user.id
+            
+            # [SECURITY FIX MED-01] تخزين جلسة التحقق الثنائي المؤقتة بقاعدة البيانات بدلاً من الذاكرة لبيئة stateless
+            expires = datetime.now(timezone.utc) + timedelta(minutes=5)
+            new_token = AuthVerificationTokens(
+                user_id=user.id,
+                token_hash=temp_token,
+                token_type="mobile_2fa_session",
+                expires_at=expires.strftime("%Y-%m-%d %H:%M:%S")
+            )
+            db.add(new_token)
+            db.commit()
             
             otp_code = generate_otp(6)
             store_otp(user.email, otp_code)
@@ -101,6 +108,13 @@ async def login(req: LoginRequest, db: Session = Depends(get_db)):
             }
             
         # Standard login session creation
+        # [SECURITY FIX LOW-01] تدوير الجلسة بتعطيل الجلسات السابقة النشطة
+        db.query(AuthSessions).filter(
+            AuthSessions.user_id == user.id,
+            AuthSessions.is_active == 1
+        ).update({"is_active": 0})
+        db.commit()
+
         token = str(uuid.uuid4())
         expires = datetime.now(timezone.utc) + timedelta(days=7)
         new_session = AuthSessions(
@@ -136,17 +150,34 @@ async def verify_2fa(req: Verify2faRequest, db: Session = Depends(get_db)):
     from email_service import verify_otp
     
     temp_token = req.temp_token
-    if temp_token not in _mobile_temp_2fa_sessions:
+    # [SECURITY FIX MED-01] التحقق من الجلسة المؤقتة المخزنة في قاعدة البيانات
+    now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    db_token = db.query(AuthVerificationTokens).filter(
+        AuthVerificationTokens.token_hash == temp_token,
+        AuthVerificationTokens.token_type == "mobile_2fa_session",
+        AuthVerificationTokens.expires_at > now_str,
+        AuthVerificationTokens.consumed_at.is_(None)
+    ).first()
+    
+    if not db_token:
         raise HTTPException(status_code=400, detail="انتهت صلاحية جلسة التحقق، يرجى المحاولة مجدداً.")
         
-    user_id = _mobile_temp_2fa_sessions[temp_token]
+    user_id = db_token.user_id
     user = db.query(AccessProfiles).filter(AccessProfiles.id == user_id).first()
     if not user:
         raise HTTPException(status_code=400, detail="المستخدم غير موجود.")
         
     if verify_otp(user.email, req.code.strip()):
         # OTP Valid! Clean temp session
-        del _mobile_temp_2fa_sessions[temp_token]
+        db_token.consumed_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+        db.commit()
+        
+        # [SECURITY FIX LOW-01] تدوير الجلسة بتعطيل الجلسات السابقة النشطة للمستخدم
+        db.query(AuthSessions).filter(
+            AuthSessions.user_id == user.id,
+            AuthSessions.is_active == 1
+        ).update({"is_active": 0})
+        db.commit()
         
         # Issue real session token
         token = str(uuid.uuid4())
