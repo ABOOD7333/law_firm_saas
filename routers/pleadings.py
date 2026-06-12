@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, Depends, HTTPException, Form
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
 import traceback
+from core.error_handler import safe_error_html
 
 from database.database import get_db
 from database.models import AccessProfiles, LawCases, LawPleadings
@@ -18,9 +19,8 @@ async def pleadings_page(request: Request, db: Session = Depends(get_db), user: 
         cases = db.query(LawCases).filter(LawCases.office_id == (user.office_id or 1), LawCases.is_deleted == 0).all()
         return templates.TemplateResponse(request=request, name="pleadings.html",
             context={"user": user, "pleadings": pleadings, "cases": cases, "active_page": "pleadings"})
-    except Exception:
-        import traceback
-        return HTMLResponse(content=f"<pre dir='ltr'>{traceback.format_exc()}</pre>", status_code=500)
+    except Exception as exc:
+        return safe_error_html(exc, context="pleadings.py")
 
 @router.post("/pleadings/add")
 async def add_pleading(

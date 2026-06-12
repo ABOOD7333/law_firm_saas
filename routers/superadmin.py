@@ -11,12 +11,9 @@ from core.logger import app_logger
 router = APIRouter()
 
 def is_superadmin(user: AccessProfiles):
-    # Only allow user ID 1 or a specific username to access the superadmin panel
     if not user:
         return False
-    if user.id == 1 or user.username == 'ABOOD':
-        return True
-    return False
+    return getattr(user, 'is_superadmin', 0) == 1
 
 @router.get("/superadmin", response_class=HTMLResponse)
 async def superadmin_page(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
@@ -204,7 +201,7 @@ async def fix_legacy_subscriptions(request: Request, db: Session = Depends(get_d
         updated_count = 0
         for off in offices:
             owner = db.query(AccessProfiles).filter(AccessProfiles.id == off.owner_user_id).first() if off.owner_user_id else None
-            is_main = off.id == 1 or off.name == 'المكتب الرئيسي' or (owner and owner.username == 'ABOOD')
+            is_main = off.id == 1 or off.name == 'المكتب الرئيسي' or (owner and getattr(owner, 'is_superadmin', 0) == 1)
             
             if is_main:
                 off.subscription_plan = 'lifetime'

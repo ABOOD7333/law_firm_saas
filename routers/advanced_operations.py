@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
 from datetime import datetime
 import traceback
+from core.error_handler import safe_error_html
 
 from database.database import get_db
 from database.models import (
@@ -23,9 +24,9 @@ async def advanced_operations_page(request: Request, db: Session = Depends(get_d
         return templates.TemplateResponse(request=request, name="advanced_operations.html", context={
             "user": user, "active_page": "advanced_operations", "cases": cases
         })
-    except Exception:
-        import traceback
-        return HTMLResponse(content=f"<pre dir='ltr'>{traceback.format_exc()}</pre>", status_code=500)
+    except Exception as exc:
+        return safe_error_html(exc, context="advanced_operations.py")
+
 
 @router.get("/api/advanced/case_health/{case_id}")
 async def get_case_health(case_id: int, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):

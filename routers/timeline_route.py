@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 from datetime import datetime
 import traceback
+from core.error_handler import safe_error_html
 
 from database.database import get_db
 from database.models import (
@@ -206,9 +207,8 @@ async def timeline_page(
             "notes": notes,
             "correspondences": correspondences,
         })
-    except Exception:
-        import traceback
-        return HTMLResponse(content=f"<pre dir='ltr'>{traceback.format_exc()}</pre>", status_code=500)
+    except Exception as exc:
+        return safe_error_html(exc, context="timeline_route.py")
 
 
 

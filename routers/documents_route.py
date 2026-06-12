@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Request, Depends, Form, UploadFile, File, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, FileResponse
 from sqlalchemy.orm import Session
 from datetime import datetime
 import json
 import traceback
+from core.error_handler import safe_error_html
 import os
 import uuid
 
@@ -15,6 +16,9 @@ from dependencies import get_current_user, templates
 
 router = APIRouter()
 
+# [SECURITY FIX HIGH-02] Ensure private uploads folder exists
+os.makedirs("private_uploads/documents", exist_ok=True)
+
 
 @router.get("/documents", response_class=HTMLResponse)
 async def documents_page(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
@@ -24,9 +28,8 @@ async def documents_page(request: Request, db: Session = Depends(get_db), user: 
         cases = db.query(LawCases).filter(LawCases.office_id == (user.office_id or 1), LawCases.is_deleted == 0).all()
         return templates.TemplateResponse(request=request, name="documents.html",
             context={"user": user, "docs": docs, "cases": cases, "active_page": "documents"})
-    except Exception:
-        import traceback
-        return HTMLResponse(content=f"<pre dir='ltr'>{traceback.format_exc()}</pre>", status_code=500)
+    except Exception as exc:
+        return safe_error_html(exc, context="documents_route.py")
 
 @router.post("/documents/add")
 async def add_document(
@@ -71,10 +74,10 @@ async def add_document(
             return HTMLResponse(content="<script>alert('فشل التحقق من أمان محتوى الملف. يرجى رفع ملف سليم وصحيح.'); window.history.back();</script>", status_code=400)
 
         filename = f"{uuid.uuid4().hex}.{ext}"
-        path = os.path.join("static", "uploads", "documents", filename)
+        path = os.path.join("private_uploads", "documents", filename)
         with open(path, "wb") as f_out:
             f_out.write(file_bytes)
-        file_path_str = f"static/uploads/documents/{filename}"
+        file_path_str = f"private_uploads/documents/{filename}"
 
     d = LawDocuments(case_id=case_id, office_id=user.office_id or 1,
         name=name, document_type_key=document_type_key,
@@ -124,10 +127,10 @@ async def edit_document(
                 return HTMLResponse(content="<script>alert('فشل التحقق من أمان محتوى الملف. يرجى رفع ملف سليم وصحيح.'); window.history.back();</script>", status_code=400)
 
             filename = f"{uuid.uuid4().hex}.{ext}"
-            path = os.path.join("static", "uploads", "documents", filename)
+            path = os.path.join("private_uploads", "documents", filename)
             with open(path, "wb") as f_out:
                 f_out.write(file_bytes)
-            d.file_path = f"static/uploads/documents/{filename}"
+            d.file_path = f"private_uploads/documents/{filename}"
 
         d.case_id = case_id
         d.name = name
@@ -153,4 +156,45 @@ async def delete_document(
             return HTMLResponse(content="<script>alert('غير مصرح لك بحذف مستندات هذه القضية'); window.history.back();</script>", status_code=403)
         db.delete(d); db.commit()
     return RedirectResponse(url="/documents", status_code=303)
+
+
+# [SECURITY FIX HIGH-02] Secure File Access Endpoints
+@router.get("/private_uploads/documents/{filename}")
+@router.get("/static/uploads/documents/{filename}")
+async def download_document(
+    filename: str,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    if not user:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+        
+    # Find the document in database by file path (either private_uploads or static)
+    doc = db.query(LawDocuments).filter(
+        (LawDocuments.file_path == f"private_uploads/documents/{filename}") |
+        (LawDocuments.file_path == f"static/uploads/documents/{filename}")
+    ).first()
+    
+    if not doc:
+        raise HTTPException(status_code=404, detail="المستند غير موجود في قاعدة البيانات")
+        
+    # Check authorization: must belong to the user's office
+    if doc.office_id != user.office_id:
+        raise HTTPException(status_code=403, detail="غير مصرح لك بالوصول لهذا المستند")
+        
+    # RBAC Check: Restrict lawyers to their assigned cases only if they cannot view all
+    case = db.query(LawCases).filter(LawCases.id == doc.case_id).first()
+    if case and user.role in ['محامي', 'محامٍ'] and user.can_view_all_cases == 0 and case.lead_lawyer_id != user.id:
+        raise HTTPException(status_code=403, detail="غير مصرح لك بالوصول لمستندات هذه القضية")
+        
+    # Resolve physical path on server
+    path = os.path.join("private_uploads", "documents", filename)
+    if not os.path.exists(path):
+        # Fallback to static uploads for backward compatibility
+        path = os.path.join("static", "uploads", "documents", filename)
+        
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="الملف غير موجود على الخادم")
+        
+    return FileResponse(path)
 

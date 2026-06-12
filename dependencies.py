@@ -44,7 +44,7 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
             return None
             
         # Superadmins bypass office blocks
-        if user.id == 1 or user.username == 'ABOOD':
+        if getattr(user, 'is_superadmin', 0) == 1:
             return user
             
         if user.office_id:

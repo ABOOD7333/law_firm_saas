@@ -62,6 +62,13 @@ async def login(req: LoginRequest, db: Session = Depends(get_db)):
     
     if not user or user.is_active == 0:
         raise HTTPException(status_code=400, detail="البريد الإلكتروني أو كلمة المرور غير صحيحة.")
+
+    # [SECURITY FIX MED-04] التحقق من القفل قبل محاولة كلمة المرور
+    if getattr(user, 'failed_attempts', 0) >= 10:
+        raise HTTPException(
+            status_code=429,
+            detail="تم قفل الحساب مؤقتاً بسبب كثرة المحاولات الفاشلة. يرجى التواصل مع المسؤول."
+        )
         
     # Client login case verification
     if user.role == "موكل" and req.case_number:

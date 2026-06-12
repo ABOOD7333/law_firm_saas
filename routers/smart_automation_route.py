@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
 import traceback
+from core.error_handler import safe_error_html
 
 from database.database import get_db
 from database.models import (
@@ -25,9 +26,8 @@ async def automation_page(
         cases = db.query(LawCases).filter(LawCases.office_id == _office_id).all()
         return templates.TemplateResponse(request=request, name="automation.html",
             context={"user": user, "cases": cases, "active_page": "automation"})
-    except Exception:
-        import traceback
-        return HTMLResponse(content=f"<pre dir='ltr'>{traceback.format_exc()}</pre>", status_code=500)
+    except Exception as exc:
+        return safe_error_html(exc, context="smart_automation_route.py")
 
 @router.get("/api/conflict-check")
 async def conflict_check(

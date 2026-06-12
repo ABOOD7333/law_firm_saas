@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
 import traceback
+from core.error_handler import safe_error_html
 
 from database.database import get_db
 from database.models import AccessProfiles, LawCases, LawExpenses
@@ -25,9 +26,8 @@ async def expenses_page(request: Request, db: Session = Depends(get_db), user: A
         return templates.TemplateResponse(request=request, name="expenses.html", context={
             "user": user, "active_page": "expenses", "records": records, "cases": cases, "records_json": records_json
         })
-    except Exception:
-        import traceback
-        return HTMLResponse(content=f"<pre dir='ltr'>{traceback.format_exc()}</pre>", status_code=500)
+    except Exception as exc:
+        return safe_error_html(exc, context="expenses.py")
 
 @router.post("/api/expenses/save")
 async def expenses_save(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):

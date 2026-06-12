@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 import traceback
+from core.error_handler import safe_error_html
 
 from database.database import get_db
 from database.models import (
@@ -129,10 +130,6 @@ async def reports_page(
             "total_clients": total_clients, "total_parties": total_parties,
             "total_tasks": total_tasks, "done_tasks_all": done_tasks_all,
         })
-    except Exception:
-        app_logger.error("reports_page error", exc_info=True)
-        return HTMLResponse(
-            content=f"<pre dir='ltr'>{traceback.format_exc()}</pre>",
-            status_code=500
-        )
+    except Exception as exc:
+        return safe_error_html(exc, context="reports_route.py")
 

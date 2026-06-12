@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
 import traceback
+from core.error_handler import safe_error_html
 
 from database.database import get_db
 from database.models import AccessProfiles, LawCases, LawLegalReferences
@@ -26,9 +27,8 @@ async def legal_references_page(request: Request, db: Session = Depends(get_db),
         return templates.TemplateResponse(request=request, name="legal_references.html", context={
             "user": user, "active_page": "legal_references", "records": records, "cases": cases, "records_json": records_json
         })
-    except Exception:
-        import traceback
-        return HTMLResponse(content=f"<pre dir='ltr'>{traceback.format_exc()}</pre>", status_code=500)
+    except Exception as exc:
+        return safe_error_html(exc, context="legal_references.py")
 
 @router.post("/api/legal_references/save")
 async def legal_references_save(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):

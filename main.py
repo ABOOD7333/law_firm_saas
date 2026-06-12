@@ -50,6 +50,8 @@ os.makedirs("static/img", exist_ok=True)
 
 os.makedirs("static/uploads/documents", exist_ok=True)
 
+os.makedirs("private_uploads/documents", exist_ok=True)
+
 os.makedirs("templates", exist_ok=True)
 
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -190,7 +192,7 @@ class LoginRateLimitMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
 
-        if request.url.path in ["/api/login", "/api/superadmin-login"] and request.method == "POST":
+        if request.url.path in ["/api/login", "/api/superadmin-login", "/api/mobile/login"] and request.method == "POST":
 
             ip = request.client.host or "127.0.0.1"
 
@@ -216,23 +218,71 @@ app.add_middleware(LoginRateLimitMiddleware)
 
 from fastapi.middleware.cors import CORSMiddleware
 
+# ── [SECURITY FIX CRIT-01] إصلاح ثغرة CORS Wildcard ──
+# تم حذف allow_origin_regex=r"https?://.*" التي كانت تسمح لأي موقع بالوصول
+_ALLOWED_ORIGINS = [
+    "http://localhost",
+    "http://localhost:8000",
+    "http://localhost:7882",
+    "http://127.0.0.1:8000",
+    "https://web-production-80e9e.up.railway.app",
+]
+
 app.add_middleware(
 
     CORSMiddleware,
 
-    allow_origins=["http://localhost", "http://localhost:7882", "https://web-production-80e9e.up.railway.app"],
-
-    allow_origin_regex=r"https?://.*",
+    allow_origins=_ALLOWED_ORIGINS,
 
     allow_credentials=True,
 
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
 
-    allow_headers=["*"],
-
-    expose_headers=["*"],
+    allow_headers=["Content-Type", "Authorization", "X-CSRF-Token", "X-Requested-With"],
 
 )
+
+# ── [SECURITY FIX MED-06] إضافة Security HTTP Headers ──
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+
+    async def dispatch(self, request: Request, call_next):
+
+        response = await call_next(request)
+
+        # منع Clickjacking
+        response.headers["X-Frame-Options"] = "DENY"
+
+        # منع MIME Sniffing
+        response.headers["X-Content-Type-Options"] = "nosniff"
+
+        # تفعيل XSS Protection المدمج في المتصفح
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+
+        # تقليل تسريب Referer
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
+        # تقييد الصلاحيات المتصفحية
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+
+        # إجبار HTTPS (للإنتاج)
+        is_prod = request.url.hostname not in ["127.0.0.1", "localhost"]
+        if is_prod:
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+
+        # Content Security Policy
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+            "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; "
+            "img-src 'self' data: blob: https:; "
+            "connect-src 'self'; "
+            "frame-ancestors 'none';"
+        )
+
+        return response
+
+app.add_middleware(SecurityHeadersMiddleware)
 
 # Mount static files
 
@@ -312,13 +362,20 @@ async def api_forgot_send_otp(request: Request, db: Session = Depends(get_db)):
 
     ).first()
 
+    # [SECURITY FIX MED-02] رسالة موحدة لمنع User Enumeration
+    # لا نُفصح إذا كان المستخدم موجوداً أم لا، وإذا كان الهاتف مطابقاً أم لا
+    _enum_error = _JSONResponse({
+        "success": False,
+        "error": "إذا كانت البيانات صحيحة، سيصلك رمز التحقق على بريدك الإلكتروني خلال دقائق."
+    }, status_code=200)
+
     if not user:
 
-        return _JSONResponse({"success": False, "error": "لم يتم العثور على حساب بهذه البيانات"}, status_code=404)
+        return _enum_error
 
     if user.phone != phone:
 
-        return _JSONResponse({"success": False, "error": "رقم الهاتف غير مطابق للبيانات المسجلة"}, status_code=400)
+        return _enum_error
 
     # Rate Limiting Check (3 محاولات كل 15 دقيقة)
 
@@ -3031,28 +3088,6 @@ async def knowledge_admin_page(request: Request, db: Session = Depends(get_db)):
         return RedirectResponse("/", status_code=302)
     return templates.TemplateResponse("knowledge_admin.html", {"request": request, "user": user})
 
-@app.post("/debug-login-test")
-async def debug_login_test(request: Request, db: Session = Depends(get_db)):
-    import traceback
-    try:
-        form = await request.form()
-        email = str(form.get("email", "ABOOD"))
-        password = str(form.get("password", "admin123456"))
-        user = db.query(AccessProfiles).filter(
-            (AccessProfiles.email == email) |
-            (AccessProfiles.username == email)
-        ).first()
-        if not user:
-            return JSONResponse({"error": "user_not_found"})
-        pin_ok = _verify_pin(password, user.access_pin_hash) if user.access_pin_hash else False
-        return JSONResponse({
-            "user_id": user.id,
-            "username": user.username,
-            "role": user.role,
-            "is_active": user.is_active,
-            "pin_ok": pin_ok,
-            "status": "ok"
-        })
-    except Exception as e:
-        return JSONResponse({"error": str(e), "trace": traceback.format_exc()}, status_code=200)
-
+# [SECURITY FIX CRITICAL] تم حذف endpoint التشخيصي /debug-login-test
+# كان هذا الـ endpoint يُتيح اختبار كلمات المرور وعرض بيانات المستخدمين دون مصادقة.
+# لا تُضف أي endpoints تشخيصية مشابهة في بيئة الإنتاج.

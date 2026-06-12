@@ -49,6 +49,7 @@ class AccessProfiles(Base):
     username: Mapped[Optional[str]] = mapped_column(Text, index=True)
     lawyer_name: Mapped[Optional[str]] = mapped_column(Text, index=True)
     case_number: Mapped[Optional[str]] = mapped_column(Text, index=True)
+    is_superadmin: Mapped[int] = mapped_column(Integer, CheckConstraint('is_superadmin IN (0, 1)'), nullable=False, server_default=text('0'))
 
     specializations: Mapped[List['LawSpecializations']] = relationship('LawSpecializations', secondary='law_user_specializations', back_populates='users')
 

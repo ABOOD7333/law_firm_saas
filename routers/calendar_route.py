@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 import traceback
+from core.error_handler import safe_error_html
 
 from database.database import get_db
 from database.models import AccessProfiles, LawHearings, LawTasks
@@ -83,7 +84,6 @@ async def calendar_page(
                      "prev_month": prev_month, "prev_year": prev_year,
                      "next_month": next_month, "next_year": next_year,
                      "total_hearings": len(hearings), "total_tasks": len(tasks)})
-    except Exception:
-        import traceback
-        return HTMLResponse(content=f"<pre dir='ltr'>{traceback.format_exc()}</pre>", status_code=500)
+    except Exception as exc:
+        return safe_error_html(exc, context="calendar_route.py")
 

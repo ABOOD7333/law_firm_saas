@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
 import traceback
+from core.error_handler import safe_error_html
 
 from database.database import get_db
 from database.models import AccessProfiles, LawCases, LawTimesheets
@@ -26,9 +27,8 @@ async def timesheet_page(request: Request, db: Session = Depends(get_db), user: 
         return templates.TemplateResponse(request=request, name="timesheet.html", context={
             "user": user, "active_page": "timesheet", "records": records, "cases": cases, "users": users, "records_json": records_json
         })
-    except Exception:
-        import traceback
-        return HTMLResponse(content=f"<pre dir='ltr'>{traceback.format_exc()}</pre>", status_code=500)
+    except Exception as exc:
+        return safe_error_html(exc, context="timesheet.py")
 
 @router.post("/api/timesheets/save")
 async def timesheets_save(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):

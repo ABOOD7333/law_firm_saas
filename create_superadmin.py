@@ -43,7 +43,8 @@ def create_superadmin():
                 office_id=office.id,
                 access_pin_hash=hash_pin("admin123456"),
                 is_active=1,
-                failed_attempts=0
+                failed_attempts=0,
+                is_superadmin=1
             )
             db.add(admin)
             db.commit()
@@ -53,6 +54,7 @@ def create_superadmin():
             admin.access_pin_hash = hash_pin("admin123456")
             admin.is_active = 1
             admin.failed_attempts = 0
+            admin.is_superadmin = 1
             if office:
                 admin.office_id = office.id
             db.commit()
