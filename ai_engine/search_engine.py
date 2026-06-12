@@ -7,6 +7,16 @@ import math
 import re
 from typing import List, Dict, Optional, Tuple
 
+try:
+    from ai_engine.knowledge_base.yemeni_laws import CIVIL_LAW_EXTENDED
+except ImportError:
+    CIVIL_LAW_EXTENDED = []
+
+try:
+    from ai_engine.knowledge_base.legal_procedures import YEMENI_PROCEDURES
+except ImportError:
+    YEMENI_PROCEDURES = []
+
 # ─────────────────────────────────────────────
 # قاعدة القوانين اليمنية المدمجة
 # (في التطبيق الحقيقي هذه ستُقرأ من ملفات خارجية)
@@ -421,7 +431,7 @@ class LegalSearchEngine:
     B = 0.75   # معامل الطول (length normalization)
 
     def __init__(self):
-        self.documents: List[Dict] = YEMENI_LAWS_DB + SYSTEM_GUIDES_DB
+        self.documents: List[Dict] = YEMENI_LAWS_DB + SYSTEM_GUIDES_DB + CIVIL_LAW_EXTENDED + YEMENI_PROCEDURES
         self.index: Dict[str, Dict[int, int]] = {}   # token -> {doc_id: freq}
         self.doc_lengths: Dict[int, int] = {}          # doc_id -> طول المستند
         self.avg_doc_length: float = 0.0
@@ -442,7 +452,7 @@ class LegalSearchEngine:
                 doc.get("text", ""),
                 " ".join(doc.get("keywords", [])),
             ])
-            tokens = self._tokenize(text)
+            tokens = self._tokenize(self._normalize(text))
             self.doc_lengths[doc_id] = len(tokens)
             total_length += len(tokens)
 
@@ -505,9 +515,9 @@ class LegalSearchEngine:
             # حساب عدد الكلمات المطابقة في هذا المستند
             doc_matched_tokens = sum(1 for token in tokens if token in self.index and doc_id in self.index[token])
             
-            # تطبيق فلترة صارمة لمنع النتائج العشوائية:
-            # إذا كان الاستعلام يحتوي على كلمتين أو أكثر، يجب مطابقة كلمتين على الأقل في المستند.
-            if len(tokens) >= 2 and doc_matched_tokens < 2:
+            # تطبيق فلترة معتدلة لمنع النتائج العشوائية:
+            # إذا كان الاستعلام يحتوي على 3 كلمات أو أكثر، يجب مطابقة كلمتين على الأقل في المستند.
+            if len(tokens) >= 3 and doc_matched_tokens < 2:
                 continue
                 
             doc = self.documents[doc_id].copy()
