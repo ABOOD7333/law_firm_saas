@@ -226,14 +226,22 @@ async def ai_chat(request: Request, db: Session = Depends(get_db), current_user:
                         "time_ms": elapsed
                     })
 
+        # بناء سياق المستخدم الحالي
+        user_context = _build_user_context(current_user, db)
+
         # ب. إذا كانت النية استشارة عامة أو غير معروفة، نستخدم Gemini مع سياق محلي
         if intent.type in ["unknown", "legal_advice"]:
             # جمع سياق محلي أولاً
             unified_results = _unified_assistant_search(db, office_id, question)
             local_context = _build_local_context(unified_results)
             
-            # إرسال لـ Gemini مع السياق المحلي
-            answer = _ask_gemini(question, local_context, user_name)
+            # دمج سياق المستخدم مع السياق المحلي
+            full_context = user_context
+            if local_context:
+                full_context = f"{user_context}\n\n{local_context}" if user_context else local_context
+            
+            # إرسال لـ Gemini مع السياق الكامل
+            answer = _ask_gemini(question, full_context, user_name)
             
             # إذا فشل Gemini، استخدم الطريقة القديمة
             if not answer:
@@ -495,6 +503,49 @@ async def list_knowledge(request: Request, db: Session = Depends(get_db), curren
 # ==============================
 # دوال مساعدة
 # ==============================
+
+def _build_user_context(current_user, db) -> str:
+    """يبني سياق المستخدم الحالي (اسمه، دوره، صلاحياته) لإرساله مع السؤال لـ Gemini"""
+    try:
+        role_map = {
+            'admin': 'مدير المكتب',
+            'مدير': 'مدير المكتب',
+            'lawyer': 'محامي',
+            'محامي': 'محامي',
+            'secretary': 'سكرتير',
+            'سكرتير': 'سكرتير',
+            'assistant': 'مساعد',
+            'مساعد': 'مساعد',
+            'superadmin': 'مدير النظام العام',
+        }
+        user_role = getattr(current_user, 'role', 'مستخدم')
+        role_arabic = role_map.get(user_role, user_role)
+        
+        parts = [
+            "--- معلومات المستخدم الحالي (الذي يسألك الآن) ---",
+            f"الاسم: {current_user.name}",
+            f"الصفة/الدور: {role_arabic}",
+        ]
+        
+        if hasattr(current_user, 'email') and current_user.email:
+            parts.append(f"البريد: {current_user.email}")
+        if hasattr(current_user, 'phone') and current_user.phone:
+            parts.append(f"الهاتف: {current_user.phone}")
+        if hasattr(current_user, 'office_id') and current_user.office_id:
+            # جلب اسم المكتب
+            try:
+                from database.models import LawOffices
+                office = db.query(LawOffices).filter(LawOffices.id == current_user.office_id).first()
+                if office:
+                    parts.append(f"المكتب: {office.name}")
+            except Exception:
+                pass
+        
+        parts.append("--- نهاية معلومات المستخدم ---")
+        return "\n".join(parts)
+    except Exception as e:
+        return ""
+
 
 def _ask_gemini(question: str, local_context: str = None, user_name: str = "") -> str:
     """يرسل السؤال لـ Gemini ويعيد الإجابة الذكية"""
