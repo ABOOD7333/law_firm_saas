@@ -36,9 +36,11 @@ COPY --from=builder /install /usr/local
 # نسخ كود التطبيق
 COPY --chown=lawsaas:lawsaas . .
 
-# إنشاء مجلدات الرفع مع صلاحيات صحيحة
-RUN mkdir -p static/uploads/documents static/css static/js static/img && \
-    chown -R lawsaas:lawsaas static/
+# إنشاء جميع مجلدات الرفع مع صلاحيات صحيحة
+RUN mkdir -p static/uploads/documents static/css static/js static/img \
+        private_uploads/documents && \
+    chown -R lawsaas:lawsaas static/ private_uploads/ && \
+    chmod -R 755 static/ private_uploads/
 
 # التبديل للمستخدم غير الجذر
 USER lawsaas

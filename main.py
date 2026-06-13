@@ -40,19 +40,22 @@ except Exception as e:
 
     print(f"Failed to auto-create superadmin: {e}")
 
-# Ensure static and templates directories exist for the server
+# إنشاء المجلدات الضرورية (مع تجاهل خطأ الصلاحيات - Dockerfile ينشئها مسبقاً)
+def _safe_makedirs(path: str):
+    """Create directory if possible; log a warning on PermissionError."""
+    try:
+        os.makedirs(path, exist_ok=True)
+    except PermissionError:
+        app_logger.warning(f"[startup] Cannot create '{path}' — already handled by Dockerfile (OK)")
+    except OSError as exc:
+        app_logger.warning(f"[startup] makedirs('{path}'): {exc}")
 
-os.makedirs("static/css", exist_ok=True)
-
-os.makedirs("static/js", exist_ok=True)
-
-os.makedirs("static/img", exist_ok=True)
-
-os.makedirs("static/uploads/documents", exist_ok=True)
-
-os.makedirs("private_uploads/documents", exist_ok=True)
-
-os.makedirs("templates", exist_ok=True)
+_safe_makedirs("static/css")
+_safe_makedirs("static/js")
+_safe_makedirs("static/img")
+_safe_makedirs("static/uploads/documents")
+_safe_makedirs("private_uploads/documents")
+_safe_makedirs("templates")
 
 from starlette.middleware.base import BaseHTTPMiddleware
 
