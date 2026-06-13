@@ -1,55 +1,76 @@
 """
-ChromaDB Vector Store
+ChromaDB Vector Store - Lazy Loading
 إدارة تخزين وبحث النصوص القانونية في قاعدة بيانات متجهة (Vector DB) محلية
-"""
-# ChromaDB sqlite3 version override for production environment (Docker / Railway)
-try:
-    __import__('pysqlite3')
-    import sys
-    sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
-except ImportError:
-    pass
 
-import chromadb
+تحسين: Lazy Loading الكامل — لا يتصل بـ ChromaDB ولا يُحمَّل أي نموذج
+عند استيراد الملف. يتم الاتصال فقط عند أول استخدام فعلي.
+هذا يضمن بدء تشغيل الخادم فوراً على Railway دون أي تأخير.
+"""
 import uuid
 from typing import List, Dict, Any
 
 from ..config import VECTOR_DB_DIR, CHROMA_COLLECTION_NAME
-from .embedder import embedder
-from .chunker import chunker
+
 
 class VectorStore:
     def __init__(self):
-        from chromadb.config import Settings
-        self.client = chromadb.PersistentClient(
-            path=str(VECTOR_DB_DIR),
-            settings=Settings(anonymized_telemetry=False)
-        )
+        # Lazy: لا نتصل بـ ChromaDB الآن، بل عند أول استخدام
+        self._client = None
+        self._collection = None
 
-        
-        # Get or create the collection
-        self.collection = self.client.get_or_create_collection(
-            name=CHROMA_COLLECTION_NAME,
-            metadata={"hnsw:space": "cosine"} # Cosine similarity is usually best for semantic text
-        )
+    def _get_collection(self):
+        """الاتصال بـ ChromaDB عند الحاجة الفعلية فقط (Lazy Init)"""
+        if self._collection is None:
+            try:
+                # ChromaDB sqlite3 override للإنتاج
+                try:
+                    __import__('pysqlite3')
+                    import sys
+                    sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+                except ImportError:
+                    pass
+
+                import chromadb
+                from chromadb.config import Settings
+                self._client = chromadb.PersistentClient(
+                    path=str(VECTOR_DB_DIR),
+                    settings=Settings(anonymized_telemetry=False)
+                )
+                self._collection = self._client.get_or_create_collection(
+                    name=CHROMA_COLLECTION_NAME,
+                    metadata={"hnsw:space": "cosine"}
+                )
+                print("[VectorStore] ChromaDB connected successfully.")
+            except Exception as e:
+                print(f"[VectorStore] ChromaDB init error: {e}")
+                raise
+        return self._collection
+
+    @property
+    def collection(self):
+        """خاصية للوصول الآمن للـ collection مع Lazy Init"""
+        return self._get_collection()
 
     def add_document(self, document_id: int, text: str, metadata: Dict[str, Any] = None):
         """
         يستقبل نصاً كاملاً (مثل قانون أو حكم)، يقطعه، ويخزنه في الـ Vector DB
         """
+        from .embedder import embedder
+        from .chunker import chunker
+
         if not metadata:
             metadata = {}
-            
+
         metadata['document_id'] = str(document_id)
-            
+
         # 1. Chunk the text
         chunks = chunker.chunk_text(text)
         if not chunks:
             return 0
-            
+
         # 2. Generate Embeddings
         embeddings = embedder.embed_batch(chunks)
-        
+
         # 3. Prepare IDs and Metadata
         ids = [f"{document_id}_{i}" for i in range(len(chunks))]
         metadatas = []
@@ -57,44 +78,42 @@ class VectorStore:
             chunk_meta = metadata.copy()
             chunk_meta['chunk_index'] = i
             metadatas.append(chunk_meta)
-            
+
         # 4. Insert into ChromaDB
-        # ChromaDB handles batching automatically in python client
         self.collection.add(
             ids=ids,
             embeddings=embeddings,
             documents=chunks,
             metadatas=metadatas
         )
-        
+
         return len(chunks)
 
     def semantic_search(self, query: str, n_results: int = 5, filter_meta: Dict[str, Any] = None) -> List[Dict]:
         """يبحث عن السياق الأقرب للسؤال في القوانين"""
-        # Embed the query
+        from .embedder import embedder
+
         query_embedding = embedder.embed_text(query)
-        
-        # Search
+
         results = self.collection.query(
             query_embeddings=[query_embedding],
             n_results=n_results,
-            where=filter_meta # e.g. {"category": "civil_law"}
+            where=filter_meta
         )
-        
-        # Format results
+
         formatted_results = []
         if results and results['documents'] and len(results['documents']) > 0:
             docs = results['documents'][0]
             metas = results['metadatas'][0]
             dists = results['distances'][0]
-            
+
             for i in range(len(docs)):
                 formatted_results.append({
                     "text": docs[i],
                     "metadata": metas[i],
-                    "distance": dists[i] # Lower is more similar
+                    "distance": dists[i]
                 })
-                
+
         return formatted_results
 
     def delete_document(self, document_id: int):
@@ -137,6 +156,7 @@ class VectorStore:
                 temp_docs.append((f"system_law_{idx}", law_name, article, title, category))
                 
             # توليد المتجهات دفعة واحدة (أسرع بكثير)
+            from .embedder import embedder
             print(f"[VectorStore] Generating embeddings in batches...")
             embeddings = embedder.embed_batch(doc_texts)
             
