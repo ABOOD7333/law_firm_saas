@@ -1,0 +1,778 @@
+{% extends "base.html" %}
+{% block title %}محلل العقود الذكي — LawSaaS{% endblock %}
+
+{% block content %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap');
+
+* { box-sizing: border-box; }
+
+.ca-wrapper {
+    font-family: 'Tajawal', sans-serif;
+    min-height: calc(100vh - 70px);
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+    padding: 28px;
+    direction: rtl;
+}
+
+/* ── Header ── */
+.ca-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 32px;
+}
+.ca-header-icon {
+    width: 60px; height: 60px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px;
+    box-shadow: 0 8px 25px rgba(99,102,241,0.4);
+}
+.ca-header h1 { color: #f1f5f9; font-size: 26px; font-weight: 800; margin: 0; }
+.ca-header p  { color: #94a3b8; font-size: 14px; margin: 4px 0 0; }
+
+/* ── Tabs ── */
+.ca-tabs {
+    display: flex; gap: 8px; margin-bottom: 28px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 14px; padding: 6px;
+}
+.ca-tab {
+    flex: 1; padding: 12px 16px; border-radius: 10px;
+    border: none; background: transparent; color: #94a3b8;
+    font-family: 'Tajawal', sans-serif; font-size: 15px; font-weight: 600;
+    cursor: pointer; transition: all 0.25s; display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.ca-tab.active {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #fff; box-shadow: 0 4px 15px rgba(99,102,241,0.4);
+}
+.ca-tab:hover:not(.active) { background: rgba(255,255,255,0.08); color: #e2e8f0; }
+
+/* ── Panels ── */
+.ca-panel { display: none; }
+.ca-panel.active { display: block; }
+
+/* ── Upload Zone ── */
+.upload-zone {
+    border: 2px dashed rgba(99,102,241,0.4);
+    border-radius: 16px;
+    padding: 48px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    background: rgba(99,102,241,0.04);
+    position: relative;
+}
+.upload-zone:hover, .upload-zone.dragover {
+    border-color: #6366f1;
+    background: rgba(99,102,241,0.1);
+    transform: scale(1.01);
+}
+.upload-zone input[type="file"] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+}
+.upload-icon { font-size: 52px; margin-bottom: 12px; }
+.upload-zone h3 { color: #e2e8f0; font-size: 18px; margin: 0 0 8px; }
+.upload-zone p  { color: #64748b; font-size: 14px; margin: 0; }
+.file-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(99,102,241,0.2); border: 1px solid rgba(99,102,241,0.4);
+    color: #a5b4fc; border-radius: 8px; padding: 6px 14px; font-size: 14px; margin-top: 12px;
+}
+
+/* ── Btn ── */
+.btn-analyze {
+    width: 100%; padding: 16px; margin-top: 20px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #fff; border: none; border-radius: 12px;
+    font-family: 'Tajawal', sans-serif; font-size: 17px; font-weight: 700;
+    cursor: pointer; transition: all 0.3s;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+}
+.btn-analyze:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(99,102,241,0.5); }
+.btn-analyze:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* ── Loading ── */
+.loading-overlay {
+    display: none; text-align: center; padding: 40px;
+}
+.loading-spinner {
+    width: 52px; height: 52px; border: 4px solid rgba(99,102,241,0.2);
+    border-top-color: #6366f1; border-radius: 50%;
+    animation: spin 0.8s linear infinite; margin: 0 auto 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { color: #a5b4fc; font-size: 16px; font-weight: 600; }
+
+/* ── Results Grid ── */
+.results-container { margin-top: 28px; }
+.results-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px; margin-bottom: 20px;
+}
+.result-card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px; padding: 20px;
+    transition: all 0.25s;
+}
+.result-card:hover { border-color: rgba(99,102,241,0.3); transform: translateY(-2px); }
+.result-card-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+}
+.result-card-icon {
+    width: 38px; height: 38px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center; font-size: 18px;
+}
+.icon-purple { background: rgba(99,102,241,0.2); }
+.icon-blue   { background: rgba(59,130,246,0.2); }
+.icon-green  { background: rgba(16,185,129,0.2); }
+.icon-orange { background: rgba(245,158,11,0.2); }
+.icon-red    { background: rgba(239,68,68,0.2); }
+.result-card-title { color: #e2e8f0; font-size: 16px; font-weight: 700; }
+
+/* ── Tags / Badges ── */
+.tag {
+    display: inline-block; padding: 5px 12px; border-radius: 20px;
+    font-size: 13px; font-weight: 600; margin: 4px;
+}
+.tag-party   { background: rgba(99,102,241,0.2);  color: #a5b4fc; border: 1px solid rgba(99,102,241,0.3); }
+.tag-date    { background: rgba(59,130,246,0.2);  color: #93c5fd; border: 1px solid rgba(59,130,246,0.3); }
+.tag-money   { background: rgba(16,185,129,0.2);  color: #6ee7b7; border: 1px solid rgba(16,185,129,0.3); }
+.tag-warning { background: rgba(245,158,11,0.2);  color: #fcd34d; border: 1px solid rgba(245,158,11,0.3); }
+
+/* ── Summary Box ── */
+.summary-box {
+    background: linear-gradient(135deg, rgba(99,102,241,0.1), rgba(139,92,246,0.1));
+    border: 1px solid rgba(99,102,241,0.25);
+    border-radius: 16px; padding: 24px; margin-bottom: 20px;
+}
+.summary-box h3 { color: #a5b4fc; font-size: 14px; margin: 0 0 10px; text-transform: uppercase; letter-spacing: 1px; }
+.summary-box p  { color: #e2e8f0; font-size: 16px; line-height: 1.8; margin: 0; }
+
+/* ── Contract Type Badge ── */
+.contract-type-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(139,92,246,0.2); border: 1px solid rgba(139,92,246,0.4);
+    color: #c4b5fd; border-radius: 10px; padding: 8px 18px; font-size: 15px; font-weight: 700;
+    margin-bottom: 20px;
+}
+
+/* ── Obligation Items ── */
+.obligation-item {
+    background: rgba(255,255,255,0.04); border-radius: 10px; padding: 12px 16px;
+    margin-bottom: 8px; border-right: 3px solid #6366f1;
+}
+.obligation-item .party-name { color: #a5b4fc; font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+.obligation-item .obligation-text { color: #cbd5e1; font-size: 14px; line-height: 1.6; }
+
+/* ── Penalty Items ── */
+.penalty-item {
+    background: rgba(239,68,68,0.06); border-radius: 10px; padding: 12px 16px;
+    margin-bottom: 8px; border-right: 3px solid #ef4444;
+}
+.penalty-item .penalty-condition { color: #fca5a5; font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+.penalty-item .penalty-detail    { color: #cbd5e1; font-size: 14px; }
+
+/* ── Risk Cards ── */
+.risk-card {
+    border-radius: 12px; padding: 16px 20px; margin-bottom: 12px;
+    border-right: 4px solid;
+}
+.risk-high   { background: rgba(239,68,68,0.08);  border-color: #ef4444; }
+.risk-medium { background: rgba(245,158,11,0.08); border-color: #f59e0b; }
+.risk-low    { background: rgba(16,185,129,0.08); border-color: #10b981; }
+.risk-badge {
+    display: inline-block; padding: 3px 10px; border-radius: 20px;
+    font-size: 12px; font-weight: 700; margin-bottom: 8px;
+}
+.risk-badge-high   { background: rgba(239,68,68,0.2);  color: #fca5a5; }
+.risk-badge-medium { background: rgba(245,158,11,0.2); color: #fcd34d; }
+.risk-badge-low    { background: rgba(16,185,129,0.2); color: #6ee7b7; }
+.risk-law   { color: #94a3b8; font-size: 12px; margin-bottom: 6px; }
+.risk-desc  { color: #e2e8f0; font-size: 14px; line-height: 1.6; margin-bottom: 6px; }
+.risk-rec   { color: #7dd3fc; font-size: 13px; font-style: italic; }
+
+.overall-risk-banner {
+    border-radius: 14px; padding: 18px 24px; margin-bottom: 24px;
+    display: flex; align-items: center; gap: 14px;
+}
+.overall-safe   { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3); }
+.overall-low    { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2); }
+.overall-medium { background: rgba(245,158,11,0.1);  border: 1px solid rgba(245,158,11,0.3); }
+.overall-high   { background: rgba(239,68,68,0.1);   border: 1px solid rgba(239,68,68,0.3); }
+.overall-icon { font-size: 32px; }
+.overall-label  { color: #94a3b8; font-size: 13px; margin-bottom: 3px; }
+.overall-value  { font-size: 20px; font-weight: 800; }
+
+/* ── Diff Viewer ── */
+.diff-stats {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px;
+}
+.diff-stat-card {
+    background: rgba(255,255,255,0.05); border-radius: 12px; padding: 16px; text-align: center;
+}
+.diff-stat-num { font-size: 28px; font-weight: 800; }
+.diff-stat-lbl { color: #64748b; font-size: 13px; margin-top: 4px; }
+.stat-added   .diff-stat-num { color: #34d399; }
+.stat-removed .diff-stat-num { color: #f87171; }
+.stat-changed .diff-stat-num { color: #fbbf24; }
+.stat-similar .diff-stat-num { color: #818cf8; }
+
+.diff-viewer {
+    background: #0d1117; border-radius: 12px; border: 1px solid rgba(255,255,255,0.07);
+    overflow: auto; max-height: 500px; font-family: 'Courier New', monospace; font-size: 13px;
+}
+.diff-line { padding: 4px 16px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
+.diff-added    { background: rgba(34,197,94,0.1);  color: #86efac; border-right: 3px solid #22c55e; }
+.diff-removed  { background: rgba(239,68,68,0.1);  color: #fca5a5; border-right: 3px solid #ef4444; }
+.diff-header   { background: rgba(99,102,241,0.1); color: #818cf8; font-style: italic; }
+.diff-unchanged{ color: #475569; }
+
+.ai-insight-box {
+    background: linear-gradient(135deg, rgba(99,102,241,0.08), rgba(139,92,246,0.08));
+    border: 1px solid rgba(99,102,241,0.2); border-radius: 14px; padding: 20px; margin-top: 20px;
+}
+.ai-insight-box h4 { color: #a5b4fc; font-size: 14px; margin: 0 0 12px; }
+.ai-insight-box p  { color: #cbd5e1; font-size: 14px; line-height: 1.8; margin: 0; white-space: pre-wrap; }
+
+/* ── Compare upload zone ── */
+.compare-uploads {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;
+}
+.compare-upload-zone {
+    border: 2px dashed rgba(99,102,241,0.3); border-radius: 14px; padding: 28px 16px;
+    text-align: center; cursor: pointer; transition: all 0.3s; background: rgba(99,102,241,0.04);
+    position: relative;
+}
+.compare-upload-zone:hover, .compare-upload-zone.dragover {
+    border-color: #6366f1; background: rgba(99,102,241,0.1);
+}
+.compare-upload-zone input[type="file"] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+}
+.compare-upload-zone .upload-icon { font-size: 36px; margin-bottom: 8px; }
+.compare-upload-zone h4 { color: #e2e8f0; font-size: 15px; margin: 0 0 4px; }
+.compare-upload-zone p  { color: #64748b; font-size: 13px; margin: 0; }
+.v1-zone { border-color: rgba(59,130,246,0.4); }
+.v2-zone { border-color: rgba(139,92,246,0.4); }
+.v1-zone:hover { border-color: #3b82f6; background: rgba(59,130,246,0.08); }
+.v2-zone:hover { border-color: #8b5cf6; background: rgba(139,92,246,0.08); }
+
+/* ── Empty state ── */
+.empty-state { text-align: center; padding: 60px 20px; color: #475569; }
+.empty-state-icon { font-size: 64px; margin-bottom: 16px; opacity: 0.5; }
+.empty-state h3 { font-size: 20px; color: #64748b; margin: 0 0 8px; }
+.empty-state p  { font-size: 14px; }
+
+/* ── Section title ── */
+.section-title {
+    color: #94a3b8; font-size: 13px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; margin: 0 0 12px; padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+/* ── No items ── */
+.no-items { color: #475569; font-size: 14px; text-align: center; padding: 16px; }
+</style>
+
+<div class="ca-wrapper">
+    <!-- Header -->
+    <div class="ca-header">
+        <div class="ca-header-icon">📄</div>
+        <div>
+            <h1>محلل العقود الذكي</h1>
+            <p>تحليل كامل + كشف المخاطر + مقارنة النسخ — مدعوم بـ Gemini AI</p>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="ca-tabs">
+        <button class="ca-tab active" onclick="switchTab('analyze')" id="tab-analyze">
+            🧠 تحليل العقد
+        </button>
+        <button class="ca-tab" onclick="switchTab('risks')" id="tab-risks">
+            ⚠️ كشف المخاطر
+        </button>
+        <button class="ca-tab" onclick="switchTab('compare')" id="tab-compare">
+            🔀 مقارنة النسخ
+        </button>
+    </div>
+
+    <!-- ══════════════════════════════════════════ -->
+    <!-- Panel 1: تحليل العقد                      -->
+    <!-- ══════════════════════════════════════════ -->
+    <div class="ca-panel active" id="panel-analyze">
+        <!-- Upload -->
+        <div class="upload-zone" id="analyzeZone" ondragover="handleDrag(event,'analyzeZone')" ondragleave="handleDragLeave('analyzeZone')" ondrop="handleDrop(event,'analyzeFile','analyzeZone')">
+            <input type="file" id="analyzeFile" accept=".pdf,.docx,.txt" onchange="fileSelected(this,'analyzeBadge','analyzeFileName')">
+            <div class="upload-icon">📋</div>
+            <h3>ارفع العقد هنا</h3>
+            <p>PDF أو DOCX أو TXT — حجم أقصى 20MB</p>
+            <div id="analyzeBadge" class="file-badge" style="display:none">
+                📎 <span id="analyzeFileName"></span>
+            </div>
+        </div>
+
+        <button class="btn-analyze" id="btnAnalyze" onclick="runAnalysis()" disabled>
+            🧠 تحليل العقد بالذكاء الاصطناعي
+        </button>
+
+        <!-- Loading -->
+        <div class="loading-overlay" id="analyzeLoading">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Gemini يحلل العقد...</div>
+            <div style="color:#64748b; font-size:13px; margin-top:8px;">قد يستغرق 10-20 ثانية</div>
+        </div>
+
+        <!-- Results -->
+        <div class="results-container" id="analyzeResults" style="display:none">
+            <!-- Contract type + summary -->
+            <div id="contractTypeBadge"></div>
+            <div class="summary-box" id="summaryBox" style="display:none">
+                <h3>ملخص العقد</h3>
+                <p id="summaryText"></p>
+            </div>
+
+            <div class="results-grid">
+                <!-- Parties -->
+                <div class="result-card">
+                    <div class="result-card-header">
+                        <div class="result-card-icon icon-purple">👥</div>
+                        <div class="result-card-title">أطراف العقد</div>
+                    </div>
+                    <div id="partiesContent"><div class="no-items">لا يوجد</div></div>
+                </div>
+
+                <!-- Key Dates -->
+                <div class="result-card">
+                    <div class="result-card-header">
+                        <div class="result-card-icon icon-blue">📅</div>
+                        <div class="result-card-title">التواريخ الحرجة</div>
+                    </div>
+                    <div id="datesContent"><div class="no-items">لا يوجد</div></div>
+                </div>
+
+                <!-- Financial -->
+                <div class="result-card">
+                    <div class="result-card-header">
+                        <div class="result-card-icon icon-green">💰</div>
+                        <div class="result-card-title">البنود المالية</div>
+                    </div>
+                    <div id="financialContent"><div class="no-items">لا يوجد</div></div>
+                </div>
+            </div>
+
+            <!-- Obligations -->
+            <div class="result-card" style="margin-bottom:20px" id="obligationsCard">
+                <div class="result-card-header">
+                    <div class="result-card-icon icon-orange">📋</div>
+                    <div class="result-card-title">الالتزامات التعاقدية</div>
+                </div>
+                <div id="obligationsContent"><div class="no-items">لا يوجد</div></div>
+            </div>
+
+            <!-- Penalties -->
+            <div class="result-card" id="penaltiesCard">
+                <div class="result-card-header">
+                    <div class="result-card-icon icon-red">⚡</div>
+                    <div class="result-card-title">الشروط الجزائية</div>
+                </div>
+                <div id="penaltiesContent"><div class="no-items">لا يوجد</div></div>
+            </div>
+        </div>
+
+        <!-- Empty state -->
+        <div class="empty-state" id="analyzeEmpty">
+            <div class="empty-state-icon">📄</div>
+            <h3>ارفع عقداً للبدء</h3>
+            <p>سيقوم Gemini AI باستخراج جميع الكيانات القانونية من العقد</p>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════ -->
+    <!-- Panel 2: كشف المخاطر                      -->
+    <!-- ══════════════════════════════════════════ -->
+    <div class="ca-panel" id="panel-risks">
+        <div class="upload-zone" id="risksZone" ondragover="handleDrag(event,'risksZone')" ondragleave="handleDragLeave('risksZone')" ondrop="handleDrop(event,'risksFile','risksZone')">
+            <input type="file" id="risksFile" accept=".pdf,.docx,.txt" onchange="fileSelected(this,'risksBadge','risksFileName')">
+            <div class="upload-icon">⚠️</div>
+            <h3>ارفع العقد للفحص القانوني</h3>
+            <p>سيتم مقارنة بنوده بالقانون المدني اليمني</p>
+            <div id="risksBadge" class="file-badge" style="display:none">
+                📎 <span id="risksFileName"></span>
+            </div>
+        </div>
+
+        <button class="btn-analyze" id="btnRisks" onclick="runRiskDetection()" disabled>
+            ⚠️ كشف المخاطر القانونية
+        </button>
+
+        <div class="loading-overlay" id="risksLoading">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">يتم تحليل بنود العقد...</div>
+        </div>
+
+        <div id="risksResults" style="display:none; margin-top:28px">
+            <div id="overallRiskBanner"></div>
+            <div id="risksList"></div>
+            <div class="ai-insight-box" id="risksRecommendation" style="display:none">
+                <h4>🤖 توصية المستشار الذكي</h4>
+                <p id="recommendationText"></p>
+            </div>
+        </div>
+
+        <div class="empty-state" id="risksEmpty">
+            <div class="empty-state-icon">🛡️</div>
+            <h3>افحص عقدك قبل التوقيع</h3>
+            <p>سيكشف النظام عن البنود المخالفة للقانون اليمني أو عالية المخاطر</p>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════ -->
+    <!-- Panel 3: مقارنة النسخ                      -->
+    <!-- ══════════════════════════════════════════ -->
+    <div class="ca-panel" id="panel-compare">
+        <div class="compare-uploads">
+            <div class="compare-upload-zone v1-zone" id="cmp1Zone" ondragover="handleDrag(event,'cmp1Zone')" ondragleave="handleDragLeave('cmp1Zone')" ondrop="handleDrop(event,'cmpFile1','cmp1Zone')">
+                <input type="file" id="cmpFile1" accept=".pdf,.docx,.txt" onchange="cmpFileSelected(this, 1)">
+                <div class="upload-icon">🔵</div>
+                <h4 id="cmp1Label">النسخة الأولى</h4>
+                <p id="cmp1Name">اسحب الملف أو اضغط للاختيار</p>
+            </div>
+            <div class="compare-upload-zone v2-zone" id="cmp2Zone" ondragover="handleDrag(event,'cmp2Zone')" ondragleave="handleDragLeave('cmp2Zone')" ondrop="handleDrop(event,'cmpFile2','cmp2Zone')">
+                <input type="file" id="cmpFile2" accept=".pdf,.docx,.txt" onchange="cmpFileSelected(this, 2)">
+                <div class="upload-icon">🟣</div>
+                <h4 id="cmp2Label">النسخة الثانية</h4>
+                <p id="cmp2Name">اسحب الملف أو اضغط للاختيار</p>
+            </div>
+        </div>
+
+        <button class="btn-analyze" id="btnCompare" onclick="runComparison()" disabled>
+            🔀 مقارنة النسختين
+        </button>
+
+        <div class="loading-overlay" id="compareLoading">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">يتم مقارنة العقدين...</div>
+        </div>
+
+        <div id="compareResults" style="display:none; margin-top:28px">
+            <!-- Stats -->
+            <div class="diff-stats" id="diffStats"></div>
+            <!-- AI Insight -->
+            <div class="ai-insight-box" id="diffInsight" style="display:none">
+                <h4>🤖 تحليل Gemini للفروق الجوهرية</h4>
+                <p id="diffInsightText"></p>
+            </div>
+            <!-- Diff Viewer -->
+            <div class="section-title" style="margin-top:20px">عرض الفروق التفصيلية</div>
+            <div class="diff-viewer" id="diffViewer"></div>
+        </div>
+
+        <div class="empty-state" id="compareEmpty">
+            <div class="empty-state-icon">🔀</div>
+            <h3>قارن بين نسختين من العقد</h3>
+            <p>ارفع النسخة الأصلية والمعدَّلة لرؤية جميع التغييرات بدقة</p>
+        </div>
+    </div>
+</div>
+
+<script>
+// ── Tab switching ─────────────────────────────────────────────────────────
+function switchTab(name) {
+    document.querySelectorAll('.ca-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.ca-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    document.getElementById('panel-' + name).classList.add('active');
+}
+
+// ── Drag & Drop ───────────────────────────────────────────────────────────
+function handleDrag(e, zoneId) {
+    e.preventDefault(); e.stopPropagation();
+    document.getElementById(zoneId).classList.add('dragover');
+}
+function handleDragLeave(zoneId) {
+    document.getElementById(zoneId).classList.remove('dragover');
+}
+function handleDrop(e, inputId, zoneId) {
+    e.preventDefault();
+    document.getElementById(zoneId).classList.remove('dragover');
+    const files = e.dataTransfer.files;
+    if (!files.length) return;
+    const input = document.getElementById(inputId);
+    const dt = new DataTransfer();
+    dt.items.add(files[0]);
+    input.files = dt.files;
+    input.dispatchEvent(new Event('change'));
+}
+
+// ── File selected ──────────────────────────────────────────────────────────
+function fileSelected(input, badgeId, nameId) {
+    if (!input.files.length) return;
+    const name = input.files[0].name;
+    document.getElementById(badgeId).style.display = 'inline-flex';
+    document.getElementById(nameId).textContent = name;
+    // Enable corresponding button
+    if (input.id === 'analyzeFile') document.getElementById('btnAnalyze').disabled = false;
+    if (input.id === 'risksFile')   document.getElementById('btnRisks').disabled = false;
+}
+function cmpFileSelected(input, num) {
+    if (!input.files.length) return;
+    const name = input.files[0].name;
+    document.getElementById('cmp' + num + 'Label').textContent = name.length > 30 ? name.slice(0, 30) + '...' : name;
+    document.getElementById('cmp' + num + 'Name').textContent = '✅ تم الاختيار';
+    const f1 = document.getElementById('cmpFile1').files.length;
+    const f2 = document.getElementById('cmpFile2').files.length;
+    document.getElementById('btnCompare').disabled = !(f1 && f2);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 1. تحليل العقد
+// ═══════════════════════════════════════════════════════════════════════════
+async function runAnalysis() {
+    const file = document.getElementById('analyzeFile').files[0];
+    if (!file) return;
+
+    document.getElementById('analyzeEmpty').style.display = 'none';
+    document.getElementById('analyzeResults').style.display = 'none';
+    document.getElementById('analyzeLoading').style.display = 'block';
+    document.getElementById('btnAnalyze').disabled = true;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        const res = await fetch('/api/rag/analyze-contract', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'خطأ غير معروف');
+        renderAnalysisResults(data.analysis);
+    } catch (err) {
+        alert('حدث خطأ: ' + err.message);
+        document.getElementById('analyzeEmpty').style.display = 'block';
+    } finally {
+        document.getElementById('analyzeLoading').style.display = 'none';
+        document.getElementById('btnAnalyze').disabled = false;
+    }
+}
+
+function renderAnalysisResults(a) {
+    // Contract type badge
+    const typeEl = document.getElementById('contractTypeBadge');
+    typeEl.innerHTML = `<div class="contract-type-badge">📋 ${a.contract_type || 'غير محدد'} ${a.is_ai_used ? '<span style="font-size:12px;opacity:0.7">• Gemini AI</span>' : ''}</div>`;
+
+    // Summary
+    if (a.summary) {
+        document.getElementById('summaryText').textContent = a.summary;
+        document.getElementById('summaryBox').style.display = 'block';
+    }
+
+    // Parties
+    const parties = a.parties || [];
+    document.getElementById('partiesContent').innerHTML = parties.length
+        ? parties.map(p => `
+            <div class="obligation-item">
+                <div class="party-name">${escHtml(p.role || 'طرف')}</div>
+                <div class="obligation-text">${escHtml(p.name || '')}</div>
+                ${p.id_info ? `<div style="color:#64748b;font-size:12px;margin-top:4px">${escHtml(p.id_info)}</div>` : ''}
+            </div>`).join('')
+        : '<div class="no-items">لم يتم استخراج أطراف</div>';
+
+    // Dates
+    const dates = a.key_dates || [];
+    document.getElementById('datesContent').innerHTML = dates.length
+        ? dates.map(d => `<span class="tag tag-date">📅 ${escHtml(d.label)}: ${escHtml(d.date)}</span>`).join('')
+        : '<div class="no-items">لم يتم استخراج تواريخ</div>';
+
+    // Financial
+    const fin = a.financial_terms || [];
+    document.getElementById('financialContent').innerHTML = fin.length
+        ? fin.map(f => `
+            <div class="obligation-item">
+                <div class="party-name">${escHtml(f.label)}</div>
+                <div class="obligation-text" style="color:#6ee7b7">${escHtml(f.amount)}</div>
+                ${f.payment_schedule ? `<div style="color:#64748b;font-size:12px;margin-top:4px">${escHtml(f.payment_schedule)}</div>` : ''}
+            </div>`).join('')
+        : '<div class="no-items">لم يتم استخراج مبالغ</div>';
+
+    // Obligations
+    const obls = a.obligations || [];
+    document.getElementById('obligationsContent').innerHTML = obls.length
+        ? obls.map(o => `
+            <div class="obligation-item">
+                <div class="party-name">${escHtml(o.party)}</div>
+                <div class="obligation-text">${escHtml(o.obligation)}</div>
+            </div>`).join('')
+        : '<div class="no-items">لم يتم استخراج التزامات</div>';
+
+    // Penalties
+    const pens = a.penalty_clauses || [];
+    document.getElementById('penaltiesContent').innerHTML = pens.length
+        ? pens.map(p => `
+            <div class="penalty-item">
+                <div class="penalty-condition">⚡ ${escHtml(p.condition)}</div>
+                <div class="penalty-detail">المبلغ: ${escHtml(p.amount)} | المسؤول: ${escHtml(p.party_liable)}</div>
+            </div>`).join('')
+        : '<div class="no-items">لا توجد شروط جزائية</div>';
+
+    document.getElementById('analyzeResults').style.display = 'block';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 2. كشف المخاطر
+// ═══════════════════════════════════════════════════════════════════════════
+async function runRiskDetection() {
+    const file = document.getElementById('risksFile').files[0];
+    if (!file) return;
+
+    document.getElementById('risksEmpty').style.display = 'none';
+    document.getElementById('risksResults').style.display = 'none';
+    document.getElementById('risksLoading').style.display = 'block';
+    document.getElementById('btnRisks').disabled = true;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        const res = await fetch('/api/rag/detect-risks', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'خطأ');
+        renderRisks(data.risks);
+    } catch (err) {
+        alert('حدث خطأ: ' + err.message);
+        document.getElementById('risksEmpty').style.display = 'block';
+    } finally {
+        document.getElementById('risksLoading').style.display = 'none';
+        document.getElementById('btnRisks').disabled = false;
+    }
+}
+
+function renderRisks(data) {
+    const risks = data.risks || [];
+    const overall = data.overall_risk || 'آمن';
+
+    // Overall banner
+    const colors = { 'عالي': 'overall-high', 'متوسط': 'overall-medium', 'منخفض': 'overall-low', 'آمن': 'overall-safe' };
+    const icons  = { 'عالي': '🔴', 'متوسط': '🟡', 'منخفض': '🟢', 'آمن': '✅' };
+    const textColors = { 'عالي': '#f87171', 'متوسط': '#fbbf24', 'منخفض': '#34d399', 'آمن': '#34d399' };
+    document.getElementById('overallRiskBanner').innerHTML = `
+        <div class="overall-risk-banner ${colors[overall] || 'overall-safe'}">
+            <div class="overall-icon">${icons[overall] || '✅'}</div>
+            <div>
+                <div class="overall-label">مستوى المخاطر الإجمالي</div>
+                <div class="overall-value" style="color:${textColors[overall] || '#34d399'}">${overall}</div>
+            </div>
+            <div style="margin-right:auto;color:#64748b;font-size:13px">${risks.length} بند يستحق المراجعة</div>
+        </div>`;
+
+    // Risk list
+    if (risks.length) {
+        const levelClass = { 'عالي': 'risk-high', 'متوسط': 'risk-medium', 'منخفض': 'risk-low' };
+        const badgeClass = { 'عالي': 'risk-badge-high', 'متوسط': 'risk-badge-medium', 'منخفض': 'risk-badge-low' };
+        document.getElementById('risksList').innerHTML = risks.map(r => `
+            <div class="risk-card ${levelClass[r.risk_level] || 'risk-low'}">
+                <span class="risk-badge ${badgeClass[r.risk_level] || 'risk-badge-low'}">${r.risk_level || 'منخفض'}</span>
+                <div class="risk-law">📖 ${escHtml(r.law_reference || r.law || '')}</div>
+                <div class="risk-desc">${escHtml(r.description || '')}</div>
+                ${r.recommendation ? `<div class="risk-rec">💡 ${escHtml(r.recommendation)}</div>` : ''}
+            </div>`).join('');
+    } else {
+        document.getElementById('risksList').innerHTML = `
+            <div style="text-align:center;padding:40px">
+                <div style="font-size:48px;margin-bottom:12px">✅</div>
+                <div style="color:#34d399;font-size:18px;font-weight:700">العقد آمن</div>
+                <div style="color:#64748b;font-size:14px;margin-top:8px">لم يتم اكتشاف بنود مخالفة للقانون اليمني</div>
+            </div>`;
+    }
+
+    // Recommendation
+    if (data.recommendation) {
+        document.getElementById('recommendationText').textContent = data.recommendation;
+        document.getElementById('risksRecommendation').style.display = 'block';
+    }
+
+    document.getElementById('risksResults').style.display = 'block';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 3. مقارنة النسخ
+// ═══════════════════════════════════════════════════════════════════════════
+async function runComparison() {
+    const f1 = document.getElementById('cmpFile1').files[0];
+    const f2 = document.getElementById('cmpFile2').files[0];
+    if (!f1 || !f2) return;
+
+    document.getElementById('compareEmpty').style.display = 'none';
+    document.getElementById('compareResults').style.display = 'none';
+    document.getElementById('compareLoading').style.display = 'block';
+    document.getElementById('btnCompare').disabled = true;
+
+    const formData = new FormData();
+    formData.append('file1', f1);
+    formData.append('file2', f2);
+    formData.append('label1', f1.name);
+    formData.append('label2', f2.name);
+
+    try {
+        const res = await fetch('/api/rag/compare-contracts', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'خطأ');
+        renderComparison(data.comparison);
+    } catch (err) {
+        alert('حدث خطأ: ' + err.message);
+        document.getElementById('compareEmpty').style.display = 'block';
+    } finally {
+        document.getElementById('compareLoading').style.display = 'none';
+        document.getElementById('btnCompare').disabled = false;
+    }
+}
+
+function renderComparison(c) {
+    const s = c.stats || {};
+    // Stats
+    document.getElementById('diffStats').innerHTML = `
+        <div class="diff-stat-card stat-added">
+            <div class="diff-stat-num">+${s.added_lines || 0}</div>
+            <div class="diff-stat-lbl">سطر مضاف</div>
+        </div>
+        <div class="diff-stat-card stat-removed">
+            <div class="diff-stat-num">-${s.removed_lines || 0}</div>
+            <div class="diff-stat-lbl">سطر محذوف</div>
+        </div>
+        <div class="diff-stat-card stat-changed">
+            <div class="diff-stat-num">${s.changed_sections || 0}</div>
+            <div class="diff-stat-lbl">قسم معدَّل</div>
+        </div>
+        <div class="diff-stat-card stat-similar">
+            <div class="diff-stat-num">${s.similarity_ratio || 0}%</div>
+            <div class="diff-stat-lbl">نسبة التشابه</div>
+        </div>`;
+
+    // AI Insight
+    if (c.ai_summary) {
+        document.getElementById('diffInsightText').textContent = c.ai_summary;
+        document.getElementById('diffInsight').style.display = 'block';
+    }
+
+    // Diff viewer
+    const diff = c.diff || [];
+    const typeClass = { 'added': 'diff-added', 'removed': 'diff-removed', 'header': 'diff-header', 'unchanged': 'diff-unchanged' };
+    document.getElementById('diffViewer').innerHTML = diff.length
+        ? diff.map(l => `<div class="diff-line ${typeClass[l.type] || 'diff-unchanged'}">${escHtml(l.text || '')}</div>`).join('')
+        : '<div class="diff-unchanged diff-line">لا يوجد فروق</div>';
+
+    document.getElementById('compareResults').style.display = 'block';
+}
+
+// ── Utility ────────────────────────────────────────────────────────────────
+function escHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+</script>
+{% endblock %}

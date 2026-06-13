@@ -175,32 +175,94 @@ async def semantic_search(
     return {"success": True, "results": results}
 
 
+
 @router.post("/analyze-contract")
 async def analyze_contract(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: AccessProfiles = Depends(get_current_user)
 ):
-    """استخراج المعلومات الأساسية من عقد"""
+    """تحليل عقد كامل باستخدام Gemini AI — استخراج الأطراف والالتزامات والشروط الجزائية"""
     if not current_user:
         raise HTTPException(status_code=401)
-        
-    # Save temporarily
-    temp_path = f"temp_contract_{uuid.uuid4().hex}.pdf"
-    with open(temp_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-        
-    # Extract text
-    text = document_loader.load_file(temp_path)
-    
-    # Analyze
-    analysis = analyzer_service.analyze_contract(text)
-    
-    # Cleanup
-    if os.path.exists(temp_path):
-        os.remove(temp_path)
-        
-    return {"success": True, "analysis": analysis}
+
+    ext = os.path.splitext(file.filename or "")[1].lower() or ".pdf"
+    temp_path = f"temp_contract_{uuid.uuid4().hex}{ext}"
+    try:
+        with open(temp_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        text = document_loader.load_file(temp_path)
+        if not text or text.startswith("Error"):
+            return {"success": False, "error": f"تعذر استخراج النص: {text}"}
+        analysis = analyzer_service.analyze_contract_ai(text)
+        return {"success": True, "analysis": analysis, "text_length": len(text)}
+    finally:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+
+
+@router.post("/detect-risks")
+async def detect_contract_risks(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: AccessProfiles = Depends(get_current_user)
+):
+    """كشف البنود عالية المخاطر في العقد ومقارنتها بالقانون المدني اليمني"""
+    if not current_user:
+        raise HTTPException(status_code=401)
+
+    ext = os.path.splitext(file.filename or "")[1].lower() or ".pdf"
+    temp_path = f"temp_risk_{uuid.uuid4().hex}{ext}"
+    try:
+        with open(temp_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        text = document_loader.load_file(temp_path)
+        if not text or text.startswith("Error"):
+            return {"success": False, "error": f"تعذر استخراج النص: {text}"}
+        risks = analyzer_service.detect_risks(text)
+        return {"success": True, "risks": risks, "text_length": len(text)}
+    finally:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+
+
+@router.post("/compare-contracts")
+async def compare_two_contracts(
+    file1: UploadFile = File(...),
+    file2: UploadFile = File(...),
+    label1: str = Form(default="النسخة الأولى"),
+    label2: str = Form(default="النسخة الثانية"),
+    db: Session = Depends(get_db),
+    current_user: AccessProfiles = Depends(get_current_user)
+):
+    """مقارنة نسختين من العقد وإظهار التعديلات (Document Diff)"""
+    if not current_user:
+        raise HTTPException(status_code=401)
+
+    ext1 = os.path.splitext(file1.filename or "")[1].lower() or ".pdf"
+    ext2 = os.path.splitext(file2.filename or "")[1].lower() or ".pdf"
+    temp1 = f"temp_cmp1_{uuid.uuid4().hex}{ext1}"
+    temp2 = f"temp_cmp2_{uuid.uuid4().hex}{ext2}"
+    try:
+        with open(temp1, "wb") as b:
+            shutil.copyfileobj(file1.file, b)
+        with open(temp2, "wb") as b:
+            shutil.copyfileobj(file2.file, b)
+
+        text1 = document_loader.load_file(temp1)
+        text2 = document_loader.load_file(temp2)
+
+        if not text1 or text1.startswith("Error"):
+            return {"success": False, "error": f"تعذر قراءة الملف الأول: {text1}"}
+        if not text2 or text2.startswith("Error"):
+            return {"success": False, "error": f"تعذر قراءة الملف الثاني: {text2}"}
+
+        comparison = analyzer_service.compare_contracts(text1, text2, label1, label2)
+        return {"success": True, "comparison": comparison}
+    finally:
+        for p in [temp1, temp2]:
+            if os.path.exists(p):
+                os.remove(p)
 
 
 @router.post("/summarize")
@@ -213,6 +275,7 @@ async def summarize_text(
     text = data.get("text")
     if not text:
         return {"success": False, "error": "Text is required"}
-        
+
     summary = summarizer_service.summarize(text)
     return {"success": True, "summary": summary}
+

@@ -3016,6 +3016,10 @@ try:
 except ImportError as e:
     print(f"[RAG] تحذير: تعذر تحميل RAG Engine ({e}). سيعمل النظام بدون ميزة تحليل المستندات.")
 
+# محلل العقود الذكي
+from routers import contract_analyzer as contract_analyzer_router
+app.include_router(contract_analyzer_router.router)
+
 # ----------------------------------------------------------------------------
 
 # SaaS Subscription Routes
