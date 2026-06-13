@@ -30,6 +30,24 @@ app = FastAPI(title="Lexzur Clone - SaaS Law Firm Management", version="1.0")
 # Ensure database tables are created (critical for Railway deployment)
 init_db()
 
+@app.on_event("startup")
+async def startup_event():
+    # Index system laws in ChromaDB in background
+    try:
+        import threading
+        from rag_engine.core.vector_store import vector_store
+        from ai_engine.search_engine import YEMENI_LAWS_DB, SYSTEM_GUIDES_DB, CIVIL_LAW_EXTENDED, YEMENI_PROCEDURES
+        
+        all_docs = YEMENI_LAWS_DB + SYSTEM_GUIDES_DB + CIVIL_LAW_EXTENDED + YEMENI_PROCEDURES
+        
+        def index_in_bg():
+            print("[Startup] Initializing system laws indexing in background...")
+            vector_store.index_system_laws_if_needed(all_docs)
+            
+        threading.Thread(target=index_in_bg, daemon=True).start()
+    except Exception as e:
+        print(f"[Startup] Failed to start system laws indexing thread: {e}")
+
 try:
 
     from create_superadmin import create_superadmin

@@ -213,7 +213,7 @@ async def ai_chat(request: Request, db: Session = Depends(get_db), current_user:
                     result = search_engine.search_by_article(intent.law_name, intent.article_number)
                     search_results = [result] if result else []
                 else:
-                    search_results = search_engine.search(question, top_k=5)
+                    search_results = search_engine.hybrid_search(question, top_k=5)
 
                 # نتائج المعرفة المخصصة
                 custom_results = _search_custom_knowledge(db, office_id, question)
@@ -728,7 +728,7 @@ def _unified_assistant_search(db: Session, office_id: int, query_text: str) -> d
     # 3. البحث في القوانين
     try:
         search_engine = _get_search_engine()
-        law_matches = search_engine.search(query_clean, top_k=3)
+        law_matches = search_engine.hybrid_search(query_clean, top_k=3)
         results["laws"] = [m for m in law_matches if m.get("score", 0) > 0.1]
     except Exception:
         pass

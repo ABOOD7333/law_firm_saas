@@ -608,6 +608,132 @@ class LegalSearchEngine:
             r["score"] = 1.0
         return results[:top_k]
 
+    def hybrid_search(self, query: str, top_k: int = 5, category: str = None) -> List[Dict]:
+        """
+        البحث الهجين (Hybrid Search):
+        يجمع بين بحث BM25 المعجمي وبحث ChromaDB الدلالي.
+        
+        Args:
+            query: الاستعلام النصي
+            top_k: عدد النتائج المطلوبة
+            category: فلترة حسب الفئة (اختياري)
+        """
+        if not query or not query.strip():
+            return []
+
+        # 1. البحث المعجمي (BM25)
+        # نقوم بزيادة عدد النتائج المسترجعة مبدئياً لتوسيع مجال الدمج
+        lexical_results = self.search(query, top_k=top_k * 3)
+        
+        # 2. البحث الدلالي (Semantic/Vector)
+        semantic_results = []
+        try:
+            from rag_engine.core.vector_store import vector_store
+            # فلترة الميتاداتا حسب الفئة إذا كانت مدخلة
+            filter_meta = {"category": category} if category else None
+            
+            # استعلام ChromaDB
+            # بما أن ChromaDB ترجع كوزاين ديستانس (Cosine Distance)، حيث 0 يعني تشابه تام و2 يعني تباعد تام:
+            # فإنSimilarity = 1 - distance (أو 1 - distance/2 حسب تدرج الفضاء)
+            raw_semantic = vector_store.semantic_search(query, n_results=top_k * 3, filter_meta=filter_meta)
+            
+            for item in raw_semantic:
+                meta = item.get("metadata", {})
+                if meta.get("is_system_law"):
+                    # إذا كان قانون نظام، نقوم بتحويله لشكل يطابق مستندات search_engine لتوحيد العرض
+                    semantic_results.append({
+                        "law": meta.get("law", ""),
+                        "article": meta.get("article", ""),
+                        "title": meta.get("title", ""),
+                        "text": item.get("text", "").replace(f"قانون {meta.get('law', '')} - مادة {meta.get('article', '')} ({meta.get('title', '')}): ", "", 1),
+                        "category": meta.get("category", ""),
+                        "semantic_score": 1.0 - float(item.get("distance", 1.0)), # Cosine similarity
+                        "source": "system_law"
+                    })
+                else:
+                    # مستند مرفوع خاص بمكتب المحاماة
+                    semantic_results.append({
+                        "law": meta.get("file_name", "مستند المعرفة"),
+                        "article": "مقتطف دلالي",
+                        "title": meta.get("category", "عام"),
+                        "text": item.get("text", ""),
+                        "category": meta.get("category", ""),
+                        "semantic_score": 1.0 - float(item.get("distance", 1.0)), # Cosine similarity
+                        "source": "custom_doc"
+                    })
+        except Exception as e:
+            print(f"[HybridSearch] Semantic query failed: {str(e)}")
+            semantic_results = []
+
+        # 3. دمج وترتيب النتائج (Fusion & Normalization)
+        # تطبيع درجات المعجمي (BM25 Scores) لتكون بين 0 و 1
+        max_lexical_score = max([r.get("score", 0.0) for r in lexical_results]) if lexical_results else 1.0
+        if max_lexical_score == 0:
+            max_lexical_score = 1.0
+            
+        for r in lexical_results:
+            r["normalized_lexical_score"] = float(r.get("score", 0.0)) / max_lexical_score
+
+        # دمج النتيجتين
+        merged: Dict[str, Dict] = {}
+        
+        # أوزان الدمج
+        W_SEMANTIC = 0.6
+        W_LEXICAL = 0.4
+
+        # دمج نتائج المعجمي أولاً
+        for r in lexical_results:
+            key = f"{r.get('law')}_{r.get('article')}_{r.get('title')}".lower()
+            merged[key] = {
+                "law": r.get("law", ""),
+                "law_number": r.get("law_number", ""),
+                "year": r.get("year", ""),
+                "article": r.get("article", ""),
+                "title": r.get("title", ""),
+                "text": r.get("text", ""),
+                "category": r.get("category", ""),
+                "score_lexical": r.get("normalized_lexical_score", 0.0),
+                "score_semantic": 0.0,
+                "source": "system_law"
+            }
+
+        # دمج نتائج الدلالي
+        for r in semantic_results:
+            key = f"{r.get('law')}_{r.get('article')}_{r.get('title')}".lower()
+            if key in merged:
+                # تحديث درجة الدلالي إذا كان المستند مشتركاً
+                merged[key]["score_semantic"] = max(0.0, r.get("semantic_score", 0.0))
+            else:
+                # إضافة مستند جديد
+                merged[key] = {
+                    "law": r.get("law", ""),
+                    "law_number": "",
+                    "year": "",
+                    "article": r.get("article", ""),
+                    "title": r.get("title", ""),
+                    "text": r.get("text", ""),
+                    "category": r.get("category", ""),
+                    "score_lexical": 0.0,
+                    "score_semantic": max(0.0, r.get("semantic_score", 0.0)),
+                    "source": r.get("source", "system_law")
+                }
+
+        # حساب الدرجة النهائية المدمجة وتصفية المكررات
+        final_list = []
+        for key, doc in merged.items():
+            # دمج الأوزان
+            final_score = (W_SEMANTIC * doc["score_semantic"]) + (W_LEXICAL * doc["score_lexical"])
+            doc["score"] = round(final_score, 4)
+            final_list.append(doc)
+
+        # ترتيب تنازلي حسب الدرجة المدمجة
+        final_list.sort(key=lambda x: x["score"], reverse=True)
+        
+        # تصفية نتائج منخفضة الجودة
+        filtered_list = [d for d in final_list if d["score"] > 0.02]
+
+        return filtered_list[:top_k]
+
     def get_all_laws(self) -> List[str]:
         """يعيد قائمة أسماء القوانين المتاحة"""
         seen = set()

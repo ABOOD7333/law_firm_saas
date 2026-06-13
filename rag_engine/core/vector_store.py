@@ -103,5 +103,83 @@ class VectorStore:
             where={"document_id": str(document_id)}
         )
 
+    def index_system_laws_if_needed(self, documents: List[Dict[str, Any]]):
+        """
+        فهرسة القوانين اليمنية المدمجة في قاعدة البيانات المتجهة (إذا لم تكن مفهرسة بالفعل)
+        """
+        try:
+            # التحقق مما إذا كان هناك أي قانون نظام مسجل بالفعل
+            existing = self.collection.get(
+                where={"is_system_law": True},
+                limit=1
+            )
+            if existing and existing['ids']:
+                print("[VectorStore] System laws already indexed in ChromaDB.")
+                return
+
+            print(f"[VectorStore] Indexing {len(documents)} system laws into ChromaDB...")
+            
+            doc_texts = []
+            temp_docs = []
+            for idx, doc in enumerate(documents):
+                law_name = doc.get("law", "")
+                article = doc.get("article", "")
+                title = doc.get("title", "")
+                text_content = doc.get("text", "")
+                keywords = doc.get("keywords", [])
+                category = doc.get("category", "")
+                
+                doc_text = f"قانون {law_name} - مادة {article} ({title}): {text_content}"
+                if keywords:
+                    doc_text += f"\nالكلمات المفتاحية: {', '.join(keywords)}"
+                
+                doc_texts.append(doc_text)
+                temp_docs.append((f"system_law_{idx}", law_name, article, title, category))
+                
+            # توليد المتجهات دفعة واحدة (أسرع بكثير)
+            print(f"[VectorStore] Generating embeddings in batches...")
+            embeddings = embedder.embed_batch(doc_texts)
+            
+            ids = []
+            metadatas = []
+            documents_to_add = []
+            embeddings_to_add = []
+            
+            for i, (doc_id, law_name, article, title, category) in enumerate(temp_docs):
+                ids.append(doc_id)
+                embeddings_to_add.append(embeddings[i])
+                documents_to_add.append(doc_texts[i])
+                metadatas.append({
+                    "is_system_law": True,
+                    "document_id": doc_id,
+                    "law": law_name,
+                    "article": str(article),
+                    "title": str(title),
+                    "category": str(category),
+                    "source": "system_law"
+                })
+                
+                if len(ids) >= 100:
+                    self.collection.add(
+                        ids=ids,
+                        embeddings=embeddings_to_add,
+                        documents=documents_to_add,
+                        metadatas=metadatas
+                    )
+                    ids, embeddings_to_add, documents_to_add, metadatas = [], [], [], []
+                    
+            if ids:
+                self.collection.add(
+                    ids=ids,
+                    embeddings=embeddings_to_add,
+                    documents=documents_to_add,
+                    metadatas=metadatas
+                )
+                
+            print(f"[VectorStore] Successfully indexed all system laws into ChromaDB.")
+        except Exception as e:
+            print(f"[VectorStore] Error indexing system laws: {str(e)}")
+
 # Singleton instance
 vector_store = VectorStore()
+
