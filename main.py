@@ -32,21 +32,17 @@ init_db()
 
 @app.on_event("startup")
 async def startup_event():
-    # Index system laws in ChromaDB in background
-    try:
-        import threading
-        from rag_engine.core.vector_store import vector_store
-        from ai_engine.search_engine import YEMENI_LAWS_DB, SYSTEM_GUIDES_DB, CIVIL_LAW_EXTENDED, YEMENI_PROCEDURES
-        
-        all_docs = YEMENI_LAWS_DB + SYSTEM_GUIDES_DB + CIVIL_LAW_EXTENDED + YEMENI_PROCEDURES
-        
-        def index_in_bg():
-            print("[Startup] Initializing system laws indexing in background...")
-            vector_store.index_system_laws_if_needed(all_docs)
-            
-        threading.Thread(target=index_in_bg, daemon=True).start()
-    except Exception as e:
-        print(f"[Startup] Failed to start system laws indexing thread: {e}")
+    # ─────────────────────────────────────────────────────────────────────
+    # ChromaDB / Embedding model indexing — DISABLED on startup intentionally
+    #
+    # السبب: تحميل نموذج sentence-transformers (229MB) عند كل إعادة تشغيل
+    # يستنفد RAM الخادم على Railway → crash loop لانهائي.
+    #
+    # الحل: البحث الهجين يعمل بـ BM25 المعجمي بشكل كامل وهو كافٍ.
+    # إذا أردت تفعيل الجزء الدلالي مستقبلاً، قم بتشغيل سكربت الفهرسة
+    # يدوياً محلياً ورفع قاعدة بيانات chromadb إلى Volume مخصص.
+    # ─────────────────────────────────────────────────────────────────────
+    print("[Startup] Server ready. Semantic indexing disabled to preserve RAM on Railway.")
 
 try:
 
