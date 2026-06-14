@@ -209,47 +209,37 @@ class GeminiLegalAssistant:
             logger.error(f"خطأ في Gemini API: {error_msg}")
             return None
 
-    def _call_gemini(self, prompt: str, retries: int = 2) -> Optional[str]:
-        """استدعاء Gemini API مع إعادة المحاولة"""
-        for attempt in range(retries + 1):
-            try:
-                response = self._client.models.generate_content(
-                    model="gemini-2.0-flash",
-                    contents=prompt,
-                    config={
-                        "system_instruction": SYSTEM_PROMPT,
-                        "temperature": 0.5,
-                        "top_p": 0.9,
-                        "top_k": 40,
-                        "max_output_tokens": 4096,
-                    },
-                )
-
-                if response and response.text:
-                    return response.text.strip()
-
-                return None
-
-            except Exception as e:
-                error_msg = str(e)
-                logger.warning(f"Gemini attempt {attempt + 1} failed: {error_msg}")
-
-                if "quota" in error_msg.lower() or "429" in error_msg:
-                    logger.error("⚠️ تجاوز حصة Gemini API. انتظار...")
+    def _call_gemini(self, prompt: str, retries: int = 1) -> Optional[str]:
+        """استدعاء Gemini API مع تجربة الموديلات المتاحة تلقائياً"""
+        models_to_try = ["gemini-flash-latest", "gemini-2.0-flash-lite", "gemini-2.5-flash", "gemini-2.0-flash"]
+        for model_name in models_to_try:
+            for attempt in range(retries + 1):
+                try:
+                    response = self._client.models.generate_content(
+                        model=model_name,
+                        contents=prompt,
+                        config={
+                            "system_instruction": SYSTEM_PROMPT,
+                            "temperature": 0.5,
+                            "top_p": 0.9,
+                            "top_k": 40,
+                            "max_output_tokens": 4096,
+                        },
+                    )
+                    if response and response.text:
+                        return response.text.strip()
+                    break
+                except Exception as e:
+                    error_msg = str(e)
+                    logger.warning(f"Gemini model {model_name} attempt {attempt + 1} failed: {error_msg}")
+                    if "quota" in error_msg.lower() or "429" in error_msg or "resource_exhausted" in error_msg.lower():
+                        break
+                    if "safety" in error_msg.lower():
+                        logger.warning("⚠️ تم حجب الرد بسبب إعدادات الأمان")
+                        return None
                     if attempt < retries:
-                        time.sleep(2 ** attempt)  # exponential backoff
-                    continue
-
-                if "safety" in error_msg.lower():
-                    logger.warning("⚠️ تم حجب الرد بسبب إعدادات الأمان")
-                    return None
-
-                if attempt < retries:
-                    time.sleep(1)
-                    continue
-
-                return None
-
+                        time.sleep(1)
+                        continue
         return None
 
     def _format_db_data(self, data: Dict) -> Optional[str]:
