@@ -81,15 +81,19 @@
         </select>
       </div>
       <div class="btn-row">
+        {% if has_perm(user, 'timesheet', 'add') or has_perm(user, 'timesheet', 'edit') %}
         <button type="submit" class="action-btn" style="background:linear-gradient(135deg,#10b981,#047857);">
           <i class="fa-solid fa-floppy-disk"></i> حفظ
         </button>
+        {% endif %}
         <button type="button" class="action-btn" style="background:linear-gradient(135deg,#6366f1,#4f46e5);" onclick="clearForm()">
           <i class="fa-solid fa-plus"></i> جديد
         </button>
+        {% if has_perm(user, 'timesheet', 'delete') %}
         <button type="button" class="action-btn" style="background:linear-gradient(135deg,#ef4444,#dc2626);" onclick="deleteRecord()">
           <i class="fa-solid fa-trash"></i> حذف
         </button>
+        {% endif %}
       </div>
     </form>
   </div>

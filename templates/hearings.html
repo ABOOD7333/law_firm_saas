@@ -9,12 +9,14 @@
         <p>متابعة وتحديث مواعيد الجلسات والمهام القضائية</p>
     </div>
     <div style="display:flex; gap:10px;">
+        {% if has_perm(user, 'hearings', 'add') %}
         <button class="btn-primary" style="background-color: var(--secondary-color);" onclick="addCustomRefData('hearing_status', 'select[name=\'status_key\']', 'أدخل حالة الجلسة الجديدة (مثال: محجوزة للحكم):')">
             <i class="fa-solid fa-plus"></i> إضافة حالة جلسة
         </button>
         <button class="btn-primary" onclick="document.getElementById('addHearingModal').style.display='flex'">
             <i class="fa-solid fa-plus"></i> إضافة جلسة جديدة
         </button>
+        {% endif %}
     </div>
 </div>
 
@@ -61,9 +63,11 @@
                     </td>
                     <td>
                         <div style="display:flex;gap:5px;">
+                            {% if has_perm(user, 'hearings', 'edit') %}
                             <button class="action-btn" style="color:var(--primary-color);" title="تعديل" onclick="openEditHearingModal('{{ hearing.id }}', '{{ hearing.title }}', '{{ hearing.hearing_at }}', '{{ hearing.next_hearing_date or '' }}', '{{ hearing.status_key }}', '{{ hearing.case_id or '' }}')">
                                 <i class="fa-solid fa-pen-to-square"></i> تعديل
                             </button>
+                            {% endif %}
                         </div>
                     </td>
                 </tr>

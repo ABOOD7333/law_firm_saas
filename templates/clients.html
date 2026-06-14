@@ -8,9 +8,11 @@
         <h1>سجل الموكلين</h1>
         <p>إدارة بيانات الموكلين وإضافة موكلين جدد للنظام.</p>
     </div>
+    {% if has_perm(user, 'clients', 'add') %}
     <button class="primary-btn" onclick="openAddClientModal()">
         <i class="fa-solid fa-plus"></i> إضافة موكل جديد
     </button>
+    {% endif %}
 </div>
 
 <div class="content-section">
@@ -41,9 +43,11 @@
                             <button class="action-btn view-btn" title="عرض التفاصيل">
                                 <i class="fa-solid fa-eye"></i> عرض
                             </button>
+                            {% if has_perm(user, 'clients', 'edit') %}
                             <button class="action-btn edit-btn" title="تعديل" onclick="openEditClientModal('{{ client.id }}', '{{ client.name }}', '{{ client.username or '' }}', '{{ client.case_number or '' }}', '{{ client.phone }}', '{{ client.email }}')">
                                 <i class="fa-solid fa-pen-to-square"></i> تعديل
                             </button>
+                            {% endif %}
                         </div>
                     </td>
                 </tr>

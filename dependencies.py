@@ -11,6 +11,30 @@ from database.models import AccessProfiles, AuthSessions, LawOffices
 
 templates = Jinja2Templates(directory="templates")
 
+def check_user_permission(user, module: str, action: str = "view") -> bool:
+    if not user:
+        return False
+    # Owner and Office Manager bypass all checks
+    if user.role in ["صاحب المكتب", "صاحب مكتب", "مدير المكتب", "مدير مكتب"]:
+        return True
+    
+    if not getattr(user, 'permissions_json', None):
+        return False
+        
+    try:
+        import json
+        perms = json.loads(user.permissions_json)
+        if module in perms:
+            if action == "view":
+                return "view" in perms[module] or len(perms[module]) > 0
+            return action in perms[module]
+    except Exception:
+        pass
+    return False
+
+templates.env.globals['has_perm'] = check_user_permission
+
+
 
 def get_current_user(request: Request, db: Session = Depends(get_db)):
     token = request.cookies.get("session_token")

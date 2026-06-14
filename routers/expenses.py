@@ -6,7 +6,7 @@ from core.error_handler import safe_error_html
 
 from database.database import get_db
 from database.models import AccessProfiles, LawCases, LawExpenses
-from dependencies import get_current_user, templates
+from dependencies import get_current_user, templates, check_user_permission
 
 router = APIRouter()
 
@@ -14,6 +14,8 @@ router = APIRouter()
 @router.get("/expenses", response_class=HTMLResponse)
 async def expenses_page(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     if not user: return RedirectResponse(url="/", status_code=303)
+    if not check_user_permission(user, 'expenses', 'view'):
+        return HTMLResponse(content="<script>alert('غير مصرح لك بدخول قسم المصروفات'); window.location.href='/dashboard';</script>", status_code=403)
     try:
         import json
         office_id = user.office_id or 1
@@ -38,6 +40,13 @@ async def expenses_save(request: Request, db: Session = Depends(get_db), user: A
         rec_id = data.get("id")
         case_id = data.get("case_id")
         office_id = user.office_id or 1
+        
+        if rec_id:
+            if not check_user_permission(user, 'expenses', 'edit'):
+                return JSONResponse({"ok": False, "message": "غير مصرح لك بتعديل المصاريف"})
+        else:
+            if not check_user_permission(user, 'expenses', 'add'):
+                return JSONResponse({"ok": False, "message": "غير مصرح لك بإضافة مصاريف"})
         
         if case_id:
             # Validate case ownership/office
@@ -76,7 +85,10 @@ async def expenses_save(request: Request, db: Session = Depends(get_db), user: A
 async def expenses_delete(rec_id: int, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     from fastapi.responses import JSONResponse
     if not user: return JSONResponse({"ok": False, "message": "غير مصرح"}, status_code=401)
-    r = db.query(LawExpenses).filter(LawExpenses.id == rec_id, LawExpenses.office_id == (user.office_id or 1)).first()
+    if not check_user_permission(user, 'expenses', 'delete'):
+        return JSONResponse({"ok": False, "message": "غير مصرح لك بحذف المصاريف"})
+    office_id = user.office_id or 1
+    r = db.query(LawExpenses).filter(LawExpenses.id == rec_id, LawExpenses.office_id == office_id).first()
     if r:
         # Check lawyer case visibility permission
         case = db.query(LawCases).filter(LawCases.id == r.case_id).first()

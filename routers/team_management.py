@@ -11,7 +11,7 @@ from dependencies import get_current_user, templates
 from core.logger import app_logger
 from core.audit import write_audit
 
-_ADMIN_ROLES = {'مدير', 'مدير المكتب', 'صاحب المكتب', 'مدير النظام'}
+_ALLOWED_TEAM_ROLES = {'صاحب المكتب', 'صاحب مكتب', 'مدير المكتب', 'مدير مكتب'}
 
 router = APIRouter()
 
@@ -19,6 +19,8 @@ router = APIRouter()
 @router.get("/team", response_class=HTMLResponse)
 async def team_page(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     if not user: return RedirectResponse(url="/", status_code=303)
+    if user.role not in _ALLOWED_TEAM_ROLES:
+        return RedirectResponse(url="/dashboard", status_code=303)
     try:
         import json
         office_id = user.office_id or 1
@@ -35,7 +37,7 @@ async def team_page(request: Request, db: Session = Depends(get_db), user: Acces
             "job_title": m.job_title or "", "is_active": m.is_active,
             "can_view_all_cases": m.can_view_all_cases,
             "last_login_at": m.last_login_at or "",
-            "specializations": "", "permissions": []
+            "specializations": "", "permissions": json.loads(m.permissions_json) if m.permissions_json else {}
         } for m in members], ensure_ascii=False)
         return templates.TemplateResponse(request=request, name="team.html", context={
             "user": user, "active_page": "team", "office": office, "owner": owner,
@@ -49,7 +51,7 @@ async def team_page(request: Request, db: Session = Depends(get_db), user: Acces
 async def team_save(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     from fastapi.responses import JSONResponse
     if not user: return JSONResponse({"ok": False, "message": "غير مصرح"}, status_code=401)
-    if user.role not in _ADMIN_ROLES:
+    if user.role not in _ALLOWED_TEAM_ROLES:
         app_logger.warning(f"SECURITY | team_save blocked | actor={user.id}")
         return JSONResponse({"ok": False, "message": "ليس لديك صلاحية لإضافة أو تعديل الأعضاء"}, status_code=403)
     try:
@@ -67,6 +69,8 @@ async def team_save(request: Request, db: Session = Depends(get_db), user: Acces
         is_active = int(data.get("is_active", 1))
         can_view  = int(data.get("can_view_all_cases", 0))
         record_id = data.get("id")
+        permissions = data.get("permissions") or {}
+        permissions_str = _json.dumps(permissions, ensure_ascii=False)
 
         ALLOWED_OFFICE_ROLES = {'مدير', 'محامي', 'محامٍ', 'سكرتير', 'محاسب', 'موكل'}
         if role not in ALLOWED_OFFICE_ROLES:
@@ -105,6 +109,7 @@ async def team_save(request: Request, db: Session = Depends(get_db), user: Acces
             m.name = name; m.username = username; m.phone = phone; m.email = email
             m.birth_date = birth_date; m.role = role; m.job_title = job_title
             m.is_active = is_active; m.can_view_all_cases = can_view
+            m.permissions_json = permissions_str
             if pin and len(pin) >= 6:
                 import os as _os, base64 as _b64
                 _salt = _os.urandom(16)
@@ -126,7 +131,7 @@ async def team_save(request: Request, db: Session = Depends(get_db), user: Acces
                 office_id=office_id, email_verified=1, reset_verified=0,
                 state="verified", access_pin_hash=pin_hash,
                 protection_type="ربط الجهاز الحالي", preferred_theme="light",
-                failed_attempts=0,
+                failed_attempts=0, permissions_json=permissions_str
             )
             db.add(new_m); db.commit()
             return JSONResponse({"ok": True, "message": f"تم إنشاء العضو بنجاح. رمز الدخول: {pin}"})
@@ -138,7 +143,7 @@ async def team_save(request: Request, db: Session = Depends(get_db), user: Acces
 @router.post("/api/team/toggle/{member_id}")
 async def team_toggle(member_id: int, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     if not user: return JSONResponse({"ok": False, "message": "غير مصرح"}, status_code=401)
-    if user.role not in _ADMIN_ROLES:
+    if user.role not in _ALLOWED_TEAM_ROLES:
         app_logger.warning(f"SECURITY | team_toggle blocked | actor={user.id} target={member_id}")
         return JSONResponse({"ok": False, "message": "ليس لديك صلاحية"}, status_code=403)
     office_id = user.office_id or 1
@@ -161,7 +166,7 @@ async def team_toggle(member_id: int, db: Session = Depends(get_db), user: Acces
 @router.delete("/api/team/delete/{member_id}")
 async def team_delete(member_id: int, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     if not user: return JSONResponse({"ok": False, "message": "غير مصرح"}, status_code=401)
-    if user.role not in _ADMIN_ROLES:
+    if user.role not in _ALLOWED_TEAM_ROLES:
         app_logger.warning(f"SECURITY | team_delete blocked | actor={user.id} target={member_id}")
         return JSONResponse({"ok": False, "message": "ليس لديك صلاحية"}, status_code=403)
     office_id = user.office_id or 1

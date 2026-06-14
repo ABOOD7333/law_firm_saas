@@ -17,12 +17,14 @@
         </div>
     </div>
     <div style="display: flex; gap: 10px;">
+        {% if has_perm(user, 'finance', 'add') %}
         <button class="btn-primary" style="background: white; color: var(--primary-color); border: 1px solid var(--primary-color);" onclick="document.getElementById('addExpenseModal').style.display='flex'">
             <i class="fa-solid fa-minus-circle"></i> إضافة مصروف
         </button>
         <button class="btn-primary" onclick="document.getElementById('addTransactionModal').style.display='flex'">
             <i class="fa-solid fa-plus-circle"></i> إضافة إيراد (دفعة)
         </button>
+        {% endif %}
     </div>
 </div>
 

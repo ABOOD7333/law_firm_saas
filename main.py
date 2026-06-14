@@ -338,7 +338,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Templates setup - imported from dependencies to avoid circular imports in routers
 
-from dependencies import templates, get_current_user
+from dependencies import templates, get_current_user, check_user_permission
 
 @app.get("/", response_class=HTMLResponse)
 
@@ -1159,6 +1159,10 @@ async def clients_page(request: Request, db: Session = Depends(get_db), user: Ac
 
         return RedirectResponse(url="/", status_code=303)
 
+    if not check_user_permission(user, 'clients', 'view'):
+
+        return HTMLResponse(content="<script>alert('غير مصرح لك بدخول قسم الموكلين'); window.location.href='/dashboard';</script>", status_code=403)
+
     try:
 
         office_id = user.office_id or 1
@@ -1210,6 +1214,10 @@ async def add_client(
     if not user:
 
         return RedirectResponse(url="/", status_code=303)
+
+    if not check_user_permission(user, 'clients', 'add'):
+
+        return HTMLResponse(content="<script>alert('غير مصرح لك بإضافة موكل'); window.history.back();</script>", status_code=403)
 
     office_id = user.office_id or 1
 
@@ -1309,6 +1317,10 @@ async def edit_client(
 
         return RedirectResponse(url="/", status_code=303)
 
+    if not check_user_permission(user, 'clients', 'edit'):
+
+        return HTMLResponse(content="<script>alert('غير مصرح لك بتعديل بيانات موكل'); window.history.back();</script>", status_code=403)
+
     office_id = user.office_id or 1
 
     client = db.query(LawClients).filter(LawClients.id == client_id, LawClients.office_id == office_id).first()
@@ -1354,6 +1366,10 @@ async def cases_page(request: Request, db: Session = Depends(get_db), user: Acce
     if not user:
 
         return RedirectResponse(url="/", status_code=303)
+
+    if not check_user_permission(user, 'cases', 'view'):
+
+        return HTMLResponse(content="<script>alert('غير مصرح لك بدخول قسم القضايا'); window.location.href='/dashboard';</script>", status_code=403)
 
     try:
 
@@ -1414,6 +1430,10 @@ async def add_case(
     if not user:
 
         return RedirectResponse(url="/", status_code=303)
+
+    if not check_user_permission(user, 'cases', 'add'):
+
+        return HTMLResponse(content="<script>alert('غير مصرح لك بإضافة قضية'); window.history.back();</script>", status_code=403)
 
     office = db.query(LawOffices).first()
 
@@ -1655,6 +1675,10 @@ async def edit_case(
 
         return RedirectResponse(url="/", status_code=303)
 
+    if not check_user_permission(user, 'cases', 'edit'):
+
+        return HTMLResponse(content="<script>alert('غير مصرح لك بتعديل قضية'); window.history.back();</script>", status_code=403)
+
     office_id = user.office_id or 1
 
     case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
@@ -1696,6 +1720,10 @@ async def hearings_page(request: Request, db: Session = Depends(get_db), user: A
     if not user:
 
         return RedirectResponse(url="/", status_code=303)
+
+    if not check_user_permission(user, 'hearings', 'view'):
+
+        return HTMLResponse(content="<script>alert('غير مصرح لك بدخول قسم الجلسات'); window.location.href='/dashboard';</script>", status_code=403)
 
     try:
 
@@ -1762,6 +1790,10 @@ async def add_hearing(
     if not user:
 
         return RedirectResponse(url="/", status_code=303)
+
+    if not check_user_permission(user, 'hearings', 'add'):
+
+        return HTMLResponse(content="<script>alert('غير مصرح لك بإضافة جلسة'); window.history.back();</script>", status_code=403)
 
     # Get user office or default to first
 
@@ -1853,6 +1885,10 @@ async def finance_page(
 ):
     if not user:
         return RedirectResponse(url="/", status_code=303)
+
+    if not check_user_permission(user, 'finance', 'view'):
+
+        return HTMLResponse(content="<script>alert('غير مصرح لك بدخول قسم المالية'); window.location.href='/dashboard';</script>", status_code=403)
     try:
         office_id = user.office_id or 1
         transactions = db.query(LawTransactions).filter(LawTransactions.office_id == office_id).order_by(LawTransactions.transaction_at.desc()).all()
@@ -2070,6 +2106,10 @@ async def add_transaction(
     if not user:
         return RedirectResponse(url="/", status_code=303)
 
+    if not check_user_permission(user, 'finance', 'add'):
+
+        return HTMLResponse(content="<script>alert('غير مصرح لك بإضافة إيرادات'); window.history.back();</script>", status_code=403)
+
     office_id = user.office_id or 1
 
     if case_id:
@@ -2115,6 +2155,10 @@ async def add_expense(
 ):
     if not user:
         return RedirectResponse(url="/", status_code=303)
+
+    if not check_user_permission(user, 'finance', 'add'):
+
+        return HTMLResponse(content="<script>alert('غير مصرح لك بإضافة مصروفات'); window.history.back();</script>", status_code=403)
 
     office_id = user.office_id or 1
 
@@ -2255,7 +2299,7 @@ async def add_user(
 
         return RedirectResponse(url="/", status_code=303)
 
-    if user.role not in ['مدير', 'مدير المكتب', 'صاحب المكتب']:
+    if user.role not in ['صاحب المكتب', 'صاحب مكتب', 'مدير المكتب', 'مدير مكتب']:
 
         return HTMLResponse(content="<script>alert('ليس لديك صلاحية لإضافة مستخدمين'); window.history.back();</script>", status_code=403)
 
@@ -2361,6 +2405,10 @@ async def edit_hearing(
 
     if not user: return RedirectResponse(url="/", status_code=303)
 
+    if not check_user_permission(user, 'hearings', 'edit'):
+
+        return HTMLResponse(content="<script>alert('غير مصرح لك بتعديل جلسة'); window.history.back();</script>", status_code=403)
+
     office_id = user.office_id or 1
 
     hearing = db.query(LawHearings).filter(LawHearings.id == hearing_id, LawHearings.office_id == office_id).first()
@@ -2385,7 +2433,7 @@ async def edit_hearing(
 
 # الأدوار المسموح لها بإدارة المستخدمين
 
-_ADMIN_ROLES = {'مدير', 'مدير المكتب', 'صاحب المكتب', 'مدير النظام'}
+_ADMIN_ROLES = {'صاحب المكتب', 'صاحب مكتب', 'مدير المكتب', 'مدير مكتب'}
 
 @app.post("/settings/edit_user")
 

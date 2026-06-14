@@ -186,17 +186,19 @@
             </li>
             
             {% if not_client %}
-                {% if is_admin or is_lawyer or is_sec %}
+                {% if (is_admin or is_lawyer or is_sec) and (has_perm(user, 'cases', 'view') or has_perm(user, 'hearings', 'view')) %}
                 <li class="nav-item {% if active_page == 'calendar' %}active{% endif %}">
                     <a href="/calendar"><i class="fa-solid fa-calendar-week"></i> التقويم القضائي</a>
                 </li>
                 {% endif %}
                 
+                {% if has_perm(user, 'cases', 'view') or has_perm(user, 'clients', 'view') %}
                 <li class="nav-item {% if active_page == 'search' %}active{% endif %}">
                     <a href="/search"><i class="fa-solid fa-magnifying-glass"></i> البحث المتقدم</a>
                 </li>
+                {% endif %}
                 
-                {% if is_admin or is_lawyer or is_sec %}
+                {% if (is_admin or is_lawyer or is_sec) and has_perm(user, 'cases', 'view') %}
                 <li class="nav-item {% if active_page == 'cases' %}active{% endif %}">
                     <a href="/cases"><i class="fa-solid fa-gavel"></i> إدارة القضايا</a>
                 </li>
@@ -205,81 +207,114 @@
                 </li>
                 {% endif %}
                 
+                {% if has_perm(user, 'clients', 'view') %}
                 <li class="nav-item {% if active_page == 'clients' %}active{% endif %}">
                     <a href="/clients"><i class="fa-solid fa-users"></i> الموكلون</a>
                 </li>
+                {% endif %}
                 
                 {% if is_admin or is_lawyer or is_sec %}
-                <li class="nav-item {% if active_page == 'hearings' %}active{% endif %}">
-                    <a href="/hearings"><i class="fa-solid fa-calendar-days"></i> محاضر الجلسات</a>
-                </li>
-                <li class="nav-item {% if active_page == 'documents' %}active{% endif %}">
-                    <a href="/documents"><i class="fa-solid fa-folder-open"></i> المستندات والأرشفة</a>
-                </li>
-                <li class="nav-item {% if active_page == 'pleadings' %}active{% endif %}">
-                    <a href="/pleadings"><i class="fa-solid fa-scroll"></i> المرافعات والمذكرات</a>
-                </li>
-                <li class="nav-item {% if active_page == 'judgments' %}active{% endif %}">
-                    <a href="/judgments"><i class="fa-solid fa-scale-balanced"></i> الأحكام والقرارات</a>
-                </li>
-                <li class="nav-item {% if active_page == 'notes' %}active{% endif %}">
-                    <a href="/notes"><i class="fa-solid fa-note-sticky"></i> الملاحظات والاتصالات</a>
-                </li>
-                <li class="nav-item {% if active_page == 'correspondences' %}active{% endif %}">
-                    <a href="/correspondences"><i class="fa-solid fa-envelope"></i> المراسلات الرسمية</a>
-                </li>
-                <li class="nav-item {% if active_page == 'automation' %}active{% endif %}">
-                    <a href="/automation"><i class="fa-solid fa-wand-magic-sparkles"></i> الأتمتة الذكية</a>
-                </li>
-                <li class="nav-item {% if active_page == 'tasks' %}active{% endif %}">
-                    <a href="/tasks"><i class="fa-solid fa-list-check"></i> المهام والمتابعة</a>
-                </li>
-                <li class="nav-item {% if active_page == 'timeline' %}active{% endif %}">
-                    <a href="/timeline"><i class="fa-solid fa-timeline"></i> الخط الزمني</a>
-                </li>
+                    {% if has_perm(user, 'hearings', 'view') %}
+                    <li class="nav-item {% if active_page == 'hearings' %}active{% endif %}">
+                        <a href="/hearings"><i class="fa-solid fa-calendar-days"></i> محاضر الجلسات</a>
+                    </li>
+                    {% endif %}
+                    {% if has_perm(user, 'documents', 'view') %}
+                    <li class="nav-item {% if active_page == 'documents' %}active{% endif %}">
+                        <a href="/documents"><i class="fa-solid fa-folder-open"></i> المستندات والأرشفة</a>
+                    </li>
+                    {% endif %}
+                    {% if has_perm(user, 'pleadings', 'view') %}
+                    <li class="nav-item {% if active_page == 'pleadings' %}active{% endif %}">
+                        <a href="/pleadings"><i class="fa-solid fa-scroll"></i> المرافعات والمذكرات</a>
+                    </li>
+                    {% endif %}
+                    {% if has_perm(user, 'judgments', 'view') %}
+                    <li class="nav-item {% if active_page == 'judgments' %}active{% endif %}">
+                        <a href="/judgments"><i class="fa-solid fa-scale-balanced"></i> الأحكام والقرارات</a>
+                    </li>
+                    {% endif %}
+                    {% if has_perm(user, 'notes', 'view') %}
+                    <li class="nav-item {% if active_page == 'notes' %}active{% endif %}">
+                        <a href="/notes"><i class="fa-solid fa-note-sticky"></i> الملاحظات والاتصالات</a>
+                    </li>
+                    {% endif %}
+                    {% if has_perm(user, 'correspondences', 'view') %}
+                    <li class="nav-item {% if active_page == 'correspondences' %}active{% endif %}">
+                        <a href="/correspondences"><i class="fa-solid fa-envelope"></i> المراسلات الرسمية</a>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item {% if active_page == 'automation' %}active{% endif %}">
+                        <a href="/automation"><i class="fa-solid fa-wand-magic-sparkles"></i> الأتمتة الذكية</a>
+                    </li>
+                    {% if has_perm(user, 'tasks', 'view') %}
+                    <li class="nav-item {% if active_page == 'tasks' %}active{% endif %}">
+                        <a href="/tasks"><i class="fa-solid fa-list-check"></i> المهام والمتابعة</a>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item {% if active_page == 'timeline' %}active{% endif %}">
+                        <a href="/timeline"><i class="fa-solid fa-timeline"></i> الخط الزمني</a>
+                    </li>
                 {% endif %}
                 
                 {% if is_admin or is_acc %}
-                <li class="nav-item {% if active_page == 'finance' %}active{% endif %}">
-                    <a href="/finance"><i class="fa-solid fa-file-invoice-dollar"></i> الحسابات والمالية</a>
-                </li>
-                <li class="nav-item {% if active_page == 'expenses' %}active{% endif %}">
-                    <a href="/expenses"><i class="fa-solid fa-money-bill-wave"></i> مصاريف القضية</a>
-                </li>
+                    {% if has_perm(user, 'finance', 'view') %}
+                    <li class="nav-item {% if active_page == 'finance' %}active{% endif %}">
+                        <a href="/finance"><i class="fa-solid fa-file-invoice-dollar"></i> الحسابات والمالية</a>
+                    </li>
+                    {% endif %}
+                    {% if has_perm(user, 'expenses', 'view') %}
+                    <li class="nav-item {% if active_page == 'expenses' %}active{% endif %}">
+                        <a href="/expenses"><i class="fa-solid fa-money-bill-wave"></i> مصاريف القضية</a>
+                    </li>
+                    {% endif %}
                 {% endif %}
                 
-                {% if is_admin or is_acc or is_lawyer %}
+                {% if (is_admin or is_acc or is_lawyer) and has_perm(user, 'timesheet', 'view') %}
                 <li class="nav-item {% if active_page == 'timesheet' %}active{% endif %}">
                     <a href="/timesheet"><i class="fa-solid fa-clock"></i> سجل الساعات</a>
                 </li>
                 {% endif %}
                 
                 {% if is_admin or is_lawyer or is_sec %}
-                <li class="nav-item {% if active_page == 'execution' %}active{% endif %}">
-                    <a href="/execution"><i class="fa-solid fa-gavel"></i> إجراءات التنفيذ</a>
-                </li>
-                <li class="nav-item {% if active_page == 'power_of_attorney' %}active{% endif %}">
-                    <a href="/power_of_attorney"><i class="fa-solid fa-file-signature"></i> الوكالات الرسمية</a>
-                </li>
+                    {% if has_perm(user, 'execution', 'view') %}
+                    <li class="nav-item {% if active_page == 'execution' %}active{% endif %}">
+                        <a href="/execution"><i class="fa-solid fa-gavel"></i> إجراءات التنفيذ</a>
+                    </li>
+                    {% endif %}
+                    {% if has_perm(user, 'power_of_attorney', 'view') %}
+                    <li class="nav-item {% if active_page == 'power_of_attorney' %}active{% endif %}">
+                        <a href="/power_of_attorney"><i class="fa-solid fa-file-signature"></i> الوكالات الرسمية</a>
+                    </li>
+                    {% endif %}
                 {% endif %}
                 
+                {% if has_perm(user, 'reports', 'view') %}
                 <li class="nav-item {% if active_page == 'reports' %}active{% endif %}">
                     <a href="/reports"><i class="fa-solid fa-chart-bar"></i> التقارير</a>
                 </li>
+                {% endif %}
                 
-                {% if is_admin %}
+                {% if user and user.role in ['صاحب المكتب', 'صاحب مكتب', 'مدير المكتب', 'مدير مكتب'] %}
                 <li class="nav-item {% if active_page == 'team' %}active{% endif %}">
                     <a href="/team"><i class="fa-solid fa-users-gear"></i> الفريق والصلاحيات</a>
                 </li>
+                {% endif %}
+                {% if has_perm(user, 'advanced_operations', 'view') %}
                 <li class="nav-item {% if active_page == 'advanced_operations' %}active{% endif %}">
                     <a href="/advanced_operations"><i class="fa-solid fa-microchip"></i> العمليات المتقدمة</a>
                 </li>
+                {% endif %}
+                {% if has_perm(user, 'legal_references', 'view') %}
                 <li class="nav-item {% if active_page == 'legal_references' %}active{% endif %}">
                     <a href="/legal_references"><i class="fa-solid fa-book-open"></i> المراجع القانونية</a>
                 </li>
+                {% endif %}
+                {% if has_perm(user, 'limitations', 'view') %}
                 <li class="nav-item {% if active_page == 'limitations' %}active{% endif %}">
                     <a href="/limitations"><i class="fa-solid fa-clock-rotate-left"></i> تنبيهات التقادم</a>
                 </li>
+                {% endif %}
                 <li class="nav-item {% if active_page == 'reference_data' %}active{% endif %}">
                     <a href="/reference_data"><i class="fa-solid fa-table-list"></i> الجداول المرجعية</a>
                 </li>

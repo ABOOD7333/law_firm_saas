@@ -239,22 +239,52 @@
 
         <!-- Permissions grid -->
         <h3 style="font-size:.95rem;font-weight:800;color:var(--secondary-color);margin:16px 0 10px;"><i class="fa-solid fa-shield-halved" style="color:#6366f1;margin-left:6px;"></i>الصلاحيات التفصيلية</h3>
-        <div class="perm-grid" id="permGrid">
-          {% set perms = [
-            ('manage_cases','إدارة القضايا'),('view_cases','عرض القضايا'),
-            ('manage_clients','إدارة الموكلين'),('view_clients','عرض الموكلين'),
-            ('manage_hearings','إدارة الجلسات'),('manage_documents','إدارة المستندات'),
-            ('manage_finance','إدارة المالية'),('view_finance','عرض المالية'),
-            ('manage_tasks','إدارة المهام'),('manage_users','إدارة المستخدمين'),
-            ('manage_settings','إعدادات النظام'),('export_data','تصدير البيانات'),
-            ('view_reports','عرض التقارير'),('manage_correspondence','المراسلات'),
-            ('manage_notes','الملاحظات')
+        <div id="permGrid" style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px; max-height:450px; overflow-y:auto; padding-left:10px;">
+          {% set perm_modules = [
+            ('cases', 'إدارة القضايا'),
+            ('parties', 'الأطراف والمتقاضون'),
+            ('clients', 'الموكلون'),
+            ('hearings', 'محاضر الجلسات'),
+            ('documents', 'المستندات والأرشفة'),
+            ('pleadings', 'المرافعات والمذكرات'),
+            ('judgments', 'الأحكام والقرارات'),
+            ('notes', 'الملاحظات والاتصالات'),
+            ('correspondences', 'المراسلات الرسمية'),
+            ('tasks', 'المهام والمتابعة'),
+            ('finance', 'الحسابات والمالية'),
+            ('expenses', 'مصاريف القضية'),
+            ('timesheet', 'سجل الساعات'),
+            ('execution', 'إجراءات التنفيذ'),
+            ('power_of_attorney', 'الوكالات الرسمية'),
+            ('reports', 'التقارير'),
+            ('team', 'الفريق والصلاحيات'),
+            ('advanced_operations', 'العمليات المتقدمة'),
+            ('legal_references', 'المراجع القانونية'),
+            ('limitations', 'تنبيهات التقادم')
           ] %}
-          {% for key, label in perms %}
-          <label class="perm-item" id="perm_{{ key }}">
-            <input type="checkbox" name="perm_{{ key }}" value="{{ key }}" onchange="this.parentElement.classList.toggle('checked',this.checked)">
-            {{ label }}
-          </label>
+          {% for key, label in perm_modules %}
+          <div class="perm-module-card" style="border:1.5px solid var(--border-color); border-radius:10px; padding:12px 16px; background:#fff; transition: all 0.2s;" id="card_{{ key }}">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:700; font-size:0.9rem; margin-bottom:0;">
+                      <input type="checkbox" class="module-access" data-module="{{ key }}" onchange="toggleModuleActions('{{ key }}', this.checked)">
+                      {{ label }}
+                  </label>
+              </div>
+              <div id="actions_{{ key }}" style="display:none; margin-top:10px; padding-right:20px; gap:15px; border-top:1px dashed #e2e8f0; padding-top:8px; flex-wrap:wrap;">
+                  <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-size:0.82rem; color:#475569; margin-bottom:0;">
+                      <input type="checkbox" class="action-check" data-module="{{ key }}" data-action="view" onchange="syncModuleAccess('{{ key }}')"> دخول / عرض
+                  </label>
+                  <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-size:0.82rem; color:#475569; margin-bottom:0;">
+                      <input type="checkbox" class="action-check" data-module="{{ key }}" data-action="add" onchange="syncModuleAccess('{{ key }}')"> إضافة
+                  </label>
+                  <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-size:0.82rem; color:#475569; margin-bottom:0;">
+                      <input type="checkbox" class="action-check" data-module="{{ key }}" data-action="edit" onchange="syncModuleAccess('{{ key }}')"> تعديل
+                  </label>
+                  <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-size:0.82rem; color:#475569; margin-bottom:0;">
+                      <input type="checkbox" class="action-check" data-module="{{ key }}" data-action="delete" onchange="syncModuleAccess('{{ key }}')"> حذف
+                  </label>
+              </div>
+          </div>
           {% endfor %}
         </div>
 
@@ -297,6 +327,37 @@ function showAlert(msg, type='success') {
   setTimeout(() => el.style.display = 'none', 4000);
 }
 
+function toggleModuleActions(module, checked) {
+  const div = document.getElementById('actions_' + module);
+  if (!div) return;
+  if (checked) {
+    div.style.display = 'flex';
+    // Default check view if none checked
+    const viewCb = div.querySelector(`.action-check[data-action="view"]`);
+    if (viewCb && !div.querySelector('.action-check:checked')) {
+      viewCb.checked = true;
+    }
+  } else {
+    div.style.display = 'none';
+    div.querySelectorAll('.action-check').forEach(cb => cb.checked = false);
+  }
+}
+
+function syncModuleAccess(module) {
+  const div = document.getElementById('actions_' + module);
+  const mainCb = document.querySelector(`.module-access[data-module="${module}"]`);
+  if (!div || !mainCb) return;
+  
+  const anyChecked = div.querySelectorAll('.action-check:checked').length > 0;
+  if (anyChecked) {
+    mainCb.checked = true;
+    div.style.display = 'flex';
+  } else {
+    mainCb.checked = false;
+    div.style.display = 'none';
+  }
+}
+
 function selectMember(id, row) {
   selectedId = id;
   document.querySelectorAll('#membersTable tr').forEach(r => r.classList.remove('selected'));
@@ -316,11 +377,31 @@ function selectMember(id, row) {
   document.getElementById('fViewAll').checked = !!m.can_view_all_cases;
   document.getElementById('fSpecializations').value = m.specializations || '';
   onRoleChange();
+  
   // Set permissions
-  const perms = m.permissions || [];
   document.querySelectorAll('#permGrid input[type=checkbox]').forEach(cb => {
-    cb.checked = perms.includes(cb.value);
-    cb.parentElement.classList.toggle('checked', cb.checked);
+    cb.checked = false;
+  });
+  document.querySelectorAll('.perm-module-card div[id^="actions_"]').forEach(div => {
+    div.style.display = 'none';
+  });
+  
+  const perms = m.permissions || {};
+  Object.keys(perms).forEach(moduleKey => {
+    const actions = perms[moduleKey] || [];
+    if (actions.length > 0) {
+      const mainCb = document.querySelector(`.module-access[data-module="${moduleKey}"]`);
+      if (mainCb) {
+        mainCb.checked = true;
+        toggleModuleActions(moduleKey, true);
+      }
+      actions.forEach(action => {
+        const actionCb = document.querySelector(`.action-check[data-module="${moduleKey}"][data-action="${action}"]`);
+        if (actionCb) {
+          actionCb.checked = true;
+        }
+      });
+    }
   });
 }
 
@@ -329,13 +410,23 @@ function clearForm() {
   document.getElementById('memberForm').reset();
   document.getElementById('memberId').value = '';
   document.querySelectorAll('#membersTable tr').forEach(r => r.classList.remove('selected'));
+  
   document.querySelectorAll('#permGrid input[type=checkbox]').forEach(cb => {
-    cb.checked = false; cb.parentElement.classList.remove('checked');
+    cb.checked = false;
   });
+  document.querySelectorAll('.perm-module-card div[id^="actions_"]').forEach(div => {
+    div.style.display = 'none';
+  });
+  
   // Default permissions for lawyer
-  ['view_cases','view_clients','manage_hearings','manage_tasks','manage_notes'].forEach(k => {
-    const el = document.querySelector(`input[value="${k}"]`);
-    if (el) { el.checked = true; el.parentElement.classList.add('checked'); }
+  ['cases', 'clients', 'hearings', 'tasks', 'notes'].forEach(mKey => {
+    const mainCb = document.querySelector(`.module-access[data-module="${mKey}"]`);
+    if (mainCb) {
+      mainCb.checked = true;
+      toggleModuleActions(mKey, true);
+      const viewCb = document.querySelector(`.action-check[data-module="${mKey}"][data-action="view"]`);
+      if (viewCb) viewCb.checked = true;
+    }
   });
 }
 
@@ -366,7 +457,20 @@ function selectCase(num) {
 async function saveMember(e) {
   e.preventDefault();
   const id = document.getElementById('memberId').value;
-  const perms = [...document.querySelectorAll('#permGrid input:checked')].map(c => c.value);
+  
+  const perms = {};
+  document.querySelectorAll('.module-access:checked').forEach(mainCb => {
+    const moduleKey = mainCb.dataset.module;
+    const checkedActions = [];
+    document.querySelectorAll(`.action-check[data-module="${moduleKey}"]:checked`).forEach(actionCb => {
+      checkedActions.push(actionCb.dataset.action);
+    });
+    if (checkedActions.length === 0) {
+      checkedActions.push('view');
+    }
+    perms[moduleKey] = checkedActions;
+  });
+
   const payload = {
     id: id || null,
     name: document.getElementById('fName').value.trim(),

@@ -12,9 +12,11 @@
         <button class="btn" style="background: #f1f5f9; color: #334155; padding: 10px 20px; border-radius: 8px; font-weight: 700; border: 1px solid #cbd5e1; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-family: 'Cairo', sans-serif;" onclick="openReportModal()">
             <i class="fa-solid fa-file-invoice"></i> التقارير
         </button>
+        {% if has_perm(user, 'cases', 'add') %}
         <button class="primary-btn" onclick="openAddCaseModal()">
             <i class="fa-solid fa-plus"></i> فتح قضية جديدة
         </button>
+        {% endif %}
     </div>
 </div>
 
@@ -56,9 +58,11 @@
                             <a href="/cases/{{ case.id }}" class="action-btn view-btn" title="عرض القضية">
                                 <i class="fa-solid fa-folder-open"></i> عرض
                             </a>
+                            {% if has_perm(user, 'cases', 'edit') %}
                             <button class="action-btn" style="color:var(--primary-color);" title="تعديل القضية" onclick="openEditCaseModal('{{ case.id }}', '{{ case.title }}', '{{ case.case_number }}', '{{ case.law_clients[0].id if case.law_clients else '' }}', '{{ case.lead_lawyer_id or '' }}', '{{ case.status_key }}')">
                                 <i class="fa-solid fa-pen-to-square"></i> تعديل
                             </button>
+                            {% endif %}
                         </div>
                     </td>
                 </tr>
