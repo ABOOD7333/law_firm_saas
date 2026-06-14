@@ -142,3 +142,112 @@ async def update_template(
     db.commit()
     return JSONResponse({"success": True})
 
+@router.get("/api/workflows")
+async def get_workflows(
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    from fastapi.responses import JSONResponse
+    from database.models import LawWorkflowRules, LawAuditLog
+    if not user: return JSONResponse({"error": "unauthorized"}, status_code=401)
+    office_id = user.office_id or 1
+    
+    # Get rules
+    rules = db.query(LawWorkflowRules).filter(LawWorkflowRules.office_id == office_id).all()
+    rules_data = []
+    for r in rules:
+        rules_data.append({
+            "id": r.id,
+            "name": r.name,
+            "trigger_key": r.trigger_key,
+            "action_type": r.action_type,
+            "action_config": r.action_config,
+            "is_active": r.is_active
+        })
+        
+    # Get recent execution logs
+    logs = db.query(LawAuditLog).filter(
+        LawAuditLog.office_id == office_id,
+        LawAuditLog.table_name == 'law_workflow_rules',
+        LawAuditLog.action_name == 'execute_workflow'
+    ).order_by(LawAuditLog.created_at.desc()).limit(10).all()
+    
+    logs_data = []
+    for log in logs:
+        logs_data.append({
+            "id": log.id,
+            "details": log.details,
+            "created_at": log.created_at
+        })
+        
+    return JSONResponse({"rules": rules_data, "logs": logs_data})
+
+@router.post("/api/workflows/toggle")
+async def toggle_workflow(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    from fastapi.responses import JSONResponse
+    from database.models import LawWorkflowRules
+    if not user: return JSONResponse({"error": "unauthorized"}, status_code=401)
+    office_id = user.office_id or 1
+    
+    data = await request.json()
+    rule_id = data.get("rule_id")
+    if not rule_id:
+        return JSONResponse({"error": "Missing rule_id"}, status_code=400)
+        
+    rule = db.query(LawWorkflowRules).filter(
+        LawWorkflowRules.id == rule_id,
+        LawWorkflowRules.office_id == office_id
+    ).first()
+    
+    if not rule:
+        return JSONResponse({"error": "Rule not found"}, status_code=404)
+        
+    rule.is_active = 1 if rule.is_active == 0 else 0
+    db.commit()
+    return JSONResponse({"success": True, "is_active": rule.is_active})
+
+@router.post("/api/workflows/save")
+async def save_workflow_config(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    from fastapi.responses import JSONResponse
+    from database.models import LawWorkflowRules
+    import json
+    if not user: return JSONResponse({"error": "unauthorized"}, status_code=401)
+    office_id = user.office_id or 1
+    
+    data = await request.json()
+    rule_id = data.get("rule_id")
+    action_config = data.get("action_config")
+    
+    if not rule_id or action_config is None:
+        return JSONResponse({"error": "Missing rule_id or action_config"}, status_code=400)
+        
+    rule = db.query(LawWorkflowRules).filter(
+        LawWorkflowRules.id == rule_id,
+        LawWorkflowRules.office_id == office_id
+    ).first()
+    
+    if not rule:
+        return JSONResponse({"error": "Rule not found"}, status_code=404)
+        
+    # Verify action_config is valid JSON
+    try:
+        if isinstance(action_config, dict):
+            rule.action_config = json.dumps(action_config, ensure_ascii=False)
+        else:
+            json.loads(action_config) # test parse
+            rule.action_config = action_config
+    except Exception as e:
+        return JSONResponse({"error": f"Invalid JSON config: {e}"}, status_code=400)
+        
+    db.commit()
+    return JSONResponse({"success": True})
+
+

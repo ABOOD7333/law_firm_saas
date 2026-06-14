@@ -70,6 +70,55 @@
     .legal-doc { box-shadow: none; border: none; padding: 0; }
     .print-doc-btn { display: none !important; }
 }
+
+/* تنسيق التبديل الذكي للأتمتة */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 46px;
+    height: 24px;
+}
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #cbd5e1;
+    transition: .3s;
+    border-radius: 24px;
+}
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px; width: 18px;
+    left: 3px; bottom: 3px;
+    background-color: white;
+    transition: .3s;
+    border-radius: 50%;
+}
+input:checked + .slider {
+    background-color: #10b981;
+}
+input:checked + .slider:before {
+    transform: translateX(-22px);
+}
+.wf-log-row {
+    padding: 10px 12px;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: .82rem;
+    color: #334155;
+    transition: background-color 0.2s;
+}
+.wf-log-row:hover {
+    background-color: #f8fafc;
+}
+.wf-log-row:last-child {
+    border-bottom: none;
+}
 </style>
 
 <!-- Page Header -->
@@ -209,6 +258,30 @@
     </div>
 </div>
 
+<!-- Section 4: Smart Workflows -->
+<div class="section-card">
+    <h3><i class="fa-solid fa-gears" style="color:var(--primary-color);"></i> باني سير العمل والمهام الذكية (No-Code Legal Workflows)</h3>
+    <p style="color:var(--text-muted); font-size:0.88rem; margin-top:-10px; margin-bottom:20px;">أتمتة المهام والتحذيرات تلقائياً بناءً على قواعد وأحداث محددة لزيادة الكفاءة والالتزام بالمواعيد القضائية.</p>
+    
+    <div style="display:grid; grid-template-columns: 2fr 1fr; gap:20px;">
+        <!-- Rules List -->
+        <div style="background:#f8fafc; border-radius:12px; border:1px solid var(--border-color); padding:20px; display:flex; flex-direction:column; gap:16px;">
+            <h4 style="margin:0 0 10px; font-size:0.95rem; color:var(--secondary-color); font-weight:700;"><i class="fa-solid fa-list-check" style="color:#3b82f6;"></i> القواعد النشطة المتاحة</h4>
+            <div id="workflowsList" style="display:flex; flex-direction:column; gap:12px;">
+                <p style="text-align:center; color:var(--text-muted); padding:20px;">جاري تحميل القواعد الذكية...</p>
+            </div>
+        </div>
+        
+        <!-- Execution Logs -->
+        <div style="background:#f8fafc; border-radius:12px; border:1px solid var(--border-color); padding:20px; display:flex; flex-direction:column;">
+            <h4 style="margin:0 0 10px; font-size:0.95rem; color:var(--secondary-color); font-weight:700;"><i class="fa-solid fa-clock-rotate-left" style="color:#8b5cf6;"></i> سجل العمليات المنفذة تلقائياً</h4>
+            <div id="workflowsLog" style="overflow-y:auto; max-height:260px; display:flex; flex-direction:column; gap:4px; flex-grow:1; background:white; border:1px solid var(--border-color); border-radius:8px;">
+                <p style="text-align:center; color:var(--text-muted); padding:30px; font-size:.82rem;">جاري تحميل سجل العمليات...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Template Editor Modal -->
 <div id="templateModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);align-items:center;justify-content:center;z-index:1000;backdrop-filter: blur(4px);">
     <div style="background:#f3f4f6;border-radius:14px;width:900px;max-width:95%;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 25px -5px rgba(0,0,0,.1);">
@@ -260,6 +333,50 @@
             </div>
         </div>
         <div id="docModalBody" style="padding:28px;overflow-y:auto;flex-grow:1;"></div>
+    </div>
+</div>
+
+<!-- Workflow Config Modal -->
+<div id="workflowModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);align-items:center;justify-content:center;z-index:1000;backdrop-filter: blur(4px);">
+    <div style="background:#f3f4f6;border-radius:14px;width:650px;max-width:95%;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 25px -5px rgba(0,0,0,.1);">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:20px 28px;background:white;border-bottom:1px solid #e5e7eb;">
+            <h2 id="wfModalTitle" style="margin:0;color:var(--secondary-color);font-size:1.3rem;"><i class="fa-solid fa-sliders" style="color:var(--primary-color);"></i> إعدادات قاعدة الأتمتة</h2>
+            <button onclick="document.getElementById('workflowModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#6b7280;">&times;</button>
+        </div>
+        <div style="padding:28px;overflow-y:auto;flex-grow:1;display:flex;flex-direction:column;gap:16px;direction:rtl;text-align:right;">
+            <input type="hidden" id="wfRuleId">
+            <div>
+                <label style="font-weight:700;font-size:.9rem;display:block;margin-bottom:6px;">اسم القاعدة:</label>
+                <input id="wfRuleName" type="text" style="width:100%;padding:10px 14px;border:1.5px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;" readonly>
+            </div>
+            <div>
+                <label style="font-weight:700;font-size:.9rem;display:block;margin-bottom:6px;">صيغة عنوان المهمة المولدة:</label>
+                <input id="wfTaskTitle" type="text" placeholder="عنوان المهمة..." style="width:100%;padding:10px 14px;border:1.5px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+                <small style="color:var(--text-muted);font-size:.78rem;margin-top:4px;display:block;" id="wfTitleHelper"></small>
+            </div>
+            <div id="wfOffsetWrapper">
+                <label style="font-weight:700;font-size:.9rem;display:block;margin-bottom:6px;">موعد استحقاق المهمة (بالساعات قبل الحدث):</label>
+                <input id="wfDueOffset" type="number" placeholder="مثال: -48 تعني قبل الحدث بـ 48 ساعة" style="width:100%;padding:10px 14px;border:1.5px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+                <small style="color:var(--text-muted);font-size:.78rem;margin-top:4px;display:block;">استخدم أرقاماً سالبة للمهام الاستباقية (مثال: -48 للجلسات) أو 0 لنفس وقت الحدث.</small>
+            </div>
+            <div>
+                <label style="font-weight:700;font-size:.9rem;display:block;margin-bottom:6px;">مستوى الأولوية للمهمة:</label>
+                <select id="wfPriority" style="width:100%;padding:10px 14px;border:1.5px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+                    <option value="1">منخفضة</option>
+                    <option value="2">متوسطة</option>
+                    <option value="3">عالية (تنبيه عاجل)</option>
+                </select>
+            </div>
+            <div>
+                <label style="font-weight:700;font-size:.9rem;display:block;margin-bottom:6px;">صيغة وصف المهمة:</label>
+                <textarea id="wfTaskDesc" rows="4" style="width:100%;padding:10px 14px;border:1.5px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;resize:vertical;"></textarea>
+                <small style="color:var(--text-muted);font-size:.78rem;margin-top:4px;display:block;" id="wfDescHelper"></small>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:10px;">
+                <button class="print-doc-btn" style="background:#6b7280;" onclick="document.getElementById('workflowModal').style.display='none'">إلغاء</button>
+                <button class="print-doc-btn" style="background:#10b981;" onclick="saveWorkflowConfig()"><i class="fa-solid fa-save"></i> حفظ التعديلات</button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -620,5 +737,172 @@ function sendReportByEmail() {
     if (!selectedCaseData) { alert('اختر قضية أولاً من القائمة أعلاه'); return; }
     alert(`سيتم إرسال تقرير القضية ${selectedCaseData.number} للموكل.\n(هذه الميزة تتطلب تكامل خدمة البريد الإلكتروني)`);
 }
+
+// logic logic logic logic logic logic logic logic logic logic logic logic logic logic logic logic logic
+let loadedRules = [];
+
+async function loadWorkflows() {
+    try {
+        const res = await fetch('/api/workflows').then(r => r.json());
+        loadedRules = res.rules;
+        
+        // Render Rules List
+        const listDiv = document.getElementById('workflowsList');
+        if (loadedRules.length === 0) {
+            listDiv.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding:20px;">لا توجد قواعد سير عمل مفعّلة حالياً.</p>';
+        } else {
+            let html = '';
+            loadedRules.forEach(r => {
+                const config = JSON.parse(r.action_config);
+                const isChecked = r.is_active === 1 ? 'checked' : '';
+                
+                let triggerDesc = '';
+                if (r.trigger_key === 'on_hearing_created') {
+                    triggerDesc = `عند إضافة جلسة محاكمة جديدة ➔ إنشاء مهمة تحضيرية (${Math.abs(config.due_offset_hours || 48)} ساعة قبل الجلسة)`;
+                } else if (r.trigger_key === 'on_case_limitation_warning') {
+                    triggerDesc = 'قرب تاريخ تقادم القضية (أقل من 30 يوماً) ➔ إرسال إشعار تحذيري يومي وتوليد مهمة عاجلة للمحامي';
+                }
+                
+                html += `
+                <div style="display:flex; justify-content:space-between; align-items:center; background:white; padding:15px; border-radius:10px; border:1px solid var(--border-color); box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                    <div style="flex-grow:1; padding-left:15px; text-align:right;">
+                        <strong style="color:var(--secondary-color); font-size:0.92rem; display:block; margin-bottom:4px;">${r.name}</strong>
+                        <span style="font-size:0.8rem; color:var(--text-muted);"><i class="fa-solid fa-bolt" style="color:#f59e0b; margin-left:4px;"></i> ${triggerDesc}</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <button class="print-doc-btn" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; padding:6px 12px; font-size:0.8rem;" onclick="openWorkflowEditor(${r.id})">
+                            <i class="fa-solid fa-sliders"></i> إعدادات
+                        </button>
+                        <label class="switch">
+                            <input type="checkbox" ${isChecked} onchange="toggleWorkflow(${r.id})">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+                `;
+            });
+            listDiv.innerHTML = html;
+        }
+        
+        // Render Execution Logs
+        const logsDiv = document.getElementById('workflowsLog');
+        if (res.logs.length === 0) {
+            logsDiv.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding:30px; font-size:.82rem;">لا توجد إجراءات تلقائية منفذة بعد.</p>';
+        } else {
+            let logsHtml = '';
+            res.logs.forEach(l => {
+                logsHtml += `
+                <div class="wf-log-row" style="text-align:right;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                        <span style="font-weight:700; color:#10b981;"><i class="fa-solid fa-circle-check"></i> تم التنفيذ بنجاح</span>
+                        <span style="color:var(--text-muted); font-size:0.75rem;" dir="ltr">${l.created_at}</span>
+                    </div>
+                    <div>${l.details}</div>
+                </div>
+                `;
+            });
+            logsDiv.innerHTML = logsHtml;
+        }
+    } catch (e) {
+        console.error(e);
+        document.getElementById('workflowsList').innerHTML = '<p style="color:red; text-align:center; padding:20px;">خطأ في الاتصال بالخادم لتحميل القواعد</p>';
+    }
+}
+
+async function toggleWorkflow(ruleId) {
+    try {
+        const res = await fetch('/api/workflows/toggle', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ rule_id: ruleId })
+        }).then(r => r.json());
+        
+        if (res.success) {
+            loadWorkflows();
+        } else {
+            alert('حدث خطأ أثناء تبديل حالة القاعدة.');
+        }
+    } catch (e) {
+        alert('حدث خطأ في الاتصال بالخادم.');
+    }
+}
+
+function openWorkflowEditor(ruleId) {
+    const rule = loadedRules.find(r => r.id === ruleId);
+    if (!rule) return;
+    
+    document.getElementById('wfRuleId').value = rule.id;
+    document.getElementById('wfRuleName').value = rule.name;
+    
+    const config = JSON.parse(rule.action_config);
+    document.getElementById('wfTaskTitle').value = config.task_title || '';
+    document.getElementById('wfPriority').value = config.priority_level || '2';
+    document.getElementById('wfTaskDesc').value = config.task_description || '';
+    
+    const offsetWrapper = document.getElementById('wfOffsetWrapper');
+    const titleHelper = document.getElementById('wfTitleHelper');
+    const descHelper = document.getElementById('wfDescHelper');
+    
+    if (rule.trigger_key === 'on_hearing_created') {
+        offsetWrapper.style.display = 'block';
+        document.getElementById('wfDueOffset').value = config.due_offset_hours || -48;
+        titleHelper.innerHTML = 'يمكنك استخدام المتغيرات: <code>{hearing_title}</code> لعنوان الجلسة، أو <code>{case_title}</code> لعنوان القضية.';
+        descHelper.innerHTML = 'المتغيرات المتاحة للوصف: <code>{hearing_title}</code>، <code>{case_title}</code>، <code>{hearing_time}</code>.';
+    } else {
+        offsetWrapper.style.display = 'none';
+        document.getElementById('wfDueOffset').value = 0;
+        titleHelper.innerHTML = 'يمكنك استخدام المتغيرات: <code>{case_title}</code> لاسم القضية.';
+        descHelper.innerHTML = 'المتغيرات المتاحة للوصف: <code>{case_title}</code>، <code>{limitation_date}</code>.';
+    }
+    
+    document.getElementById('workflowModal').style.display = 'flex';
+}
+
+async function saveWorkflowConfig() {
+    const ruleId = parseInt(document.getElementById('wfRuleId').value);
+    const rule = loadedRules.find(r => r.id === ruleId);
+    if (!rule) return;
+    
+    const title = document.getElementById('wfTaskTitle').value.trim();
+    const priority = parseInt(document.getElementById('wfPriority').value);
+    const desc = document.getElementById('wfTaskDesc').value.trim();
+    const offset = parseInt(document.getElementById('wfDueOffset').value);
+    
+    if (!title) {
+        alert('يرجى كتابة صيغة عنوان المهمة.');
+        return;
+    }
+    
+    const config = {
+        task_title: title,
+        priority_level: priority,
+        task_description: desc
+    };
+    
+    if (rule.trigger_key === 'on_hearing_created') {
+        config.due_offset_hours = offset;
+    }
+    
+    try {
+        const res = await fetch('/api/workflows/save', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ rule_id: ruleId, action_config: config })
+        }).then(r => r.json());
+        
+        if (res.success) {
+            alert('تم حفظ إعدادات القاعدة وتعديلها بنجاح!');
+            document.getElementById('workflowModal').style.display = 'none';
+            loadWorkflows();
+        } else {
+            alert('حدث خطأ أثناء حفظ الإعدادات: ' + res.error);
+        }
+    } catch (e) {
+        alert('حدث خطأ في الاتصال بالخادم لحفظ الإعدادات.');
+    }
+}
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', loadWorkflows);
 </script>
 {% endblock %}

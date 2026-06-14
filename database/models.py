@@ -569,6 +569,18 @@ class LawTemplates(Base):
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
     updated_at: Mapped[Optional[str]] = mapped_column(Text)
 
+class LawWorkflowRules(Base):
+    __tablename__ = 'law_workflow_rules'
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    office_id: Mapped[int] = mapped_column(ForeignKey('law_offices.id', ondelete='CASCADE'), index=True)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    trigger_key: Mapped[str] = mapped_column(Text, nullable=False)  # 'on_hearing_created' | 'on_case_limitation_warning'
+    action_type: Mapped[str] = mapped_column(Text, nullable=False)  # 'create_task'
+    action_config: Mapped[str] = mapped_column(Text, nullable=False)  # JSON configuration
+    is_active: Mapped[int] = mapped_column(Integer, CheckConstraint('is_active IN (0, 1)'), nullable=False, server_default=text('1'))
+    created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+    updated_at: Mapped[Optional[str]] = mapped_column(Text)
+
 class LawUserDevices(Base):
     __tablename__ = 'law_user_devices'
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

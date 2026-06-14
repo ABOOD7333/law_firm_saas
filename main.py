@@ -41,8 +41,28 @@ app = FastAPI(title="Lexzur Clone - SaaS Law Firm Management", version="1.0")
 # Ensure database tables are created (critical for Railway deployment)
 init_db()
 
+async def daily_scheduler():
+    import asyncio
+    from database.database import SessionLocal
+    from core.workflow_engine import run_daily_limitation_checks
+    while True:
+        try:
+            print("[Scheduler] Running daily limitation checks...")
+            db = SessionLocal()
+            run_daily_limitation_checks(db)
+            db.close()
+            print("[Scheduler] Daily limitation checks completed.")
+        except Exception as e:
+            print(f"[Scheduler Error] {e}")
+        # Run every 24 hours
+        await asyncio.sleep(86400)
+
 @app.on_event("startup")
 async def startup_event():
+    # Spawn daily scheduler background task
+    import asyncio
+    asyncio.create_task(daily_scheduler())
+
     # ─────────────────────────────────────────────────────────────────────
     # ChromaDB / Embedding model indexing — DISABLED on startup intentionally
     #
@@ -1782,6 +1802,18 @@ async def add_hearing(
     db.add(new_hearing)
 
     db.commit()
+
+    # Trigger smart workflow rule on hearing creation
+    try:
+        from core.workflow_engine import trigger_event
+        event_data = {
+            "hearing_title": new_hearing.title,
+            "hearing_at": new_hearing.hearing_at,
+            "case_id": new_hearing.case_id
+        }
+        trigger_event(db, "on_hearing_created", event_data, office_id=office_id)
+    except Exception as e:
+        print(f"[Workflow Trigger Error] {e}")
 
     if redirect_to_case == "true":
 
