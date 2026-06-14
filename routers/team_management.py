@@ -11,7 +11,7 @@ from dependencies import get_current_user, templates
 from core.logger import app_logger
 from core.audit import write_audit
 
-_ALLOWED_TEAM_ROLES = {'صاحب المكتب', 'صاحب مكتب', 'مدير المكتب', 'مدير مكتب'}
+_ALLOWED_TEAM_ROLES = {'صاحب المكتب', 'صاحب مكتب', 'مدير المكتب', 'مدير مكتب', 'مدير', 'مدير النظام'}
 
 router = APIRouter()
 

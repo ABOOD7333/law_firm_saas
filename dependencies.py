@@ -14,8 +14,14 @@ templates = Jinja2Templates(directory="templates")
 def check_user_permission(user, module: str, action: str = "view") -> bool:
     if not user:
         return False
-    # Owner and Office Manager bypass all checks
-    if user.role in ["صاحب المكتب", "صاحب مكتب", "مدير المكتب", "مدير مكتب"]:
+    # Owner and Office Manager bypass all checks — covers all role name variants
+    _ADMIN_ROLES = {
+        "صاحب المكتب", "صاحب مكتب",
+        "مدير المكتب", "مدير مكتب",
+        "مدير", "مدير النظام",
+        "admin", "owner",
+    }
+    if user.role in _ADMIN_ROLES:
         return True
     
     if not getattr(user, 'permissions_json', None):

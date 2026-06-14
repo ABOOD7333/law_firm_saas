@@ -169,7 +169,7 @@
             </button>
         </div>
         <ul class="nav-menu">
-            {% set is_admin = user and user.role in ['صاحب المكتب', 'مدير المكتب', 'مدير', 'مدير النظام'] %}
+            {% set is_admin = user and user.role in ['صاحب المكتب', 'صاحب مكتب', 'مدير المكتب', 'مدير مكتب', 'مدير', 'مدير النظام'] %}
             {% set is_lawyer = user and user.role in ['محامي', 'محامٍ'] %}
             {% set is_sec = user and user.role == 'سكرتير' %}
             {% set is_acc = user and user.role == 'محاسب' %}
@@ -295,7 +295,7 @@
                 </li>
                 {% endif %}
                 
-                {% if user and user.role in ['صاحب المكتب', 'صاحب مكتب', 'مدير المكتب', 'مدير مكتب'] %}
+                {% if user and user.role in ['صاحب المكتب', 'صاحب مكتب', 'مدير المكتب', 'مدير مكتب', 'مدير', 'مدير النظام'] %}
                 <li class="nav-item {% if active_page == 'team' %}active{% endif %}">
                     <a href="/team"><i class="fa-solid fa-users-gear"></i> الفريق والصلاحيات</a>
                 </li>
