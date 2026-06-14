@@ -56,3 +56,7 @@ logs/
 dist/
 build/
 *.egg-info/
+
+# --- Local Runtime / Data ---
+tessdata/
+rag_engine/chroma_db/
