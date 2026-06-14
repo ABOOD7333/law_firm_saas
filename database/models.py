@@ -272,6 +272,8 @@ class LawTransactions(Base):
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
     updated_at: Mapped[Optional[str]] = mapped_column(Text)
     is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
+    currency: Mapped[str] = mapped_column(Text, server_default=text("'SAR'"), nullable=False)
+    exchange_rate: Mapped[float] = mapped_column(REAL, server_default=text('1.0'), nullable=False)
 
     law_case: Mapped['LawCases'] = relationship('LawCases', back_populates='law_transactions')
 
@@ -430,6 +432,8 @@ class LawExpenses(Base):
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
     updated_at: Mapped[Optional[str]] = mapped_column(Text)
     is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
+    currency: Mapped[str] = mapped_column(Text, server_default=text("'SAR'"), nullable=False)
+    exchange_rate: Mapped[float] = mapped_column(REAL, server_default=text('1.0'), nullable=False)
 
     law_case: Mapped['LawCases'] = relationship('LawCases', back_populates='law_expenses')
 

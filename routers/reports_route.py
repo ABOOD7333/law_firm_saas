@@ -45,15 +45,15 @@ async def reports_page(
         # --- Financials ---
         income_data = db.query(
             func.substr(LawTransactions.transaction_at, 1, 7).label('month'),
-            func.coalesce(func.sum(LawTransactions.amount), 0).label('total')
+            func.coalesce(func.sum(LawTransactions.amount * LawTransactions.exchange_rate), 0).label('total')
         ).filter(LawTransactions.office_id == office_id)\
          .group_by(func.substr(LawTransactions.transaction_at, 1, 7))\
          .order_by(func.substr(LawTransactions.transaction_at, 1, 7).desc()).limit(6).all()
         income_data = list(reversed(income_data))
 
-        total_income   = db.query(func.coalesce(func.sum(LawTransactions.amount), 0))\
+        total_income   = db.query(func.coalesce(func.sum(LawTransactions.amount * LawTransactions.exchange_rate), 0))\
             .filter(LawTransactions.office_id == office_id).scalar() or 0
-        total_expenses = db.query(func.coalesce(func.sum(LawExpenses.amount), 0))\
+        total_expenses = db.query(func.coalesce(func.sum(LawExpenses.amount * LawExpenses.exchange_rate), 0))\
             .filter(LawExpenses.office_id == office_id).scalar() or 0
 
         # --- Hearings ---

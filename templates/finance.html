@@ -6,7 +6,15 @@
 <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
     <div>
         <h1>المالية والفواتير</h1>
-        <p>إدارة الإيرادات، المصروفات، وأتعاب القضايا بدقة وسهولة.</p>
+        <p>إدارة الإيرادات، المصروفات، وأتعاب القضايا بدقة وسهولة بالعملات المتعددة.</p>
+        <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px;">
+            <label style="font-weight: 600; color: var(--text-muted); font-size: 0.95rem;">عرض الإجماليات بـ:</label>
+            <select onchange="window.location.href='/finance?currency=' + this.value" style="padding: 6px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-family: inherit; font-size: 0.9rem; cursor: pointer; background: white; color: var(--secondary-color); font-weight: 600; outline: none;">
+                <option value="SAR" {% if target_currency == 'SAR' %}selected{% endif %}>ريال سعودي (SAR)</option>
+                <option value="YER" {% if target_currency == 'YER' %}selected{% endif %}>ريال يمني (YER)</option>
+                <option value="USD" {% if target_currency == 'USD' %}selected{% endif %}>دولار أمريكي (USD)</option>
+            </select>
+        </div>
     </div>
     <div style="display: flex; gap: 10px;">
         <button class="btn-primary" style="background: white; color: var(--primary-color); border: 1px solid var(--primary-color);" onclick="document.getElementById('addExpenseModal').style.display='flex'">
@@ -24,10 +32,9 @@
     <div class="card" style="padding: 25px; border-top: 4px solid #10b981;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div>
-                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 5px; font-weight: 600;">إجمالي الإيرادات</p>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 5px; font-weight: 600;">إجمالي الإيرادات الموطدة</p>
                 <h3 style="font-size: 1.8rem; color: var(--secondary-color);">
-                    {% set total_income = transactions | sum(attribute='amount') %}
-                    {{ "{:,.2f}".format(total_income) }} <span style="font-size: 1rem; color: var(--text-muted);">ر.س</span>
+                    {{ "{:,.2f}".format(total_income) }} <span style="font-size: 1rem; color: var(--text-muted);">{{ target_currency }}</span>
                 </h3>
             </div>
             <div style="width: 50px; height: 50px; border-radius: 12px; background: #dcfce7; color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
@@ -40,10 +47,9 @@
     <div class="card" style="padding: 25px; border-top: 4px solid #ef4444;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div>
-                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 5px; font-weight: 600;">إجمالي المصروفات</p>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 5px; font-weight: 600;">إجمالي المصروفات الموطدة</p>
                 <h3 style="font-size: 1.8rem; color: var(--secondary-color);">
-                    {% set total_expenses = expenses | sum(attribute='amount') %}
-                    {{ "{:,.2f}".format(total_expenses) }} <span style="font-size: 1rem; color: var(--text-muted);">ر.س</span>
+                    {{ "{:,.2f}".format(total_expenses) }} <span style="font-size: 1rem; color: var(--text-muted);">{{ target_currency }}</span>
                 </h3>
             </div>
             <div style="width: 50px; height: 50px; border-radius: 12px; background: #fee2e2; color: #ef4444; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
@@ -56,13 +62,12 @@
     <div class="card" style="padding: 25px; border-top: 4px solid var(--primary-color);">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div>
-                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 5px; font-weight: 600;">صافي الربح</p>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 5px; font-weight: 600;">صافي الربح الموطد</p>
                 <h3 style="font-size: 1.8rem; color: var(--secondary-color);">
-                    {% set net_profit = total_income - total_expenses %}
                     <span style="color: {% if net_profit >= 0 %}#10b981{% else %}#ef4444{% endif %};">
                         {{ "{:,.2f}".format(net_profit) }}
                     </span> 
-                    <span style="font-size: 1rem; color: var(--text-muted);">ر.س</span>
+                    <span style="font-size: 1rem; color: var(--text-muted);">{{ target_currency }}</span>
                 </h3>
             </div>
             <div style="width: 50px; height: 50px; border-radius: 12px; background: rgba(37, 99, 235, 0.1); color: var(--primary-color); display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
@@ -84,6 +89,7 @@
                         <th>القضية</th>
                         <th>المبلغ</th>
                         <th>التاريخ</th>
+                        <th>الفاتورة</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -91,12 +97,24 @@
                     <tr>
                         <td><strong>{{ trans.title }}</strong></td>
                         <td>{{ trans.law_case.title if trans.law_case else 'عام' }}</td>
-                        <td style="color: #10b981; font-weight: bold;">+{{ "{:,.2f}".format(trans.amount) }}</td>
+                        <td>
+                            <span style="color: #10b981; font-weight: bold;">+{{ "{:,.2f}".format(trans.amount) }} {{ trans.currency or 'SAR' }}</span>
+                            {% if trans.currency and trans.currency != 'SAR' %}
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
+                                (≈ {{ "{:,.2f}".format(trans.amount * trans.exchange_rate) }} ر.س)
+                            </div>
+                            {% endif %}
+                        </td>
                         <td dir="ltr" style="text-align: right;">{{ trans.transaction_at[:10] if trans.transaction_at else '-' }}</td>
+                        <td>
+                            <a href="/finance/invoice/{{ trans.id }}/pdf" target="_blank" class="btn-primary" style="padding: 6px 10px; font-size: 0.8rem; background: var(--primary-color); text-decoration: none; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px; font-weight: 600;">
+                                <i class="fa-solid fa-file-pdf"></i> تصدير PDF
+                            </a>
+                        </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="4" style="text-align: center; padding: 20px; color: var(--text-muted);">لا توجد إيرادات مسجلة</td>
+                        <td colspan="5" style="text-align: center; padding: 20px; color: var(--text-muted);">لا توجد إيرادات مسجلة</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -122,7 +140,14 @@
                     <tr>
                         <td><strong>{{ exp.title }}</strong></td>
                         <td>{{ exp.law_case.title if exp.law_case else 'عام' }}</td>
-                        <td style="color: #ef4444; font-weight: bold;">-{{ "{:,.2f}".format(exp.amount) }}</td>
+                        <td>
+                            <span style="color: #ef4444; font-weight: bold;">-{{ "{:,.2f}".format(exp.amount) }} {{ exp.currency or 'SAR' }}</span>
+                            {% if exp.currency and exp.currency != 'SAR' %}
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
+                                (≈ {{ "{:,.2f}".format(exp.amount * exp.exchange_rate) }} ر.س)
+                            </div>
+                            {% endif %}
+                        </td>
                         <td dir="ltr" style="text-align: right;">{{ exp.expense_at[:10] if exp.expense_at else '-' }}</td>
                     </tr>
                     {% else %}
@@ -145,15 +170,33 @@
         </div>
         
         <form action="/finance/add_transaction" method="post">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+            <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+            
             <div class="form-group" style="margin-bottom: 15px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">بيان الإيراد <span style="color: red;">*</span></label>
                 <input type="text" name="title" required placeholder="مثال: الدفعة الأولى من أتعاب القضية" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit;">
             </div>
 
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">المبلغ <span style="color: red;">*</span></label>
-                <input type="number" step="0.01" name="amount" required placeholder="0.00" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">المبلغ <span style="color: red;">*</span></label>
+                    <input type="number" step="0.01" name="amount" required placeholder="0.00" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit;">
+                </div>
+                
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">العملة <span style="color: red;">*</span></label>
+                    <select name="currency" id="transCurrency" onchange="toggleTransExchangeRate()" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit;">
+                        <option value="SAR">ريال سعودي (SAR)</option>
+                        <option value="YER">ريال يمني (YER)</option>
+                        <option value="USD">دولار أمريكي (USD)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group" id="transRateGroup" style="margin-bottom: 15px; display: none; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px dashed var(--border-color);">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);" id="transRateLabel">سعر الصرف</label>
+                <input type="number" step="0.00001" name="exchange_rate" id="transExchangeRate" value="1.0" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; background: white;">
+                <small style="color: var(--text-muted); display: block; margin-top: 5px;" id="transRateHelp"></small>
             </div>
             
             <div class="form-group" style="margin-bottom: 15px;">
@@ -188,15 +231,33 @@
         </div>
         
         <form action="/finance/add_expense" method="post">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+            <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+            
             <div class="form-group" style="margin-bottom: 15px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">بيان المصروف <span style="color: red;">*</span></label>
                 <input type="text" name="title" required placeholder="مثال: رسوم محكمة، قرطاسية..." style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit;">
             </div>
 
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">المبلغ <span style="color: red;">*</span></label>
-                <input type="number" step="0.01" name="amount" required placeholder="0.00" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">المبلغ <span style="color: red;">*</span></label>
+                    <input type="number" step="0.01" name="amount" required placeholder="0.00" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit;">
+                </div>
+                
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">العملة <span style="color: red;">*</span></label>
+                    <select name="currency" id="expCurrency" onchange="toggleExpExchangeRate()" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit;">
+                        <option value="SAR">ريال سعودي (SAR)</option>
+                        <option value="YER">ريال يمني (YER)</option>
+                        <option value="USD">دولار أمريكي (USD)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group" id="expRateGroup" style="margin-bottom: 15px; display: none; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px dashed var(--border-color);">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);" id="expRateLabel">سعر الصرف</label>
+                <input type="number" step="0.00001" name="exchange_rate" id="expExchangeRate" value="1.0" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; background: white;">
+                <small style="color: var(--text-muted); display: block; margin-top: 5px;" id="expRateHelp"></small>
             </div>
             
             <div class="form-group" style="margin-bottom: 15px;">
@@ -221,4 +282,50 @@
         </form>
     </div>
 </div>
+
+<script>
+function toggleTransExchangeRate() {
+    const curr = document.getElementById('transCurrency').value;
+    const group = document.getElementById('transRateGroup');
+    const rateInput = document.getElementById('transExchangeRate');
+    const label = document.getElementById('transRateLabel');
+    const help = document.getElementById('transRateHelp');
+    if (curr === 'SAR') {
+        group.style.display = 'none';
+        rateInput.value = '1.0';
+    } else if (curr === 'USD') {
+        group.style.display = 'block';
+        rateInput.value = '3.75';
+        label.innerText = 'سعر صرف الدولار مقابل الريال السعودي';
+        help.innerText = 'كم ريال سعودي يساوي 1 دولار (افتراضي: 3.75)';
+    } else if (curr === 'YER') {
+        group.style.display = 'block';
+        rateInput.value = '141.0';
+        label.innerText = 'سعر صرف الريال السعودي مقابل الريال اليمني';
+        help.innerText = 'كم ريال يمني يساوي 1 ريال سعودي (افتراضي: 141.0)';
+    }
+}
+
+function toggleExpExchangeRate() {
+    const curr = document.getElementById('expCurrency').value;
+    const group = document.getElementById('expRateGroup');
+    const rateInput = document.getElementById('expExchangeRate');
+    const label = document.getElementById('expRateLabel');
+    const help = document.getElementById('expRateHelp');
+    if (curr === 'SAR') {
+        group.style.display = 'none';
+        rateInput.value = '1.0';
+    } else if (curr === 'USD') {
+        group.style.display = 'block';
+        rateInput.value = '3.75';
+        label.innerText = 'سعر صرف الدولار مقابل الريال السعودي';
+        help.innerText = 'كم ريال سعودي يساوي 1 دولار (افتراضي: 3.75)';
+    } else if (curr === 'YER') {
+        group.style.display = 'block';
+        rateInput.value = '141.0';
+        label.innerText = 'سعر صرف الريال السعودي مقابل الريال اليمني';
+        help.innerText = 'كم ريال يمني يساوي 1 ريال سعودي (افتراضي: 141.0)';
+    }
+}
+</script>
 {% endblock %}

@@ -25,6 +25,17 @@ from database.models import (AccessProfiles, AuthSessions, AuthVerificationToken
     LawHearings, LawTransactions, LawExpenses, LawDocuments, LawTasks, PaymentRequest)
 import shutil
 
+# --- PDF Generation & Arabic support ---
+import arabic_reshaper
+from bidi.algorithm import get_display
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from fastapi.responses import FileResponse
+import urllib.request
+import tempfile
+
 app = FastAPI(title="Lexzur Clone - SaaS Law Firm Management", version="1.0")
 
 # Ensure database tables are created (critical for Railway deployment)
@@ -1778,144 +1789,328 @@ async def add_hearing(
 
     return RedirectResponse(url="/hearings", status_code=303)
 
+def get_arabic_font():
+    candidates = [
+        r"C:\Windows\Fonts\arial.ttf",
+        r"C:\Windows\Fonts\tahoma.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "static/fonts/Amiri-Regular.ttf"
+    ]
+    local_font_dir = os.path.join("static", "fonts")
+    local_font_path = os.path.join(local_font_dir, "Amiri-Regular.ttf")
+    if not any(os.path.exists(p) for p in candidates[:-1]) and not os.path.exists(local_font_path):
+        os.makedirs(local_font_dir, exist_ok=True)
+        try:
+            url = "https://github.com/googlefonts/amiri/raw/main/Amiri-Regular.ttf"
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req) as response, open(local_font_path, 'wb') as out_file:
+                out_file.write(response.read())
+        except Exception as e:
+            pass
+    for p in candidates:
+        if os.path.exists(p):
+            return p
+    return None
+
 @app.get("/finance", response_class=HTMLResponse)
-
-async def finance_page(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
-
+async def finance_page(
+    request: Request,
+    currency: str = "SAR",
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
     if not user:
-
         return RedirectResponse(url="/", status_code=303)
-
     try:
-
         office_id = user.office_id or 1
-
         transactions = db.query(LawTransactions).filter(LawTransactions.office_id == office_id).order_by(LawTransactions.transaction_at.desc()).all()
-
         expenses = db.query(LawExpenses).filter(LawExpenses.office_id == office_id).order_by(LawExpenses.expense_at.desc()).all()
-
         cases = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0).all()
 
+        target_currency = currency.upper() if currency.upper() in ["SAR", "YER", "USD"] else "SAR"
+        
+        sar_to_target = 1.0
+        if target_currency == "YER":
+            sar_to_target = 141.0
+        elif target_currency == "USD":
+            sar_to_target = 1.0 / 3.75
+
+        total_income = sum((t.amount * (t.exchange_rate or 1.0)) for t in transactions) * sar_to_target
+        total_expenses = sum((e.amount * (e.exchange_rate or 1.0)) for e in expenses) * sar_to_target
+        net_profit = total_income - total_expenses
+
         return templates.TemplateResponse(
-
             request=request,
-
             name="finance.html",
-
-            context={"user": user, "transactions": transactions, "expenses": expenses, "cases": cases, "active_page": "finance"}
-
+            context={
+                "user": user,
+                "transactions": transactions,
+                "expenses": expenses,
+                "cases": cases,
+                "active_page": "finance",
+                "total_income": total_income,
+                "total_expenses": total_expenses,
+                "net_profit": net_profit,
+                "target_currency": target_currency
+            }
         )
-
     except Exception as e:
-
         import traceback
-
         return _safe_error(traceback.format_exc())
+
+@app.get("/finance/invoice/{transaction_id}/pdf")
+async def export_invoice_pdf(
+    transaction_id: int,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    if not user:
+        return RedirectResponse(url="/", status_code=303)
+    office_id = user.office_id or 1
+    trans = db.query(LawTransactions).filter(
+        LawTransactions.id == transaction_id,
+        LawTransactions.office_id == office_id
+    ).first()
+    if not trans:
+        return HTMLResponse(content="<script>alert('الفاتورة غير موجودة'); window.history.back();</script>", status_code=404)
+
+    case_title = "عام"
+    client_name = "عميل عام"
+    client_phone = "-"
+    if trans.case_id:
+        case = db.query(LawCases).filter(LawCases.id == trans.case_id).first()
+        if case:
+            case_title = case.title
+            if case.client_id:
+                client = db.query(LawClients).filter(LawClients.id == case.client_id).first()
+                if client:
+                    client_name = client.full_name
+                    client_phone = client.phone_number or "-"
+
+    temp_dir = tempfile.gettempdir()
+    pdf_path = os.path.join(temp_dir, f"invoice_{transaction_id}.pdf")
+
+    font_path = get_arabic_font()
+    font_name = "ArabicFont"
+    if font_path:
+        try:
+            pdfmetrics.registerFont(TTFont(font_name, font_path))
+        except Exception:
+            font_name = "Helvetica"
+    else:
+        font_name = "Helvetica"
+
+    c = canvas.Canvas(pdf_path, pagesize=A4)
+    W, H = A4
+
+    def ar(text: str) -> str:
+        if not text:
+            return ""
+        try:
+            reshaped = arabic_reshaper.reshape(text)
+            return get_display(reshaped)
+        except Exception:
+            return text
+
+    # Header Band
+    c.setFillColorRGB(0.05, 0.1, 0.2)
+    c.rect(0, H - 100, W, 100, fill=1, stroke=0)
+    c.setFillColorRGB(0.8, 0.6, 0.2)
+    c.rect(0, H - 103, W, 3, fill=1, stroke=0)
+
+    c.setFillColorRGB(1, 1, 1)
+    c.setFont(font_name, 22)
+    c.drawRightString(W - 40, H - 50, ar("سند قبض أتعاب"))
+    c.setFont(font_name, 11)
+    c.setFillColorRGB(0.8, 0.9, 1.0)
+    c.drawRightString(W - 40, H - 75, ar("منصة LawSaaS لإدارة مكاتب المحاماة"))
+
+    c.setFillColorRGB(1, 1, 1)
+    c.setFont(font_name, 10)
+    c.drawString(40, H - 45, ar(f"رقم السند: {trans.id}"))
+    c.drawString(40, H - 65, ar(f"التاريخ: {trans.transaction_at[:10] if trans.transaction_at else ''}"))
+
+    c.setFillColorRGB(0.1, 0.1, 0.1)
+
+    # Details
+    y = H - 150
+    c.setFont(font_name, 12)
+    c.setFillColorRGB(0.05, 0.1, 0.2)
+    c.drawRightString(W - 40, y, ar("بيانات الطرف الأول (المكتب):"))
+    c.setFillColorRGB(0.2, 0.2, 0.2)
+    c.setFont(font_name, 10.5)
+    c.drawRightString(W - 50, y - 20, ar(f"المكتب: مكتبنا الرئيسي"))
+    c.drawRightString(W - 50, y - 35, ar(f"المحامي المستلم: {user.full_name}"))
+
+    c.setFont(font_name, 12)
+    c.setFillColorRGB(0.05, 0.1, 0.2)
+    c.drawString(40, y, ar("بيانات الطرف الثاني (العميل):"))
+    c.setFillColorRGB(0.2, 0.2, 0.2)
+    c.setFont(font_name, 10.5)
+    c.drawString(50, y - 20, ar(f"العميل: {client_name}"))
+    c.drawString(50, y - 35, ar(f"الهاتف: {client_phone}"))
+
+    y = y - 70
+    c.setStrokeColorRGB(0.8, 0.8, 0.8)
+    c.setLineWidth(1)
+    c.line(40, y + 10, W - 40, y + 10)
+
+    c.setFont(font_name, 11)
+    c.setFillColorRGB(0.1, 0.1, 0.1)
+    c.drawRightString(W - 40, y - 5, ar(f"القضية المرتبطة: {case_title}"))
+
+    # Table
+    y = y - 40
+    c.setFillColorRGB(0.9, 0.9, 0.95)
+    c.rect(40, y, W - 80, 25, fill=1, stroke=0)
+    c.setFillColorRGB(0.05, 0.1, 0.2)
+    c.setFont(font_name, 11)
+    c.drawRightString(W - 50, y + 7, ar("البيان"))
+    c.drawCentredString(W / 2, y + 7, ar("المبلغ المدفوع"))
+    c.drawString(50, y + 7, ar("المعادل بالريال السعودي"))
+
+    y = y - 30
+    c.setFillColorRGB(0.98, 0.98, 0.98)
+    c.rect(40, y - 5, W - 80, 25, fill=1, stroke=0)
+    c.setFillColorRGB(0.1, 0.1, 0.1)
+    c.setFont(font_name, 10.5)
+    c.drawRightString(W - 50, y, ar(trans.title))
+    c.drawCentredString(W / 2, y, ar(f"{trans.amount:,.2f} {trans.currency}"))
+    
+    eq_val = trans.amount * (trans.exchange_rate or 1.0)
+    c.drawString(50, y, ar(f"{eq_val:,.2f} ر.س"))
+
+    y = y - 25
+    c.setStrokeColorRGB(0.05, 0.1, 0.2)
+    c.setLineWidth(1.5)
+    c.line(40, y, W - 40, y)
+
+    y = y - 30
+    c.setFont(font_name, 12)
+    c.setFillColorRGB(0.05, 0.1, 0.2)
+    c.drawRightString(W - 40, y, ar("إجمالي المبلغ المدفوع:"))
+    c.setFont(font_name, 14)
+    c.setFillColorRGB(0.1, 0.6, 0.3)
+    c.drawRightString(W - 180, y, ar(f"{trans.amount:,.2f} {trans.currency}"))
+
+    # Signatures
+    y = y - 100
+    c.setFont(font_name, 11)
+    c.setFillColorRGB(0.2, 0.2, 0.2)
+    c.drawRightString(W - 80, y, ar("توقيع المحامي المستلم:"))
+    c.drawString(80, y, ar("توقيع العميل المودع:"))
+
+    y = y - 50
+    c.setStrokeColorRGB(0.6, 0.6, 0.6)
+    c.setLineWidth(0.5)
+    c.line(W - 180, y, W - 40, y)
+    c.line(40, y, 180, y)
+
+    # Footer
+    c.setFillColorRGB(0.05, 0.1, 0.2)
+    c.rect(0, 0, W, 40, fill=1, stroke=0)
+    c.setFillColorRGB(0.8, 0.6, 0.2)
+    c.rect(0, 40, W, 2, fill=1, stroke=0)
+
+    c.setFont(font_name, 9)
+    c.setFillColorRGB(0.8, 0.9, 1.0)
+    c.drawCentredString(W / 2, 15, ar("شكراً لثقتكم بنا - منصة LawSaaS لإدارة مكاتب المحاماة"))
+
+    c.showPage()
+    c.save()
+
+    return FileResponse(pdf_path, media_type="application/pdf", filename=f"invoice_{transaction_id}.pdf")
+
 
 @app.post("/finance/add_transaction")
 
 async def add_transaction(
-
     request: Request,
-
     title: str = Form(...),
-
     amount: float = Form(...),
-
     transaction_at: str = Form(...),
-
+    currency: str = Form("SAR"),
+    exchange_rate: float = Form(1.0),
     case_id: int = Form(None),
-
     db: Session = Depends(get_db),
-
     user: AccessProfiles = Depends(get_current_user)
-
 ):
-
     if not user:
-
         return RedirectResponse(url="/", status_code=303)
 
     office_id = user.office_id or 1
 
     if case_id:
-
         case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
-
         if not case: return HTMLResponse(content="<script>alert('غير مصرح'); window.history.back();</script>", status_code=403)
 
+    # Calculate stored exchange rate relative to SAR base
+    stored_rate = 1.0
+    if currency == 'USD':
+        stored_rate = float(exchange_rate or 3.75)
+    elif currency == 'YER':
+        val = float(exchange_rate or 141.0)
+        stored_rate = 1.0 / val if val > 0 else 0.007092
+    else:
+        stored_rate = 1.0
+
     new_trans = LawTransactions(
-
         case_id=case_id,
-
         office_id=office_id,
-
         title=title,
-
         amount=amount,
-
+        currency=currency,
+        exchange_rate=stored_rate,
         transaction_at=transaction_at,
-
         status_key="completed"
-
     )
-
     db.add(new_trans)
-
     db.commit()
-
     return RedirectResponse(url="/finance", status_code=303)
 
 @app.post("/finance/add_expense")
 
 async def add_expense(
-
     request: Request,
-
     title: str = Form(...),
-
     amount: float = Form(...),
-
     expense_at: str = Form(...),
-
+    currency: str = Form("SAR"),
+    exchange_rate: float = Form(1.0),
     case_id: int = Form(None),
-
     db: Session = Depends(get_db),
-
     user: AccessProfiles = Depends(get_current_user)
-
 ):
-
     if not user:
-
         return RedirectResponse(url="/", status_code=303)
 
     office_id = user.office_id or 1
 
     if case_id:
-
         case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
-
         if not case: return HTMLResponse(content="<script>alert('غير مصرح'); window.history.back();</script>", status_code=403)
 
+    # Calculate stored exchange rate relative to SAR base
+    stored_rate = 1.0
+    if currency == 'USD':
+        stored_rate = float(exchange_rate or 3.75)
+    elif currency == 'YER':
+        val = float(exchange_rate or 141.0)
+        stored_rate = 1.0 / val if val > 0 else 0.007092
+    else:
+        stored_rate = 1.0
+
     new_expense = LawExpenses(
-
         case_id=case_id,
-
         office_id=office_id,
-
         title=title,
-
         amount=amount,
-
+        currency=currency,
+        exchange_rate=stored_rate,
         expense_at=expense_at
-
     )
-
     db.add(new_expense)
-
     db.commit()
-
     return RedirectResponse(url="/finance", status_code=303)
 
 @app.get("/settings", response_class=HTMLResponse)

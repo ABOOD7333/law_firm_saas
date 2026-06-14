@@ -46,3 +46,9 @@ numpy<2.0
 # --- Gemini AI Assistant ---
 google-genai>=2.0.0
 
+# --- PDF Generation & Arabic Text Support ---
+reportlab==4.1.0
+arabic-reshaper==3.0.0
+python-bidi==0.4.2
+
+

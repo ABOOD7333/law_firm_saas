@@ -423,7 +423,7 @@ class DBQueryEngine:
 
         # الإيرادات (المعاملات المالية المكتملة)
         income_row = (
-            self.db.query(func.sum(LawTransactions.amount))
+            self.db.query(func.sum(LawTransactions.amount * LawTransactions.exchange_rate))
             .join(LawCases, LawTransactions.case_id == LawCases.id)
             .filter(
                 LawTransactions.office_id == self.office_id,
@@ -436,7 +436,7 @@ class DBQueryEngine:
 
         # الإيرادات المعلقة
         pending_income_row = (
-            self.db.query(func.sum(LawTransactions.amount))
+            self.db.query(func.sum(LawTransactions.amount * LawTransactions.exchange_rate))
             .filter(
                 LawTransactions.office_id == self.office_id,
                 LawTransactions.is_deleted == 0,
@@ -448,7 +448,7 @@ class DBQueryEngine:
 
         # المصروفات
         expense_row = (
-            self.db.query(func.sum(LawExpenses.amount))
+            self.db.query(func.sum(LawExpenses.amount * LawExpenses.exchange_rate))
             .filter(
                 LawExpenses.office_id == self.office_id,
                 LawExpenses.is_deleted == 0,
@@ -460,7 +460,7 @@ class DBQueryEngine:
         # هذا الشهر
         month_start = date.today().replace(day=1).isoformat()
         income_month = (
-            self.db.query(func.sum(LawTransactions.amount))
+            self.db.query(func.sum(LawTransactions.amount * LawTransactions.exchange_rate))
             .filter(
                 LawTransactions.office_id == self.office_id,
                 LawTransactions.is_deleted == 0,
@@ -474,7 +474,7 @@ class DBQueryEngine:
         # هذا العام
         year_start = date.today().replace(month=1, day=1).isoformat()
         income_year = (
-            self.db.query(func.sum(LawTransactions.amount))
+            self.db.query(func.sum(LawTransactions.amount * LawTransactions.exchange_rate))
             .filter(
                 LawTransactions.office_id == self.office_id,
                 LawTransactions.is_deleted == 0,
@@ -509,7 +509,7 @@ class DBQueryEngine:
             }
 
         income = (
-            self.db.query(func.sum(LawTransactions.amount))
+            self.db.query(func.sum(LawTransactions.amount * LawTransactions.exchange_rate))
             .filter(
                 LawTransactions.office_id == self.office_id,
                 LawTransactions.is_deleted == 0,
@@ -519,7 +519,7 @@ class DBQueryEngine:
             .scalar()
         )
         expenses = (
-            self.db.query(func.sum(LawExpenses.amount))
+            self.db.query(func.sum(LawExpenses.amount * LawExpenses.exchange_rate))
             .filter(
                 LawExpenses.office_id == self.office_id,
                 LawExpenses.is_deleted == 0,
