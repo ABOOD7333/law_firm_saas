@@ -1,0 +1,191 @@
+{% extends "client_portal/base.html" %}
+
+{% block title %}قضاياي | بوابة الموكلين{% endblock %}
+{% block page_title %}قضاياي النشطة والمنتهية{% endblock %}
+
+{% block extra_css %}
+<style>
+    .case-card {
+        background: var(--surface-color);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+        transition: 0.3s;
+    }
+    .case-card:hover {
+        border-color: var(--primary-color);
+        box-shadow: 0 10px 15px -3px rgba(30, 58, 138, 0.1);
+    }
+    .case-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 15px;
+        padding-bottom: 15px;
+        border-bottom: 1px dashed var(--border-color);
+    }
+    .case-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        margin-bottom: 5px;
+    }
+    .case-meta {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+    .meta-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .status-badge {
+        padding: 6px 16px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 700;
+    }
+    .status-badge.مفتوحة, .status-badge.جديدة { background: #e0f2fe; color: #0284c7; }
+    .status-badge.في_المحكمة { background: #fef3c7; color: #d97706; }
+    .status-badge.استئناف { background: #fce7f3; color: #be185d; }
+    .status-badge.مغلقة { background: #f1f5f9; color: #475569; }
+
+    /* Timeline Stepper */
+    .stepper {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 30px;
+        position: relative;
+    }
+    .stepper::before {
+        content: '';
+        position: absolute;
+        top: 15px;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: var(--border-color);
+        z-index: 1;
+    }
+    .step {
+        position: relative;
+        z-index: 2;
+        text-align: center;
+        width: 25%;
+    }
+    .step-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        background: var(--surface-color);
+        border: 3px solid var(--border-color);
+        margin: 0 auto 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--border-color);
+        font-size: 0.9rem;
+        transition: 0.3s;
+    }
+    .step.active .step-icon {
+        border-color: var(--accent-color);
+        background: var(--accent-color);
+        color: white;
+        box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.2);
+    }
+    .step.completed .step-icon {
+        border-color: var(--primary-color);
+        background: var(--primary-color);
+        color: white;
+    }
+    .step-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-muted);
+    }
+    .step.active .step-label { color: var(--accent-color); font-weight: 700; }
+    .step.completed .step-label { color: var(--primary-color); }
+
+    .actions {
+        margin-top: 25px;
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+    <h2><i class="fa-solid fa-briefcase"></i> قائمة قضاياي</h2>
+    <a href="/client-portal/requests" class="btn-gold"><i class="fa-solid fa-plus"></i> طلب فتح قضية جديدة</a>
+</div>
+
+{% if cases %}
+    {% for case in cases %}
+    <div class="case-card">
+        <div class="case-header">
+            <div>
+                <h3 class="case-title">{{ case.title }}</h3>
+                <div class="case-meta">
+                    <span class="meta-item"><i class="fa-solid fa-hashtag"></i> {{ case.case_number or 'غير محدد' }}</span>
+                    <span class="meta-item"><i class="fa-regular fa-calendar"></i> فتحت في: {{ case.created_at[:10] if case.created_at else 'غير محدد' }}</span>
+                    <span class="meta-item"><i class="fa-solid fa-building-columns"></i> المحكمة: {{ case.court_name or 'غير محدد' }}</span>
+                </div>
+            </div>
+            <div>
+                <!-- Fix spaces for class name dynamically -->
+                {% set status_class = case.status.replace(' ', '_') if case.status else 'مفتوحة' %}
+                <span class="status-badge {{ status_class }}">{{ case.status or 'مفتوحة' }}</span>
+            </div>
+        </div>
+
+        {% set status = case.status or 'مفتوحة' %}
+        
+        <div class="stepper">
+            <div class="step {% if status in ['مفتوحة', 'في المحكمة', 'استئناف', 'مغلقة'] %}completed{% endif %}">
+                <div class="step-icon"><i class="fa-solid fa-check"></i></div>
+                <div class="step-label">تأسيس القضية</div>
+            </div>
+            <div class="step {% if status in ['في المحكمة', 'استئناف', 'مغلقة'] %}completed{% elif status == 'مفتوحة' %}active{% endif %}">
+                <div class="step-icon">
+                    {% if status in ['في المحكمة', 'استئناف', 'مغلقة'] %}<i class="fa-solid fa-check"></i>
+                    {% else %}<i class="fa-solid fa-gavel"></i>{% endif %}
+                </div>
+                <div class="step-label">تحت الترافع</div>
+            </div>
+            <div class="step {% if status in ['مغلقة'] %}completed{% elif status == 'استئناف' %}active{% endif %}">
+                <div class="step-icon">
+                    {% if status == 'مغلقة' %}<i class="fa-solid fa-check"></i>
+                    {% else %}<i class="fa-solid fa-scale-unbalanced"></i>{% endif %}
+                </div>
+                <div class="step-label">الاستئناف / التمييز</div>
+            </div>
+            <div class="step {% if status == 'مغلقة' %}completed{% endif %}">
+                <div class="step-icon"><i class="fa-solid fa-flag-checkered"></i></div>
+                <div class="step-label">إغلاق القضية</div>
+            </div>
+        </div>
+
+        <div class="actions">
+            <!-- These routes will be built in the future -->
+            <a href="#" class="btn-gold" style="background: var(--surface-color); color: var(--primary-color); border: 1px solid var(--border-color);"><i class="fa-regular fa-folder-open"></i> مستندات القضية</a>
+            <a href="#" class="btn-gold"><i class="fa-solid fa-circle-info"></i> عرض التفاصيل</a>
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+    <div style="background: var(--surface-color); border: 1px dashed var(--border-color); border-radius: 12px; padding: 60px 20px; text-align: center;">
+        <i class="fa-solid fa-box-open" style="font-size: 4rem; color: #cbd5e1; margin-bottom: 20px;"></i>
+        <h3 style="color: var(--text-main); margin-bottom: 10px;">لا توجد قضايا مسجلة</h3>
+        <p style="color: var(--text-muted); margin-bottom: 20px;">لم يتم ربط أي قضايا نشطة أو مغلقة بحسابك حتى الآن.</p>
+        <a href="/client-portal/requests" class="btn-gold">اطلب استشارة الآن</a>
+    </div>
+{% endif %}
+
+{% endblock %}

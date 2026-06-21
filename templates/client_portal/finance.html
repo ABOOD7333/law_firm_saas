@@ -1,0 +1,206 @@
+{% extends "client_portal/base.html" %}
+
+{% block title %}المركز المالي | بوابة الموكلين{% endblock %}
+{% block page_title %}المركز المالي والفواتير{% endblock %}
+
+{% block extra_css %}
+<style>
+    .finance-summary {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    .summary-card {
+        background: var(--surface-color);
+        padding: 30px;
+        border-radius: 16px;
+        border: 1px solid var(--border-color);
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    }
+    .summary-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 6px;
+    }
+    .summary-card.due::before { background: #ef4444; }
+    .summary-card.paid::before { background: #10b981; }
+
+    .summary-title {
+        color: var(--text-muted);
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
+    .summary-amount {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--text-main);
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+    }
+    .summary-currency {
+        font-size: 1rem;
+        color: var(--text-muted);
+    }
+
+    /* Table Styles */
+    .table-container {
+        background: var(--surface-color);
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        overflow: hidden;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    th {
+        background: #f8fafc;
+        padding: 15px 20px;
+        text-align: right;
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        font-weight: 700;
+        border-bottom: 1px solid var(--border-color);
+    }
+    td {
+        padding: 15px 20px;
+        border-bottom: 1px solid var(--border-color);
+        font-size: 0.95rem;
+        color: var(--text-main);
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f8fafc; }
+
+    .status {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        display: inline-block;
+    }
+    .status-paid { background: #dcfce7; color: #166534; }
+    .status-due { background: #fee2e2; color: #991b1b; }
+    .status-partial { background: #fef3c7; color: #d97706; }
+
+    .invoice-btn {
+        background: white;
+        border: 1px solid var(--border-color);
+        color: var(--primary-color);
+        padding: 6px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.85rem;
+        text-decoration: none;
+        transition: 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .invoice-btn:hover {
+        border-color: var(--primary-color);
+        background: #eff6ff;
+    }
+    .pay-btn {
+        background: #ef4444;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.85rem;
+        text-decoration: none;
+        transition: 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .pay-btn:hover { background: #dc2626; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+    <h2><i class="fa-solid fa-money-check-dollar"></i> ملخص المدفوعات والمطالبات</h2>
+</div>
+
+<div class="finance-summary">
+    <div class="summary-card due">
+        <div class="summary-title">إجمالي المبالغ المستحقة (غير مسددة)</div>
+        <div class="summary-amount">{{ "%.2f"|format(total_due) }} <span class="summary-currency">ريال</span></div>
+    </div>
+    <div class="summary-card paid">
+        <div class="summary-title">إجمالي المبالغ المسددة</div>
+        <div class="summary-amount">{{ "%.2f"|format(total_paid) }} <span class="summary-currency">ريال</span></div>
+    </div>
+</div>
+
+<h3 style="margin-bottom: 15px; color: var(--primary-color);"><i class="fa-solid fa-receipt"></i> الفواتير والمطالبات</h3>
+
+<div class="table-container">
+    {% if payments %}
+    <table>
+        <thead>
+            <tr>
+                <th>رقم الفاتورة</th>
+                <th>التاريخ</th>
+                <th>البيان (الوصف)</th>
+                <th>القضية المرتبطة</th>
+                <th>المبلغ</th>
+                <th>الحالة</th>
+                <th>إجراءات</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for payment in payments %}
+            <tr>
+                <td><strong>#INV-{{ payment.id }}</strong></td>
+                <td>{{ payment.created_at[:10] if payment.created_at else 'غير محدد' }}</td>
+                <td>{{ payment.description }}</td>
+                <td>
+                    {% if payment.case_id %}
+                        <a href="/client-portal/cases/{{ payment.case_id }}" style="color: var(--primary-color); text-decoration: none;">عرض القضية</a>
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td style="font-weight: 700;">{{ payment.amount }} ريال</td>
+                <td>
+                    {% if payment.status == 'مدفوعة' %}
+                        <span class="status status-paid">مدفوعة</span>
+                    {% elif payment.status == 'غير مدفوعة' or payment.status == 'معلقة' %}
+                        <span class="status status-due">غير مسددة</span>
+                    {% else %}
+                        <span class="status status-partial">{{ payment.status }}</span>
+                    {% endif %}
+                </td>
+                <td style="display: flex; gap: 8px;">
+                    <a href="#" class="invoice-btn" onclick="alert('سيتم تفعيل عرض الفاتورة قريباً')"><i class="fa-regular fa-file-pdf"></i> عرض PDF</a>
+                    {% if payment.status != 'مدفوعة' %}
+                        <!-- This button will link to a payment gateway in the future -->
+                        <a href="#" class="pay-btn" onclick="alert('سيتم تفعيل بوابة الدفع الإلكتروني قريباً')"><i class="fa-regular fa-credit-card"></i> سداد الآن</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="padding: 60px 20px; text-align: center;">
+        <i class="fa-solid fa-file-invoice" style="font-size: 4rem; color: #cbd5e1; margin-bottom: 20px;"></i>
+        <h3 style="color: var(--text-main); margin-bottom: 10px;">لا توجد مطالبات مالية</h3>
+        <p style="color: var(--text-muted);">لم يتم إصدار أي فواتير أو مطالبات مالية لحسابك حتى الآن.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

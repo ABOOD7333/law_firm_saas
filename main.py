@@ -812,10 +812,13 @@ async def login_submit(
 
             is_secure = not (request.url.hostname in ["127.0.0.1", "localhost"])
 
-            response = RedirectResponse(url="/dashboard", status_code=303)
+            target_url = "/dashboard"
+            if user.role == "موكل":
+                target_url = "/client-portal"
+
+            response = RedirectResponse(url=target_url, status_code=303)
 
             response.set_cookie(
-
                 key="session_token",
 
                 value=token,
@@ -993,7 +996,11 @@ async def login_2fa_submit(
 
         is_secure = not (request.url.hostname in ["127.0.0.1", "localhost"])
 
-        response = RedirectResponse(url="/dashboard", status_code=303)
+        target_url = "/dashboard"
+        if user.role == "موكل":
+            target_url = "/client-portal"
+
+        response = RedirectResponse(url=target_url, status_code=303)
 
         response.delete_cookie("temp_2fa_token")
 

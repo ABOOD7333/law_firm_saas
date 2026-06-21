@@ -1,0 +1,162 @@
+{% extends "client_portal/base.html" %}
+
+{% block title %}مستنداتي | بوابة الموكلين{% endblock %}
+{% block page_title %}المستندات والمرفقات الخاصة بي{% endblock %}
+
+{% block extra_css %}
+<style>
+    .docs-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+    }
+    .doc-card {
+        background: var(--surface-color);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 20px;
+        display: flex;
+        align-items: flex-start;
+        gap: 15px;
+        transition: 0.2s;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
+    }
+    .doc-card:hover {
+        border-color: var(--primary-color);
+        box-shadow: 0 10px 15px -3px rgba(30, 58, 138, 0.1);
+        transform: translateY(-2px);
+    }
+    .doc-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        flex-shrink: 0;
+    }
+    .doc-pdf { background: #fee2e2; color: #ef4444; }
+    .doc-image { background: #e0f2fe; color: #0284c7; }
+    .doc-word { background: #dbeafe; color: #1d4ed8; }
+    .doc-other { background: #f1f5f9; color: #64748b; }
+
+    .doc-info {
+        flex: 1;
+        min-width: 0;
+    }
+    .doc-title {
+        font-weight: 700;
+        color: var(--text-main);
+        font-size: 1.05rem;
+        margin-bottom: 5px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .doc-meta {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        margin-bottom: 10px;
+    }
+    .doc-actions {
+        display: flex;
+        gap: 8px;
+    }
+    .btn-action {
+        background: #f8fafc;
+        border: 1px solid var(--border-color);
+        color: var(--text-main);
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        transition: 0.2s;
+    }
+    .btn-action:hover {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+
+    /* Upload Area */
+    .upload-area {
+        border: 2px dashed var(--accent-color);
+        background: rgba(212, 175, 55, 0.05);
+        border-radius: 12px;
+        padding: 40px;
+        text-align: center;
+        margin-bottom: 30px;
+        transition: 0.3s;
+        cursor: pointer;
+    }
+    .upload-area:hover {
+        background: rgba(212, 175, 55, 0.1);
+    }
+    .upload-icon {
+        font-size: 3rem;
+        color: var(--accent-color);
+        margin-bottom: 15px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Upload Section -->
+<div class="upload-area" onclick="document.getElementById('file-upload').click();">
+    <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
+    <h3 style="color: var(--primary-color); margin-bottom: 5px;">رفع مستند جديد لملف القضية</h3>
+    <p style="color: var(--text-muted); font-size: 0.9rem;">اضغط هنا لاختيار الملف (PDF, صورة, Word)</p>
+    <form action="#" method="post" enctype="multipart/form-data" style="display: none;">
+        <input type="file" id="file-upload" name="document" onchange="alert('ميزة الرفع قيد التطوير وسيتم تفعيلها قريباً')">
+    </form>
+</div>
+
+<!-- Documents List -->
+<h3 style="margin-bottom: 20px; color: var(--text-main);"><i class="fa-regular fa-folder-open"></i> المستندات المتاحة لك</h3>
+
+{% if documents %}
+    <div class="docs-grid">
+        {% for doc in documents %}
+        <div class="doc-card">
+            <div class="doc-icon {% if doc.file_path and doc.file_path.endswith('.pdf') %}doc-pdf{% elif doc.file_path and (doc.file_path.endswith('.png') or doc.file_path.endswith('.jpg')) %}doc-image{% else %}doc-other{% endif %}">
+                {% if doc.file_path and doc.file_path.endswith('.pdf') %}
+                    <i class="fa-solid fa-file-pdf"></i>
+                {% elif doc.file_path and (doc.file_path.endswith('.png') or doc.file_path.endswith('.jpg')) %}
+                    <i class="fa-solid fa-image"></i>
+                {% else %}
+                    <i class="fa-solid fa-file"></i>
+                {% endif %}
+            </div>
+            <div class="doc-info">
+                <div class="doc-title" title="{{ doc.title }}">{{ doc.title }}</div>
+                <div class="doc-meta">
+                    <i class="fa-regular fa-calendar"></i> {{ doc.created_at[:10] if doc.created_at else '' }}
+                    {% if doc.law_case %}
+                        <br><i class="fa-solid fa-gavel"></i> {{ doc.law_case.title }}
+                    {% endif %}
+                </div>
+                <div class="doc-actions">
+                    {% if doc.file_path %}
+                    <a href="/{{ doc.file_path }}" target="_blank" class="btn-action"><i class="fa-regular fa-eye"></i> عرض</a>
+                    <a href="/{{ doc.file_path }}" download class="btn-action"><i class="fa-solid fa-download"></i> تنزيل</a>
+                    {% else %}
+                    <span style="color: var(--text-muted); font-size: 0.8rem;">لا يوجد ملف مرفق</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div style="background: var(--surface-color); border: 1px dashed var(--border-color); border-radius: 12px; padding: 60px 20px; text-align: center;">
+        <i class="fa-solid fa-folder-open" style="font-size: 4rem; color: #cbd5e1; margin-bottom: 20px;"></i>
+        <h3 style="color: var(--text-main); margin-bottom: 10px;">لا توجد مستندات</h3>
+        <p style="color: var(--text-muted); margin-bottom: 20px;">لم يقم المحامي بمشاركة أي مستندات في قضاياك حتى الآن.</p>
+    </div>
+{% endif %}
+
+{% endblock %}
