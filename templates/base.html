@@ -251,6 +251,9 @@
                     <li class="nav-item {% if active_page == 'tasks' %}active{% endif %}">
                         <a href="/tasks"><i class="fa-solid fa-list-check"></i> المهام والمتابعة</a>
                     </li>
+                    <li class="nav-item {% if active_page == 'kanban' %}active{% endif %}" style="background: rgba(79,70,229,0.05); border-right: 3px solid #4f46e5;">
+                        <a href="/kanban" style="color: #4f46e5; font-weight: bold;"><i class="fa-solid fa-objects-column"></i> لوحة الكانبان 🗂️</a>
+                    </li>
                     {% endif %}
                     <li class="nav-item {% if active_page == 'timeline' %}active{% endif %}">
                         <a href="/timeline"><i class="fa-solid fa-timeline"></i> الخط الزمني</a>
@@ -266,6 +269,11 @@
                     {% if has_perm(user, 'expenses', 'view') %}
                     <li class="nav-item {% if active_page == 'expenses' %}active{% endif %}">
                         <a href="/expenses"><i class="fa-solid fa-money-bill-wave"></i> مصاريف القضية</a>
+                    </li>
+                    {% endif %}
+                    {% if has_perm(user, 'accounting', 'view') %}
+                    <li class="nav-item {% if active_page == 'accounting' %}active{% endif %}">
+                        <a href="/accounting/invoices"><i class="fa-solid fa-receipt"></i> الفوترة الإلكترونية 🧾</a>
                     </li>
                     {% endif %}
                 {% endif %}

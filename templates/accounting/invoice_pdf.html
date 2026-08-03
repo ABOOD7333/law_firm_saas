@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>فاتورة {{ invoice.invoice_number }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: #f3f4f6;
+            color: #1f2937;
+            padding: 30px;
+            direction: rtl;
+        }
+
+        .invoice-page {
+            background: white;
+            max-width: 800px;
+            margin: 0 auto;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.12);
+        }
+
+        /* Header */
+        .inv-header {
+            background: linear-gradient(135deg, #1e1b4b 0%, #3730a3 60%, #4f46e5 100%);
+            color: white;
+            padding: 36px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .office-info h1 {
+            font-size: 1.6rem;
+            font-weight: 800;
+            margin-bottom: 6px;
+        }
+        .office-info p {
+            font-size: 0.88rem;
+            opacity: 0.8;
+            line-height: 1.7;
+        }
+        .inv-badge {
+            text-align: left;
+        }
+        .inv-badge .inv-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            opacity: 0.7;
+            margin-bottom: 4px;
+        }
+        .inv-badge .inv-number {
+            font-size: 1.3rem;
+            font-weight: 800;
+            font-family: monospace;
+            letter-spacing: 1px;
+        }
+        .inv-badge .inv-status {
+            display: inline-block;
+            margin-top: 8px;
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-size: 0.82rem;
+            font-weight: 700;
+        }
+        .status-paid { background: rgba(16,185,129,0.2); color: #6ee7b7; }
+        .status-unpaid { background: rgba(239,68,68,0.2); color: #fca5a5; }
+        .status-partial { background: rgba(245,158,11,0.2); color: #fcd34d; }
+        .status-draft { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); }
+
+        /* ZATCA Badge */
+        .zatca-badge {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            padding: 5px 12px;
+            font-size: 0.75rem;
+            margin-top: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* Info Grid */
+        .inv-info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .inv-info-block {
+            padding: 24px 40px;
+            border-left: 1px solid #e5e7eb;
+        }
+        .inv-info-block:last-child { border-left: none; }
+        .inv-info-block h4 {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #9ca3af;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        .inv-info-block p {
+            font-size: 0.92rem;
+            line-height: 1.6;
+            color: #374151;
+        }
+        .inv-info-block strong { color: #1f2937; font-weight: 700; }
+
+        /* Items Table */
+        .inv-table-section { padding: 28px 40px; }
+        .inv-table-section h3 {
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #9ca3af;
+            font-weight: 700;
+            margin-bottom: 14px;
+        }
+        .inv-items-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .inv-items-table thead th {
+            background: #f8fafc;
+            padding: 12px 16px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #6b7280;
+            text-align: right;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .inv-items-table tbody td {
+            padding: 13px 16px;
+            font-size: 0.91rem;
+            border-bottom: 1px solid #f3f4f6;
+            color: #374151;
+        }
+        .inv-items-table tbody tr:last-child td { border-bottom: none; }
+        .inv-items-table tbody tr:hover td { background: #fafafa; }
+
+        /* Totals & QR */
+        .inv-footer-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+            padding: 0 40px 36px;
+            align-items: start;
+        }
+
+        /* QR Code */
+        .qr-section {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .qr-section h4 {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #9ca3af;
+            font-weight: 700;
+        }
+        .qr-code-img {
+            width: 140px;
+            height: 140px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 8px;
+            background: white;
+        }
+        .qr-note {
+            font-size: 0.75rem;
+            color: #9ca3af;
+            max-width: 160px;
+            line-height: 1.5;
+        }
+
+        /* Totals */
+        .totals-section {
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-right: auto;
+        }
+        .t-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 7px 0;
+            font-size: 0.91rem;
+        }
+        .t-row .t-label { color: #6b7280; }
+        .t-row .t-val { font-weight: 700; color: #1f2937; }
+        .t-row.t-grand {
+            border-top: 2px solid #e5e7eb;
+            margin-top: 8px;
+            padding-top: 12px;
+            font-size: 1.1rem;
+            font-weight: 800;
+        }
+        .t-row.t-grand .t-label { color: #1e1b4b; }
+        .t-row.t-grand .t-val { color: #4f46e5; font-size: 1.2rem; }
+
+        /* Footer */
+        .inv-bottom {
+            border-top: 1px solid #e5e7eb;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fafafa;
+        }
+        .inv-bottom p {
+            font-size: 0.8rem;
+            color: #9ca3af;
+        }
+        .inv-bottom .uuid-badge {
+            font-size: 0.72rem;
+            color: #d1d5db;
+            font-family: monospace;
+        }
+
+        /* Print button */
+        .print-actions {
+            max-width: 800px;
+            margin: 20px auto;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        .btn-print {
+            background: linear-gradient(135deg, #1e1b4b, #4f46e5);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 12px 28px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            font-family: 'Cairo', sans-serif;
+            cursor: pointer;
+            display: inline-flex; align-items: center; gap: 8px;
+            box-shadow: 0 4px 14px rgba(79,70,229,0.3);
+            transition: all 0.2s;
+        }
+        .btn-print:hover { transform: translateY(-1px); }
+        .btn-back {
+            background: #f3f4f6;
+            color: #374151;
+            border: none;
+            border-radius: 10px;
+            padding: 12px 24px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            font-family: 'Cairo', sans-serif;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex; align-items: center; gap: 8px;
+            transition: all 0.2s;
+        }
+        .btn-back:hover { background: #e5e7eb; }
+
+        @media print {
+            body { background: white; padding: 0; }
+            .invoice-page { box-shadow: none; border-radius: 0; }
+            .print-actions { display: none; }
+        }
+
+        @media (max-width: 650px) {
+            .inv-header, .inv-footer-grid { flex-direction: column; gap: 20px; }
+            .inv-info-grid { grid-template-columns: 1fr; }
+            .inv-info-block { border-left: none; border-bottom: 1px solid #e5e7eb; }
+            .inv-footer-grid { grid-template-columns: 1fr; }
+            body { padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Action buttons (hidden on print) -->
+<div class="print-actions">
+    <a href="/accounting/invoices" class="btn-back">
+        <i class="fa-solid fa-arrow-right"></i> عودة للفواتير
+    </a>
+    <button class="btn-print" onclick="window.print()">
+        <i class="fa-solid fa-print"></i> طباعة / حفظ PDF
+    </button>
+</div>
+
+<div class="invoice-page">
+    <!-- Header -->
+    <div class="inv-header">
+        <div class="office-info">
+            <h1>{{ office.name if office else 'مكتب المحاماة' }}</h1>
+            {% if office %}
+            <p>
+                {% if office.email %}{{ office.email }}<br>{% endif %}
+                {% if office.phone %}📞 {{ office.phone }}<br>{% endif %}
+                {% if office.address %}📍 {{ office.address }}{% endif %}
+            </p>
+            {% endif %}
+            <div class="zatca-badge">
+                ✅ فاتورة إلكترونية — ZATCA Phase 1
+            </div>
+        </div>
+        <div class="inv-badge">
+            <div class="inv-label">فاتورة رقم</div>
+            <div class="inv-number">{{ invoice.invoice_number }}</div>
+            <div>
+                {% if invoice.status == 'Paid' %}
+                    <span class="inv-status status-paid">✓ مدفوعة</span>
+                {% elif invoice.status == 'Unpaid' %}
+                    <span class="inv-status status-unpaid">⚡ غير مدفوعة</span>
+                {% elif invoice.status == 'Partial' %}
+                    <span class="inv-status status-partial">◑ مدفوعة جزئياً</span>
+                {% else %}
+                    <span class="inv-status status-draft">مسودة</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Client & Dates Info -->
+    <div class="inv-info-grid">
+        <div class="inv-info-block">
+            <h4>🧑‍💼 فُصدر إلى</h4>
+            {% if client %}
+            <p>
+                <strong>{{ client.name }}</strong><br>
+                {% if client.email %}{{ client.email }}<br>{% endif %}
+                {% if client.phone %}{{ client.phone }}<br>{% endif %}
+                {% if client.id_number %}رقم الهوية: {{ client.id_number }}{% endif %}
+            </p>
+            {% else %}
+            <p style="color:#9ca3af;">موكل عام / غير محدد</p>
+            {% endif %}
+        </div>
+        <div class="inv-info-block">
+            <h4>📅 تفاصيل الفاتورة</h4>
+            <p>
+                <strong>تاريخ الإصدار:</strong> {{ invoice.issue_date[:10] if invoice.issue_date else '—' }}<br>
+                {% if invoice.due_date %}<strong>تاريخ الاستحقاق:</strong> {{ invoice.due_date }}<br>{% endif %}
+                {% if invoice.case_id %}<strong>رقم القضية:</strong> #{{ invoice.case_id }}{% endif %}
+            </p>
+        </div>
+    </div>
+
+    <!-- Items -->
+    <div class="inv-table-section">
+        <h3>بنود الخدمات القانونية</h3>
+        <table class="inv-items-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>الوصف</th>
+                    <th>الكمية</th>
+                    <th>سعر الوحدة</th>
+                    <th>ضريبة %</th>
+                    <th>الضريبة</th>
+                    <th>الإجمالي</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td style="color:#9ca3af;">{{ loop.index }}</td>
+                    <td style="font-weight:600;">{{ item.description }}</td>
+                    <td style="text-align:center;">{{ item.quantity|int }}</td>
+                    <td>{{ "%.2f"|format(item.unit_price) }} ر.س</td>
+                    <td style="text-align:center;">{{ item.tax_rate|int }}%</td>
+                    <td style="color:#d97706;">{{ "%.2f"|format(item.tax_amount) }} ر.س</td>
+                    <td style="font-weight:700;color:#1e1b4b;">{{ "%.2f"|format(item.line_total) }} ر.س</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- QR + Totals -->
+    <div class="inv-footer-grid">
+        <div class="qr-section">
+            <h4>رمز QR ZATCA</h4>
+            {% if invoice.zatca_qr %}
+            <div id="zatca-qr-code" style="width:140px;height:140px;border:2px solid #e5e7eb;border-radius:12px;padding:8px;background:white;display:flex;align-items:center;justify-content:center;"></div>
+            <p class="qr-note">امسح الرمز للتحقق من صحة الفاتورة وفق متطلبات هيئة الزكاة والضريبة والجمارك</p>
+            <script>
+            // Store TLV data for QR generation
+            window._zatcaTLV = "{{ invoice.zatca_qr }}";
+            </script>
+            {% else %}
+            <div style="width:140px;height:140px;border:2px dashed #e5e7eb;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#d1d5db;font-size:2rem;">
+                <i class="fa-solid fa-qrcode"></i>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="totals-section">
+            <div class="t-row">
+                <span class="t-label">المجموع الجزئي (قبل الضريبة)</span>
+                <span class="t-val">{{ "%.2f"|format(invoice.subtotal) }} ر.س</span>
+            </div>
+            <div class="t-row">
+                <span class="t-label">ضريبة القيمة المضافة</span>
+                <span class="t-val" style="color:#d97706;">{{ "%.2f"|format(invoice.tax_total) }} ر.س</span>
+            </div>
+            <div class="t-row t-grand">
+                <span class="t-label">الإجمالي الكلي</span>
+                <span class="t-val">{{ "%.2f"|format(invoice.grand_total) }} ر.س</span>
+            </div>
+            {% if invoice.amount_paid > 0 %}
+            <div class="t-row" style="margin-top:8px;border-top:1px solid #e5e7eb;padding-top:10px;">
+                <span class="t-label" style="color:#059669;">المبلغ المدفوع</span>
+                <span class="t-val" style="color:#059669;">{{ "%.2f"|format(invoice.amount_paid) }} ر.س</span>
+            </div>
+            <div class="t-row">
+                <span class="t-label" style="color:#dc2626;">المتبقي</span>
+                <span class="t-val" style="color:#dc2626;">{{ "%.2f"|format(invoice.grand_total - invoice.amount_paid) }} ر.س</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if invoice.notes %}
+    <div style="padding: 0 40px 24px;">
+        <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:16px 20px;">
+            <p style="font-size:0.78rem;font-weight:700;color:#9ca3af;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em;">ملاحظات</p>
+            <p style="font-size:0.9rem;color:#374151;line-height:1.6;">{{ invoice.notes }}</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Footer -->
+    <div class="inv-bottom">
+        <p>شكراً لثقتكم بخدماتنا القانونية 🤝</p>
+        <div class="uuid-badge">UUID: {{ invoice.uuid }}</div>
+    </div>
+</div>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const qrDiv = document.getElementById('zatca-qr-code');
+    const tlvData = window._zatcaTLV;
+    if (qrDiv && tlvData) {
+        QRCode.toCanvas(document.createElement('canvas'), tlvData, {
+            width: 124,
+            margin: 1,
+            color: { dark: '#1e1b4b', light: '#ffffff' }
+        }, function(err, canvas) {
+            if (!err) {
+                qrDiv.innerHTML = '';
+                qrDiv.appendChild(canvas);
+            }
+        });
+    }
+});
+</script>
+</body>
+</html>

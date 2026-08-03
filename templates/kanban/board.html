@@ -1,0 +1,400 @@
+{% extends "base.html" %}
+{% block title %}لوحة الكانبان | LawSaaS{% endblock %}
+
+{% block head %}
+<!-- SortableJS for Drag and Drop -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+<style>
+.kanban-header {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
+}
+.kanban-title { margin: 0; font-size: 1.4rem; font-weight: 800; color: #1e1b4b; display: flex; align-items: center; gap: 10px; }
+.kanban-actions { display: flex; gap: 10px; }
+
+/* View Switcher */
+.view-switcher {
+    display: inline-flex;
+    background: #f1f5f9;
+    border-radius: 12px;
+    padding: 4px;
+    border: 1px solid #e2e8f0;
+}
+.view-tab {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+}
+.view-tab.active {
+    background: white;
+    color: #4f46e5;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+/* Kanban Board Container */
+.kanban-board {
+    display: flex; gap: 20px; overflow-x: auto; padding-bottom: 20px; min-height: 70vh; align-items: flex-start;
+}
+.kanban-column {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    min-width: 320px;
+    max-width: 320px;
+    flex-shrink: 0;
+    display: flex; flex-direction: column;
+}
+.col-header {
+    padding: 16px;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex; justify-content: space-between; align-items: center;
+}
+.col-title { font-weight: 800; font-size: 1rem; display: flex; align-items: center; gap: 8px; }
+.col-count { 
+    background: #e2e8f0; color: #475569; font-size: 0.75rem; font-weight: 700; 
+    padding: 2px 8px; border-radius: 12px;
+}
+
+.col-body {
+    padding: 12px;
+    flex-grow: 1;
+    min-height: 150px;
+    display: flex; flex-direction: column; gap: 12px;
+}
+
+/* Kanban Card */
+.k-card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 14px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+    cursor: grab;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+}
+.k-card:active { cursor: grabbing; }
+.k-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform: translateY(-2px); }
+
+.k-card-title { font-size: 0.95rem; font-weight: 700; color: #1e293b; margin-bottom: 8px; line-height: 1.4; }
+.k-card-desc { font-size: 0.8rem; color: #64748b; margin-bottom: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+.k-card-footer {
+    display: flex; justify-content: space-between; align-items: center;
+    border-top: 1px dashed #e2e8f0; padding-top: 10px;
+}
+
+.k-badge {
+    font-size: 0.7rem; font-weight: 700; padding: 3px 8px; border-radius: 6px;
+    display: inline-flex; align-items: center; gap: 4px;
+}
+.kb-case { background: #f0fdf4; color: #166534; }
+.kb-date { background: #fff1f2; color: #be123c; }
+
+.k-avatar {
+    width: 26px; height: 26px; border-radius: 50%; background: #4f46e5; color: white;
+    display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700;
+    box-shadow: 0 0 0 2px white;
+}
+
+/* Priority Indicators */
+.priority-line { position: absolute; top: 0; right: 0; bottom: 0; width: 4px; border-radius: 0 12px 12px 0; }
+.pr-3 { background: #ef4444; } /* High */
+.pr-2 { background: #f59e0b; } /* Medium */
+.pr-1 { background: #10b981; } /* Low */
+
+/* Colors for specific columns */
+.col-pending .col-title { color: #64748b; }
+.col-in_progress .col-title { color: #3b82f6; }
+.col-done .col-title { color: #10b981; }
+.col-cancelled .col-title { color: #ef4444; }
+.col-draft .col-title { color: #64748b; }
+.col-active .col-title { color: #8b5cf6; }
+.col-closed .col-title { color: #10b981; }
+
+/* Empty state styling */
+.sortable-ghost { opacity: 0.4; background: #f8fafc; border: 1px dashed #cbd5e1; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="kanban-header">
+    <h2 class="kanban-title"><i class="fa-solid fa-objects-column" style="color:#4f46e5;"></i> لوحة الكانبان</h2>
+    
+    <div class="view-switcher">
+        <button class="view-tab active" id="tab-tasks" onclick="switchView('tasks')">لوحة المهام</button>
+        <button class="view-tab" id="tab-cases" onclick="switchView('cases')">لوحة القضايا</button>
+    </div>
+    
+    <div class="kanban-actions">
+        <button class="btn-primary" onclick="window.location='/tasks/add'">
+            <i class="fa-solid fa-plus"></i> مهمة جديدة
+        </button>
+    </div>
+</div>
+
+<!-- Tasks Board -->
+<div class="kanban-board" id="board-tasks">
+    <!-- Pending -->
+    <div class="kanban-column col-pending">
+        <div class="col-header">
+            <span class="col-title"><i class="fa-regular fa-circle"></i> جديد</span>
+            <span class="col-count" id="count-t-pending">0</span>
+        </div>
+        <div class="col-body sortable-list" data-status="pending" id="t-pending"></div>
+    </div>
+    
+    <!-- In Progress -->
+    <div class="kanban-column col-in_progress">
+        <div class="col-header">
+            <span class="col-title"><i class="fa-solid fa-spinner"></i> قيد التنفيذ</span>
+            <span class="col-count" id="count-t-in_progress">0</span>
+        </div>
+        <div class="col-body sortable-list" data-status="in_progress" id="t-in_progress"></div>
+    </div>
+    
+    <!-- Done -->
+    <div class="kanban-column col-done">
+        <div class="col-header">
+            <span class="col-title"><i class="fa-solid fa-circle-check"></i> مكتمل</span>
+            <span class="col-count" id="count-t-done">0</span>
+        </div>
+        <div class="col-body sortable-list" data-status="done" id="t-done"></div>
+    </div>
+    
+    <!-- Cancelled -->
+    <div class="kanban-column col-cancelled">
+        <div class="col-header">
+            <span class="col-title"><i class="fa-solid fa-circle-xmark"></i> ملغى</span>
+            <span class="col-count" id="count-t-cancelled">0</span>
+        </div>
+        <div class="col-body sortable-list" data-status="cancelled" id="t-cancelled"></div>
+    </div>
+</div>
+
+<!-- Cases Board (Hidden by default) -->
+<div class="kanban-board" id="board-cases" style="display: none;">
+    <!-- Draft -->
+    <div class="kanban-column col-draft">
+        <div class="col-header">
+            <span class="col-title"><i class="fa-solid fa-pen-ruler"></i> مسودة</span>
+            <span class="col-count" id="count-c-draft">0</span>
+        </div>
+        <div class="col-body sortable-list-cases" data-status="draft" id="c-draft"></div>
+    </div>
+    
+    <!-- Active -->
+    <div class="kanban-column col-active">
+        <div class="col-header">
+            <span class="col-title"><i class="fa-solid fa-fire"></i> نشطة</span>
+            <span class="col-count" id="count-c-active">0</span>
+        </div>
+        <div class="col-body sortable-list-cases" data-status="active" id="c-active"></div>
+    </div>
+    
+    <!-- Closed -->
+    <div class="kanban-column col-closed">
+        <div class="col-header">
+            <span class="col-title"><i class="fa-solid fa-gavel"></i> منتهية</span>
+            <span class="col-count" id="count-c-closed">0</span>
+        </div>
+        <div class="col-body sortable-list-cases" data-status="closed" id="c-closed"></div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let tasksSortables = [];
+let casesSortables = [];
+
+// API Loading
+async function loadTasks() {
+    try {
+        const res = await fetch('/kanban/api/tasks');
+        const data = await res.json();
+        if (data.ok) {
+            renderTasks(data.tasks);
+        }
+    } catch(e) { console.error("Error loading tasks", e); }
+}
+
+async function loadCases() {
+    try {
+        const res = await fetch('/kanban/api/cases');
+        const data = await res.json();
+        if (data.ok) {
+            renderCases(data.cases);
+        }
+    } catch(e) { console.error("Error loading cases", e); }
+}
+
+// Rendering Logic
+function renderTasks(tasks) {
+    const cols = {
+        'pending': document.getElementById('t-pending'),
+        'in_progress': document.getElementById('t-in_progress'),
+        'done': document.getElementById('t-done'),
+        'cancelled': document.getElementById('t-cancelled')
+    };
+    
+    // Clear cols
+    for (let k in cols) { if (cols[k]) cols[k].innerHTML = ''; }
+    
+    tasks.forEach(t => {
+        let status = t.status_key || 'pending';
+        if (!cols[status]) status = 'pending'; // fallback
+        
+        let prClass = t.priority_level == 3 ? 'pr-3' : (t.priority_level == 1 ? 'pr-1' : 'pr-2');
+        let card = document.createElement('div');
+        card.className = 'k-card';
+        card.dataset.id = t.id;
+        
+        let caseHtml = t.case ? `<span class="k-badge kb-case"><i class="fa-solid fa-scale-balanced"></i> ${t.case.case_number}</span>` : '';
+        let dateHtml = t.due_at ? `<span class="k-badge kb-date"><i class="fa-regular fa-clock"></i> ${t.due_at.substring(0,10)}</span>` : '';
+        let avatarHtml = t.assignee ? `<div class="k-avatar" title="${t.assignee.name}">${t.assignee.avatar}</div>` : '';
+        
+        card.innerHTML = `
+            <div class="priority-line ${prClass}"></div>
+            <div class="k-card-title">${t.title}</div>
+            ${t.description ? `<div class="k-card-desc">${t.description}</div>` : ''}
+            <div class="k-card-footer">
+                <div style="display:flex; gap:6px;">${caseHtml}${dateHtml}</div>
+                ${avatarHtml}
+            </div>
+        `;
+        
+        cols[status].appendChild(card);
+    });
+    
+    updateCounts('t-');
+}
+
+function renderCases(cases) {
+    const cols = {
+        'draft': document.getElementById('c-draft'),
+        'active': document.getElementById('c-active'),
+        'closed': document.getElementById('c-closed')
+    };
+    
+    // Clear cols
+    for (let k in cols) { if (cols[k]) cols[k].innerHTML = ''; }
+    
+    cases.forEach(c => {
+        let status = c.status_key || 'draft';
+        if (!cols[status]) status = 'draft';
+        
+        let card = document.createElement('div');
+        card.className = 'k-card';
+        card.dataset.id = c.id;
+        
+        card.innerHTML = `
+            <div class="k-card-title">${c.title}</div>
+            <div class="k-card-desc">قضية رقم: ${c.case_number}</div>
+            <div class="k-card-footer">
+                <span class="k-badge kb-case"><i class="fa-solid fa-scale-balanced"></i> ${c.estimated_fee ? c.estimated_fee + ' ر.س' : 'غير محدد'}</span>
+            </div>
+        `;
+        
+        cols[status].appendChild(card);
+    });
+    
+    updateCounts('c-');
+}
+
+function updateCounts(prefix) {
+    const lists = document.querySelectorAll(`[id^="${prefix}"]`);
+    lists.forEach(list => {
+        const countSpan = document.getElementById(`count-${list.id}`);
+        if (countSpan) countSpan.textContent = list.children.length;
+    });
+}
+
+// Setup SortableJS
+function initSortables() {
+    const taskLists = document.querySelectorAll('.sortable-list');
+    taskLists.forEach(list => {
+        tasksSortables.push(new Sortable(list, {
+            group: 'tasks',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            onEnd: async function (evt) {
+                const itemEl = evt.item;
+                const newStatus = evt.to.dataset.status;
+                const taskId = itemEl.dataset.id;
+                
+                updateCounts('t-');
+                
+                // Get new order of all items in the target column
+                let updates = [];
+                Array.from(evt.to.children).forEach((child, index) => {
+                    updates.push({
+                        id: child.dataset.id,
+                        order: index,
+                        status: newStatus
+                    });
+                });
+                
+                // Send batch update
+                try {
+                    await fetch('/kanban/api/tasks/reorder', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ updates: updates })
+                    });
+                } catch(e) { console.error("Update failed", e); }
+            }
+        }));
+    });
+    
+    const caseLists = document.querySelectorAll('.sortable-list-cases');
+    caseLists.forEach(list => {
+        casesSortables.push(new Sortable(list, {
+            group: 'cases',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            onEnd: async function (evt) {
+                const itemEl = evt.item;
+                const newStatus = evt.to.dataset.status;
+                const caseId = itemEl.dataset.id;
+                
+                updateCounts('c-');
+                
+                try {
+                    await fetch(`/kanban/api/cases/${caseId}/move`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status_key: newStatus })
+                    });
+                } catch(e) { console.error("Update failed", e); }
+            }
+        }));
+    });
+}
+
+// View Switching
+function switchView(view) {
+    document.getElementById('tab-tasks').classList.remove('active');
+    document.getElementById('tab-cases').classList.remove('active');
+    document.getElementById('board-tasks').style.display = 'none';
+    document.getElementById('board-cases').style.display = 'none';
+    
+    document.getElementById(`tab-${view}`).classList.add('active');
+    document.getElementById(`board-${view}`).style.display = 'flex';
+}
+
+// Init
+document.addEventListener('DOMContentLoaded', () => {
+    initSortables();
+    loadTasks();
+    loadCases();
+});
+</script>
+{% endblock %}

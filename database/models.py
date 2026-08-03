@@ -289,6 +289,7 @@ class LawTasks(Base):
     assignee_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey('access_profiles.id'))
     status_key: Mapped[Optional[str]] = mapped_column(Text, server_default=text("'pending'"))
     priority_level: Mapped[int] = mapped_column(Integer, server_default=text('2'))
+    kanban_order: Mapped[int] = mapped_column(Integer, server_default=text('0'))
     is_active: Mapped[int] = mapped_column(Integer, CheckConstraint('is_active IN (0, 1)'), nullable=False, server_default=text('1'))
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
     updated_at: Mapped[Optional[str]] = mapped_column(Text)
@@ -681,4 +682,63 @@ class PaymentRequest(Base):
     submitted_at: Mapped[str] = mapped_column(Text, server_default=text('CURRENT_TIMESTAMP'))
     reviewed_at: Mapped[Optional[str]] = mapped_column(Text)
     reviewed_by: Mapped[Optional[int]] = mapped_column(Integer)
+
+# ============================================================
+# ZATCA Accounting & Invoicing
+# ============================================================
+class Invoices(Base):
+    __tablename__ = 'invoices'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    office_id: Mapped[int] = mapped_column(ForeignKey('law_offices.id', ondelete='CASCADE'), nullable=False, index=True)
+    client_id: Mapped[Optional[int]] = mapped_column(ForeignKey('law_clients.id', ondelete='SET NULL'), nullable=True, index=True)
+    case_id: Mapped[Optional[int]] = mapped_column(ForeignKey('law_cases.id', ondelete='SET NULL'), nullable=True, index=True)
+    
+    invoice_number: Mapped[str] = mapped_column(Text, nullable=False, index=True)
+    uuid: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+    issue_date: Mapped[str] = mapped_column(Text, nullable=False)
+    due_date: Mapped[Optional[str]] = mapped_column(Text)
+    
+    invoice_type: Mapped[str] = mapped_column(Text, server_default=text("'Simplified'")) # 'Simplified' (B2C) or 'Standard' (B2B)
+    status: Mapped[str] = mapped_column(Text, server_default=text("'Draft'")) # Draft, Unpaid, Partial, Paid, Cancelled
+    
+    subtotal: Mapped[float] = mapped_column(REAL, server_default=text('0.0'))
+    tax_total: Mapped[float] = mapped_column(REAL, server_default=text('0.0'))
+    grand_total: Mapped[float] = mapped_column(REAL, server_default=text('0.0'))
+    amount_paid: Mapped[float] = mapped_column(REAL, server_default=text('0.0'))
+    
+    zatca_qr: Mapped[Optional[str]] = mapped_column(Text) # Base64 TLV QR String
+    notes: Mapped[Optional[str]] = mapped_column(Text)
+    
+    created_at: Mapped[str] = mapped_column(Text, server_default=text('CURRENT_TIMESTAMP'))
+    created_by: Mapped[Optional[int]] = mapped_column(ForeignKey('access_profiles.id', ondelete='SET NULL'), nullable=True)
+
+class InvoiceItems(Base):
+    __tablename__ = 'invoice_items'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    invoice_id: Mapped[int] = mapped_column(ForeignKey('invoices.id', ondelete='CASCADE'), nullable=False, index=True)
+    
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    quantity: Mapped[float] = mapped_column(REAL, server_default=text('1.0'))
+    unit_price: Mapped[float] = mapped_column(REAL, server_default=text('0.0'))
+    tax_rate: Mapped[float] = mapped_column(REAL, server_default=text('15.0')) # %
+    tax_amount: Mapped[float] = mapped_column(REAL, server_default=text('0.0'))
+    line_total: Mapped[float] = mapped_column(REAL, server_default=text('0.0')) # Including tax
+
+class ClientPayments(Base):
+    __tablename__ = 'client_payments'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    office_id: Mapped[int] = mapped_column(ForeignKey('law_offices.id', ondelete='CASCADE'), nullable=False)
+    invoice_id: Mapped[int] = mapped_column(ForeignKey('invoices.id', ondelete='CASCADE'), nullable=False, index=True)
+    client_id: Mapped[Optional[int]] = mapped_column(ForeignKey('law_clients.id', ondelete='SET NULL'), nullable=True)
+    
+    amount: Mapped[float] = mapped_column(REAL, nullable=False)
+    payment_method: Mapped[str] = mapped_column(Text, server_default=text("'Bank Transfer'")) # Bank Transfer, Cash, Card
+    reference_number: Mapped[Optional[str]] = mapped_column(Text)
+    payment_date: Mapped[str] = mapped_column(Text, server_default=text('CURRENT_TIMESTAMP'))
+    notes: Mapped[Optional[str]] = mapped_column(Text)
+    
+    created_by: Mapped[Optional[int]] = mapped_column(ForeignKey('access_profiles.id', ondelete='SET NULL'), nullable=True)
 

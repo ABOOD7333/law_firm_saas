@@ -1,0 +1,408 @@
+{% extends "base.html" %}
+{% block title %}إصدار فاتورة جديدة | LawSaaS{% endblock %}
+
+{% block head %}
+<style>
+.form-card {
+    background: var(--card-bg, #fff);
+    border-radius: 18px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    border: 1px solid var(--border-color, #e5e7eb);
+    overflow: hidden;
+    max-width: 900px;
+    margin: 0 auto;
+}
+.form-header {
+    background: linear-gradient(135deg, #1e1b4b, #4f46e5);
+    padding: 28px 32px;
+    color: white;
+    display: flex; align-items: center; justify-content: space-between;
+}
+.form-header h2 { margin: 0; font-size: 1.3rem; font-weight: 700; }
+.form-header .invoice-num-badge {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 10px;
+    padding: 6px 16px;
+    font-size: 0.9rem;
+    font-family: monospace;
+    letter-spacing: 1px;
+}
+
+.form-body { padding: 32px; }
+
+.form-section-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #6b7280;
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f3f4f6;
+}
+.form-grid-2 {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;
+}
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group label { font-size: 0.87rem; font-weight: 600; color: var(--text-secondary, #374151); }
+.form-group input, .form-group select, .form-group textarea {
+    border: 1px solid var(--border-color, #d1d5db);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 0.93rem;
+    font-family: 'Cairo', sans-serif;
+    color: var(--text-primary, #111827);
+    background: var(--input-bg, #fff);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+    box-sizing: border-box;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79,70,229,0.1);
+    outline: none;
+}
+
+/* --- Items Table --- */
+.items-section { margin-bottom: 28px; }
+.items-table-wrap {
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 12px;
+    overflow: hidden;
+}
+.items-table { width: 100%; border-collapse: collapse; }
+.items-table thead th {
+    background: #f8fafc;
+    padding: 12px 14px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #6b7280;
+    text-align: right;
+    border-bottom: 1px solid #e5e7eb;
+}
+.items-table tbody td {
+    padding: 10px 10px;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: middle;
+}
+.items-table tbody tr:last-child td { border-bottom: none; }
+.items-table tbody input {
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 7px 10px;
+    font-family: 'Cairo', sans-serif;
+    font-size: 0.88rem;
+    width: 100%;
+    box-sizing: border-box;
+    background: transparent;
+    transition: all 0.2s;
+}
+.items-table tbody input:focus {
+    border-color: #4f46e5;
+    background: rgba(79,70,229,0.03);
+    outline: none;
+}
+.btn-add-row {
+    margin-top: 10px;
+    background: rgba(79,70,229,0.06);
+    color: #4f46e5;
+    border: 1px dashed rgba(79,70,229,0.3);
+    border-radius: 8px;
+    padding: 8px 18px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    font-family: 'Cairo', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-add-row:hover { background: rgba(79,70,229,0.12); }
+.btn-del-row {
+    background: rgba(239,68,68,0.07);
+    color: #dc2626;
+    border: none;
+    border-radius: 7px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+.btn-del-row:hover { background: rgba(239,68,68,0.15); }
+
+/* --- Totals Summary --- */
+.totals-box {
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 20px 24px;
+    max-width: 340px;
+    margin-right: auto;
+    margin-bottom: 28px;
+}
+.totals-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 0;
+    font-size: 0.92rem;
+}
+.totals-row.grand {
+    border-top: 2px solid #e5e7eb;
+    margin-top: 8px;
+    padding-top: 12px;
+    font-weight: 800;
+    font-size: 1.05rem;
+    color: #1e1b4b;
+}
+.totals-row .label { color: #6b7280; }
+.totals-row .value { font-weight: 700; }
+.totals-row.grand .value { color: #4f46e5; }
+
+/* --- Submit --- */
+.form-actions {
+    display: flex; gap: 12px; justify-content: flex-end; padding-top: 20px;
+    border-top: 1px solid #f3f4f6;
+}
+.btn-submit {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 28px;
+    font-size: 1rem;
+    font-weight: 700;
+    font-family: 'Cairo', sans-serif;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 8px;
+    box-shadow: 0 4px 14px rgba(79,70,229,0.3);
+    transition: all 0.2s;
+}
+.btn-submit:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(79,70,229,0.4); }
+.btn-cancel { background: #f3f4f6; color: #374151; border: none; border-radius: 10px; padding: 12px 24px; font-size: 0.95rem; font-weight: 600; font-family: 'Cairo', sans-serif; cursor: pointer; transition: all 0.2s; }
+.btn-cancel:hover { background: #e5e7eb; }
+
+@media (max-width: 700px) {
+    .form-grid-2 { grid-template-columns: 1fr; }
+    .form-body { padding: 20px; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-card">
+    <div class="form-header">
+        <div>
+            <h2><i class="fa-solid fa-file-invoice" style="margin-left:10px;"></i> إصدار فاتورة إلكترونية</h2>
+            <p style="margin:6px 0 0;opacity:0.8;font-size:0.88rem;">متوافقة مع متطلبات ZATCA — المرحلة الأولى</p>
+        </div>
+        <div class="invoice-num-badge">{{ draft_number }}</div>
+    </div>
+
+    <div class="form-body">
+        <!-- قسم معلومات الفاتورة -->
+        <div class="form-section-title">معلومات الفاتورة</div>
+        <div class="form-grid-2">
+            <div class="form-group">
+                <label><i class="fa-solid fa-hashtag" style="margin-left:5px;color:#4f46e5;"></i> رقم الفاتورة</label>
+                <input type="text" id="invoice_number" value="{{ draft_number }}" readonly style="background:#f8fafc;">
+            </div>
+            <div class="form-group">
+                <label><i class="fa-solid fa-calendar" style="margin-left:5px;color:#4f46e5;"></i> تاريخ الاستحقاق</label>
+                <input type="date" id="due_date">
+            </div>
+            <div class="form-group">
+                <label><i class="fa-solid fa-user" style="margin-left:5px;color:#4f46e5;"></i> الموكل</label>
+                <select id="client_id">
+                    <option value="">-- اختر موكلاً (اختياري) --</option>
+                    {% for c in clients %}
+                    <option value="{{ c.id }}">{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label><i class="fa-solid fa-gavel" style="margin-left:5px;color:#4f46e5;"></i> القضية المرتبطة</label>
+                <select id="case_id">
+                    <option value="">-- اختر قضية (اختياري) --</option>
+                    {% for case in cases %}
+                    <option value="{{ case.id }}">{{ case.case_number }} - {{ case.title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <!-- بنود الفاتورة -->
+        <div class="items-section">
+            <div class="form-section-title">بنود الفاتورة <span id="items-count" style="font-size:0.75rem;font-weight:600;color:#4f46e5;"></span></div>
+            <div class="items-table-wrap">
+                <table class="items-table">
+                    <thead>
+                        <tr>
+                            <th style="width:40%">الوصف / الخدمة</th>
+                            <th style="width:10%">الكمية</th>
+                            <th style="width:18%">سعر الوحدة</th>
+                            <th style="width:12%">ضريبة %</th>
+                            <th style="width:15%">الإجمالي</th>
+                            <th style="width:5%"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="items-tbody">
+                        <!-- Rows added by JS -->
+                    </tbody>
+                </table>
+            </div>
+            <button type="button" class="btn-add-row" onclick="addRow()">
+                <i class="fa-solid fa-plus"></i> إضافة بند
+            </button>
+        </div>
+
+        <!-- ملخص المبالغ -->
+        <div class="totals-box">
+            <div class="totals-row">
+                <span class="label">المجموع الجزئي:</span>
+                <span class="value" id="total-subtotal">0.00 ر.س</span>
+            </div>
+            <div class="totals-row">
+                <span class="label">ضريبة القيمة المضافة (15%):</span>
+                <span class="value" id="total-tax">0.00 ر.س</span>
+            </div>
+            <div class="totals-row grand">
+                <span>الإجمالي الكلي:</span>
+                <span class="value" id="total-grand">0.00 ر.س</span>
+            </div>
+        </div>
+
+        <!-- ملاحظات -->
+        <div class="form-group" style="margin-bottom:24px;">
+            <label><i class="fa-solid fa-note-sticky" style="margin-left:5px;color:#4f46e5;"></i> ملاحظات (اختياري)</label>
+            <textarea id="notes" rows="3" placeholder="أي تفاصيل إضافية..."></textarea>
+        </div>
+
+        <!-- أزرار -->
+        <div class="form-actions">
+            <button type="button" class="btn-cancel" onclick="window.location='/accounting/invoices'">
+                <i class="fa-solid fa-arrow-right"></i> إلغاء
+            </button>
+            <button type="button" class="btn-submit" id="submit-btn" onclick="submitInvoice()">
+                <i class="fa-solid fa-paper-plane"></i> إصدار الفاتورة
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let rowCount = 0;
+
+function addRow() {
+    rowCount++;
+    const tbody = document.getElementById('items-tbody');
+    const tr = document.createElement('tr');
+    tr.id = `row-${rowCount}`;
+    tr.innerHTML = `
+        <td><input type="text" placeholder="وصف الخدمة القانونية..." oninput="recalc()" class="desc-input"></td>
+        <td><input type="number" value="1" min="1" step="0.01" oninput="recalc()" class="qty-input" style="text-align:center;"></td>
+        <td><input type="number" value="0" min="0" step="0.01" oninput="recalc()" class="price-input" style="text-align:center;"></td>
+        <td><input type="number" value="15" min="0" max="100" step="0.01" oninput="recalc()" class="tax-input" style="text-align:center;"></td>
+        <td style="text-align:center;"><strong class="line-total" style="color:#4f46e5;">0.00</strong></td>
+        <td><button type="button" class="btn-del-row" onclick="removeRow(${rowCount})"><i class="fa-solid fa-trash-can"></i></button></td>
+    `;
+    tbody.appendChild(tr);
+    recalc();
+    updateCount();
+}
+
+function removeRow(id) {
+    const row = document.getElementById(`row-${id}`);
+    if (row) row.remove();
+    recalc();
+    updateCount();
+}
+
+function recalc() {
+    let subtotal = 0, taxTotal = 0;
+    const rows = document.querySelectorAll('#items-tbody tr');
+    rows.forEach(row => {
+        const qty = parseFloat(row.querySelector('.qty-input')?.value || 0);
+        const price = parseFloat(row.querySelector('.price-input')?.value || 0);
+        const taxRate = parseFloat(row.querySelector('.tax-input')?.value || 0);
+        const lineSub = qty * price;
+        const lineTax = lineSub * (taxRate / 100);
+        const lineTotal = lineSub + lineTax;
+        subtotal += lineSub;
+        taxTotal += lineTax;
+        const ltEl = row.querySelector('.line-total');
+        if (ltEl) ltEl.textContent = lineTotal.toFixed(2);
+    });
+    const grand = subtotal + taxTotal;
+    document.getElementById('total-subtotal').textContent = subtotal.toFixed(2) + ' ر.س';
+    document.getElementById('total-tax').textContent = taxTotal.toFixed(2) + ' ر.س';
+    document.getElementById('total-grand').textContent = grand.toFixed(2) + ' ر.س';
+}
+
+function updateCount() {
+    const c = document.querySelectorAll('#items-tbody tr').length;
+    document.getElementById('items-count').textContent = `(${c} بند)`;
+}
+
+async function submitInvoice() {
+    const rows = document.querySelectorAll('#items-tbody tr');
+    if (rows.length === 0) {
+        alert('⚠️ يرجى إضافة بند واحد على الأقل للفاتورة.');
+        return;
+    }
+
+    const items = [];
+    let valid = true;
+    rows.forEach(row => {
+        const desc = row.querySelector('.desc-input')?.value?.trim();
+        const qty = parseFloat(row.querySelector('.qty-input')?.value || 0);
+        const price = parseFloat(row.querySelector('.price-input')?.value || 0);
+        const taxRate = parseFloat(row.querySelector('.tax-input')?.value || 15);
+        if (!desc || price <= 0) { valid = false; }
+        items.push({ description: desc, quantity: qty, unit_price: price, tax_rate: taxRate });
+    });
+
+    if (!valid) {
+        alert('⚠️ يرجى ملء وصف وسعر لكل البنود.');
+        return;
+    }
+
+    const payload = {
+        invoice_number: document.getElementById('invoice_number').value,
+        client_id: document.getElementById('client_id').value || null,
+        case_id: document.getElementById('case_id').value || null,
+        due_date: document.getElementById('due_date').value || null,
+        notes: document.getElementById('notes').value,
+        items: items
+    };
+
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الإصدار...';
+
+    try {
+        const res = await fetch('/accounting/api/invoices', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.ok) {
+            // Redirect to the PDF view
+            window.location.href = `/accounting/invoices/${data.uuid}/pdf`;
+        } else {
+            alert('❌ ' + (data.message || 'حدث خطأ ما'));
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> إصدار الفاتورة';
+        }
+    } catch (e) {
+        alert('❌ خطأ في الاتصال بالخادم.');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> إصدار الفاتورة';
+    }
+}
+
+// Add first row on load
+addRow();
+</script>
+{% endblock %}

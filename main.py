@@ -3298,9 +3298,17 @@ try:
 except ImportError as e:
     print(f"[RAG] تحذير: تعذر تحميل RAG Engine ({e}). سيعمل النظام بدون ميزة تحليل المستندات.")
 
+# لوحة الكانبان (Kanban Boards)
+from routers import kanban as kanban_router
+app.include_router(kanban_router.router)
+
 # محلل العقود الذكي
 from routers import contract_analyzer as contract_analyzer_router
 app.include_router(contract_analyzer_router.router)
+
+# نظام الفوترة الإلكترونية والمحاسبة (ZATCA)
+from routers import accounting as accounting_router
+app.include_router(accounting_router.router)
 
 # ----------------------------------------------------------------------------
 

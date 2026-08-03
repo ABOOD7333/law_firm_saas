@@ -60,3 +60,15 @@ build/
 # --- Local Runtime / Data ---
 tessdata/
 rag_engine/chroma_db/
+
+# --- ملفات اختبار مؤقتة (تحتوي مفاتيح) ---
+scratch/
+
+# --- ملفات قاعدة البيانات المؤقتة ---
+*.db-shm
+*.db-wal
+
+# --- ملفات PDF مؤقتة ---
+120.pdf
+Detailed_Platform_Review_Report.pdf
+response_output.txt
