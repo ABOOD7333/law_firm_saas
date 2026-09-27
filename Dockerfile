@@ -39,8 +39,8 @@ COPY --chown=lawsaas:lawsaas . .
 # إنشاء جميع مجلدات الرفع مع صلاحيات صحيحة
 RUN mkdir -p static/uploads/documents static/css static/js static/img \
         private_uploads/documents && \
-    chown -R lawsaas:lawsaas static/ private_uploads/ && \
-    chmod -R 755 static/ private_uploads/
+    chown -R lawsaas:lawsaas /app && \
+    chmod -R 777 /app
 
 # التبديل للمستخدم غير الجذر
 USER lawsaas
