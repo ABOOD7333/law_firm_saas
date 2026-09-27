@@ -135,5 +135,14 @@ def init_db():
     except Exception:
         pass
         
+    try:
+        from seed_real_offices import seed_real_offices
+        db_session = SessionLocal()
+        seed_real_offices(db_session)
+        db_session.close()
+    except Exception as e:
+        print(f"[Database Seed Error] {e}")
+
     print(f"[Database] Connected to: {SQLALCHEMY_DATABASE_URL.split('?')[0]}")
     print(f"[Database] Tables initialized successfully.")
+
