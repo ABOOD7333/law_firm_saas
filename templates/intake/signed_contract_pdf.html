@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>عقد تمثيل وتوكيل قانوني إلكتروني | {{ agreement.agreement_number }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: #f1f5f9;
+            padding: 30px 16px;
+            color: #0f172a;
+        }
+        .page {
+            background: white; max-width: 800px; margin: 0 auto; padding: 48px;
+            border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border: 1px solid #e2e8f0;
+        }
+        @media print {
+            body { background: white; padding: 0; }
+            .page { border: none; box-shadow: none; padding: 20px; }
+            .no-print { display: none !important; }
+        }
+        .header {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            border-bottom: 2px solid #1e1b4b; padding-bottom: 24px; margin-bottom: 30px;
+        }
+        .firm-name { font-size: 1.4rem; font-weight: 900; color: #1e1b4b; margin-bottom: 4px; }
+        .doc-title { font-size: 1.1rem; font-weight: 800; color: #4338ca; }
+        .doc-meta { text-align: left; font-size: 0.85rem; color: #64748b; }
+        
+        .section { margin-bottom: 24px; }
+        .sec-title { font-size: 1rem; font-weight: 800; color: #1e1b4b; margin-bottom: 8px; border-right: 4px solid #4f46e5; padding-right: 8px; }
+        .sec-content { font-size: 0.95rem; line-height: 1.8; color: #334155; text-align: justify; }
+
+        .signature-section {
+            margin-top: 40px; border-top: 1px dashed #cbd5e1; padding-top: 24px;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 30px;
+        }
+        .sig-box {
+            border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; text-align: center; background: #fafafa;
+        }
+        .sig-title { font-size: 0.9rem; font-weight: 800; color: #475569; margin-bottom: 12px; }
+        .sig-img { max-height: 80px; max-width: 100%; object-fit: contain; margin-bottom: 8px; }
+        
+        .stamp-badge {
+            display: inline-block; border: 2px solid #10b981; color: #047857; border-radius: 8px;
+            padding: 4px 12px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase;
+        }
+
+        .action-bar {
+            max-width: 800px; margin: 0 auto 20px auto; display: flex; justify-content: space-between; align-items: center;
+        }
+        .btn-print {
+            background: #1e1b4b; color: white; border: none; padding: 10px 20px; border-radius: 10px;
+            font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="action-bar no-print">
+    <button onclick="window.print()" class="btn-print"><i class="fa-solid fa-print"></i> طباعة أو حفظ كـ PDF</button>
+    <span style="font-size:0.9rem; color:#64748b;"><i class="fa-solid fa-shield-check" style="color:#10b981;"></i> وثيقة قانونية معتمدة رقمياً</span>
+</div>
+
+<div class="page">
+    <div class="header">
+        <div>
+            <div class="firm-name">{{ office.name if office else 'المكتب القانوني' }}</div>
+            <div class="doc-title">{{ agreement.agreement_title }}</div>
+        </div>
+        <div class="doc-meta">
+            <div><strong>رقم الوثيقة:</strong> {{ agreement.agreement_number }}</div>
+            <div><strong>تاريخ التوقيع:</strong> {{ agreement.signed_at[:10] if agreement.signed_at else '—' }}</div>
+            <div><strong>كود التحقق:</strong> <span style="font-family:monospace; color:#4f46e5; font-weight:bold;">{{ agreement.verification_hash }}</span></div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="sec-title">أطراف الاتفاقية</div>
+        <div class="sec-content">
+            <p><strong>الطرف الأول (المحامي / المكتب):</strong> {{ office.name if office else 'المكتب القانوني المعتمد' }}</p>
+            <p><strong>الطرف الثاني (الموكل):</strong> {{ sub.full_name }} — رقم الهاتف: {{ sub.phone }} {% if sub.national_id %}— الهوية الوطنية: {{ sub.national_id }}{% endif %}</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="sec-title">موضوع التوكيل والتمثيل</div>
+        <div class="sec-content">
+            {{ agreement.agreement_body }}
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="sec-title">الإقرار والتوقيع الإلكتروني المعتمد</div>
+        <div class="sec-content">
+            يقر الطرف الثاني بأنه قرأ بنود هذه الاتفاقية ووافق عليها ووقع عليها إلكترونياً بكامل أهليته المعتبرة شرعاً وقانوناً.
+        </div>
+    </div>
+
+    <div class="signature-section">
+        <div class="sig-box">
+            <div class="sig-title">توقيع الطرف الأول (المكتب)</div>
+            <div style="height:70px; display:flex; align-items:center; justify-content:center; color:#64748b; font-weight:bold;">
+                <i class="fa-solid fa-stamp" style="font-size:2rem; color:#4f46e5;"></i>
+            </div>
+            <div style="font-size:0.8rem; color:#64748b;">معتمد إلكترونياً عبر المنصة</div>
+        </div>
+
+        <div class="sig-box">
+            <div class="sig-title">توقيع الطرف الثاني (الموكل)</div>
+            {% if agreement.signature_base64 %}
+            <img src="{{ agreement.signature_base64 }}" alt="Signature" class="sig-img">
+            {% else %}
+            <div style="height:70px; display:flex; align-items:center; justify-content:center; color:#94a3b8;">تم التوقيع الإلكتروني</div>
+            {% endif %}
+            <div>
+                <span class="stamp-badge"><i class="fa-solid fa-circle-check"></i> موقّع وموثّق رقمياً</span>
+            </div>
+            <div style="font-size:0.75rem; color:#64748b; margin-top:4px;">IP: {{ agreement.signer_ip or '—' }} | الوقت: {{ agreement.signed_at }}</div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

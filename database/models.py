@@ -742,3 +742,75 @@ class ClientPayments(Base):
     
     created_by: Mapped[Optional[int]] = mapped_column(ForeignKey('access_profiles.id', ondelete='SET NULL'), nullable=True)
 
+# ============================================================
+# Smart Client Intake & E-Signature
+# ============================================================
+class ClientIntakeForms(Base):
+    __tablename__ = 'client_intake_forms'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    office_id: Mapped[int] = mapped_column(ForeignKey('law_offices.id', ondelete='CASCADE'), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    form_token: Mapped[str] = mapped_column(Text, nullable=False, unique=True, index=True)
+    description: Mapped[Optional[str]] = mapped_column(Text)
+    is_active: Mapped[int] = mapped_column(Integer, CheckConstraint('is_active IN (0, 1)'), nullable=False, server_default=text('1'))
+    require_signature: Mapped[int] = mapped_column(Integer, CheckConstraint('require_signature IN (0, 1)'), nullable=False, server_default=text('1'))
+    default_retainer_text: Mapped[Optional[str]] = mapped_column(Text)
+    created_at: Mapped[str] = mapped_column(Text, server_default=text('CURRENT_TIMESTAMP'))
+    created_by: Mapped[Optional[int]] = mapped_column(ForeignKey('access_profiles.id', ondelete='SET NULL'), nullable=True)
+
+class IntakeSubmissions(Base):
+    __tablename__ = 'intake_submissions'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    form_id: Mapped[int] = mapped_column(ForeignKey('client_intake_forms.id', ondelete='CASCADE'), nullable=False, index=True)
+    office_id: Mapped[int] = mapped_column(ForeignKey('law_offices.id', ondelete='CASCADE'), nullable=False, index=True)
+    submission_token: Mapped[str] = mapped_column(Text, nullable=False, unique=True, index=True)
+    
+    # Prospective Client Info
+    full_name: Mapped[str] = mapped_column(Text, nullable=False)
+    phone: Mapped[str] = mapped_column(Text, nullable=False)
+    email: Mapped[Optional[str]] = mapped_column(Text)
+    national_id: Mapped[Optional[str]] = mapped_column(Text)
+    
+    # Case & Adverse Party Details
+    case_type: Mapped[Optional[str]] = mapped_column(Text)
+    case_summary: Mapped[str] = mapped_column(Text, nullable=False)
+    opposing_party_name: Mapped[Optional[str]] = mapped_column(Text)
+    opposing_party_id: Mapped[Optional[str]] = mapped_column(Text)
+    
+    # Conflict Check Results
+    conflict_status: Mapped[str] = mapped_column(Text, server_default=text("'safe'")) # 'safe', 'conflict_detected', 'reviewed'
+    conflict_notes: Mapped[Optional[str]] = mapped_column(Text)
+    
+    # Workflow Status
+    status: Mapped[str] = mapped_column(Text, server_default=text("'pending'")) # 'pending', 'approved', 'signed', 'rejected', 'converted'
+    converted_client_id: Mapped[Optional[int]] = mapped_column(ForeignKey('law_clients.id', ondelete='SET NULL'), nullable=True)
+    converted_case_id: Mapped[Optional[int]] = mapped_column(ForeignKey('law_cases.id', ondelete='SET NULL'), nullable=True)
+    
+    created_at: Mapped[str] = mapped_column(Text, server_default=text('CURRENT_TIMESTAMP'))
+    updated_at: Mapped[Optional[str]] = mapped_column(Text)
+
+class RetainerAgreements(Base):
+    __tablename__ = 'retainer_agreements'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    submission_id: Mapped[int] = mapped_column(ForeignKey('intake_submissions.id', ondelete='CASCADE'), nullable=False, index=True)
+    office_id: Mapped[int] = mapped_column(ForeignKey('law_offices.id', ondelete='CASCADE'), nullable=False, index=True)
+    agreement_number: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+    agreement_title: Mapped[str] = mapped_column(Text, nullable=False)
+    agreement_body: Mapped[str] = mapped_column(Text, nullable=False)
+    fee_amount: Mapped[float] = mapped_column(REAL, server_default=text('0.0'))
+    
+    # E-Signature Details
+    signature_base64: Mapped[Optional[str]] = mapped_column(Text) # PNG Base64 Signature
+    signer_name: Mapped[Optional[str]] = mapped_column(Text)
+    signer_ip: Mapped[Optional[str]] = mapped_column(Text)
+    signer_user_agent: Mapped[Optional[str]] = mapped_column(Text)
+    is_signed: Mapped[int] = mapped_column(Integer, CheckConstraint('is_signed IN (0, 1)'), nullable=False, server_default=text('0'))
+    signed_at: Mapped[Optional[str]] = mapped_column(Text)
+    verification_hash: Mapped[Optional[str]] = mapped_column(Text)
+    
+    created_at: Mapped[str] = mapped_column(Text, server_default=text('CURRENT_TIMESTAMP'))
+
+

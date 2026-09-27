@@ -25,8 +25,7 @@ def write_audit(
     session_uuid: str | None = None,
 ) -> None:
     """
-    يكتب سجل تدقيق واحد في الجدول law_audit_log.
-    لا يُوقف التطبيق عند الفشل — يسجل الخطأ فقط.
+    يكتب سجل تدقيق واحد في الجدول law_audit_logسجل الخطأ فقط.
     """
     try:
         import json

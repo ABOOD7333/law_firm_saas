@@ -211,6 +211,9 @@
                 <li class="nav-item {% if active_page == 'clients' %}active{% endif %}">
                     <a href="/clients"><i class="fa-solid fa-users"></i> الموكلون</a>
                 </li>
+                <li class="nav-item {% if active_page == 'intake' %}active{% endif %}" style="background: rgba(16,185,129,0.08); border-right: 3px solid #10b981;">
+                    <a href="/intake" style="color: #059669; font-weight: bold;"><i class="fa-solid fa-file-signature"></i> استقطاب وتوقيع العقود ✍️</a>
+                </li>
                 {% endif %}
                 
                 {% if is_admin or is_lawyer or is_sec %}

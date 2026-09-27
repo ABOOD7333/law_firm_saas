@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ form.title }} | {{ office.name if office else 'المنصة القانونية' }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            min-height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+            padding: 24px 16px;
+            color: #1e293b;
+        }
+        .form-card {
+            background: #ffffff;
+            border-radius: 24px;
+            max-width: 650px;
+            width: 100%;
+            padding: 36px 32px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+        }
+        .brand-header {
+            text-align: center;
+            border-bottom: 2px dashed #e2e8f0;
+            padding-bottom: 20px;
+            margin-bottom: 24px;
+        }
+        .brand-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: #eef2ff; color: #4338ca;
+            padding: 6px 16px; border-radius: 9999px; font-weight: 700; font-size: 0.85rem; margin-bottom: 12px;
+        }
+        .form-title { font-size: 1.4rem; font-weight: 900; color: #0f172a; margin-bottom: 6px; }
+        .form-desc { font-size: 0.9rem; color: #64748b; line-height: 1.5; }
+        
+        .section-label {
+            font-size: 0.95rem; font-weight: 800; color: #334155; margin-bottom: 12px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .grid-2 {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px;
+        }
+        @media (max-width: 580px) {
+            .grid-2 { grid-template-columns: 1fr; }
+            .form-card { padding: 24px 18px; }
+        }
+        .form-group { margin-bottom: 16px; }
+        .form-group label {
+            display: block; font-size: 0.85rem; font-weight: 700; color: #475569; margin-bottom: 6px;
+        }
+        .form-control {
+            width: 100%; padding: 12px 14px; border: 1.5px solid #cbd5e1; border-radius: 12px;
+            font-family: inherit; font-size: 0.95rem; transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .form-control:focus {
+            outline: none; border-color: #4f46e5; box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+        }
+        .adversary-box {
+            background: #fff1f2; border: 1px solid #fecdd3; border-radius: 16px; padding: 16px; margin-bottom: 20px;
+        }
+        .adv-title { font-size: 0.85rem; font-weight: 800; color: #9f1239; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+
+        .btn-submit {
+            width: 100%; padding: 14px; border-radius: 12px; background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
+            color: white; font-weight: 800; font-size: 1.05rem; border: none; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3); transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 15px 20px -3px rgba(79, 70, 229, 0.4); }
+    </style>
+</head>
+<body>
+
+<div class="form-card">
+    <div class="brand-header">
+        <div class="brand-badge">
+            <i class="fa-solid fa-scale-balanced"></i> {{ office.name if office else 'المنصة القانونية' }}
+        </div>
+        <h1 class="form-title">{{ form.title }}</h1>
+        {% if form.description %}
+        <p class="form-desc">{{ form.description }}</p>
+        {% endif %}
+    </div>
+
+    <form action="/form/{{ form.form_token }}/submit" method="POST">
+        <!-- معلومات العميل المتقدم -->
+        <div class="section-label"><i class="fa-solid fa-user-check" style="color:#4f46e5;"></i> البيانات الشخصية للموكل</div>
+        <div class="grid-2">
+            <div class="form-group">
+                <label>الاسم الثلاثي أو الرباعي <span style="color:#ef4444;">*</span></label>
+                <input type="text" name="full_name" class="form-control" required placeholder="أدخل اسمك كاملاً">
+            </div>
+            <div class="form-group">
+                <label>رقم الهاتف / الواتساب <span style="color:#ef4444;">*</span></label>
+                <input type="tel" name="phone" class="form-control" required placeholder="05XXXXXXXX / 77XXXXXXX">
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <div class="form-group">
+                <label>البريد الإلكتروني</label>
+                <input type="email" name="email" class="form-control" placeholder="name@example.com">
+            </div>
+            <div class="form-group">
+                <label>رقم الهوية الوطنية / الإقامة</label>
+                <input type="text" name="national_id" class="form-control" placeholder="رقم الهوية أو السجل">
+            </div>
+        </div>
+
+        <!-- تفاصيل القضية والخصم -->
+        <div class="section-label" style="margin-top:10px;"><i class="fa-solid fa-gavel" style="color:#4f46e5;"></i> تفاصيل القضية والأطراف</div>
+        <div class="form-group">
+            <label>نوع القضية</label>
+            <select name="case_type" class="form-control">
+                <option value="قضايا تجارية وشركات">قضايا تجارية وشركات</option>
+                <option value="قضايا عقارية وأراضي">قضايا عقارية وأراضي</option>
+                <option value="قضايا عمالية ومطالبات مالية">قضايا عمالية ومطالبات مالية</option>
+                <option value="أحوال شخصية وتركات">أحوال شخصية وتركات</option>
+                <option value="قضايا مدنية عامة">قضايا مدنية عامة</option>
+                <option value="استشارة قانونية وصياغة عقود">استشارة قانونية وصياغة عقود</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>ملخص النزاع أو الاستشارة القانونية <span style="color:#ef4444;">*</span></label>
+            <textarea name="case_summary" class="form-control" rows="4" required placeholder="اشرح تفاصيل موضوعك باختصار، وما هي مطالبك المحددة..."></textarea>
+        </div>
+
+        <!-- بيانات الخصم لفحص تعارض المصالح -->
+        <div class="adversary-box">
+            <div class="adv-title"><i class="fa-solid fa-shield-halved"></i> بيانات الخصم أو الطرف الآخر (لفحص تعارض المصالح)</div>
+            <div class="grid-2" style="margin-bottom:0;">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label>اسم الخصم / الشركة المدعى عليها</label>
+                    <input type="text" name="opposing_party_name" class="form-control" placeholder="اسم الخصم أو الطرف الثاني">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label>رقم هوية / سجل الخصم (إن وجد)</label>
+                    <input type="text" name="opposing_party_id" class="form-control" placeholder="رقم الهوية أو السجل التجاري">
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn-submit">
+            <span>متابعة وتوقيع العقد إلكترونياً</span>
+            <i class="fa-solid fa-arrow-left"></i>
+        </button>
+    </form>
+</div>
+
+</body>
+</html>

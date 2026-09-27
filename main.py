@@ -3310,6 +3310,10 @@ app.include_router(contract_analyzer_router.router)
 from routers import accounting as accounting_router
 app.include_router(accounting_router.router)
 
+# استقطاب الموكلين والتوقيع الإلكتروني (Smart Intake & E-Signature)
+from routers import intake as intake_router
+app.include_router(intake_router.router)
+
 # ----------------------------------------------------------------------------
 
 # SaaS Subscription Routes

@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+{% block title %}استقطاب الموكلين والتوقيع الإلكتروني | LawSaaS{% endblock %}
+
+{% block head %}
+<style>
+.intake-header {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;
+}
+.intake-title { margin: 0; font-size: 1.4rem; font-weight: 800; color: #1e1b4b; display: flex; align-items: center; gap: 10px; }
+
+.stats-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;
+}
+.stat-box {
+    background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px;
+    display: flex; align-items: center; gap: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+.stat-icon {
+    width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem;
+}
+.si-purple { background: #f3e8ff; color: #7e22ce; }
+.si-blue { background: #dbeafe; color: #1d4ed8; }
+.si-green { background: #dcfce7; color: #15803d; }
+.si-red { background: #fee2e2; color: #b91c1c; }
+
+.stat-val { font-size: 1.5rem; font-weight: 800; color: #0f172a; line-height: 1; }
+.stat-lbl { font-size: 0.85rem; color: #64748b; margin-top: 4px; font-weight: 600; }
+
+.section-card {
+    background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; margin-bottom: 24px;
+}
+.sec-head {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;
+}
+.sec-title { font-size: 1.1rem; font-weight: 800; color: #1e293b; margin: 0; }
+
+.link-box {
+    background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 12px; padding: 14px;
+    display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px;
+}
+.link-url { font-family: monospace; font-size: 0.9rem; color: #4f46e5; word-break: break-all; font-weight: bold; }
+
+.custom-table {
+    width: 100%; border-collapse: collapse; text-align: right;
+}
+.custom-table th {
+    background: #f8fafc; color: #475569; font-weight: 700; font-size: 0.85rem; padding: 12px 16px; border-bottom: 2px solid #e2e8f0;
+}
+.custom-table td {
+    padding: 14px 16px; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; color: #1e293b;
+}
+
+.badge-tag {
+    font-size: 0.75rem; font-weight: 700; padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 4px;
+}
+.badge-safe { background: #dcfce7; color: #166534; }
+.badge-conflict { background: #fee2e2; color: #991b1b; animation: pulse 2s infinite; }
+.badge-signed { background: #dbeafe; color: #1e40af; }
+.badge-converted { background: #f3e8ff; color: #6b21a8; }
+
+.btn-action {
+    padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; border: none; cursor: pointer;
+    text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-convert { background: #10b981; color: white; }
+.btn-view { background: #f1f5f9; color: #475569; }
+.btn-copy { background: #4f46e5; color: white; border: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="intake-header">
+    <h2 class="intake-title"><i class="fa-solid fa-file-signature" style="color:#4f46e5;"></i> استقطاب الموكلين والتوقيع الإلكتروني</h2>
+    <div>
+        <button class="btn-primary" onclick="document.getElementById('new-form-modal').style.display='flex'">
+            <i class="fa-solid fa-plus"></i> إنشاء رابط استقطاب جديد
+        </button>
+    </div>
+</div>
+
+<!-- إحصائيات سريعة -->
+<div class="stats-grid">
+    <div class="stat-box">
+        <div class="stat-icon si-purple"><i class="fa-solid fa-inbox"></i></div>
+        <div>
+            <div class="stat-val">{{ total_submissions }}</div>
+            <div class="stat-lbl">إجمالي الطلبات الواردة</div>
+        </div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-icon si-blue"><i class="fa-solid fa-signature"></i></div>
+        <div>
+            <div class="stat-val">{{ signed_count }}</div>
+            <div class="stat-lbl">عقود موقعة إلكترونياً</div>
+        </div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-icon si-red"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <div>
+            <div class="stat-val">{{ conflict_count }}</div>
+            <div class="stat-lbl">تنبيهات تعارض مصالح</div>
+        </div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-icon si-green"><i class="fa-solid fa-link"></i></div>
+        <div>
+            <div class="stat-val">{{ forms|length }}</div>
+            <div class="stat-lbl">روابط استقطاب نشطة</div>
+        </div>
+    </div>
+</div>
+
+<!-- روابط الاستقطاب النشطة للمكتب -->
+<div class="section-card">
+    <div class="sec-head">
+        <h3 class="sec-title"><i class="fa-solid fa-share-nodes" style="color:#4f46e5;"></i> روابط الاستقطاب العامة للمكتب (أرسلها للموكل عبر واتساب)</h3>
+    </div>
+    {% for f in forms %}
+    <div class="link-box">
+        <div>
+            <div style="font-weight:800; color:#1e293b; margin-bottom:4px;">{{ f.title }}</div>
+            <div class="link-url" id="link-{{ f.id }}">{{ request.base_url }}form/{{ f.form_token }}</div>
+        </div>
+        <div style="display:flex; gap:8px;">
+            <button class="btn-copy" onclick="copyLink('link-{{ f.id }}')">
+                <i class="fa-regular fa-copy"></i> نسخ الرابط
+            </button>
+            <a href="https://api.whatsapp.com/send?text={{ ('مرحباً بك، يرجى تعبئة بيانات القضية وتوقيع التوكيل عبر الرابط التالي: ' ~ request.base_url ~ 'form/' ~ f.form_token)|urlencode }}" target="_blank" class="btn-action" style="background:#25D366; color:white; padding:8px 14px;">
+                <i class="fa-brands fa-whatsapp"></i> واتساب
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- جدول الطلبات الواردة -->
+<div class="section-card">
+    <div class="sec-head">
+        <h3 class="sec-title"><i class="fa-solid fa-users-viewfinder" style="color:#4f46e5;"></i> طلبات الموكلين والعقود الموقعة</h3>
+    </div>
+
+    {% if submissions %}
+    <div style="overflow-x: auto;">
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    <th>المتقدم (الموكل)</th>
+                    <th>نوع القضية</th>
+                    <th>الخصم المذكور</th>
+                    <th>فحص تعارض المصالح</th>
+                    <th>حالة العقد والتوقيع</th>
+                    <th>تاريخ التقديم</th>
+                    <th>الإجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in submissions %}
+                <tr>
+                    <td>
+                        <div style="font-weight:700;">{{ s.full_name }}</div>
+                        <div style="font-size:0.8rem; color:#64748b;">{{ s.phone }}</div>
+                    </td>
+                    <td><span class="badge-tag" style="background:#f1f5f9; color:#475569;">{{ s.case_type or 'عامة' }}</span></td>
+                    <td>
+                        {% if s.opposing_party_name %}
+                        <span style="color:#b91c1c; font-weight:600;"><i class="fa-solid fa-user-xmark"></i> {{ s.opposing_party_name }}</span>
+                        {% else %}
+                        <span style="color:#9ca3af;">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if s.conflict_status == 'safe' %}
+                        <span class="badge-tag badge-safe"><i class="fa-solid fa-check"></i> آمن (لا يوجد تعارض)</span>
+                        {% elif s.conflict_status == 'conflict_detected' %}
+                        <span class="badge-tag badge-conflict" title="تم رصد خصم أو طرف مسبق"><i class="fa-solid fa-triangle-exclamation"></i> تنبيه تعارض مصالح!</span>
+                        {% else %}
+                        <span class="badge-tag" style="background:#fef3c7; color:#92400e;"><i class="fa-solid fa-eye"></i> قيد المراجعة</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if s.status == 'signed' %}
+                        <span class="badge-tag badge-signed"><i class="fa-solid fa-signature"></i> تم التوقيع إلكترونياً</span>
+                        {% elif s.status == 'converted' %}
+                        <span class="badge-tag badge-converted"><i class="fa-solid fa-folder-check"></i> تم التحويل لقضية رسمية</span>
+                        {% else %}
+                        <span class="badge-tag" style="background:#f1f5f9; color:#64748b;">بانتظار الإجراء</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size:0.8rem; color:#64748b;">{{ s.created_at[:16] }}</td>
+                    <td>
+                        <div style="display:flex; gap:6px;">
+                            {% if s.status != 'converted' %}
+                            <form action="/intake/submission/{{ s.id }}/convert" method="POST" onsubmit="return confirm('هل تريد إنشاء ملف قضية وموكل رسمي في النظام لهذا الطلب؟');">
+                                <button type="submit" class="btn-action btn-convert">
+                                    <i class="fa-solid fa-user-plus"></i> قبول وتحويل لقضية
+                                </button>
+                            </form>
+                            {% else %}
+                            <a href="/cases" class="btn-action btn-view"><i class="fa-solid fa-folder-open"></i> عرض القضية</a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="text-align:center; padding:40px 20px; color:#94a3b8;">
+        <i class="fa-solid fa-envelope-open" style="font-size:2.5rem; margin-bottom:12px; color:#cbd5e1;"></i>
+        <div>لا توجد طلبات واردة حتى الآن. انسخ رابط الاستقطاب في الأعلى وأرسله لعملائك!</div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal إنشاء نموذج جديد -->
+<div id="new-form-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:16px; width:90%; max-width:550px; padding:24px; box-shadow:0 10px 25px rgba(0,0,0,0.2);">
+        <h3 style="margin-top:0; font-weight:800; color:#1e1b4b;">إنشاء رابط استقطاب موكلين جديد</h3>
+        <form action="/intake/create-form" method="POST">
+            <div style="margin-bottom:14px;">
+                <label style="display:block; font-weight:700; margin-bottom:6px; font-size:0.9rem;">عنوان النموذج</label>
+                <input type="text" name="title" required placeholder="مثال: استمارة توكيل قضايا الشركات والعقارات" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:inherit;">
+            </div>
+            <div style="margin-bottom:14px;">
+                <label style="display:block; font-weight:700; margin-bottom:6px; font-size:0.9rem;">وصف توضيحي للموكل</label>
+                <textarea name="description" rows="3" placeholder="ملاحظات أو متطلبات يراها العميل عند فتح الرابط..." style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:inherit;"></textarea>
+            </div>
+            <div style="margin-bottom:18px;">
+                <label style="display:block; font-weight:700; margin-bottom:6px; font-size:0.9rem;">شروط عقد التوكيل (التي سيوقع عليها)</label>
+                <textarea name="retainer_text" rows="3" placeholder="نص التعهد القانوني وشروط التمثيل..." style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:inherit;">أتعهد أنا الموقع أدناه بتوكيل المكتب لمتابعة القضية وفقاً للشروط واللوائح القانونية المعتمدة والأتعاب المتفق عليها.</textarea>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button type="button" onclick="document.getElementById('new-form-modal').style.display='none'" style="padding:8px 16px; border-radius:8px; border:1px solid #cbd5e1; background:white; cursor:pointer;">إلغاء</button>
+                <button type="submit" class="btn-primary">إنشاء وتوليد الرابط</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copyLink(elementId) {
+    const text = document.getElementById(elementId).innerText;
+    navigator.clipboard.writeText(text).then(() => {
+        alert('تم نسخ الرابط بنجاح! يمكنك الآن مشاركته مع موكليك.');
+    });
+}
+</script>
+{% endblock %}
