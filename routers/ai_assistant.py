@@ -73,13 +73,16 @@ def _handle_conversational_query(question: str, user_name: str = ""):
     q = re.sub(r"[؟\?!،,\.\-\_]", " ", q)
     q = " ".join(q.split())
 
-    # 0. التحية والترحيب
+    # 0. التحية والترحيب الخالص فقط
     greeting_keywords = [
-        "مرحبا", "مرحبتين", "اهلا", "اهلين", "السلام عليكم", "سلام", "صباح الخير", "مساء الخير", "الو"
+        "مرحبا", "مرحبتين", "اهلا", "اهلين", "السلام عليكم", "سلام", "صباح الخير", "مساء الخير", "الو", "هاي", "هلو"
     ]
-    if any(kw in q for kw in greeting_keywords) and len(q.split()) <= 4:
-        name = user_name if user_name else "عزيزي"
-        return f"أهلاً وسهلاً بك يا {name} في منصة LawSaaS! 👋 كيف يمكنني مساعدتك القانونية اليوم؟"
+    if q in greeting_keywords or (len(q.split()) <= 2 and any(q.startswith(kw) for kw in greeting_keywords)):
+        # تأكد أنه لا يحتوي على كلمات قانونية
+        legal_leak = ["قانون", "مادة", "عقوب", "قضية", "جلسة", "موكل", "حكم", "محكمة", "ابحث", "اعطني"]
+        if not any(lk in q for lk in legal_leak):
+            name = user_name if user_name else "عزيزي"
+            return f"أهلاً وسهلاً بك يا {name} في منصة LawSaaS! 👋 كيف يمكنني مساعدتك القانونية اليوم؟"
 
     # 1. كيف حالك
     wellness_keywords = [
