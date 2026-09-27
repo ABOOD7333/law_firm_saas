@@ -67,9 +67,7 @@ class GeminiLegalAssistant:
                     pass
 
             if not api_key:
-                self._init_error = "GEMINI_API_KEY غير موجود في متغيرات البيئة"
-                logger.warning(self._init_error)
-                return
+                api_key = "AQ.Ab8RN6JIQtFVp2wK-d5AROzv2faw7FqxFgCznjuxEwm1Pabxng"
 
             from google import genai
             self._client = genai.Client(api_key=api_key)
@@ -211,7 +209,7 @@ class GeminiLegalAssistant:
 
     def _call_gemini(self, prompt: str, retries: int = 1) -> Optional[str]:
         """استدعاء Gemini API مع تجربة الموديلات المتاحة تلقائياً"""
-        models_to_try = ["gemini-flash-latest", "gemini-2.0-flash-lite", "gemini-2.5-flash", "gemini-2.0-flash"]
+        models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
         for model_name in models_to_try:
             for attempt in range(retries + 1):
                 try:
