@@ -690,8 +690,15 @@
                         v2.0</span></div>
                 <div style="font-size: 12px; color: #64748b;">مدعوم بالذكاء الاصطناعي • متصل ومستعد</div>
             </div>
+            <!-- شارة رصيد النقاط اليومية -->
+            <div id="aiQuotaBadge" style="margin-right: auto; margin-left: 12px; display: flex; align-items: center; gap: 8px;">
+                <span id="quotaPill" style="font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 20px; background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; display: flex; align-items: center; gap: 6px;">
+                    <span id="quotaIcon">💎</span>
+                    <span>الرصيد الذكي اليومي: <strong id="quotaRemaining">--</strong> / <span id="quotaLimit">--</span></span>
+                </span>
+            </div>
             <button onclick="clearChat()"
-                style="margin-right: auto; background: none; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 12px; font-size: 12px; cursor: pointer; color: #64748b; font-family: 'Cairo', sans-serif;">
+                style="background: none; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 12px; font-size: 12px; cursor: pointer; color: #64748b; font-family: 'Cairo', sans-serif;">
                 🗑️ مسح المحادثة
             </button>
         </div>
@@ -840,6 +847,11 @@
             removeTypingIndicator(typingId);
 
             if (data.success) {
+                // تحديث عداد النقاط
+                if (data.remaining_points !== undefined && data.daily_limit !== undefined) {
+                    updateQuotaBadge(data.remaining_points, data.daily_limit, data.used_model);
+                }
+
                 if (data.doc_type && data.form_fields) {
                     renderInteractiveForm(data.doc_type, data.form_fields, data.answer);
                 } else {
@@ -1126,6 +1138,48 @@
     function escapeHtml(text) {
         return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
     }
+
+    // ===== نظام النقاط اليومية =====
+    async function fetchQuota() {
+        try {
+            const res = await fetch('/api/ai/quota');
+            const data = await res.json();
+            if (data.success) {
+                updateQuotaBadge(data.remaining_points, data.daily_limit, data.has_advanced_ai ? 'gemini' : 'local');
+            }
+        } catch (e) {
+            console.error('Failed to fetch AI quota:', e);
+        }
+    }
+
+    function updateQuotaBadge(remaining, limit, usedModel) {
+        const remEl = document.getElementById('quotaRemaining');
+        const limEl = document.getElementById('quotaLimit');
+        const iconEl = document.getElementById('quotaIcon');
+        const pillEl = document.getElementById('quotaPill');
+
+        if (!remEl || !limEl || !pillEl) return;
+
+        remEl.textContent = remaining;
+        limEl.textContent = limit;
+
+        if (remaining <= 0 || usedModel === 'local') {
+            pillEl.style.background = '#fef2f2';
+            pillEl.style.color = '#b91c1c';
+            pillEl.style.borderColor = '#fecaca';
+            if (iconEl) iconEl.textContent = '⚡';
+            pillEl.title = 'تم استهلاك رصيد الذكاء المتقدم لليوم. يعمل المساعد حالياً بالمحرك القانوني الداخلي.';
+        } else {
+            pillEl.style.background = '#eef2ff';
+            pillEl.style.color = '#4338ca';
+            pillEl.style.borderColor = '#c7d2fe';
+            if (iconEl) iconEl.textContent = '💎';
+            pillEl.title = 'الرصيد اليومي المتاح لاستعلامات الذكاء الاصطناعي المتقدمة.';
+        }
+    }
+
+    // تحميل الرصيد عند فتح الصفحة
+    document.addEventListener('DOMContentLoaded', fetchQuota);
 </script>
 
 {% endblock %}

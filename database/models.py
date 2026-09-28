@@ -631,6 +631,23 @@ class AIKnowledge(Base):
     updated_at: Mapped[Optional[str]] = mapped_column(Text)
     is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
 
+
+class AIUserQuota(Base):
+    __tablename__ = 'ai_user_quotas'
+    __table_args__ = (
+        UniqueConstraint('user_id', 'usage_date', name='uq_user_ai_date'),
+    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    office_id: Mapped[int] = mapped_column(ForeignKey('law_offices.id', ondelete='CASCADE'), nullable=False, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey('access_profiles.id', ondelete='CASCADE'), nullable=False, index=True)
+    usage_date: Mapped[str] = mapped_column(Text, nullable=False, index=True)  # 'YYYY-MM-DD'
+    gemini_used: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text('0'))
+    local_used: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text('0'))
+    daily_limit: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text('50'))
+    created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+    updated_at: Mapped[Optional[str]] = mapped_column(Text)
+
+
 # ===================================================
 # ÌÏÇæá ãÍÑß ÇáãÚÑÝÉ RAG (ÇáãÑÍáÉ ÇáËÇäíÉ)
 # ===================================================

@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from database.database import get_db
-from database.models import AIChatHistory, AIKnowledge, AccessProfiles
+from database.models import AIChatHistory, AIKnowledge, AIUserQuota, AccessProfiles
 from dependencies import get_current_user
 
 router = APIRouter(prefix="/api/ai", tags=["AI Assistant"])
@@ -258,25 +258,47 @@ async def ai_chat(request: Request, db: Session = Depends(get_db), current_user:
         full_context = "\n\n".join(filter(None, [user_context, local_context]))
 
         # ──────────────────────────────────────
+        # 4.5. فحص رصيد النقاط اليومي للمستخدم
+        # ──────────────────────────────────────
+        quota, today_str = _get_user_quota_info(db, office_id, user_id, current_user)
+        has_advanced_points = quota.gemini_used < quota.daily_limit
+        used_model = "gemini"
+
+        # ──────────────────────────────────────
         # 5. جلب سجل المحادثة من قاعدة البيانات  
         # ──────────────────────────────────────
         _load_conversation_memory(db, office_id, user_id)
 
         # ──────────────────────────────────────
-        # 6. إرسال لـ Gemini مع كامل السياق
+        # 6. إرسال لـ Gemini إذا كان الرصيد متاحاً
         # ──────────────────────────────────────
-        answer = _ask_gemini_advanced(
-            question=question,
-            local_context=full_context,
-            user_name=user_name,
-            user_id=user_id,
-            db_data=db_data,
-        )
+        answer = None
+        if has_advanced_points:
+            answer = _ask_gemini_advanced(
+                question=question,
+                local_context=full_context,
+                user_name=user_name,
+                user_id=user_id,
+                db_data=db_data,
+            )
+            if answer:
+                quota.gemini_used += 1
+                try:
+                    db.commit()
+                except Exception:
+                    db.rollback()
 
         # ──────────────────────────────────────
-        # 7. Fallback: إذا فشل Gemini
+        # 7. Fallback: الموديل القديم / الداخلي (عند نفاد النقاط أو فشل الاتصال)
         # ──────────────────────────────────────
         if not answer:
+            used_model = "local"
+            quota.local_used += 1
+            try:
+                db.commit()
+            except Exception:
+                db.rollback()
+
             response_builder = _get_response_builder()
             answer = response_builder.build_response(
                 intent_type=intent.type,
@@ -287,10 +309,15 @@ async def ai_chat(request: Request, db: Session = Depends(get_db), current_user:
             )
 
             # إذا كان الرد الافتراضي "لم أتمكن"، استخدم رد الموحد
-            if "لم أتمكن من فهم سؤالك" in answer or "لا يمكنني الإجابة" in answer:
+            if "لم أتمكن من استيعاب صياغة طلبكم" in answer or "لا يمكنني الإجابة" in answer:
                 formatted = _format_unified_search_response(unified_results, question)
                 if formatted and "عذراً" not in formatted:
                     answer = formatted
+
+            # إذا كان التحويل بسبب نفاد رصيد اليوم، نضيف تنبيهاً لطيفاً في نهاية الرد
+            if not has_advanced_points and answer:
+                quota_note = "\n\n---\n⚡ *تنويه: تم إعداد هذا الرد عبر المحرك القانوني الداخلي (الموديل المحلي) نظراً لاكتمال نقاط الاستعلام اليومية المتقدمة لحسابكم، ويتم تجديد الرصيد تلقائياً كل يوم.*"
+                answer += quota_note
 
         # ──────────────────────────────────────
         # 8. توليد اقتراحات المتابعة
@@ -302,13 +329,17 @@ async def ai_chat(request: Request, db: Session = Depends(get_db), current_user:
         # ──────────────────────────────────────
         _save_chat(db, office_id, user_id, question, answer, intent.type)
 
+        remaining_pts = max(0, quota.daily_limit - quota.gemini_used)
         elapsed = int((time.time() - start_time) * 1000)
         return JSONResponse({
             "success": True,
             "answer": answer,
             "intent": intent.type,
             "time_ms": elapsed,
-            "suggestions": suggestions
+            "suggestions": suggestions,
+            "used_model": used_model,
+            "remaining_points": remaining_pts,
+            "daily_limit": quota.daily_limit
         })
 
     except Exception as e:
@@ -489,9 +520,79 @@ async def list_knowledge(request: Request, db: Session = Depends(get_db), curren
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 
+@router.get("/quota")
+async def get_user_quota(request: Request, db: Session = Depends(get_db), current_user: AccessProfiles = Depends(get_current_user)):
+    """جلب رصيد النقاط اليومية للمستخدم"""
+    try:
+        if not current_user:
+            return JSONResponse({"success": False, "error": "غير مسجل الدخول"}, status_code=401)
+
+        quota, today_str = _get_user_quota_info(db, current_user.office_id, current_user.id, current_user)
+        remaining = max(0, quota.daily_limit - quota.gemini_used) if quota else 50
+
+        return JSONResponse({
+            "success": True,
+            "daily_limit": quota.daily_limit if quota else 50,
+            "gemini_used": quota.gemini_used if quota else 0,
+            "local_used": quota.local_used if quota else 0,
+            "remaining_points": remaining,
+            "has_advanced_ai": remaining > 0,
+            "date": today_str
+        })
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+
 # ══════════════════════════════════════════════
 # الدوال المساعدة الأساسية
 # ══════════════════════════════════════════════
+
+def _get_user_quota_info(db: Session, office_id: int, user_id: int, current_user: AccessProfiles):
+    """جلب أو إنشاء سجل النقاط اليومية لحساب المستخدم"""
+    from datetime import datetime, timezone, timedelta
+    from database.models import AIUserQuota
+
+    # اليوم بتوقيت اليمن (UTC+3)
+    ast_now = datetime.now(timezone.utc) + timedelta(hours=3)
+    today_str = ast_now.strftime("%Y-%m-%d")
+
+    # تحديد الحد اليومي بحسب رتبة المستخدم ونوع الحساب
+    is_super = getattr(current_user, 'is_superadmin', 0) or getattr(current_user, 'role', '') == 'superadmin'
+    is_admin = getattr(current_user, 'role', '') in ['admin', 'مدير', 'مالك', 'owner']
+
+    if is_super:
+        daily_limit = 200
+    elif is_admin:
+        daily_limit = 100
+    else:
+        daily_limit = 50
+
+    quota = db.query(AIUserQuota).filter(
+        AIUserQuota.user_id == user_id,
+        AIUserQuota.usage_date == today_str
+    ).first()
+
+    if not quota:
+        quota = AIUserQuota(
+            office_id=office_id if office_id else 1,
+            user_id=user_id,
+            usage_date=today_str,
+            gemini_used=0,
+            local_used=0,
+            daily_limit=daily_limit
+        )
+        db.add(quota)
+        try:
+            db.commit()
+            db.refresh(quota)
+        except Exception:
+            db.rollback()
+            quota = db.query(AIUserQuota).filter(
+                AIUserQuota.user_id == user_id,
+                AIUserQuota.usage_date == today_str
+            ).first()
+
+    return quota, today_str
 
 def _load_conversation_memory(db: Session, office_id: int, user_id: int):
     """تحميل ذاكرة المحادثة من قاعدة البيانات إلى Gemini"""
