@@ -106,6 +106,9 @@ LAW_SEARCH_WORDS = [
     "ابحث في", "ابحث عن", "ابحث لي", "ابحث لي عن",
     "القذف", "الزنا", "السرقة", "القتل", "النصب", "الاحتيال",
     "الشيك", "شيك", "التزوير", "الرشوة", "الاختلاس", "خيانة الأمانة",
+    "اعطني", "أعطني", "أخبرني عن", "اخبرني",
+    "ما القانون", "ماذا يقول", "ماذا ينص", "ينص على",
+    "نصت المادة", "وفق القانون", "بموجب القانون",
 ]
 
 DOCUMENT_GENERATION_WORDS = [
@@ -136,6 +139,7 @@ CASE_SEARCH_WORDS = [
 ]
 
 LEGAL_ADVICE_WORDS = [
+    # استشارة قانونية عامة
     "استشارة", "استشارة قانونية", "رأي قانوني",
     "ما حكم", "ما الحكم", "هل يجوز",
     "ما هو الوضع القانوني", "كيف أتصرف",
@@ -143,10 +147,28 @@ LEGAL_ADVICE_WORDS = [
     "ما التزاماتي", "مسؤوليتي",
     "هل يحق لي", "هل أستطيع",
     "ماذا يترتب", "ما النتائج القانونية",
+    # أحوال شخصية
     "حقوق", "الخلع", "تخلع", "الطلاق", "طلق", "زوجها", "النفقة", "الذهب", "المهر", "صداقها",
     "عقوبة", "جريمة", "سجن", "حبس", "دية", "قصاص", "ميراث", "ورث", "وصية", "حضانية", "حضانة",
-    "ما هي الحقوق", "ماهي الحقوق", "ما الحقوق", "ما عقوبة", "ما هي عقوبة"
+    "ما هي الحقوق", "ماهي الحقوق", "ما الحقوق", "ما عقوبة", "ما هي عقوبة",
+    # إجراءات قضائية - الأكثر شيوعاً في الأسئلة
+    "كيف ارفع", "كيف أرفع", "كيف اقدم", "كيف أقدم", "كيف اشتكي",
+    "رفع دعوى", "تقديم شكوى", "الاستئناف", "النقض", "الطعن",
+    "إجراءات", "خطوات", "ما هي الخطوات", "ما خطوات",
+    "ما الإجراءات", "ما هي الإجراءات",
+    # ما هي / ما هو أسئلة قانونية
+    "ما هي شروط", "ما شروط", "ما هي متطلبات",
+    # حقوق العمال
+    "حقوق العامل", "حقوق العمال", "الفصل التعسفي", "تعويض", "نهاية الخدمة",
+    # عقود
+    "هل العقد صحيح", "العقد الباطل", "إلغاء العقد", "فسخ العقد",
+    # شيكات وديون
+    "شيك بدون رصيد", "الدين", "الدائن", "المدين", "الرهن",
+    # عقارات وإيجار
+    "الإيجار", "إيجار", "الأرض", "العقار", "المنزل", "الملكية",
 ]
+
+
 
 # ─────────────────────────────────────────────
 # قوائم أسماء القوانين اليمنية
@@ -306,7 +328,9 @@ class IntentDetector:
         return ("help", min(score * 1.5, 1.0), {})
 
     def _detect_law_search(self, text: str, entities: dict) -> Tuple[str, float, dict]:
-        score = self._keyword_score(text, LAW_SEARCH_WORDS)
+        """كشف البحث القانوني — يُعطي نقاط مرتفعة لأي كلمة قانونية"""
+        hits = sum(1 for kw in LAW_SEARCH_WORDS if kw in text)
+        score = min(hits * 0.15, 1.0) if hits > 0 else 0.0
         extra: Dict = {}
 
         # استخراج رقم المادة
@@ -325,10 +349,15 @@ class IntentDetector:
         if extra.get("article_number") and not score:
             score = 0.6
 
-        return ("search_law", score, extra)
+        return ("search_law", round(score, 3), extra)
 
     def _detect_document_generation(self, text: str, entities: dict) -> Tuple[str, float, dict]:
-        action_score = self._keyword_score(text, DOCUMENT_GENERATION_WORDS[:10])  # أفعال الإنشاء
+        """كشف طلبات إنشاء المستندات — يتطلب وجود فعل إنشاء صريح"""
+        # أفعال الإنشاء الصريحة فقط (الكلمات 0-8 من القائمة)
+        creation_verbs = ["انشئ", "اكتب", "صغ", "اعمل", "اصنع", "جهز", "هيئ", "اعد", "أعد"]
+        has_creation_verb = any(verb in text for verb in creation_verbs)
+
+        action_score = self._keyword_score(text, DOCUMENT_GENERATION_WORDS[:10])
         doc_score = 0.0
         extra: Dict = {}
 
@@ -338,8 +367,12 @@ class IntentDetector:
                 doc_score = 0.5
                 break
 
+        # إذا لم يكن هناك فعل إنشاء صريح، لا نعتبره طلب توليد مستند
+        if not has_creation_verb:
+            doc_score = doc_score * 0.3  # تخفيض كبير
+
         score = min(action_score * 0.7 + doc_score, 1.0)
-        return ("generate_document", score, extra)
+        return ("generate_document", round(score, 3), extra)
 
     def _detect_hearing_query(self, text: str, entities: dict) -> Tuple[str, float, dict]:
         score = self._keyword_score(text, HEARING_QUERY_WORDS)
@@ -452,8 +485,13 @@ class IntentDetector:
         return ("search_case", score, extra)
 
     def _detect_legal_advice(self, text: str) -> Tuple[str, float, dict]:
-        score = self._keyword_score(text, LEGAL_ADVICE_WORDS)
-        return ("legal_advice", score, {})
+        """كشف الاستشارات القانونية — يُعطي نقاط مرتفعة لأي كلمة قانونية"""
+        hits = sum(1 for kw in LEGAL_ADVICE_WORDS if kw in text)
+        if hits == 0:
+            return ("legal_advice", 0.0, {})
+        # كل كلمة مطابقة تعطي 0.12 نقطة، بحد أقصى 1.0
+        score = min(hits * 0.12, 1.0)
+        return ("legal_advice", round(score, 3), {})
 
     # ──────────────────────────────────────────
     # استخراج الكيانات

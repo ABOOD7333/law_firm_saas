@@ -208,9 +208,10 @@ class GeminiLegalAssistant:
             logger.error(f"خطأ في Gemini API: {error_msg}")
             return None
 
-    def _call_gemini(self, prompt: str, retries: int = 1) -> Optional[str]:
+    def _call_gemini(self, prompt: str, retries: int = 2) -> Optional[str]:
         """استدعاء Gemini API مع تجربة الموديلات المتاحة تلقائياً"""
-        models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+        # gemini-2.5-flash هو الموديل الوحيد العامل حالياً (2026)
+        models_to_try = ["gemini-2.5-flash"]
         for model_name in models_to_try:
             for attempt in range(retries + 1):
                 try:
@@ -219,10 +220,10 @@ class GeminiLegalAssistant:
                         contents=prompt,
                         config={
                             "system_instruction": SYSTEM_PROMPT,
-                            "temperature": 0.5,
+                            "temperature": 0.4,
                             "top_p": 0.9,
                             "top_k": 40,
-                            "max_output_tokens": 4096,
+                            "max_output_tokens": 2048,
                         },
                     )
                     if response and response.text:
@@ -230,14 +231,18 @@ class GeminiLegalAssistant:
                     break
                 except Exception as e:
                     error_msg = str(e)
-                    logger.warning(f"Gemini model {model_name} attempt {attempt + 1} failed: {error_msg}")
+                    logger.warning(f"Gemini model {model_name} attempt {attempt + 1} failed: {error_msg[:200]}")
                     if "quota" in error_msg.lower() or "429" in error_msg or "resource_exhausted" in error_msg.lower():
+                        logger.warning("⚠️ Gemini API quota exceeded")
                         break
                     if "safety" in error_msg.lower():
                         logger.warning("⚠️ تم حجب الرد بسبب إعدادات الأمان")
                         return None
+                    if "not_found" in error_msg.lower() or "404" in error_msg:
+                        logger.warning(f"⚠️ Model {model_name} not found, skipping")
+                        break
                     if attempt < retries:
-                        time.sleep(1)
+                        time.sleep(0.5)
                         continue
         return None
 
