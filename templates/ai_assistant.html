@@ -837,9 +837,13 @@
         const typingId = addTypingIndicator();
 
         try {
+            const csrfToken = document.cookie.split('; ').find(c => c.startsWith('csrf_token='))?.split('=')[1] || '';
             const res = await fetch('/api/ai/chat', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
                 body: JSON.stringify({ question: message })
             });
 
@@ -946,9 +950,13 @@
         btn.innerHTML = '⏳ جاري صياغة المستند...';
 
         try {
+            const csrfToken = document.cookie.split('; ').find(c => c.startsWith('csrf_token='))?.split('=')[1] || '';
             const res = await fetch('/api/ai/generate-document', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
                 body: JSON.stringify({ doc_code: doc_code, fields: fields })
             });
 
