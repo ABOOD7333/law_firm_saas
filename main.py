@@ -341,15 +341,17 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 from dependencies import templates, get_current_user, check_user_permission
 
 @app.get("/", response_class=HTMLResponse)
-
 async def login_page(request: Request, user: AccessProfiles = Depends(get_current_user)):
-
     # إذا كان المستخدم مسجل دخول مسبقاً، نوجهه للوحة التحكم مباشرة
-
     if user:
-
         return RedirectResponse(url="/dashboard", status_code=303)
+    return templates.TemplateResponse(request=request, name="login.html")
 
+
+@app.get("/login", response_class=HTMLResponse)
+async def login_page_alias(request: Request, user: AccessProfiles = Depends(get_current_user)):
+    if user:
+        return RedirectResponse(url="/dashboard", status_code=303)
     return templates.TemplateResponse(request=request, name="login.html")
 
 @app.get("/forgot-password", response_class=HTMLResponse)
