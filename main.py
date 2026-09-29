@@ -20,6 +20,7 @@ import uvicorn
 import os
 
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from database.database import get_db, init_db
 from database.models import (AccessProfiles, AuthSessions, AuthVerificationTokens, LawClients, LawCases, LawOffices,
     LawHearings, LawTransactions, LawExpenses, LawDocuments, LawTasks, PaymentRequest)
@@ -353,6 +354,47 @@ async def login_page_alias(request: Request, user: AccessProfiles = Depends(get_
     if user:
         return RedirectResponse(url="/dashboard", status_code=303)
     return templates.TemplateResponse(request=request, name="login.html")
+
+
+@app.get("/api/health")
+async def health_check(db: Session = Depends(get_db)):
+    """نقطة تشخيص مؤقتة لفحص حالة الخادم"""
+    import traceback
+    checks = {"server": "ok", "database": "unknown", "tables": {}, "env": {}}
+    try:
+        # فحص قاعدة البيانات
+        result = db.execute(text("SELECT 1")).fetchone()
+        checks["database"] = "ok" if result else "fail"
+    except Exception as e:
+        checks["database"] = f"error: {str(e)}"
+
+    # فحص الجداول
+    try:
+        from database.models import AccessProfiles, AIUserQuota, AuthSessions
+        count = db.query(AccessProfiles).count()
+        checks["tables"]["access_profiles"] = f"ok ({count} rows)"
+    except Exception as e:
+        checks["tables"]["access_profiles"] = f"error: {str(e)}"
+
+    try:
+        count = db.query(AIUserQuota).count()
+        checks["tables"]["ai_user_quotas"] = f"ok ({count} rows)"
+    except Exception as e:
+        checks["tables"]["ai_user_quotas"] = f"error: {str(e)}"
+
+    try:
+        count = db.query(AuthSessions).count()
+        checks["tables"]["auth_sessions"] = f"ok ({count} rows)"
+    except Exception as e:
+        checks["tables"]["auth_sessions"] = f"error: {str(e)}"
+
+    # فحص متغيرات البيئة
+    import os
+    checks["env"]["DATABASE_URL"] = os.getenv("DATABASE_URL", "NOT SET")[:50] + "..."
+    checks["env"]["GEMINI_API_KEY"] = "SET" if os.getenv("GEMINI_API_KEY") else "NOT SET"
+    checks["env"]["PYTHON_VERSION"] = os.popen("python --version 2>&1").read().strip()
+
+    return JSONResponse(checks)
 
 @app.get("/forgot-password", response_class=HTMLResponse)
 
