@@ -396,6 +396,44 @@ async def health_check(db: Session = Depends(get_db)):
 
     return JSONResponse(checks)
 
+
+@app.get("/api/setup")
+async def setup_database():
+    """إعادة تهيئة قاعدة البيانات — إنشاء الجداول والبيانات الأساسية"""
+    import traceback
+    results = {"steps": []}
+    
+    # 1. إنشاء الجداول
+    try:
+        from database.database import engine
+        from database.models import Base
+        Base.metadata.create_all(bind=engine)
+        results["steps"].append({"create_tables": "OK"})
+    except Exception as e:
+        results["steps"].append({"create_tables": f"ERROR: {str(e)}"})
+        return JSONResponse(results, status_code=500)
+    
+    # 2. تهيئة البيانات الأساسية
+    try:
+        init_db()
+        results["steps"].append({"init_db": "OK"})
+    except Exception as e:
+        results["steps"].append({"init_db": f"ERROR: {str(e)}"})
+    
+    # 3. التحقق من الجداول
+    try:
+        from database.database import SessionLocal
+        db = SessionLocal()
+        from database.models import AccessProfiles
+        count = db.query(AccessProfiles).count()
+        results["steps"].append({"verify_users": f"OK ({count} users)"})
+        db.close()
+    except Exception as e:
+        results["steps"].append({"verify_users": f"ERROR: {str(e)}"})
+    
+    results["status"] = "completed"
+    return JSONResponse(results)
+
 @app.get("/forgot-password", response_class=HTMLResponse)
 
 async def forgot_password_page(request: Request):

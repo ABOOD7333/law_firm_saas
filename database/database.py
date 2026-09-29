@@ -67,8 +67,12 @@ def init_db():
     """
     try:
         Base.metadata.create_all(bind=engine)
+        print("[Database] create_all completed successfully.")
     except Exception as e:
-        print(f"[Database] Warning: create_all failed (likely table exists or dialect mismatch): {e}")
+        print(f"[Database] ERROR in create_all: {e}")
+        import traceback
+        traceback.print_exc()
+
     
     # محاولة إضافة الأعمدة الجديدة للتحديث التلقائي بدون تهيئة يدوية
     try:
