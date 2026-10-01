@@ -81,6 +81,13 @@ def init_db():
             conn.execute(text("ALTER TABLE law_clients ADD COLUMN username TEXT;"))
     except Exception:
         pass
+
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE law_clients ADD COLUMN user_id INTEGER;"))
+    except Exception:
+        pass
     
     try:
         from sqlalchemy import text
@@ -121,6 +128,13 @@ def init_db():
     try:
         from sqlalchemy import text
         with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE access_profiles ADD COLUMN locked_until TEXT;"))
+    except Exception:
+        pass
+
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
             conn.execute(text("ALTER TABLE access_profiles ADD COLUMN permissions_json TEXT;"))
     except Exception:
         pass
@@ -139,14 +153,5 @@ def init_db():
     except Exception:
         pass
         
-    try:
-        from seed_real_offices import seed_real_offices
-        db_session = SessionLocal()
-        seed_real_offices(db_session)
-        db_session.close()
-    except Exception as e:
-        print(f"[Database Seed Error] {e}")
-
     print(f"[Database] Connected to: {SQLALCHEMY_DATABASE_URL.split('?')[0]}")
     print(f"[Database] Tables initialized successfully.")
-

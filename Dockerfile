@@ -37,10 +37,9 @@ COPY --from=builder /install /usr/local
 COPY --chown=lawsaas:lawsaas . .
 
 # إنشاء جميع مجلدات الرفع مع صلاحيات صحيحة
-RUN mkdir -p static/uploads/documents static/css static/js static/img \
+    RUN mkdir -p static/uploads/documents static/css static/js static/img \
         private_uploads/documents && \
-    chown -R lawsaas:lawsaas /app && \
-    chmod -R 777 /app
+    chown -R lawsaas:lawsaas /app
 
 # التبديل للمستخدم غير الجذر
 USER lawsaas
@@ -54,4 +53,3 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
 
 # أمر التشغيل
 CMD sh -c "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 2"
-

@@ -9,7 +9,8 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from core.logger import app_logger
 
 # الكشف التلقائي عن البيئة
-IS_PRODUCTION = os.getenv("APP_ENV", "development").lower() == "production"
+IS_PRODUCTION = os.getenv("APP_ENV", "production").lower() == "production"
+SHOW_DEBUG_ERRORS = os.getenv("APP_DEBUG", "0").lower() in {"1", "true", "yes"} and not IS_PRODUCTION
 
 
 def safe_error_html(exc: Exception, context: str = "") -> HTMLResponse:
@@ -21,7 +22,7 @@ def safe_error_html(exc: Exception, context: str = "") -> HTMLResponse:
     tb_str = traceback.format_exc()
     app_logger.error(f"[ERROR] {context}: {exc}\n{tb_str}")
 
-    if IS_PRODUCTION:
+    if not SHOW_DEBUG_ERRORS:
         return HTMLResponse(
             content=(
                 "<div dir='rtl' style='font-family:sans-serif;padding:40px;text-align:center'>"
@@ -45,7 +46,7 @@ def safe_error_json(exc: Exception, context: str = "") -> JSONResponse:
     tb_str = traceback.format_exc()
     app_logger.error(f"[API ERROR] {context}: {exc}\n{tb_str}")
 
-    if IS_PRODUCTION:
+    if not SHOW_DEBUG_ERRORS:
         return JSONResponse(
             {"success": False, "error": "حدث خطأ داخلي. يرجى المحاولة مرة أخرى."},
             status_code=500

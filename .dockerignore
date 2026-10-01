@@ -49,6 +49,12 @@ Thumbs.db
 
 # Uploads (يُضاف كـ volume في وقت التشغيل)
 static/uploads/
+private_uploads/
+rag_engine/knowledge_data/
+rag_engine/chroma_db/
+logs/
+temp_contract_*
+temp_compare_*
 
 # Video files
 *.mp4

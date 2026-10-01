@@ -8,12 +8,13 @@ except ImportError:
     pass
 from core.logger import app_logger
 from core.audit import write_audit
+from core.security import hash_session_token, login_lockout_active, record_login_failure
 
 import hashlib
 import uuid
 from datetime import datetime, timedelta, timezone
-from fastapi import FastAPI, Request, Form, Depends, Cookie, UploadFile, File
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import FastAPI, Request, Form, Depends, Cookie, UploadFile, File, HTTPException
+from fastapi.responses import HTMLResponse, RedirectResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import uvicorn
@@ -113,7 +114,10 @@ class CSRFMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
 
-        if request.url.path.startswith("/api/mobile"):
+        if request.url.path.startswith("/api/mobile") and (
+            request.url.path in {"/api/mobile/login", "/api/mobile/login-2fa"}
+            or request.headers.get("Authorization", "").startswith("Bearer ")
+        ):
 
             return await call_next(request)
 
@@ -241,7 +245,7 @@ class LoginRateLimitMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
 
-        if request.url.path in ["/api/login", "/api/superadmin-login", "/api/mobile/login"] and request.method == "POST":
+        if request.url.path in ["/", "/api/login", "/api/superadmin-login", "/api/mobile/login"] and request.method == "POST":
 
             ip = request.client.host or "127.0.0.1"
 
@@ -335,7 +339,14 @@ app.add_middleware(SecurityHeadersMiddleware)
 
 # Mount static files
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+class SafeStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope):
+        if path == "uploads" or path.startswith("uploads/"):
+            return PlainTextResponse("Not found", status_code=404)
+        return await super().get_response(path, scope)
+
+
+app.mount("/static", SafeStaticFiles(directory="static"), name="static")
 
 # Templates setup - imported from dependencies to avoid circular imports in routers
 
@@ -358,49 +369,20 @@ async def login_page_alias(request: Request, user: AccessProfiles = Depends(get_
 
 @app.get("/api/health")
 async def health_check(db: Session = Depends(get_db)):
-    """نقطة تشخيص مؤقتة لفحص حالة الخادم"""
-    import traceback
-    checks = {"server": "ok", "database": "unknown", "tables": {}, "env": {}}
+    """Minimal health check; detailed diagnostics must stay private."""
+    checks = {"server": "ok", "database": "ok"}
     try:
-        # فحص قاعدة البيانات
-        result = db.execute(text("SELECT 1")).fetchone()
-        checks["database"] = "ok" if result else "fail"
-    except Exception as e:
-        checks["database"] = f"error: {str(e)}"
-
-    # فحص الجداول
-    try:
-        from database.models import AccessProfiles, AIUserQuota, AuthSessions
-        count = db.query(AccessProfiles).count()
-        checks["tables"]["access_profiles"] = f"ok ({count} rows)"
-    except Exception as e:
-        checks["tables"]["access_profiles"] = f"error: {str(e)}"
-
-    try:
-        count = db.query(AIUserQuota).count()
-        checks["tables"]["ai_user_quotas"] = f"ok ({count} rows)"
-    except Exception as e:
-        checks["tables"]["ai_user_quotas"] = f"error: {str(e)}"
-
-    try:
-        count = db.query(AuthSessions).count()
-        checks["tables"]["auth_sessions"] = f"ok ({count} rows)"
-    except Exception as e:
-        checks["tables"]["auth_sessions"] = f"error: {str(e)}"
-
-    # فحص متغيرات البيئة
-    import os
-    checks["env"]["DATABASE_URL"] = os.getenv("DATABASE_URL", "NOT SET")[:50] + "..."
-    checks["env"]["GEMINI_API_KEY"] = "SET" if os.getenv("GEMINI_API_KEY") else "NOT SET"
-    checks["env"]["PYTHON_VERSION"] = os.popen("python --version 2>&1").read().strip()
-
+        db.execute(text("SELECT 1"))
+    except Exception:
+        checks["database"] = "unavailable"
     return JSONResponse(checks)
 
 
-@app.get("/api/setup")
-async def setup_database():
-    """إعادة تهيئة قاعدة البيانات — إنشاء الجداول والبيانات الأساسية"""
-    import traceback
+@app.post("/api/setup")
+async def setup_database(user: AccessProfiles = Depends(get_current_user)):
+    """Privileged recovery endpoint; never expose database setup publicly."""
+    if not user or getattr(user, "is_superadmin", 0) != 1:
+        raise HTTPException(status_code=403, detail="غير مصرح")
     results = {"steps": []}
     
     # 1. إنشاء الجداول
@@ -409,27 +391,26 @@ async def setup_database():
         from database.models import Base
         Base.metadata.create_all(bind=engine)
         results["steps"].append({"create_tables": "OK"})
-    except Exception as e:
-        results["steps"].append({"create_tables": f"ERROR: {str(e)}"})
+    except Exception:
+        results["steps"].append({"create_tables": "ERROR"})
         return JSONResponse(results, status_code=500)
     
     # 2. تهيئة البيانات الأساسية
     try:
         init_db()
         results["steps"].append({"init_db": "OK"})
-    except Exception as e:
-        results["steps"].append({"init_db": f"ERROR: {str(e)}"})
+    except Exception:
+        results["steps"].append({"init_db": "ERROR"})
     
     # 3. التحقق من الجداول
     try:
         from database.database import SessionLocal
-        db = SessionLocal()
         from database.models import AccessProfiles
-        count = db.query(AccessProfiles).count()
-        results["steps"].append({"verify_users": f"OK ({count} users)"})
-        db.close()
-    except Exception as e:
-        results["steps"].append({"verify_users": f"ERROR: {str(e)}"})
+        with SessionLocal() as db:
+            count = db.query(AccessProfiles).count()
+            results["steps"].append({"verify_users": f"OK ({count} users)"})
+    except Exception:
+        results["steps"].append({"verify_users": "ERROR"})
     
     results["status"] = "completed"
     return JSONResponse(results)
@@ -455,10 +436,6 @@ from email_service import generate_otp, store_otp, verify_otp, send_otp_email
 from fastapi.responses import JSONResponse as _JSONResponse
 
 import secrets
-
-# مساحة لتخزين الرموز الآمنة مؤقتاً (يفضل Redis في الإنتاج)
-
-_reset_tokens = {}
 
 # سجل بسيط لتتبع طلبات OTP لمنع إغراق الإيميل (Rate Limiting)
 
@@ -539,7 +516,7 @@ async def api_forgot_send_otp(request: Request, db: Session = Depends(get_db)):
 
 @app.post("/api/forgot-verify-otp")
 
-async def api_forgot_verify_otp(request: Request):
+async def api_forgot_verify_otp(request: Request, db: Session = Depends(get_db)):
 
     """التحقق من رمز OTP وإصدار Token مؤقت آمن"""
 
@@ -551,9 +528,19 @@ async def api_forgot_verify_otp(request: Request):
 
     if verify_otp(identifier, code):
 
-        token = secrets.token_hex(16)
-
-        _reset_tokens[token] = identifier
+        user = db.query(AccessProfiles).filter(AccessProfiles.email == identifier).first()
+        if not user:
+            return _JSONResponse({"success": False, "error": "الرمز غير صحيح أو منتهي الصلاحية"}, status_code=400)
+        token = secrets.token_urlsafe(32)
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+        expires = datetime.now(timezone.utc) + timedelta(minutes=10)
+        db.add(AuthVerificationTokens(
+            user_id=user.id,
+            token_hash=token_hash,
+            token_type="password_reset",
+            expires_at=expires.strftime("%Y-%m-%d %H:%M:%S"),
+        ))
+        db.commit()
 
         return _JSONResponse({"success": True, "token": token})
 
@@ -575,17 +562,24 @@ async def api_reset_password_secure(request: Request, db: Session = Depends(get_
 
     token = data.get("token", "").strip()
 
-    # تحقق أمني: هل التوكن صالح ومطابق للبريد؟
+    if not token or not email or len(new_password) < 12:
 
-    if not token or _reset_tokens.get(token) != email:
+        return _JSONResponse({"success": False, "error": "بيانات التغيير غير صالحة؛ كلمة المرور يجب أن تكون 12 حرفاً على الأقل"}, status_code=400)
 
+    now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    reset_record = db.query(AuthVerificationTokens).filter(
+        AuthVerificationTokens.token_hash == hashlib.sha256(token.encode()).hexdigest(),
+        AuthVerificationTokens.token_type == "password_reset",
+        AuthVerificationTokens.expires_at > now_str,
+        AuthVerificationTokens.consumed_at.is_(None),
+    ).first()
+    if not reset_record:
         return _JSONResponse({"success": False, "error": "طلب غير مصرح به أو انتهت صلاحية الجلسة"}, status_code=403)
 
-    if len(new_password) < 8:
-
-        return _JSONResponse({"success": False, "error": "كلمة المرور يجب أن تكون 8 أحرف/أرقام على الأقل"}, status_code=400)
-
-    user = db.query(AccessProfiles).filter(AccessProfiles.email == email).first()
+    user = db.query(AccessProfiles).filter(
+        AccessProfiles.email == email,
+        AccessProfiles.id == reset_record.user_id,
+    ).first()
 
     if not user:
 
@@ -594,6 +588,7 @@ async def api_reset_password_secure(request: Request, db: Session = Depends(get_
     user.access_pin_hash = _hash_pin(new_password)
 
     user.failed_attempts = 0
+    user.locked_until = None
 
     if new_username:
 
@@ -607,11 +602,12 @@ async def api_reset_password_secure(request: Request, db: Session = Depends(get_
 
             user.username = new_username
 
+    reset_record.consumed_at = now_str
+    db.query(AuthSessions).filter(
+        AuthSessions.user_id == user.id,
+        AuthSessions.is_active == 1,
+    ).update({"is_active": 0})
     db.commit()
-
-    # إتلاف التوكن لمنع إعادة الاستخدام
-
-    del _reset_tokens[token]
 
     return _JSONResponse({"success": True, "message": "تم تغيير البيانات بنجاح"})
 
@@ -783,7 +779,7 @@ async def login_submit(
 
             )
 
-        if user.failed_attempts >= 10:
+        if login_lockout_active(user, db):
 
             return templates.TemplateResponse(
 
@@ -791,7 +787,7 @@ async def login_submit(
 
                 name="login.html",
 
-                context={"error": "تم قفل الحساب مؤقتاً بسبب كثرة المحاولات الخاطئة. يرجى التواصل مع الإدارة."}
+                context={"error": "تم إيقاف تسجيل الدخول مؤقتاً بسبب كثرة المحاولات. حاول لاحقاً."}
 
             )
 
@@ -801,9 +797,7 @@ async def login_submit(
 
                 # نسجل محاولة خاطئة لتجنب التخمين
 
-                user.failed_attempts += 1
-
-                db.commit()
+                record_login_failure(user, db)
 
                 return templates.TemplateResponse(
 
@@ -818,6 +812,7 @@ async def login_submit(
         if _verify_pin(password, user.access_pin_hash):
 
             user.failed_attempts = 0
+            user.locked_until = None
 
             db.commit()
 
@@ -876,7 +871,7 @@ async def login_submit(
 
             new_session = AuthSessions(
 
-                session_token=token,
+                session_token=hash_session_token(token),
 
                 user_id=user.id,
 
@@ -919,9 +914,7 @@ async def login_submit(
 
         else:
 
-            user.failed_attempts += 1
-
-            db.commit()
+            locked = record_login_failure(user, db)
 
             _ip_rate_limit.setdefault(client_ip, []).append(now)
 
@@ -933,7 +926,7 @@ async def login_submit(
 
                 name="login.html",
 
-                context={"error": f"بيانات الدخول غير صحيحة. تبقت {10 - user.failed_attempts} محاولات." if user.failed_attempts < 10 else "تم قفل الحساب."}
+                context={"error": "تم إيقاف تسجيل الدخول مؤقتاً. حاول بعد 15 دقيقة." if locked else "البريد الإلكتروني أو كلمة المرور غير صحيحة."}
 
             )
 
@@ -965,7 +958,9 @@ async def logout(request: Request, db: Session = Depends(get_db)):
 
     if token:
 
-        session_record = db.query(AuthSessions).filter(AuthSessions.session_token == token).first()
+        session_record = db.query(AuthSessions).filter(
+            AuthSessions.session_token.in_([token, hash_session_token(token)])
+        ).first()
 
         if session_record:
 
@@ -996,9 +991,8 @@ async def login_2fa_page(request: Request, db: Session = Depends(get_db)):
             AuthVerificationTokens.consumed_at.is_(None)
         ).first()
 
-    if not db_token:
-
-        return RedirectResponse(url="/", status_code=303)
+        if not db_token:
+            return RedirectResponse(url="/", status_code=303)
 
     return templates.TemplateResponse(request=request, name="login_2fa.html", context={})
 
@@ -1058,7 +1052,7 @@ async def login_2fa_submit(
 
         new_session = AuthSessions(
 
-            session_token=token,
+            session_token=hash_session_token(token),
 
             user_id=user.id,
 
@@ -1105,7 +1099,10 @@ async def login_2fa_submit(
         return response
 
     else:
-
+        db_token.attempts += 1
+        if db_token.attempts >= 5:
+            db_token.consumed_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+        db.commit()
         return templates.TemplateResponse(
 
             request=request,
@@ -1308,7 +1305,11 @@ async def add_client(
 
         return HTMLResponse(content="<script>alert('غير مصرح لك بإضافة موكل'); window.history.back();</script>", status_code=403)
 
-    office_id = user.office_id or 1
+    if len(password) < 12 or not name.strip() or len(name) > 200:
+        return HTMLResponse(content="بيانات الموكل غير صالحة؛ كلمة المرور يجب أن تكون 12 حرفاً على الأقل.", status_code=400)
+    if not user.office_id:
+        raise HTTPException(status_code=403, detail="الحساب غير مرتبط بمكتب")
+    office_id = user.office_id
 
     # التأكد من عدم تكرار اسم المستخدم
 
@@ -1370,6 +1371,9 @@ async def add_client(
 
     db.add(new_user)
 
+    db.flush()
+    new_client.user_id = new_user.id
+
     db.commit()
 
     return RedirectResponse(url="/clients", status_code=303)
@@ -1410,7 +1414,11 @@ async def edit_client(
 
         return HTMLResponse(content="<script>alert('غير مصرح لك بتعديل بيانات موكل'); window.history.back();</script>", status_code=403)
 
-    office_id = user.office_id or 1
+    if password and len(password) < 12:
+        return HTMLResponse(content="كلمة المرور يجب أن تكون 12 حرفاً على الأقل.", status_code=400)
+    if not user.office_id:
+        raise HTTPException(status_code=403, detail="الحساب غير مرتبط بمكتب")
+    office_id = user.office_id
 
     client = db.query(LawClients).filter(LawClients.id == client_id, LawClients.office_id == office_id).first()
 
@@ -1474,7 +1482,11 @@ async def cases_page(request: Request, db: Session = Depends(get_db), user: Acce
 
         cases = query.order_by(LawCases.created_at.desc()).all()
 
-        clients = db.query(LawClients).filter(LawClients.office_id == office_id).all()
+        visible_case_ids = [case.id for case in cases]
+        clients = db.query(LawClients).filter(
+            LawClients.office_id == office_id,
+            LawClients.case_id.in_(visible_case_ids) if visible_case_ids else LawClients.id == -1,
+        ).all()
 
         lawyers = db.query(AccessProfiles).filter(AccessProfiles.office_id == office_id, AccessProfiles.role != "موكل").all()
 
@@ -1714,7 +1726,10 @@ async def case_details_page(case_id: int, request: Request, db: Session = Depend
 
         lawyer = db.query(AccessProfiles).filter(AccessProfiles.id == case.lead_lawyer_id).first() if case.lead_lawyer_id else None
 
-        clients = db.query(LawClients).filter(LawClients.office_id == office_id).all()
+        clients = db.query(LawClients).filter(
+            LawClients.office_id == office_id,
+            LawClients.case_id == case.id,
+        ).all()
 
         lawyers = db.query(AccessProfiles).filter(AccessProfiles.role.in_(['محامٍ', 'مدير', 'مدير المكتب']), AccessProfiles.office_id == office_id).all()
 
@@ -2392,7 +2407,9 @@ async def add_user(
 
         return HTMLResponse(content="<script>alert('ليس لديك صلاحية لإضافة مستخدمين'); window.history.back();</script>", status_code=403)
 
-    office_id = user.office_id or 1
+    if len(password) < 12 or not user.office_id:
+        return HTMLResponse(content="كلمة المرور يجب أن تكون 12 حرفاً على الأقل والحساب مرتبطاً بمكتب.", status_code=400)
+    office_id = user.office_id
 
     ALLOWED_OFFICE_ROLES = {'مدير', 'محامي', 'محامٍ', 'سكرتير', 'محاسب', 'موكل'}
 
@@ -2694,9 +2711,9 @@ async def api_register_secure(request: Request, db: Session = Depends(get_db)):
 
             return _J({"success": False, "error": "جميع الحقول الأساسية مطلوبة"}, status_code=400)
 
-        if len(access_pin) < 6:
+        if len(access_pin) < 12:
 
-            return _J({"success": False, "error": "كلمة المرور يجب أن تكون 6 أحرف/أرقام على الأقل"}, status_code=400)
+            return _J({"success": False, "error": "كلمة المرور يجب أن تكون 12 حرفاً على الأقل"}, status_code=400)
 
         if db.query(AccessProfiles).filter(
 
@@ -2734,7 +2751,7 @@ async def api_register_secure(request: Request, db: Session = Depends(get_db)):
 
             "lawyer_name": lawyer_name,
 
-            "access_pin": access_pin,
+        "access_pin_hash": _hash_pin(access_pin),
 
             "role": role
 
@@ -2748,7 +2765,7 @@ async def api_register_secure(request: Request, db: Session = Depends(get_db)):
 
         app_logger.error(f"api_register_secure error: {exc}", exc_info=True)
 
-        return _J({"success": False, "error": f"حدث خطأ داخلي: {str(exc)}"}, status_code=500)
+        return _J({"success": False, "error": "حدث خطأ داخلي. يرجى المحاولة مرة أخرى."}, status_code=500)
 
 @app.post("/api/verify-register-otp")
 
@@ -2808,7 +2825,7 @@ async def api_verify_register_otp(request: Request, db: Session = Depends(get_db
 
             lawyer_name=None,
 
-            access_pin_hash=_hash_pin(pending_user["access_pin"]),
+            access_pin_hash=pending_user["access_pin_hash"],
 
             role='مدير',  # إعطاء صلاحيات مدير المكتب كاملة لكل من يسجل من الخارج
 
@@ -2854,7 +2871,7 @@ async def api_verify_register_otp(request: Request, db: Session = Depends(get_db
 
         app_logger.error(f"verify_register_otp error: {exc}", exc_info=True)
 
-        return _J({"success": False, "error": f"حدث خطأ داخلي أثناء الحفظ: {str(exc)}"}, status_code=500)
+        return _J({"success": False, "error": "حدث خطأ داخلي أثناء الحفظ."}, status_code=500)
 
 # REMOVED DUPLICATE: @app.post("/documents/add")
 

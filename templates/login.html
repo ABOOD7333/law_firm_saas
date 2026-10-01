@@ -252,7 +252,7 @@
                 </div>
                 <div class="form-group">
                     <label>كلمة المرور (رمز الدخول)</label>
-                    <input type="password" id="reg-pass" placeholder="أدخل كلمة مرور قوية">
+                    <input type="password" id="reg-pass" placeholder="أدخل كلمة مرور قوية (12 حرفاً على الأقل)">
                 </div>
                 <div style="display: flex; gap: 10px; margin-top: 20px;">
                     <button class="btn-submit" style="background: #f1f5f9; color: #475569;" onclick="regShowStep(1)">رجوع</button>
@@ -415,7 +415,7 @@
             const pass = document.getElementById('forgot-new-pass').value;
             const confirm = document.getElementById('forgot-new-pass-confirm').value;
 
-            if(pass.length < 6) { showAlert('forgot-alert', 'كلمة المرور 6 أحرف/أرقام على الأقل'); return; }
+            if(pass.length < 12) { showAlert('forgot-alert', 'كلمة المرور يجب أن تكون 12 حرفاً على الأقل'); return; }
             if(pass !== confirm) { showAlert('forgot-alert', 'كلمتا المرور غير متطابقتين'); return; }
 
             const btn = document.getElementById('btn-forgot-reset');

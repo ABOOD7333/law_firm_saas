@@ -3,8 +3,9 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from database.database import get_db
-from database.models import AccessProfiles, LawCases, PaymentRequest, LawDocuments, LawClients
+from database.models import AccessProfiles, LawCases, LawDocuments, LawClients, Invoices
 from dependencies import templates, get_current_user
+from core.security import client_records_for_user
 
 router = APIRouter(prefix="/client-portal", tags=["Client Portal"])
 
@@ -16,30 +17,34 @@ def get_client_user(user: AccessProfiles = Depends(get_current_user)):
         raise HTTPException(status_code=303, headers={"Location": "/dashboard"})
     return user
 
+
+def _client_records(db: Session, user: AccessProfiles):
+    return client_records_for_user(db, user)
+
+
+def _client_case_query(db: Session, user: AccessProfiles):
+    client_ids = [record.id for record in _client_records(db, user)]
+    query = db.query(LawCases).filter(
+        LawCases.office_id == user.office_id,
+        LawCases.is_deleted == 0,
+    )
+    # No matching client record means no accessible cases; never fall back to all cases.
+    return query.filter(LawCases.client_id.in_(client_ids)) if client_ids else query.filter(False)
+
 @router.get("/", response_class=HTMLResponse)
 async def client_dashboard(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_client_user)):
     
     # محاولة العثور على سجل الموكل (LawClients) المرتبط بهذا المستخدم لمعرفة قضاياه الدقيقة
     # إذا لم يكن هناك حقل ربط صريح، نعتمد على رقم الهاتف أو الاسم
-    client_record = db.query(LawClients).filter(
-        LawClients.office_id == user.office_id,
-        (LawClients.phone == user.phone) | (LawClients.name == user.name)
-    ).first()
-    
-    if client_record:
-        # جلب القضايا المرتبطة بالموكل (افتراضياً الموكل مربوط بالـ client_id)
-        # بما أننا لا نعرف بنية الربط الدقيقة في الكود، سنجلب قضايا المكتب بشكل عام كإثبات مفهوم
-        # ولكن الأفضل هو تصفيتها برقم العميل
-        cases_query = db.query(LawCases).filter(LawCases.office_id == user.office_id, LawCases.client_id == client_record.id)
-    else:
-        # Fallback
-        cases_query = db.query(LawCases).filter(LawCases.office_id == user.office_id)
-        
+    client_records = _client_records(db, user)
+    client_ids = [record.id for record in client_records]
+    cases_query = _client_case_query(db, user)
     total_cases = cases_query.count()
     
-    pending_payments = db.query(func.count(PaymentRequest.id)).filter(
-        PaymentRequest.office_id == user.office_id,
-        PaymentRequest.status != "مدفوعة"
+    pending_payments = db.query(func.count(Invoices.id)).filter(
+        Invoices.office_id == user.office_id,
+        Invoices.client_id.in_(client_ids) if client_ids else False,
+        Invoices.status.in_(["Unpaid", "Partial"]),
     ).scalar()
     
     recent_cases = cases_query.order_by(LawCases.id.desc()).limit(3).all()
@@ -55,15 +60,7 @@ async def client_dashboard(request: Request, db: Session = Depends(get_db), user
 
 @router.get("/cases", response_class=HTMLResponse)
 async def client_cases(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_client_user)):
-    client_record = db.query(LawClients).filter(
-        LawClients.office_id == user.office_id,
-        (LawClients.phone == user.phone) | (LawClients.name == user.name)
-    ).first()
-    
-    if client_record:
-        cases = db.query(LawCases).filter(LawCases.office_id == user.office_id, LawCases.client_id == client_record.id).order_by(LawCases.id.desc()).all()
-    else:
-        cases = db.query(LawCases).filter(LawCases.office_id == user.office_id).order_by(LawCases.id.desc()).all()
+    cases = _client_case_query(db, user).order_by(LawCases.id.desc()).all()
 
     return templates.TemplateResponse("client_portal/cases.html", {
         "request": request,
@@ -76,29 +73,21 @@ async def client_cases(request: Request, db: Session = Depends(get_db), user: Ac
 async def client_finance(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_client_user)):
     # جلب المطالبات المالية المتعلقة بالموكل
     # سنفترض أن المطالبات تكون باسم الموكل أو مرتبطة بـ client_id أو قضية تابعة له
-    client_record = db.query(LawClients).filter(
-        LawClients.office_id == user.office_id,
-        (LawClients.phone == user.phone) | (LawClients.name == user.name)
-    ).first()
+    client_ids = [record.id for record in _client_records(db, user)]
     
     payments = []
     total_paid = 0
     total_due = 0
 
-    if client_record:
-        payments = db.query(PaymentRequest).filter(
-            PaymentRequest.office_id == user.office_id,
-            PaymentRequest.client_id == client_record.id
-        ).order_by(PaymentRequest.id.desc()).all()
-    else:
-        # Fallback if no specific client_id mapping is found
-        payments = db.query(PaymentRequest).filter(PaymentRequest.office_id == user.office_id).order_by(PaymentRequest.id.desc()).all()
+    if client_ids:
+        payments = db.query(Invoices).filter(
+            Invoices.office_id == user.office_id,
+            Invoices.client_id.in_(client_ids),
+        ).order_by(Invoices.id.desc()).all()
 
     for p in payments:
-        if p.status == "مدفوعة":
-            total_paid += float(p.amount or 0)
-        else:
-            total_due += float(p.amount or 0)
+        total_paid += float(p.amount_paid or 0)
+        total_due += max(0.0, float(p.grand_total or 0) - float(p.amount_paid or 0))
 
     return templates.TemplateResponse("client_portal/finance.html", {
         "request": request,
@@ -112,17 +101,14 @@ async def client_finance(request: Request, db: Session = Depends(get_db), user: 
 @router.get("/documents", response_class=HTMLResponse)
 async def client_documents(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_client_user)):
     # جلب المستندات المرتبطة بقضايا الموكل
-    client_record = db.query(LawClients).filter(
-        LawClients.office_id == user.office_id,
-        (LawClients.phone == user.phone) | (LawClients.name == user.name)
-    ).first()
+    client_ids = [record.id for record in _client_records(db, user)]
     
     documents = []
-    if client_record:
+    if client_ids:
         # جلب القضايا الخاصة بالموكل أولاً
         client_cases = db.query(LawCases.id).filter(
             LawCases.office_id == user.office_id, 
-            LawCases.client_id == client_record.id
+            LawCases.client_id.in_(client_ids)
         ).all()
         case_ids = [c[0] for c in client_cases]
         

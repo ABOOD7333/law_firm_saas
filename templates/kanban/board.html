@@ -212,6 +212,10 @@
 
 {% block scripts %}
 <script>
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+
 let tasksSortables = [];
 let casesSortables = [];
 
@@ -257,14 +261,14 @@ function renderTasks(tasks) {
         card.className = 'k-card';
         card.dataset.id = t.id;
         
-        let caseHtml = t.case ? `<span class="k-badge kb-case"><i class="fa-solid fa-scale-balanced"></i> ${t.case.case_number}</span>` : '';
-        let dateHtml = t.due_at ? `<span class="k-badge kb-date"><i class="fa-regular fa-clock"></i> ${t.due_at.substring(0,10)}</span>` : '';
-        let avatarHtml = t.assignee ? `<div class="k-avatar" title="${t.assignee.name}">${t.assignee.avatar}</div>` : '';
+        let caseHtml = t.case ? `<span class="k-badge kb-case"><i class="fa-solid fa-scale-balanced"></i> ${escapeHtml(t.case.case_number)}</span>` : '';
+        let dateHtml = t.due_at ? `<span class="k-badge kb-date"><i class="fa-regular fa-clock"></i> ${escapeHtml(t.due_at.substring(0,10))}</span>` : '';
+        let avatarHtml = t.assignee ? `<div class="k-avatar" title="${escapeHtml(t.assignee.name)}">${escapeHtml(t.assignee.avatar)}</div>` : '';
         
         card.innerHTML = `
             <div class="priority-line ${prClass}"></div>
-            <div class="k-card-title">${t.title}</div>
-            ${t.description ? `<div class="k-card-desc">${t.description}</div>` : ''}
+            <div class="k-card-title">${escapeHtml(t.title)}</div>
+            ${t.description ? `<div class="k-card-desc">${escapeHtml(t.description)}</div>` : ''}
             <div class="k-card-footer">
                 <div style="display:flex; gap:6px;">${caseHtml}${dateHtml}</div>
                 ${avatarHtml}
@@ -296,8 +300,8 @@ function renderCases(cases) {
         card.dataset.id = c.id;
         
         card.innerHTML = `
-            <div class="k-card-title">${c.title}</div>
-            <div class="k-card-desc">قضية رقم: ${c.case_number}</div>
+            <div class="k-card-title">${escapeHtml(c.title)}</div>
+            <div class="k-card-desc">قضية رقم: ${escapeHtml(c.case_number)}</div>
             <div class="k-card-footer">
                 <span class="k-badge kb-case"><i class="fa-solid fa-scale-balanced"></i> ${c.estimated_fee ? c.estimated_fee + ' ر.س' : 'غير محدد'}</span>
             </div>

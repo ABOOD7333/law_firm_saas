@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from database.database import get_db
 from database.models import AccessProfiles, AuthSessions, LawOffices
+from core.security import hash_session_token
 
 templates = Jinja2Templates(directory="templates")
 
@@ -56,14 +57,19 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
     
     now_str = datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%d %H:%M:%S")
     
+    token_hash = hash_session_token(token)
     session_record = db.query(AuthSessions).filter(
-        AuthSessions.session_token == token,
+        AuthSessions.session_token.in_([token, token_hash]),
         AuthSessions.is_active == 1,
         AuthSessions.expires_at > now_str
     ).first()
 
     if not session_record:
         return None
+    # Upgrade legacy plaintext tokens at rest the first time an old session is used.
+    if session_record.session_token == token:
+        session_record.session_token = token_hash
+        db.commit()
 
     user = db.query(AccessProfiles).filter(
         AccessProfiles.id == session_record.user_id
@@ -76,6 +82,10 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
         # Superadmins bypass office blocks
         if getattr(user, 'is_superadmin', 0) == 1:
             return user
+
+        # Tenant-scoped routes must never substitute a missing office with office 1.
+        if not user.office_id:
+            return None
             
         if user.office_id:
             office = db.query(LawOffices).filter(LawOffices.id == user.office_id).first()
@@ -116,7 +126,7 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
         # 1. الموكل (Client)
         if user.role == 'موكل':
             allowed = ['/', '/dashboard', '/logout']
-            if not any(path == p for p in allowed) and not path.startswith('/static') and not path.startswith('/api/ai'):
+            if not any(path == p for p in allowed) and not path.startswith('/static') and not path.startswith('/api/mobile'):
                 if path.startswith('/api/'):
                     raise HTTPException(status_code=403, detail="غير مصرح للموكلين بالوصول")
                 raise HTTPException(status_code=status.HTTP_303_SEE_OTHER, headers={"Location": "/dashboard"})

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
 import json
+import html
 
 from database.database import get_db
 from database.models import AccessProfiles, LawOffices, PaymentRequest
@@ -75,7 +76,7 @@ async def superadmin_page(request: Request, db: Session = Depends(get_db), user:
     except Exception as e:
         import traceback
         app_logger.error(f"Superadmin page error: {e}\n{traceback.format_exc()}")
-        return HTMLResponse(content=f"An error occurred: {e}", status_code=500)
+        return HTMLResponse(content="حدث خطأ داخلي", status_code=500)
 
 @router.post("/api/superadmin/toggle-office/{office_id}")
 async def toggle_office(office_id: int, request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
@@ -107,8 +108,10 @@ async def approve_payment(payment_id: int, request: Request, db: Session = Depen
         
     try:
         data = await request.json()
+        if not isinstance(data, dict):
+            return JSONResponse({"success": False, "error": "طلب غير صالح"}, status_code=400)
         action = data.get("action") # 'approve' or 'reject'
-        notes = data.get("notes", "")
+        notes = str(data.get("notes", ""))[:1000]
         
         payment = db.query(PaymentRequest).filter(PaymentRequest.id == payment_id).first()
         if not payment:
@@ -169,7 +172,7 @@ async def approve_payment(payment_id: int, request: Request, db: Session = Depen
                     <div dir="rtl">
                         <h2 style="color: #ef4444;">❌ لم يتم قبول طلب الدفع</h2>
                         <p>مرحباً، تم رفض إيصال الدفع الذي رفعته لسبب التالي:</p>
-                        <p style="background: #f1f5f9; padding: 10px; border-radius: 5px;">{notes}</p>
+                        <p style="background: #f1f5f9; padding: 10px; border-radius: 5px;">{html.escape(notes)}</p>
                         <p>يرجى التأكد من بيانات التحويل والمحاولة مرة أخرى.</p>
                     </div>
                     """
@@ -186,7 +189,7 @@ async def approve_payment(payment_id: int, request: Request, db: Session = Depen
         app_logger.error(f"Superadmin payment approval error: {e}")
         return JSONResponse({"success": False, "error": "حدث خطأ داخلي"}, status_code=500)
 
-@router.get("/api/superadmin/fix-subscriptions")
+@router.post("/api/superadmin/fix-subscriptions")
 async def fix_legacy_subscriptions(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     if not user or not is_superadmin(user):
         return JSONResponse({"success": False, "error": "غير مصرح"}, status_code=403)
@@ -216,7 +219,7 @@ async def fix_legacy_subscriptions(request: Request, db: Session = Depends(get_d
             
         db.commit()
         return JSONResponse({"success": True, "message": f"تم تحديث اشتراكات {updated_count} مكتب بنجاح. المكتب الرئيسي أصبح مجاني دائماً والبقية تم إعطاؤهم 14 يوم من اليوم."})
-    except Exception as e:
+    except Exception:
         db.rollback()
-        app_logger.error(f"Superadmin fix subscriptions error: {e}")
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+        app_logger.exception("Superadmin fix subscriptions error")
+        return JSONResponse({"success": False, "error": "حدث خطأ داخلي"}, status_code=500)

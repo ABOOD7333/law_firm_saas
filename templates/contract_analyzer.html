@@ -562,7 +562,7 @@ async function runAnalysis() {
 function renderAnalysisResults(a) {
     // Contract type badge
     const typeEl = document.getElementById('contractTypeBadge');
-    typeEl.innerHTML = `<div class="contract-type-badge">📋 ${a.contract_type || 'غير محدد'} ${a.is_ai_used ? '<span style="font-size:12px;opacity:0.7">• Gemini AI</span>' : ''}</div>`;
+    typeEl.innerHTML = `<div class="contract-type-badge">📋 ${escHtml(a.contract_type || 'غير محدد')} ${a.is_ai_used ? '<span style="font-size:12px;opacity:0.7">• Gemini AI</span>' : ''}</div>`;
 
     // Summary
     if (a.summary) {
@@ -663,7 +663,7 @@ function renderRisks(data) {
             <div class="overall-icon">${icons[overall] || '✅'}</div>
             <div>
                 <div class="overall-label">مستوى المخاطر الإجمالي</div>
-                <div class="overall-value" style="color:${textColors[overall] || '#34d399'}">${overall}</div>
+                <div class="overall-value" style="color:${textColors[overall] || '#34d399'}">${escHtml(overall)}</div>
             </div>
             <div style="margin-right:auto;color:#64748b;font-size:13px">${risks.length} بند يستحق المراجعة</div>
         </div>`;

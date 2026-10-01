@@ -10,7 +10,9 @@ from database.models import (
     AccessProfiles, LawCases, LawClients, LawHearings, LawTasks, 
     LawDocuments, LawNotes, LawTransactions
 )
+from database.models import LawUserDevices
 from dependencies import get_current_user
+from core.security import client_records_for_user
 
 router = APIRouter(prefix="/api/mobile/sync", tags=["Mobile Sync"])
 
@@ -33,8 +35,20 @@ def get_delta(db_query, last_sync: str):
 async def pull_sync(req: SyncRequest, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     if not user:
         raise HTTPException(status_code=401, detail="غير مصرح")
-        
-    office_id = user.office_id or 1
+    if not user.office_id:
+        raise HTTPException(status_code=403, detail="الحساب غير مرتبط بمكتب")
+    if not req.device_id or len(req.device_id) > 200:
+        raise HTTPException(status_code=400, detail="معرف الجهاز غير صالح")
+    registered_device = db.query(LawUserDevices).filter(
+        LawUserDevices.device_id == req.device_id,
+        LawUserDevices.user_id == user.id,
+        LawUserDevices.is_active == 1,
+        LawUserDevices.is_deleted == 0,
+    ).first()
+    if not registered_device:
+        raise HTTPException(status_code=403, detail="الجهاز غير مسجل لهذا الحساب")
+
+    office_id = user.office_id
     last_sync = req.last_sync
     
     response_data: Dict[str, Any] = {
@@ -48,15 +62,27 @@ async def pull_sync(req: SyncRequest, db: Session = Depends(get_db), user: Acces
 
     # Helper function to convert model to dict safely
     def model_to_dict(obj):
-        return {c.name: getattr(obj, c.name) for c in obj.__table__.columns}
+        return {
+            c.name: getattr(obj, c.name)
+            for c in obj.__table__.columns
+            if c.name not in {"file_path"}
+        }
 
     # 1. Cases
-    cases_query = db.query(LawCases).filter(LawCases.office_id == office_id)
+    cases_query = db.query(LawCases).filter(
+        LawCases.office_id == office_id,
+        LawCases.is_deleted == 0,
+    )
     if user.role in ['محامي', 'محامٍ'] and getattr(user, "can_view_all_cases", 0) == 0:
         cases_query = cases_query.filter(LawCases.lead_lawyer_id == user.id)
     elif user.role == 'موكل':
-        # Mapped indirectly if needed, skipped simplified here
-        pass
+        client_case_ids = [
+            record.case_id for record in client_records_for_user(db, user)
+            if record.case_id is not None
+        ]
+        cases_query = cases_query.filter(
+            LawCases.id.in_(client_case_ids) if client_case_ids else LawCases.id == -1
+        )
         
     cases = get_delta(cases_query, last_sync)
     response_data["cases"] = [model_to_dict(c) for c in cases]
@@ -66,19 +92,46 @@ async def pull_sync(req: SyncRequest, db: Session = Depends(get_db), user: Acces
     
     if case_ids:
         # 2. Clients
-        clients_query = db.query(LawClients).filter(LawClients.office_id == office_id, LawClients.case_id.in_(case_ids))
+        clients_query = db.query(LawClients).filter(
+            LawClients.office_id == office_id,
+            LawClients.is_deleted == 0,
+            LawClients.case_id.in_(case_ids),
+        )
+        if user.role == "موكل":
+            linked_client_ids = [r.id for r in client_records_for_user(db, user)]
+            clients_query = clients_query.filter(
+                LawClients.id.in_(linked_client_ids) if linked_client_ids else LawClients.id == -1
+            )
         response_data["clients"] = [model_to_dict(c) for c in get_delta(clients_query, last_sync)]
 
-        # 3. Tasks
-        tasks_query = db.query(LawTasks).filter(LawTasks.office_id == office_id, LawTasks.case_id.in_(case_ids))
-        response_data["tasks"] = [model_to_dict(c) for c in get_delta(tasks_query, last_sync)]
+        # Internal task assignments are never exposed to client portal accounts.
+        if user.role != "موكل":
+            tasks_query = db.query(LawTasks).filter(
+                LawTasks.office_id == office_id,
+                LawTasks.is_deleted == 0,
+                LawTasks.case_id.in_(case_ids),
+            )
+            if user.role in ['محامي', 'محامٍ']:
+                tasks_query = tasks_query.filter(
+                    (LawTasks.assignee_user_id == user.id) |
+                    (LawTasks.case_id.in_(case_ids))
+                )
+            response_data["tasks"] = [model_to_dict(c) for c in get_delta(tasks_query, last_sync)]
 
         # 4. Hearings
-        hearings_query = db.query(LawHearings).filter(LawHearings.office_id == office_id, LawHearings.case_id.in_(case_ids))
+        hearings_query = db.query(LawHearings).filter(
+            LawHearings.office_id == office_id,
+            LawHearings.is_deleted == 0,
+            LawHearings.case_id.in_(case_ids),
+        )
         response_data["hearings"] = [model_to_dict(c) for c in get_delta(hearings_query, last_sync)]
 
         # 5. Documents
-        docs_query = db.query(LawDocuments).filter(LawDocuments.office_id == office_id, LawDocuments.case_id.in_(case_ids))
+        docs_query = db.query(LawDocuments).filter(
+            LawDocuments.office_id == office_id,
+            LawDocuments.is_deleted == 0,
+            LawDocuments.case_id.in_(case_ids),
+        )
         response_data["documents"] = [model_to_dict(c) for c in get_delta(docs_query, last_sync)]
 
     return response_data

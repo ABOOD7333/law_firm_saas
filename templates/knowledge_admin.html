@@ -101,6 +101,10 @@
 </div>
 
 <script>
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     loadDocuments();
     
@@ -168,13 +172,14 @@ async function loadDocuments() {
                     // Add others as needed
                 };
                 
-                const catName = categoryNames[doc.category] || doc.category;
+                const catName = escapeHtml(categoryNames[doc.category] || doc.category);
+                const safeFileName = escapeHtml(doc.file_name);
                 const dateStr = new Date(doc.created_at).toLocaleString('ar-YE');
                 
                 return `
                     <tr>
-                        <td class="fw-bold text-primary" style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${doc.file_name}">
-                            <i class="fa-solid fa-file-lines me-2"></i>${doc.file_name}
+                        <td class="fw-bold text-primary" style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${safeFileName}">
+                            <i class="fa-solid fa-file-lines me-2"></i>${safeFileName}
                         </td>
                         <td>${catName}</td>
                         <td>${statusBadge}</td>

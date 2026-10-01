@@ -1,4 +1,6 @@
 """
+import hashlib
+from datetime import datetime, timedelta
 Security Helpers — LawSaaS
 أدوات مساعدة للتحقق من أمان المدخلات والملفات المرفوعة.
 """
@@ -36,3 +38,73 @@ def validate_file_signature(content: bytes, extension: str) -> bool:
             return False
             
     return False
+
+
+def hash_session_token(token: str) -> str:
+    """Return the one-way database representation of a bearer session token."""
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def login_lockout_active(user, db) -> bool:
+    """Enforce a temporary, recoverable account lock instead of a permanent lockout."""
+    locked_until = getattr(user, "locked_until", None)
+    if not locked_until:
+        return False
+    now = datetime.utcnow()
+    try:
+        until = datetime.strptime(locked_until, "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        user.locked_until = None
+        user.failed_attempts = 0
+        db.commit()
+        return False
+    if until > now:
+        return True
+    user.locked_until = None
+    user.failed_attempts = 0
+    db.commit()
+    return False
+
+
+def record_login_failure(user, db) -> bool:
+    """Record an unsuccessful login and temporarily lock after repeated failures."""
+    user.failed_attempts = (getattr(user, "failed_attempts", 0) or 0) + 1
+    locked = user.failed_attempts >= 10
+    if locked:
+        user.failed_attempts = 0
+        user.locked_until = (datetime.utcnow() + timedelta(minutes=15)).strftime("%Y-%m-%d %H:%M:%S")
+    db.commit()
+    return locked
+
+
+def client_records_for_user(db, user):
+    """Return only same-office client records explicitly bound to a portal user.
+
+    For legacy rows, permit contact matching only when it identifies exactly one
+    client record; ambiguous matches fail closed.
+    """
+    from sqlalchemy import or_
+    from database.models import LawClients
+
+    if not user.office_id:
+        return []
+    bound = db.query(LawClients).filter(
+        LawClients.user_id == user.id,
+        LawClients.office_id == user.office_id,
+        LawClients.is_deleted == 0,
+    ).all()
+    if bound:
+        return bound
+    contacts = []
+    if user.phone:
+        contacts.append(LawClients.phone == user.phone)
+    if user.email:
+        contacts.append(LawClients.email == user.email)
+    if not contacts:
+        return []
+    matches = db.query(LawClients).filter(
+        LawClients.office_id == user.office_id,
+        LawClients.is_deleted == 0,
+        or_(*contacts),
+    ).all()
+    return matches if len(matches) == 1 else []

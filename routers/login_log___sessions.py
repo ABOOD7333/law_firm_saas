@@ -8,6 +8,7 @@ from core.error_handler import safe_error_html
 from database.database import get_db
 from database.models import AccessProfiles, AuthSessions
 from dependencies import get_current_user, templates
+from core.security import hash_session_token
 
 router = APIRouter()
 
@@ -74,15 +75,20 @@ async def session_revoke_all(request: Request, db: Session = Depends(get_db), us
     from fastapi.responses import JSONResponse
     if not user: return JSONResponse({"ok": False, "message": "غير مصرح"}, status_code=401)
     token = request.cookies.get("session_token")
+    if not token:
+        auth_header = request.headers.get("Authorization", "")
+        token = auth_header[7:] if auth_header.startswith("Bearer ") else None
     office_id = user.office_id or 1
     users = db.query(AccessProfiles.id).filter(AccessProfiles.office_id == office_id).all()
     user_ids = [u[0] for u in users]
     
     # Revoke all active sessions except the current one
+    current_hash = hash_session_token(token) if token else None
+    current_values = [current_hash, token] if token else []
     sessions = db.query(AuthSessions).filter(
         AuthSessions.user_id.in_(user_ids), 
         AuthSessions.is_active == 1,
-        AuthSessions.session_token != token
+        ~AuthSessions.session_token.in_(current_values) if current_values else True
     ).all()
     
     count = 0

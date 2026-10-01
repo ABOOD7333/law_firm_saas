@@ -57,7 +57,7 @@ async def legal_references_save(request: Request, db: Session = Depends(get_db),
             return JSONResponse({"ok": True, "message": "تمت الإضافة بنجاح"})
     except Exception as e:
         db.rollback()
-        return JSONResponse({"ok": False, "message": str(e)})
+        return JSONResponse({"ok": False, "message": "حدث خطأ داخلي"}, status_code=500)
 
 @router.delete("/api/legal_references/delete/{rec_id}")
 async def legal_references_delete(rec_id: int, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):

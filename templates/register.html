@@ -175,7 +175,7 @@
 
                 <div class="input-group">
                     <label>كلمة المرور (PIN)</label>
-                    <input type="password" id="reg-pass" placeholder="6 أرقام على الأقل">
+                    <input type="password" id="reg-pass" placeholder="12 حرفاً على الأقل">
                 </div>
                 <div class="input-group">
                     <label>تأكيد كلمة المرور</label>
@@ -371,7 +371,7 @@ async function submitRegister() {
     const pass    = document.getElementById('reg-pass').value;
     const confirm = document.getElementById('reg-pass-confirm').value;
     const terms   = document.getElementById('terms').checked;
-    if (pass.length < 6)  { alert('كلمة المرور يجب أن تكون 6 أحرف على الأقل'); return; }
+    if (pass.length < 12) { alert('كلمة المرور يجب أن تكون 12 حرفاً على الأقل'); return; }
     if (pass !== confirm)  { alert('كلمتا المرور غير متطابقتين'); return; }
     if (!terms)            { alert('يرجى الموافقة على شروط الاستخدام'); return; }
 

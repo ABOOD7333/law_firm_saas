@@ -137,7 +137,7 @@ async def team_save(request: Request, db: Session = Depends(get_db), user: Acces
             return JSONResponse({"ok": True, "message": f"تم إنشاء العضو بنجاح. رمز الدخول: {pin}"})
     except Exception as e:
         db.rollback()
-        return JSONResponse({"ok": False, "message": str(e)})
+        return JSONResponse({"ok": False, "message": "حدث خطأ داخلي"}, status_code=500)
 
 
 @router.post("/api/team/toggle/{member_id}")

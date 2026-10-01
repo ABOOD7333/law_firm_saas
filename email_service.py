@@ -5,7 +5,8 @@ Used for OTP verification in forgot_password and register flows.
 """
 import smtplib
 import os
-import random
+import secrets
+import hmac
 import string
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -62,14 +63,17 @@ def _load_smtp_config() -> dict:
 
 def generate_otp(length: int = 6) -> str:
     """يولد رمز OTP عشوائي من الأرقام."""
-    return ''.join(random.choices(string.digits, k=length))
+    if not 4 <= length <= 8:
+        raise ValueError("OTP length must be between 4 and 8 digits")
+    return f"{secrets.randbelow(10 ** length):0{length}d}"
 
 
 def store_otp(identifier: str, code: str, ttl_minutes: int = 10):
     """يحفظ رمز OTP لمعرف معين (email/phone) لمدة ttl_minutes."""
     _otp_store[identifier.lower()] = {
         "code": code,
-        "expires_at": datetime.now() + timedelta(minutes=ttl_minutes)
+        "expires_at": datetime.now() + timedelta(minutes=ttl_minutes),
+        "attempts": 0,
     }
 
 
@@ -81,9 +85,12 @@ def verify_otp(identifier: str, code: str) -> bool:
     if datetime.now() > entry["expires_at"]:
         del _otp_store[identifier.lower()]
         return False
-    if entry["code"] == code:
+    if hmac.compare_digest(str(entry["code"]), str(code)):
         del _otp_store[identifier.lower()]
         return True
+    entry["attempts"] += 1
+    if entry["attempts"] >= 5:
+        del _otp_store[identifier.lower()]
     return False
 
 
