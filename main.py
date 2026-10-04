@@ -209,7 +209,10 @@ app.add_middleware(CSRFMiddleware)
 
 def _safe_error(tb_str: str = "") -> HTMLResponse:
 
-    """يعرض تفاصيل الخطأ في التطوير فقط — يخفيها في الإنتاج."""
+    """يعرض تفاصيل الخطأ في التطوير فقط — يخفيها في الإنتاج ويسجلها في السجلات."""
+
+    if tb_str:
+        app_logger.error(f"[SERVER_ERROR_TRACEBACK]\n{tb_str}")
 
     if True: # SECURITY FIX: Never expose tracebacks
 
@@ -3222,6 +3225,7 @@ async def activity_page(request: Request, db: Session = Depends(get_db), user: A
         for task in all_tasks:
 
             assignee = users_map.get(task.assignee_user_id)
+            task_date = str(task.created_at)[:16] if task.created_at else ''
 
             if task.status_key == 'in_progress':
 
@@ -3237,7 +3241,7 @@ async def activity_page(request: Request, db: Session = Depends(get_db), user: A
 
                     'sub': f"القضية: {task.law_case.title if task.law_case else 'مهمة عامة'}",
 
-                    'date': task.created_at[:16]
+                    'date': task_date
 
                 })
 
@@ -3255,7 +3259,7 @@ async def activity_page(request: Request, db: Session = Depends(get_db), user: A
 
                     'sub': f"القضية: {task.law_case.title if task.law_case else 'مهمة عامة'}",
 
-                    'date': task.created_at[:16]
+                    'date': task_date
 
                 })
 
@@ -3273,11 +3277,13 @@ async def activity_page(request: Request, db: Session = Depends(get_db), user: A
 
                     'sub': f"القضية: {task.law_case.title if task.law_case else 'مهمة عامة'}",
 
-                    'date': task.created_at[:16]
+                    'date': task_date
 
                 })
 
         for doc in recent_docs:
+
+            doc_date = str(doc.created_at)[:16] if doc.created_at else ''
 
             activity_feed.append({
 
@@ -3289,13 +3295,13 @@ async def activity_page(request: Request, db: Session = Depends(get_db), user: A
 
                 'text': f"رفع مستند: {doc.name}",
 
-                'sub': f"نوعه: {'{مذكرة' if doc.document_type_key == 'memo' else doc.document_type_key} – مرتبط بالقضية رقم {doc.case_id}",
+                'sub': f"نوعه: {'مذكرة' if doc.document_type_key == 'memo' else doc.document_type_key} – مرتبط بالقضية رقم {doc.case_id}",
 
-                'date': doc.created_at[:16]
+                'date': doc_date
 
             })
 
-        activity_feed.sort(key=lambda x: x['date'], reverse=True)
+        activity_feed.sort(key=lambda x: x.get('date', ''), reverse=True)
 
         # Task stats per user
 

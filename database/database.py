@@ -173,6 +173,34 @@ def init_db():
             conn.execute(text("ALTER TABLE law_hearings ADD COLUMN show_in_client_portal INTEGER DEFAULT 1;"))
     except Exception:
         pass
+
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE law_tasks ADD COLUMN kanban_order INTEGER DEFAULT 0;"))
+    except Exception:
+        pass
+
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE law_tasks ADD COLUMN is_active INTEGER DEFAULT 1;"))
+    except Exception:
+        pass
+
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE law_tasks ADD COLUMN is_deleted INTEGER DEFAULT 0;"))
+    except Exception:
+        pass
+
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE law_tasks ADD COLUMN priority_level INTEGER DEFAULT 2;"))
+    except Exception:
+        pass
         
     print(f"[Database] Connected to: {SQLALCHEMY_DATABASE_URL.split('?')[0]}")
     print(f"[Database] Tables initialized successfully.")
