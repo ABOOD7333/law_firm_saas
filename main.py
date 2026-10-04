@@ -1165,7 +1165,9 @@ async def dashboard_page(request: Request, db: Session = Depends(get_db), user: 
 
                 LawHearings.case_id.in_(case_ids),
 
-                LawHearings.status_key == 'pending'
+                LawHearings.show_in_client_portal == 1,
+
+                LawHearings.is_deleted == 0
 
             ).order_by(LawHearings.hearing_at.asc()).limit(5).all() if case_ids else []
 
@@ -1881,7 +1883,15 @@ async def add_hearing(
 
     next_hearing_date: str = Form(None),
 
-    status_key: str = Form("pending"),
+    status_key: str = Form("قادمة"),
+
+    chamber_number: str = Form(None),
+
+    floor_number: str = Form(None),
+
+    show_in_client_portal: int = Form(1),
+
+    attachment: UploadFile = File(None),
 
     redirect_to_case: str = Form(None),
 
@@ -1919,6 +1929,16 @@ async def add_hearing(
 
         if not case: return HTMLResponse(content="<script>alert('غير مصرح'); window.history.back();</script>", status_code=403)
 
+    attachment_path = None
+    if attachment and attachment.filename and "".join(c for c in attachment.filename if c.isalnum() or c in ' ._-'):
+        import time, shutil
+        upload_dir = "static/uploads/hearings"
+        os.makedirs(upload_dir, exist_ok=True)
+        safe_filename = f"{int(time.time())}_" + "".join(c for c in attachment.filename if c.isalnum() or c in ' ._-')
+        attachment_path = f"{upload_dir}/{safe_filename}"
+        with open(attachment_path, "wb") as buffer:
+            shutil.copyfileobj(attachment.file, buffer)
+
     new_hearing = LawHearings(
 
         case_id=case_id,
@@ -1931,7 +1951,15 @@ async def add_hearing(
 
         next_hearing_date=next_hearing_date,
 
-        status_key=status_key
+        status_key=status_key,
+
+        chamber_number=chamber_number,
+
+        floor_number=floor_number,
+
+        show_in_client_portal=1 if str(show_in_client_portal) in ("1", "true", "True") else 0,
+
+        attachment_path=attachment_path
 
     )
 
@@ -2499,6 +2527,14 @@ async def edit_hearing(
 
     status_key: str = Form(...),
 
+    chamber_number: str = Form(None),
+
+    floor_number: str = Form(None),
+
+    show_in_client_portal: int = Form(1),
+
+    attachment: UploadFile = File(None),
+
     redirect_to_case: str = Form(None),
 
     case_id: int = Form(None),
@@ -2528,6 +2564,22 @@ async def edit_hearing(
         hearing.next_hearing_date = next_hearing_date
 
         hearing.status_key = status_key
+
+        hearing.chamber_number = chamber_number
+
+        hearing.floor_number = floor_number
+
+        hearing.show_in_client_portal = 1 if str(show_in_client_portal) in ("1", "true", "True") else 0
+
+        if attachment and attachment.filename and "".join(c for c in attachment.filename if c.isalnum() or c in ' ._-'):
+            import time, shutil
+            upload_dir = "static/uploads/hearings"
+            os.makedirs(upload_dir, exist_ok=True)
+            safe_filename = f"{int(time.time())}_" + "".join(c for c in attachment.filename if c.isalnum() or c in ' ._-')
+            attachment_path = f"{upload_dir}/{safe_filename}"
+            with open(attachment_path, "wb") as buffer:
+                shutil.copyfileobj(attachment.file, buffer)
+            hearing.attachment_path = attachment_path
 
         db.commit()
 

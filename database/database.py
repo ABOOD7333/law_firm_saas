@@ -152,6 +152,27 @@ def init_db():
             conn.execute(text("ALTER TABLE access_profiles ADD COLUMN linked_owner_id INTEGER;"))
     except Exception:
         pass
+
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE law_hearings ADD COLUMN chamber_number TEXT;"))
+    except Exception:
+        pass
+
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE law_hearings ADD COLUMN floor_number TEXT;"))
+    except Exception:
+        pass
+
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE law_hearings ADD COLUMN show_in_client_portal INTEGER DEFAULT 1;"))
+    except Exception:
+        pass
         
     print(f"[Database] Connected to: {SQLALCHEMY_DATABASE_URL.split('?')[0]}")
     print(f"[Database] Tables initialized successfully.")
