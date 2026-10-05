@@ -557,7 +557,7 @@ def _get_user_quota_info(db: Session, office_id: int, user_id: int, current_user
     today_str = ast_now.strftime("%Y-%m-%d")
 
     # تحديد الحد اليومي بحسب رتبة المستخدم ونوع الحساب
-    is_super = getattr(current_user, 'is_superadmin', 0) or getattr(current_user, 'role', '') == 'superadmin'
+    is_super = getattr(current_user, 'is_superadmin', 0) == 1
     is_admin = getattr(current_user, 'role', '') in ['admin', 'مدير', 'مالك', 'owner']
 
     if is_super:
