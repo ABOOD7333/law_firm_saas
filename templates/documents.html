@@ -111,7 +111,7 @@
                                 <i class="fa-solid fa-download"></i> تحميل
                             </a>
                             {% endif %}
-                            <button class="action-btn" style="color:var(--primary-color);" title="تعديل" onclick="openEditDocModal('{{ d.id }}', '{{ d.case_id }}', '{{ d.name }}', '{{ d.document_type_key }}', '{{ d.doc_date or '' }}', '{{ d.notes or '' }}')">
+                            <button class="action-btn" style="color:var(--primary-color);" title="تعديل" onclick="openEditDocModal({{ d.id|tojson|forceescape }}, {{ d.case_id|tojson|forceescape }}, {{ d.name|tojson|forceescape }}, {{ d.document_type_key|tojson|forceescape }}, {{ (d.doc_date or '')|tojson|forceescape }}, {{ (d.notes or '')|tojson|forceescape }})">
                                 <i class="fa-solid fa-pen-to-square"></i> تعديل
                             </button>
                             <form action="/documents/delete" method="post" style="display:inline;" onsubmit="return confirm('حذف المستند؟')">

@@ -98,11 +98,11 @@
                     </td>
                     <td>
                         <button class="action-btn" style="color:var(--primary-color);" title="عرض/تعديل"
-                            onclick="openEditPleading('{{ p.id }}','{{ p.case_id }}','{{ p.title }}','{{ p.pleading_type_key }}','{{ p.status_key }}','{{ p.issue_date or '' }}')">
+                            onclick="openEditPleading({{ p.id|tojson|forceescape }},{{ p.case_id|tojson|forceescape }},{{ p.title|tojson|forceescape }},{{ p.pleading_type_key|tojson|forceescape }},{{ p.status_key|tojson|forceescape }},{{ (p.issue_date or '')|tojson|forceescape }})">
                             <i class="fa-solid fa-pen"></i>
                         </button>
                         <button class="action-btn" style="color:#8b5cf6;" title="عرض المحتوى"
-                            onclick="showContent('{{ p.title }}', `{{ p.content_html or 'لا يوجد محتوى مكتوب بعد.' }}`)">
+                            onclick="showContent({{ p.title|tojson|forceescape }}, {{ (p.content_html or 'لا يوجد محتوى مكتوب بعد.')|tojson|forceescape }})">
                             <i class="fa-solid fa-eye"></i>
                         </button>
                     </td>

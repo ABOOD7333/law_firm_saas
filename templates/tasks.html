@@ -83,7 +83,7 @@
                         {% endif %}
                     </td>
                     <td>
-                        <button class="action-btn" style="color: var(--primary-color);" title="تعديل" onclick="openEditTaskModal('{{ task.id }}', '{{ task.title }}', '{{ task.description or '' }}', '{{ task.due_at or '' }}', '{{ task.assignee_user_id or '' }}', '{{ task.priority_level }}', '{{ task.status_key }}', '{{ task.case_id or '' }}')"><i class="fa-solid fa-pen"></i></button>
+                        <button class="action-btn" style="color: var(--primary-color);" title="تعديل" onclick="openEditTaskModal({{ task.id|tojson|forceescape }}, {{ task.title|tojson|forceescape }}, {{ (task.description or '')|tojson|forceescape }}, {{ (task.due_at or '')|tojson|forceescape }}, {{ (task.assignee_user_id or '')|tojson|forceescape }}, {{ task.priority_level|tojson|forceescape }}, {{ task.status_key|tojson|forceescape }}, {{ (task.case_id or '')|tojson|forceescape }})"><i class="fa-solid fa-pen"></i></button>
                         
                         <!-- Quick status update buttons -->
                         {% if task.status_key != 'completed' %}

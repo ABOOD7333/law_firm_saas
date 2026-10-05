@@ -202,9 +202,11 @@
                 <li class="nav-item {% if active_page == 'cases' %}active{% endif %}">
                     <a href="/cases"><i class="fa-solid fa-gavel"></i> إدارة القضايا</a>
                 </li>
+                {% if has_perm(user, 'parties', 'view') %}
                 <li class="nav-item {% if active_page == 'parties' %}active{% endif %}">
                     <a href="/parties"><i class="fa-solid fa-people-arrows"></i> الأطراف والمتقاضون</a>
                 </li>
+                {% endif %}
                 {% endif %}
                 
                 {% if has_perm(user, 'clients', 'view') %}
@@ -258,9 +260,11 @@
                         <a href="/kanban" style="color: #4f46e5; font-weight: bold;"><i class="fa-solid fa-objects-column"></i> لوحة الكانبان 🗂️</a>
                     </li>
                     {% endif %}
+                    {% if has_perm(user, 'cases', 'view') %}
                     <li class="nav-item {% if active_page == 'timeline' %}active{% endif %}">
                         <a href="/timeline"><i class="fa-solid fa-timeline"></i> الخط الزمني</a>
                     </li>
+                    {% endif %}
                 {% endif %}
                 
                 {% if is_admin or is_acc %}

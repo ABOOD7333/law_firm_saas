@@ -126,7 +126,7 @@
                             <td>
                                 {% if hearing.attachment_path and has_perm(user, 'hearings', 'view') %}<a class="action-btn" href="/hearings/{{ hearing.id }}/attachment" title="تنزيل المرفق"><i class="fa-solid fa-download"></i> المرفق</a>{% endif %}
                                 {% if has_perm(user, 'hearings', 'edit') %}
-                                <button class="action-btn" style="color: var(--primary-color);" title="تعديل" onclick="openEditHearingModal('{{ hearing.id }}', '{{ hearing.title }}', '{{ hearing.hearing_at }}', '{{ hearing.next_hearing_date or '' }}', '{{ hearing.status_key }}', '{{ case.id }}', '{{ hearing.chamber_number or '' }}', '{{ hearing.floor_number or '' }}', '{{ hearing.show_in_client_portal }}')"><i class="fa-solid fa-pen"></i></button>
+                                <button class="action-btn" style="color: var(--primary-color);" title="تعديل" onclick="openEditHearingModal({{ hearing.id|tojson|forceescape }}, {{ hearing.title|tojson|forceescape }}, {{ hearing.hearing_at|tojson|forceescape }}, {{ (hearing.next_hearing_date or '')|tojson|forceescape }}, {{ hearing.status_key|tojson|forceescape }}, {{ case.id|tojson|forceescape }}, {{ (hearing.chamber_number or '')|tojson|forceescape }}, {{ (hearing.floor_number or '')|tojson|forceescape }}, {{ hearing.show_in_client_portal|tojson|forceescape }})"><i class="fa-solid fa-pen"></i></button>
                                 {% endif %}
                             </td>
                         </tr>

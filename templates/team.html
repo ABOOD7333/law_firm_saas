@@ -142,7 +142,7 @@
                   <i class="fa-solid fa-{{ 'ban' if m.is_active else 'circle-check' }}"></i>
                   {{ 'إيقاف' if m.is_active else 'تفعيل' }}
                 </button>
-                <button class="tbl-btn tbl-delete" onclick="quickDelete({{ m.id }}, '{{ m.name }}'); event.stopPropagation();" title="حذف العضو نهائياً">
+                <button class="tbl-btn tbl-delete" onclick="quickDelete({{ m.id }}, {{ m.name|tojson|forceescape }}); event.stopPropagation();" title="حذف العضو نهائياً">
                   <i class="fa-solid fa-trash-can"></i> حذف
                 </button>
               </div>
@@ -230,7 +230,7 @@
           <input type="text" id="fCaseInput" placeholder="اكتب رقم القضية..." oninput="filterCases(this.value)">
           <div id="caseSuggestions" style="border:1px solid var(--border-color);border-radius:8px;max-height:120px;overflow-y:auto;display:none;background:var(--card-bg);margin-top:4px;">
             {% for c in cases %}
-            <div onclick="selectCase('{{ c.case_number }}')" style="padding:8px 12px;cursor:pointer;font-size:.85rem;" class="case-opt" data-num="{{ c.case_number }}" data-title="{{ c.title }}">
+            <div onclick="selectCase({{ c.case_number|tojson|forceescape }})" style="padding:8px 12px;cursor:pointer;font-size:.85rem;" class="case-opt" data-num="{{ c.case_number }}" data-title="{{ c.title }}">
               {{ c.case_number }} — {{ c.title[:50] }}
             </div>
             {% endfor %}

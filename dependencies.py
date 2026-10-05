@@ -2,7 +2,7 @@
 Shared dependencies module - imported by routers to avoid circular imports.
 This module provides get_current_user and templates without importing from main.
 """
-from fastapi import Request, Depends
+from fastapi import Request, Depends, HTTPException
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
@@ -39,6 +39,30 @@ def check_user_permission(user, module: str, action: str = "view") -> bool:
     except Exception:
         pass
     return False
+
+
+def require_user_permission(user, module: str, action: str = "view") -> None:
+    """Enforce an RBAC permission at the request handler boundary."""
+    if not user:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    if not user.office_id or not check_user_permission(user, module, action):
+        raise HTTPException(status_code=403, detail="لا تملك الصلاحية المطلوبة")
+
+
+def user_can_access_case(db: Session, user, case_id: int) -> bool:
+    """Return whether a user may access a live case within their own office."""
+    from database.models import LawCases
+
+    if not user or not user.office_id:
+        return False
+    query = db.query(LawCases.id).filter(
+        LawCases.id == case_id,
+        LawCases.office_id == user.office_id,
+        LawCases.is_deleted == 0,
+    )
+    if user.role in {"محامي", "محامٍ"} and not getattr(user, "can_view_all_cases", 0):
+        query = query.filter(LawCases.lead_lawyer_id == user.id)
+    return query.first() is not None
 
 templates.env.globals['has_perm'] = check_user_permission
 

@@ -55,7 +55,7 @@
             </div>
             <div style="display:flex;gap:6px;flex-shrink:0;">
                 <button class="action-btn" style="color:var(--primary-color);" title="تعديل"
-                    onclick="openEdit('{{ note.id }}','{{ note.title }}','{{ note.note_type_key or '' }}',`{{ (note.content or '')|replace('`','\\`') }}`)">
+                    onclick="openEdit({{ note.id|tojson|forceescape }},{{ note.title|tojson|forceescape }},{{ (note.note_type_key or '')|tojson|forceescape }},{{ (note.content or '')|tojson|forceescape }})">
                     <i class="fa-solid fa-pen-to-square"></i> تعديل
                 </button>
                 <form action="/notes/delete" method="post" style="display:inline;" onsubmit="return confirm('حذف الملاحظة؟')">

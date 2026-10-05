@@ -12,7 +12,7 @@ from database.database import get_db
 from database.models import AccessProfiles, LawCases, LawDocuments
 
 # نستخدم الاستيراد المتأخر لتجنب التكرار (Circular Imports)
-from dependencies import get_current_user, templates
+from dependencies import get_current_user, templates, require_user_permission, user_can_access_case
 
 router = APIRouter()
 
@@ -23,6 +23,7 @@ os.makedirs("private_uploads/documents", exist_ok=True)
 @router.get("/documents", response_class=HTMLResponse)
 async def documents_page(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     if not user: return RedirectResponse(url="/", status_code=303)
+    require_user_permission(user, "documents", "view")
     try:
         if not user.office_id:
             raise HTTPException(status_code=403, detail="الحساب غير مرتبط بمكتب")
@@ -56,6 +57,7 @@ async def add_document(
     user: AccessProfiles = Depends(get_current_user)
 ):
     if not user: return RedirectResponse(url="/", status_code=303)
+    require_user_permission(user, "documents", "add")
     office_id = user.office_id
     if not office_id:
         raise HTTPException(status_code=403, detail="الحساب غير مرتبط بمكتب")
@@ -63,9 +65,9 @@ async def add_document(
         raise HTTPException(status_code=400, detail="بيانات المستند غير صالحة")
     
     # IDOR Check: Ensure case belongs to the user's office
-    case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
-    if not case:
+    if not user_can_access_case(db, user, case_id):
         return HTMLResponse(content="<script>alert('غير مصرح لك بإضافة مستندات لهذه القضية'); window.history.back();</script>", status_code=403)
+    case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
         
     # RBAC Check: Restrict lawyers to their assigned cases only if they cannot view all
     if user.role in ['محامي', 'محامٍ'] and user.can_view_all_cases == 0 and case.lead_lawyer_id != user.id:
@@ -115,6 +117,7 @@ async def edit_document(
     user: AccessProfiles = Depends(get_current_user)
 ):
     if not user: return RedirectResponse(url="/", status_code=303)
+    require_user_permission(user, "documents", "edit")
     office_id = user.office_id
     if not office_id:
         raise HTTPException(status_code=403, detail="الحساب غير مرتبط بمكتب")
@@ -126,12 +129,12 @@ async def edit_document(
             LawCases.id == d.case_id,
             LawCases.office_id == office_id,
         ).first()
-        if not current_case:
+        if not current_case or not user_can_access_case(db, user, current_case.id):
             raise HTTPException(status_code=404, detail="المستند غير موجود")
         if user.role in ['محامي', 'محامٍ'] and user.can_view_all_cases == 0 and current_case.lead_lawyer_id != user.id:
             raise HTTPException(status_code=403, detail="غير مصرح لك بتعديل هذا المستند")
         case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
-        if not case: return HTMLResponse(content="<script>alert('غير مصرح'); window.history.back();</script>", status_code=403)
+        if not case or not user_can_access_case(db, user, case_id): return HTMLResponse(content="<script>alert('غير مصرح'); window.history.back();</script>", status_code=403)
         
         # RBAC Check: Restrict lawyers to their assigned cases only if they cannot view all
         if user.role in ['محامي', 'محامٍ'] and user.can_view_all_cases == 0 and case.lead_lawyer_id != user.id:
@@ -176,13 +179,14 @@ async def delete_document(
     user: AccessProfiles = Depends(get_current_user)
 ):
     if not user: return RedirectResponse(url="/", status_code=303)
+    require_user_permission(user, "documents", "delete")
     if not user.office_id:
         raise HTTPException(status_code=403, detail="الحساب غير مرتبط بمكتب")
     d = db.query(LawDocuments).filter(LawDocuments.id == doc_id, LawDocuments.office_id == user.office_id).first()
     if d:
         # RBAC Check: Ensure lawyer owns the case referenced by the document
         case = db.query(LawCases).filter(LawCases.id == d.case_id).first()
-        if case and user.role in ['محامي', 'محامٍ'] and user.can_view_all_cases == 0 and case.lead_lawyer_id != user.id:
+        if not case or not user_can_access_case(db, user, case.id):
             return HTMLResponse(content="<script>alert('غير مصرح لك بحذف مستندات هذه القضية'); window.history.back();</script>", status_code=403)
         db.delete(d); db.commit()
     return RedirectResponse(url="/documents", status_code=303)
@@ -198,6 +202,7 @@ async def download_document(
 ):
     if not user:
         raise HTTPException(status_code=401, detail="غير مصرح")
+    require_user_permission(user, "documents", "view")
         
     # Find the document in database by file path (either private_uploads or static)
     doc = db.query(LawDocuments).filter(
@@ -209,7 +214,7 @@ async def download_document(
         raise HTTPException(status_code=404, detail="المستند غير موجود في قاعدة البيانات")
         
     # Check authorization: must belong to the user's office
-    if doc.office_id != user.office_id:
+    if doc.office_id != user.office_id or not user_can_access_case(db, user, doc.case_id):
         raise HTTPException(status_code=403, detail="غير مصرح لك بالوصول لهذا المستند")
         
     # RBAC Check: Restrict lawyers to their assigned cases only if they cannot view all

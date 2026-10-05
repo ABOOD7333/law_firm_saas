@@ -84,7 +84,7 @@
                     </td>
                     <td>
                         <button class="action-btn" style="color:var(--primary-color);" title="تعديل"
-                            onclick="openEditParty('{{ party.id }}','{{ party.name }}','{{ party.role_key }}','{{ party.id_number or '' }}','{{ party.phone or '' }}','{{ party.email or '' }}','{{ party.address or '' }}','{{ party.case_id }}')">
+                            onclick="openEditParty({{ party.id|tojson|forceescape }},{{ party.name|tojson|forceescape }},{{ party.role_key|tojson|forceescape }},{{ (party.id_number or '')|tojson|forceescape }},{{ (party.phone or '')|tojson|forceescape }},{{ (party.email or '')|tojson|forceescape }},{{ (party.address or '')|tojson|forceescape }},{{ party.case_id|tojson|forceescape }})">
                             <i class="fa-solid fa-pen"></i>
                         </button>
                         <form action="/parties/delete" method="post" style="display:inline;" onsubmit="return confirm('هل أنت متأكد من حذف هذا الطرف؟')">

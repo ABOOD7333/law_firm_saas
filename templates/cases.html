@@ -59,7 +59,7 @@
                                 <i class="fa-solid fa-folder-open"></i> عرض
                             </a>
                             {% if has_perm(user, 'cases', 'edit') %}
-                            <button class="action-btn" style="color:var(--primary-color);" title="تعديل القضية" onclick="openEditCaseModal('{{ case.id }}', '{{ case.title }}', '{{ case.case_number }}', '{{ case.law_clients[0].id if case.law_clients else '' }}', '{{ case.lead_lawyer_id or '' }}', '{{ case.status_key }}')">
+                            <button class="action-btn" style="color:var(--primary-color);" title="تعديل القضية" onclick="openEditCaseModal({{ case.id|tojson|forceescape }}, {{ case.title|tojson|forceescape }}, {{ case.case_number|tojson|forceescape }}, {{ (case.law_clients[0].id if case.law_clients else '')|tojson|forceescape }}, {{ (case.lead_lawyer_id or '')|tojson|forceescape }}, {{ case.status_key|tojson|forceescape }})">
                                 <i class="fa-solid fa-pen-to-square"></i> تعديل
                             </button>
                             {% endif %}

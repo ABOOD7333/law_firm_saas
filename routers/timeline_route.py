@@ -10,7 +10,7 @@ from database.models import (
     AccessProfiles, LawCases, LawHearings, LawTasks,
     LawJudgments, LawDocuments, LawNotes, LawCorrespondences
 )
-from dependencies import get_current_user, templates
+from dependencies import get_current_user, templates, check_user_permission
 
 router = APIRouter()
 
@@ -22,21 +22,54 @@ async def timeline_page(
     user: AccessProfiles = Depends(get_current_user)
 ):
     if not user: return RedirectResponse(url="/", status_code=303)
+    if not check_user_permission(user, "cases", "view"):
+        raise HTTPException(status_code=403, detail="لا تملك صلاحية عرض القضايا")
     try:
         from datetime import date as _date
         today_str = str(_date.today())
 
         # Determine office scope
-        office_id = user.office_id or 1
+        office_id = user.office_id
+        if not office_id:
+            raise HTTPException(status_code=403, detail="الحساب غير مرتبط بمكتب")
+        cases_query = db.query(LawCases).filter(
+            LawCases.office_id == office_id,
+            LawCases.is_deleted == 0,
+        )
+        if user.role in {"محامي", "محامٍ"} and not user.can_view_all_cases:
+            cases_query = cases_query.filter(LawCases.lead_lawyer_id == user.id)
+        cases = cases_query.all()
+        case_ids = [c.id for c in cases]
 
         # --- Fetch all data ---
-        hearings      = db.query(LawHearings).filter(LawHearings.office_id == office_id).all()
-        tasks         = db.query(LawTasks).filter(LawTasks.office_id == office_id).all()
-        judgments     = db.query(LawJudgments).filter(LawJudgments.office_id == office_id).all()
-        documents     = db.query(LawDocuments).filter(LawDocuments.office_id == office_id).all()
-        notes         = db.query(LawNotes).filter(LawNotes.office_id == office_id).all()
-        correspondences = db.query(LawCorrespondences).filter(LawCorrespondences.office_id == office_id).all()
-        cases         = db.query(LawCases).filter(LawCases.is_deleted == 0).all()
+        hearings = db.query(LawHearings).filter(
+            LawHearings.office_id == office_id,
+            LawHearings.case_id.in_(case_ids) if case_ids else LawHearings.id == -1,
+        ).all() if check_user_permission(user, "hearings", "view") else []
+        task_query = db.query(LawTasks).filter(LawTasks.office_id == office_id, LawTasks.is_deleted == 0)
+        if user.role in {"محامي", "محامٍ"} and not user.can_view_all_cases:
+            from sqlalchemy import or_
+            task_query = task_query.filter(
+                or_(LawTasks.case_id.in_(case_ids) if case_ids else False,
+                    (LawTasks.case_id.is_(None)) & (LawTasks.assignee_user_id == user.id))
+            )
+        tasks = task_query.all() if check_user_permission(user, "tasks", "view") else []
+        judgments = db.query(LawJudgments).filter(
+            LawJudgments.office_id == office_id,
+            LawJudgments.case_id.in_(case_ids) if case_ids else LawJudgments.id == -1,
+        ).all() if case_ids and check_user_permission(user, "judgments", "view") else []
+        documents = db.query(LawDocuments).filter(
+            LawDocuments.office_id == office_id,
+            LawDocuments.case_id.in_(case_ids) if case_ids else LawDocuments.id == -1,
+        ).all() if case_ids and check_user_permission(user, "documents", "view") else []
+        notes = db.query(LawNotes).filter(
+            LawNotes.office_id == office_id,
+            LawNotes.case_id.in_(case_ids) if case_ids else LawNotes.id == -1,
+        ).all() if case_ids and check_user_permission(user, "notes", "view") else []
+        correspondences = db.query(LawCorrespondences).filter(
+            LawCorrespondences.office_id == office_id,
+            LawCorrespondences.case_id.in_(case_ids) if case_ids else LawCorrespondences.id == -1,
+        ).all() if case_ids and check_user_permission(user, "correspondences", "view") else []
 
         # Build cases lookup
         cases_map = {c.id: c for c in cases}

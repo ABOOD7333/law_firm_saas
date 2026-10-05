@@ -84,14 +84,14 @@
                     <td style="max-width:200px;">
                         {% if j.judgment_text %}
                         <span style="font-size:.85rem;color:var(--text-muted);">{{ j.judgment_text[:70] }}{% if j.judgment_text|length > 70 %}...{% endif %}</span>
-                        <button onclick="showJudgmentText('{{ j.law_case.case_number if j.law_case else '' }}', `{{ j.judgment_text }}`)" style="background:none;border:none;color:var(--primary-color);cursor:pointer;font-size:.8rem;font-weight:600;">عرض</button>
+                        <button onclick="showJudgmentText({{ (j.law_case.case_number if j.law_case else '')|tojson|forceescape }}, {{ j.judgment_text|tojson|forceescape }})" style="background:none;border:none;color:var(--primary-color);cursor:pointer;font-size:.8rem;font-weight:600;">عرض</button>
                         {% else %}
                         <span style="color:var(--text-muted);font-size:.85rem;">-</span>
                         {% endif %}
                     </td>
                     <td>
                         <button class="action-btn" style="color:var(--primary-color);" title="تعديل"
-                            onclick="openEditJudgment('{{ j.id }}','{{ j.case_id }}','{{ j.judgment_date }}','{{ j.court_name or '' }}','{{ j.judge_name or '' }}','{{ j.status_key or '' }}')">
+                            onclick="openEditJudgment({{ j.id|tojson|forceescape }},{{ j.case_id|tojson|forceescape }},{{ j.judgment_date|tojson|forceescape }},{{ (j.court_name or '')|tojson|forceescape }},{{ (j.judge_name or '')|tojson|forceescape }},{{ (j.status_key or '')|tojson|forceescape }})">
                             <i class="fa-solid fa-pen"></i>
                         </button>
                     </td>

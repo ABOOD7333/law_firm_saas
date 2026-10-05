@@ -6,7 +6,7 @@ from core.error_handler import safe_error_html
 
 from database.database import get_db
 from database.models import AccessProfiles, LawCases, LawPleadings
-from dependencies import get_current_user, templates
+from dependencies import get_current_user, templates, require_user_permission, user_can_access_case
 
 router = APIRouter()
 
@@ -14,9 +14,14 @@ router = APIRouter()
 @router.get("/pleadings", response_class=HTMLResponse)
 async def pleadings_page(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     if not user: return RedirectResponse(url="/", status_code=303)
+    require_user_permission(user, "pleadings", "view")
     try:
-        pleadings = db.query(LawPleadings).filter(LawPleadings.office_id == (user.office_id or 1)).order_by(LawPleadings.id.desc()).all()
-        cases = db.query(LawCases).filter(LawCases.office_id == (user.office_id or 1), LawCases.is_deleted == 0).all()
+        cases_query = db.query(LawCases).filter(LawCases.office_id == user.office_id, LawCases.is_deleted == 0)
+        if user.role in {"محامي", "محامٍ"} and not user.can_view_all_cases:
+            cases_query = cases_query.filter(LawCases.lead_lawyer_id == user.id)
+        case_ids = [row.id for row in cases_query.with_entities(LawCases.id).all()]
+        pleadings = db.query(LawPleadings).filter(LawPleadings.office_id == user.office_id, LawPleadings.case_id.in_(case_ids)).order_by(LawPleadings.id.desc()).all() if case_ids else []
+        cases = cases_query.all()
         return templates.TemplateResponse(request=request, name="pleadings.html",
             context={"user": user, "pleadings": pleadings, "cases": cases, "active_page": "pleadings"})
     except Exception as exc:
@@ -35,9 +40,9 @@ async def add_pleading(
     user: AccessProfiles = Depends(get_current_user)
 ):
     if not user: return RedirectResponse(url="/", status_code=303)
-    office_id = user.office_id or 1
-    case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
-    if not case: return HTMLResponse(content="<script>alert('غير مصرح'); window.history.back();</script>", status_code=403)
+    require_user_permission(user, "pleadings", "add")
+    office_id = user.office_id
+    if not user_can_access_case(db, user, case_id): return HTMLResponse(content="<script>alert('غير مصرح'); window.history.back();</script>", status_code=403)
     
     pleading = LawPleadings(case_id=case_id, office_id=office_id,
         title=title, pleading_type_key=pleading_type_key,
@@ -60,7 +65,9 @@ async def edit_pleading(
     user: AccessProfiles = Depends(get_current_user)
 ):
     if not user: return RedirectResponse(url="/", status_code=303)
-    p = db.query(LawPleadings).filter(LawPleadings.id == pleading_id, LawPleadings.office_id == (user.office_id or 1)).first()
+    require_user_permission(user, "pleadings", "edit")
+    p = db.query(LawPleadings).filter(LawPleadings.id == pleading_id, LawPleadings.office_id == user.office_id).first()
+    if not p or not user_can_access_case(db, user, p.case_id): raise HTTPException(status_code=403, detail="غير مصرح بتعديل هذه المذكرة")
     if p:
         p.title = title; p.pleading_type_key = pleading_type_key
         p.content_html = content_html; p.issue_date = issue_date

@@ -7,7 +7,7 @@ from database.models import (
     AccessProfiles, LawCases, LawClients, LawParties,
     LawHearings, LawPleadings, LawJudgments, LawNotes
 )
-from dependencies import get_current_user, templates
+from dependencies import get_current_user, templates, check_user_permission, require_user_permission
 
 router = APIRouter()
 
@@ -21,6 +21,7 @@ async def search_page(
     user: AccessProfiles = Depends(get_current_user)
 ):
     if not user: return RedirectResponse(url="/", status_code=303)
+    require_user_permission(user, "cases", "view")
     results = {"cases": [], "clients": [], "parties": [], "hearings": [], "pleadings": [], "judgments": [], "notes": []}
     if q and q.strip():
         term = q.strip()
@@ -35,7 +36,7 @@ async def search_page(
         if user.role in ["محامي", "محامٍ"]:
             visible_case_ids = visible_case_ids.filter(LawCases.lead_lawyer_id == user.id)
         case_ids = [row[0] for row in visible_case_ids.all()]
-        if scope in ("all", "cases"):
+        if scope in ("all", "cases") and check_user_permission(user, "cases", "view"):
             results["cases"] = db.query(LawCases).filter(
                 LawCases.office_id == office_id,
                 LawCases.is_deleted == 0,
@@ -45,7 +46,7 @@ async def search_page(
                 (LawCases.summary.ilike(like)) |
                 (LawCases.description.ilike(like))
             ).limit(15).all()
-        if scope in ("all", "clients"):
+        if scope in ("all", "clients") and check_user_permission(user, "clients", "view"):
             results["clients"] = db.query(LawClients).filter(
                 LawClients.office_id == office_id,
                 LawClients.case_id.in_(case_ids) if case_ids else LawClients.id == -1,
@@ -53,7 +54,7 @@ async def search_page(
                 (LawClients.phone.ilike(like)) |
                 (LawClients.national_id.ilike(like))
             ).limit(15).all()
-        if scope in ("all", "parties"):
+        if scope in ("all", "parties") and check_user_permission(user, "parties", "view"):
             results["parties"] = db.query(LawParties).filter(
                 LawParties.office_id == office_id,
                 LawParties.case_id.in_(case_ids) if case_ids else LawParties.id == -1,
@@ -61,21 +62,21 @@ async def search_page(
                 (LawParties.phone.ilike(like)) |
                 (LawParties.id_number.ilike(like))
             ).limit(15).all()
-        if scope in ("all", "hearings"):
+        if scope in ("all", "hearings") and check_user_permission(user, "hearings", "view"):
             results["hearings"] = db.query(LawHearings).filter(
                 LawHearings.office_id == office_id,
                 LawHearings.case_id.in_(case_ids) if case_ids else LawHearings.id == -1,
                 (LawHearings.title.ilike(like)) |
                 (LawHearings.result_summary.ilike(like))
             ).limit(15).all()
-        if scope in ("all", "pleadings"):
+        if scope in ("all", "pleadings") and check_user_permission(user, "pleadings", "view"):
             results["pleadings"] = db.query(LawPleadings).filter(
                 LawPleadings.office_id == office_id,
                 LawPleadings.case_id.in_(case_ids) if case_ids else LawPleadings.id == -1,
                 (LawPleadings.title.ilike(like)) |
                 (LawPleadings.content_html.ilike(like))
             ).limit(15).all()
-        if scope in ("all", "judgments"):
+        if scope in ("all", "judgments") and check_user_permission(user, "judgments", "view"):
             results["judgments"] = db.query(LawJudgments).filter(
                 LawJudgments.office_id == office_id,
                 LawJudgments.case_id.in_(case_ids) if case_ids else LawJudgments.id == -1,
@@ -84,7 +85,7 @@ async def search_page(
                 (LawJudgments.judgment_text.ilike(like)) |
                 (LawJudgments.status_key.ilike(like))
             ).limit(15).all()
-        if scope in ("all", "notes"):
+        if scope in ("all", "notes") and check_user_permission(user, "notes", "view"):
             results["notes"] = db.query(LawNotes).filter(
                 LawNotes.office_id == office_id,
                 LawNotes.case_id.in_(case_ids) if case_ids else LawNotes.id == -1,

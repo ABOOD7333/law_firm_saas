@@ -377,7 +377,7 @@ app.mount("/static", SafeStaticFiles(directory="static"), name="static")
 
 # Templates setup - imported from dependencies to avoid circular imports in routers
 
-from dependencies import templates, get_current_user, check_user_permission
+from dependencies import templates, get_current_user, check_user_permission, user_can_access_case
 
 @app.get("/", response_class=HTMLResponse)
 async def login_page(request: Request, user: AccessProfiles = Depends(get_current_user)):
@@ -1256,6 +1256,9 @@ async def get_case_numbers(db: Session = Depends(get_db), user: AccessProfiles =
 
         return _JSONResponse([])
 
+    if not check_user_permission(user, "cases", "view"):
+        raise HTTPException(status_code=403, detail="لا تملك صلاحية عرض القضايا")
+
     office_id = user.office_id or 1
 
     query = db.query(LawCases.case_number).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0)
@@ -1638,6 +1641,9 @@ async def export_case_report(
 
         return RedirectResponse(url="/", status_code=303)
 
+    if not check_user_permission(user, "reports", "view") or not check_user_permission(user, "cases", "view"):
+        raise HTTPException(status_code=403, detail="لا تملك صلاحية عرض التقرير")
+
     office_id = user.office_id or 1
 
     query = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0)
@@ -1736,11 +1742,14 @@ async def case_details_page(case_id: int, request: Request, db: Session = Depend
 
         return RedirectResponse(url="/", status_code=303)
 
+    if not check_user_permission(user, "cases", "view"):
+        raise HTTPException(status_code=403, detail="لا تملك صلاحية عرض القضايا")
+
     try:
 
         office_id = user.office_id or 1
 
-        case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
+        case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id, LawCases.is_deleted == 0).first()
 
         if not case:
 
@@ -1748,7 +1757,7 @@ async def case_details_page(case_id: int, request: Request, db: Session = Depend
 
         # منع المحامي من دخول قضية غير تابعة له
 
-        if user.role in ['محامي', 'محامٍ'] and case.lead_lawyer_id != user.id:
+        if not user_can_access_case(db, user, case_id):
 
             return HTMLResponse(content="<script>alert('غير مصرح لك بالدخول لهذه القضية'); window.location.href='/cases';</script>", status_code=403)
 
@@ -1952,25 +1961,21 @@ async def add_hearing(
 
         return HTMLResponse(content="<script>alert('غير مصرح لك بإضافة جلسة'); window.history.back();</script>", status_code=403)
 
-    # Get user office or default to first
-
     office_id = user.office_id
 
     if not office_id:
-
-        first_office = db.query(LawOffices).first()
-
-        office_id = first_office.id if first_office else 1
+        raise HTTPException(status_code=403, detail="الحساب غير مرتبط بمكتب")
 
     # Clean datetime format from HTML5 datetime-local (e.g. 2023-05-10T14:30)
 
     formatted_hearing_at = hearing_at.replace('T', ' ') if hearing_at else None
 
-    if case_id:
-
-        case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
-
-        if not case: return HTMLResponse(content="<script>alert('غير مصرح'); window.history.back();</script>", status_code=403)
+    case = db.query(LawCases).filter(
+        LawCases.id == case_id, LawCases.office_id == office_id,
+        LawCases.is_deleted == 0,
+    ).first()
+    if not case or not user_can_access_case(db, user, case_id):
+        return HTMLResponse(content="<script>alert('غير مصرح'); window.history.back();</script>", status_code=403)
 
     attachment_path = None
     if attachment and attachment.filename:
@@ -2285,8 +2290,12 @@ async def add_transaction(
     office_id = user.office_id or 1
 
     if case_id:
-        case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
-        if not case: return HTMLResponse(content="<script>alert('غير مصرح'); window.history.back();</script>", status_code=403)
+        case = db.query(LawCases).filter(
+            LawCases.id == case_id, LawCases.office_id == office_id,
+            LawCases.is_deleted == 0,
+        ).first()
+        if not case or not user_can_access_case(db, user, case_id):
+            return HTMLResponse(content="<script>alert('غير مصرح'); window.history.back();</script>", status_code=403)
 
     # Calculate stored exchange rate relative to SAR base
     stored_rate = 1.0
@@ -2427,7 +2436,7 @@ async def update_office(
 
         # نتحقق أن المستخدم ينتمي لهذا المكتب قبل التعديل (أو أنه سوبر آدمن)
 
-        if office and (user.office_id == office.id or user.id == 1):
+        if office and (user.office_id == office.id or getattr(user, "is_superadmin", 0) == 1):
 
             office.name = name
 
@@ -2596,6 +2605,9 @@ async def edit_hearing(
     hearing = db.query(LawHearings).filter(LawHearings.id == hearing_id, LawHearings.office_id == office_id).first()
 
     if hearing:
+
+        if not user_can_access_case(db, user, hearing.case_id):
+            raise HTTPException(status_code=403, detail="غير مصرح بتعديل جلسات هذه القضية")
 
         hearing.title = title
 

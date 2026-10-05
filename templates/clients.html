@@ -44,7 +44,7 @@
                                 <i class="fa-solid fa-eye"></i> عرض
                             </button>
                             {% if has_perm(user, 'clients', 'edit') %}
-                            <button class="action-btn edit-btn" title="تعديل" onclick="openEditClientModal('{{ client.id }}', '{{ client.name }}', '{{ client.username or '' }}', '{{ client.case_number or '' }}', '{{ client.phone }}', '{{ client.email }}')">
+                            <button class="action-btn edit-btn" title="تعديل" onclick="openEditClientModal({{ client.id|tojson|forceescape }}, {{ client.name|tojson|forceescape }}, {{ (client.username or '')|tojson|forceescape }}, {{ (client.case_number or '')|tojson|forceescape }}, {{ client.phone|tojson|forceescape }}, {{ client.email|tojson|forceescape }})">
                                 <i class="fa-solid fa-pen-to-square"></i> تعديل
                             </button>
                             {% endif %}

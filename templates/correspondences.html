@@ -95,7 +95,7 @@
                     </td>
                     <td>
                         <button class="action-btn" style="color:var(--primary-color);" title="تعديل"
-                            onclick="openEdit('{{ c.id }}','{{ c.direction_key }}','{{ c.letter_number or '' }}','{{ c.subject or '' }}','{{ c.needs_reply or '' }}','{{ c.reply_due_date or '' }}','{{ c.response_status or '' }}','{{ c.letter_date or '' }}')">
+                            onclick="openEdit({{ c.id|tojson|forceescape }},{{ c.direction_key|tojson|forceescape }},{{ (c.letter_number or '')|tojson|forceescape }},{{ (c.subject or '')|tojson|forceescape }},{{ (c.needs_reply or '')|tojson|forceescape }},{{ (c.reply_due_date or '')|tojson|forceescape }},{{ (c.response_status or '')|tojson|forceescape }},{{ (c.letter_date or '')|tojson|forceescape }})">
                             <i class="fa-solid fa-pen"></i>
                         </button>
                         <form action="/correspondences/delete" method="post" style="display:inline;" onsubmit="return confirm('حذف المراسلة؟')">

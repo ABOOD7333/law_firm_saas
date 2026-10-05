@@ -93,7 +93,7 @@
                             {% endif %}
                         </td>
                         <td>
-                            <button class="action-btn" style="color: var(--primary-color);" title="تعديل الصلاحيات" onclick="openEditUserModal('{{ team_user.id }}', '{{ team_user.name }}', '{{ team_user.phone }}', '{{ team_user.email }}', '{{ team_user.role }}', '{{ team_user.is_active }}', '{{ team_user.birth_date or '' }}')"><i class="fa-solid fa-user-pen"></i></button>
+                            <button class="action-btn" style="color: var(--primary-color);" title="تعديل الصلاحيات" onclick="openEditUserModal({{ team_user.id|tojson|forceescape }}, {{ team_user.name|tojson|forceescape }}, {{ team_user.phone|tojson|forceescape }}, {{ team_user.email|tojson|forceescape }}, {{ team_user.role|tojson|forceescape }}, {{ team_user.is_active|tojson|forceescape }}, {{ (team_user.birth_date or '')|tojson|forceescape }})"><i class="fa-solid fa-user-pen"></i></button>
                             {% if team_user.id != user.id %}
                             <button class="action-btn" style="color: #ef4444;" title="إيقاف الحساب"><i class="fa-solid fa-ban"></i></button>
                             {% endif %}

@@ -10,7 +10,7 @@ from database.models import (
     AccessProfiles, LawCases, LawDocuments, LawTasks,
     LawHearings, LawPleadings, LawExpenses
 )
-from dependencies import get_current_user, templates
+from dependencies import get_current_user, templates, require_user_permission, user_can_access_case
 
 router = APIRouter()
 
@@ -18,9 +18,12 @@ router = APIRouter()
 @router.get("/advanced_operations", response_class=HTMLResponse)
 async def advanced_operations_page(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     if not user: return RedirectResponse(url="/", status_code=303)
+    require_user_permission(user, "advanced_operations", "view")
     try:
-        office_id = user.office_id or 1
-        cases = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0).all()
+        cases_query = db.query(LawCases).filter(LawCases.office_id == user.office_id, LawCases.is_deleted == 0)
+        if user.role in {"محامي", "محامٍ"} and not user.can_view_all_cases:
+            cases_query = cases_query.filter(LawCases.lead_lawyer_id == user.id)
+        cases = cases_query.all()
         return templates.TemplateResponse(request=request, name="advanced_operations.html", context={
             "user": user, "active_page": "advanced_operations", "cases": cases
         })
@@ -33,12 +36,13 @@ async def get_case_health(case_id: int, db: Session = Depends(get_db), user: Acc
     from fastapi.responses import JSONResponse
     from datetime import datetime
     if not user: return JSONResponse({"error": "Unauthorized"}, status_code=401)
-    
-    case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == user.office_id).first()
+    require_user_permission(user, "advanced_operations", "view")
+
+    case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == user.office_id, LawCases.is_deleted == 0).first()
     if not case: return JSONResponse({"error": "Case not found"}, status_code=404)
     
     # 🔴 IDOR protection: Restrict lawyers to their assigned cases
-    if user.role in ['محامي', 'محامٍ'] and user.can_view_all_cases == 0 and case.lead_lawyer_id != user.id:
+    if not user_can_access_case(db, user, case_id):
         return JSONResponse({"error": "Unauthorized access to case details"}, status_code=403)
     
     factors = []
