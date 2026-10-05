@@ -79,9 +79,17 @@ def create_superadmin():
                 raise ValueError("Configured SUPERADMIN_USERNAME belongs to a non-superadmin account")
             if admin.email.lower() != email:
                 raise ValueError("Configured SUPERADMIN_EMAIL does not match the existing administrator")
-            # Bootstrap is creation-only. Never reactivate an intentionally
-            # suspended administrator or reset their password on every restart.
-            print("[SuperAdmin] Existing account left unchanged (status and credential preserved).")
+            if admin.phone != phone and db.query(AccessProfiles).filter(
+                AccessProfiles.phone == phone,
+                AccessProfiles.id != admin.id,
+            ).first():
+                raise ValueError("SUPERADMIN_PHONE is already assigned to another account")
+            # The deployment secret is the only permitted source for bootstrap credential rotation.
+            admin.access_pin_hash = hash_pin(password)
+            admin.phone = phone
+            admin.is_active = 1
+            admin.failed_attempts = 0
+            db.commit()
         
     except Exception as e:
         print("حدث خطأ:", e)
