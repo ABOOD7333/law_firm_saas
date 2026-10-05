@@ -1,9 +1,9 @@
+"""Security Helpers — LawSaaS.
+
+أدوات مساعدة للتحقق من أمان المدخلات والملفات المرفوعة.
 """
 import hashlib
 from datetime import datetime, timedelta
-Security Helpers — LawSaaS
-أدوات مساعدة للتحقق من أمان المدخلات والملفات المرفوعة.
-"""
 
 def validate_file_signature(content: bytes, extension: str) -> bool:
     """

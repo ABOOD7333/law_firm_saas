@@ -3363,7 +3363,7 @@ async def activity_page(request: Request, db: Session = Depends(get_db), user: A
 
 # ============ ROUTERS INTEGRATION ============
 
-from routers import parties
+from routers import parties, client_portal
 
 from routers import pleadings
 
@@ -3412,6 +3412,7 @@ from routers import superadmin
 from routers import mobile_api, mobile_sync, mobile_biometrics
 
 app.include_router(parties.router)
+app.include_router(client_portal.router)
 
 app.include_router(mobile_api.router)
 
