@@ -210,7 +210,10 @@ app.add_middleware(CSRFMiddleware)
 
 def _safe_error(tb_str: str = "") -> HTMLResponse:
 
-    """يعرض تفاصيل الخطأ في التطوير فقط — يخفيها في الإنتاج."""
+    """يعرض تفاصيل الخطأ في التطوير فقط — يخفيها في الإنتاج ويسجلها في السجلات."""
+
+    if tb_str:
+        app_logger.error(f"[SERVER_ERROR_TRACEBACK]\n{tb_str}")
 
     if True: # SECURITY FIX: Never expose tracebacks
 
@@ -1168,7 +1171,9 @@ async def dashboard_page(request: Request, db: Session = Depends(get_db), user: 
                 LawHearings.office_id == user.office_id,
                 LawHearings.is_deleted == 0,
 
-                LawHearings.status_key == 'pending'
+                LawHearings.show_in_client_portal == 1,
+
+                LawHearings.is_deleted == 0
 
             ).order_by(LawHearings.hearing_at.asc()).limit(5).all() if case_ids else []
 
@@ -1898,7 +1903,15 @@ async def add_hearing(
 
     next_hearing_date: str = Form(None),
 
-    status_key: str = Form("pending"),
+    status_key: str = Form("قادمة"),
+
+    chamber_number: str = Form(None),
+
+    floor_number: str = Form(None),
+
+    show_in_client_portal: int = Form(1),
+
+    attachment: UploadFile = File(None),
 
     redirect_to_case: str = Form(None),
 
@@ -1936,6 +1949,16 @@ async def add_hearing(
 
         if not case: return HTMLResponse(content="<script>alert('غير مصرح'); window.history.back();</script>", status_code=403)
 
+    attachment_path = None
+    if attachment and attachment.filename and "".join(c for c in attachment.filename if c.isalnum() or c in ' ._-'):
+        import time, shutil
+        upload_dir = "static/uploads/hearings"
+        os.makedirs(upload_dir, exist_ok=True)
+        safe_filename = f"{int(time.time())}_" + "".join(c for c in attachment.filename if c.isalnum() or c in ' ._-')
+        attachment_path = f"{upload_dir}/{safe_filename}"
+        with open(attachment_path, "wb") as buffer:
+            shutil.copyfileobj(attachment.file, buffer)
+
     new_hearing = LawHearings(
 
         case_id=case_id,
@@ -1948,7 +1971,15 @@ async def add_hearing(
 
         next_hearing_date=next_hearing_date,
 
-        status_key=status_key
+        status_key=status_key,
+
+        chamber_number=chamber_number,
+
+        floor_number=floor_number,
+
+        show_in_client_portal=1 if str(show_in_client_portal) in ("1", "true", "True") else 0,
+
+        attachment_path=attachment_path
 
     )
 
@@ -2519,6 +2550,14 @@ async def edit_hearing(
 
     status_key: str = Form(...),
 
+    chamber_number: str = Form(None),
+
+    floor_number: str = Form(None),
+
+    show_in_client_portal: int = Form(1),
+
+    attachment: UploadFile = File(None),
+
     redirect_to_case: str = Form(None),
 
     case_id: int = Form(None),
@@ -2548,6 +2587,22 @@ async def edit_hearing(
         hearing.next_hearing_date = next_hearing_date
 
         hearing.status_key = status_key
+
+        hearing.chamber_number = chamber_number
+
+        hearing.floor_number = floor_number
+
+        hearing.show_in_client_portal = 1 if str(show_in_client_portal) in ("1", "true", "True") else 0
+
+        if attachment and attachment.filename and "".join(c for c in attachment.filename if c.isalnum() or c in ' ._-'):
+            import time, shutil
+            upload_dir = "static/uploads/hearings"
+            os.makedirs(upload_dir, exist_ok=True)
+            safe_filename = f"{int(time.time())}_" + "".join(c for c in attachment.filename if c.isalnum() or c in ' ._-')
+            attachment_path = f"{upload_dir}/{safe_filename}"
+            with open(attachment_path, "wb") as buffer:
+                shutil.copyfileobj(attachment.file, buffer)
+            hearing.attachment_path = attachment_path
 
         db.commit()
 
@@ -3190,6 +3245,7 @@ async def activity_page(request: Request, db: Session = Depends(get_db), user: A
         for task in all_tasks:
 
             assignee = users_map.get(task.assignee_user_id)
+            task_date = str(task.created_at)[:16] if task.created_at else ''
 
             if task.status_key == 'in_progress':
 
@@ -3205,7 +3261,7 @@ async def activity_page(request: Request, db: Session = Depends(get_db), user: A
 
                     'sub': f"القضية: {task.law_case.title if task.law_case else 'مهمة عامة'}",
 
-                    'date': task.created_at[:16]
+                    'date': task_date
 
                 })
 
@@ -3223,7 +3279,7 @@ async def activity_page(request: Request, db: Session = Depends(get_db), user: A
 
                     'sub': f"القضية: {task.law_case.title if task.law_case else 'مهمة عامة'}",
 
-                    'date': task.created_at[:16]
+                    'date': task_date
 
                 })
 
@@ -3241,11 +3297,13 @@ async def activity_page(request: Request, db: Session = Depends(get_db), user: A
 
                     'sub': f"القضية: {task.law_case.title if task.law_case else 'مهمة عامة'}",
 
-                    'date': task.created_at[:16]
+                    'date': task_date
 
                 })
 
         for doc in recent_docs:
+
+            doc_date = str(doc.created_at)[:16] if doc.created_at else ''
 
             activity_feed.append({
 
@@ -3257,13 +3315,13 @@ async def activity_page(request: Request, db: Session = Depends(get_db), user: A
 
                 'text': f"رفع مستند: {doc.name}",
 
-                'sub': f"نوعه: {'{مذكرة' if doc.document_type_key == 'memo' else doc.document_type_key} – مرتبط بالقضية رقم {doc.case_id}",
+                'sub': f"نوعه: {'مذكرة' if doc.document_type_key == 'memo' else doc.document_type_key} – مرتبط بالقضية رقم {doc.case_id}",
 
-                'date': doc.created_at[:16]
+                'date': doc_date
 
             })
 
-        activity_feed.sort(key=lambda x: x['date'], reverse=True)
+        activity_feed.sort(key=lambda x: x.get('date', ''), reverse=True)
 
         # Task stats per user
 

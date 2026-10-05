@@ -152,7 +152,55 @@ def init_db():
             conn.execute(text("ALTER TABLE access_profiles ADD COLUMN linked_owner_id INTEGER;"))
     except Exception:
         pass
-        
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE law_hearings ADD COLUMN chamber_number TEXT;"))
+    except Exception:
+        pass
+
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE law_hearings ADD COLUMN floor_number TEXT;"))
+    except Exception:
+        pass
+
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE law_hearings ADD COLUMN show_in_client_portal INTEGER DEFAULT 1;"))
+    except Exception:
+        pass
+
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE law_tasks ADD COLUMN kanban_order INTEGER DEFAULT 0;"))
+    except Exception:
+        pass
+
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE law_tasks ADD COLUMN is_active INTEGER DEFAULT 1;"))
+    except Exception:
+        pass
+
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE law_tasks ADD COLUMN is_deleted INTEGER DEFAULT 0;"))
+    except Exception:
+        pass
+
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE law_tasks ADD COLUMN priority_level INTEGER DEFAULT 2;"))
+    except Exception:
+        pass
+
     # Never log DATABASE_URL: it may contain a username and password.
     print(f"[Database] Connected using dialect: {engine.dialect.name}")
     print(f"[Database] Tables initialized successfully.")

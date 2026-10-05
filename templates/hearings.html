@@ -64,7 +64,7 @@
                     <td>
                         <div style="display:flex;gap:5px;">
                             {% if has_perm(user, 'hearings', 'edit') %}
-                            <button class="action-btn" style="color:var(--primary-color);" title="تعديل" onclick="openEditHearingModal('{{ hearing.id }}', '{{ hearing.title }}', '{{ hearing.hearing_at }}', '{{ hearing.next_hearing_date or '' }}', '{{ hearing.status_key }}', '{{ hearing.case_id or '' }}')">
+                            <button class="action-btn" style="color:var(--primary-color);" title="تعديل" onclick="openEditHearingModal('{{ hearing.id }}', '{{ hearing.title }}', '{{ hearing.hearing_at }}', '{{ hearing.next_hearing_date or '' }}', '{{ hearing.status_key }}', '{{ hearing.case_id or '' }}', '{{ hearing.chamber_number or '' }}', '{{ hearing.floor_number or '' }}', '{{ hearing.show_in_client_portal }}')">
                                 <i class="fa-solid fa-pen-to-square"></i> تعديل
                             </button>
                             {% endif %}
@@ -119,13 +119,66 @@
                 <input type="date" name="next_hearing_date" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif;">
             </div>
             
-            <div class="form-group" style="margin-bottom: 25px;">
+            <div class="form-group" style="margin-bottom: 15px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">حالة الجلسة</label>
                 <select name="status_key" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif;">
-                    <option value="pending">قادمة</option>
-                    <option value="completed">منعقدة</option>
-                    <option value="postponed">مؤجلة</option>
+                    <option value="قادمة">قادمة</option>
+                    <option value="منعقدة">منعقدة</option>
+                    <option value="مؤجلة">مؤجلة</option>
+                    <option value="جلسة استماع بشأن النزاعات الانتخابية">جلسة استماع بشأن النزاعات الانتخابية</option>
+                    <option value="الجلسة الأخيرة">الجلسة الأخيرة</option>
+                    <option value="الجلسة الأولى">الجلسة الأولى</option>
+                    <option value="جلسة إدارة القضية">جلسة إدارة القضية</option>
+                    <option value="جلسة استماع المنافسة العامة">جلسة استماع المنافسة العامة</option>
+                    <option value="جلسة استماع بشأن المسائل الإدارية">جلسة استماع بشأن المسائل الإدارية</option>
+                    <option value="جلسة استماع بشأن مسألة اللاجئين">جلسة استماع بشأن مسألة اللاجئين</option>
+                    <option value="جلسة استماع تفويض الاختصاص">جلسة استماع تفويض الاختصاص</option>
+                    <option value="جلسة استماع قاضي الأحداث">جلسة استماع قاضي الأحداث</option>
+                    <option value="جلسة استماع محكمة الجنايات">جلسة استماع محكمة الجنايات</option>
+                    <option value="جلسة استماع محكمة النقض">جلسة استماع محكمة النقض</option>
+                    <option value="جلسة الإستماع">جلسة الإستماع</option>
+                    <option value="جلسة الإلتماس">جلسة الإلتماس</option>
+                    <option value="جلسة الحكم">جلسة الحكم</option>
+                    <option value="جلسة الحكم المستعجل">جلسة الحكم المستعجل</option>
+                    <option value="جلسة الخبراء">جلسة الخبراء</option>
+                    <option value="جلسة الصلح">جلسة الصلح</option>
+                    <option value="جلسة المحاكمة">جلسة المحاكمة</option>
+                    <option value="جلسة المراجعة">جلسة المراجعة</option>
+                    <option value="جلسة الوصاية">جلسة الوصاية</option>
+                    <option value="جلسة تقصي الحقائق">جلسة تقصي الحقائق</option>
+                    <option value="جلسة تنفيذ الأحكام">جلسة تنفيذ الأحكام</option>
+                    <option value="جلسة هيئة المحكمة">جلسة هيئة المحكمة</option>
                 </select>
+            </div>
+
+            <!-- عرض تفاصيل الجلسة في بوابة العميل -->
+            <div style="margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border-color);">
+                <label for="add_show_in_client_portal" style="font-weight: 600; color: var(--secondary-color); cursor: pointer; margin: 0;">عرض تفاصيل الجلسة في بوابة العميل</label>
+                <input type="checkbox" name="show_in_client_portal" id="add_show_in_client_portal" value="1" checked style="width: 20px; height: 20px; cursor: pointer; accent-color: var(--primary-color);">
+            </div>
+
+            <!-- رفع الملفات -->
+            <div class="form-group" style="margin-bottom: 20px;">
+                <div style="border: 2px dashed #cbd5e1; border-radius: 12px; padding: 25px 15px; text-align: center; background: #f8fafc; cursor: pointer; transition: 0.2s;" onclick="document.getElementById('add_hearing_file').click();" ondragover="event.preventDefault(); this.style.borderColor='var(--primary-color)';" ondragleave="this.style.borderColor='#cbd5e1';" ondrop="event.preventDefault(); this.style.borderColor='#cbd5e1'; document.getElementById('add_hearing_file').files = event.dataTransfer.files; updateAddFileName(event.dataTransfer.files[0]?.name);">
+                    <div style="width: 50px; height: 50px; background: #1e3a8a; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: white; font-size: 1.4rem; margin-bottom: 10px;">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                    </div>
+                    <p style="margin: 0; font-weight: 600; color: #1e3a8a; font-size: 0.95rem;">ضع الملفات هنا للتحميل أو <span style="text-decoration: underline;">تصفحها</span></p>
+                    <input type="file" name="attachment" id="add_hearing_file" style="display: none;" onchange="updateAddFileName(this.files[0]?.name)">
+                    <small id="add_file_name_display" style="display: block; margin-top: 8px; color: #64748b; font-size: 0.85rem;"></small>
+                </div>
+            </div>
+
+            <!-- رقم الغرفة ورقم الدور -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px;">
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">رقم الغرفة</label>
+                    <input type="text" name="chamber_number" placeholder="رقم الغرفة" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                </div>
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">رقم الدور</label>
+                    <input type="text" name="floor_number" placeholder="رقم الدور" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                </div>
             </div>
             
             <div style="display: flex; gap: 10px; justify-content: flex-end;">
@@ -138,14 +191,14 @@
 
 <!-- Modal for Editing Hearing -->
 <div id="editHearingModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000;">
-    <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; width: 500px; max-width: 90%;">
+    <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; width: 550px; max-width: 90%; max-height: 90vh; overflow-y: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h2 style="margin: 0; font-size: 1.5rem; color: var(--secondary-color);">تعديل بيانات الجلسة</h2>
             <button onclick="document.getElementById('editHearingModal').style.display='none'" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted);">&times;</button>
         </div>
         
-        <form action="/hearings/edit" method="post">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+        <form action="/hearings/edit" method="post" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
             <input type="hidden" name="hearing_id" id="edit_hearing_id">
             <input type="hidden" name="case_id" id="edit_hearing_case_id">
             
@@ -164,13 +217,66 @@
                 <input type="date" name="next_hearing_date" id="edit_hearing_next" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif;">
             </div>
             
-            <div class="form-group" style="margin-bottom: 25px;">
+            <div class="form-group" style="margin-bottom: 15px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">حالة الجلسة</label>
                 <select name="status_key" id="edit_hearing_status" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif;">
                     <option value="pending">قادمة</option>
                     <option value="completed">منعقدة</option>
                     <option value="postponed">مؤجلة</option>
+                    <option value="جلسة استماع بشأن النزاعات الانتخابية">جلسة استماع بشأن النزاعات الانتخابية</option>
+                    <option value="الجلسة الأخيرة">الجلسة الأخيرة</option>
+                    <option value="الجلسة الأولى">الجلسة الأولى</option>
+                    <option value="جلسة إدارة القضية">جلسة إدارة القضية</option>
+                    <option value="جلسة استماع المنافسة العامة">جلسة استماع المنافسة العامة</option>
+                    <option value="جلسة استماع بشأن المسائل الإدارية">جلسة استماع بشأن المسائل الإدارية</option>
+                    <option value="جلسة استماع بشأن مسألة اللاجئين">جلسة استماع بشأن مسألة اللاجئين</option>
+                    <option value="جلسة استماع تفويض الاختصاص">جلسة استماع تفويض الاختصاص</option>
+                    <option value="جلسة استماع قاضي الأحداث">جلسة استماع قاضي الأحداث</option>
+                    <option value="جلسة استماع محكمة الجنايات">جلسة استماع محكمة الجنايات</option>
+                    <option value="جلسة استماع محكمة النقض">جلسة استماع محكمة النقض</option>
+                    <option value="جلسة الإستماع">جلسة الإستماع</option>
+                    <option value="جلسة الإلتماس">جلسة الإلتماس</option>
+                    <option value="جلسة الحكم">جلسة الحكم</option>
+                    <option value="جلسة الحكم المستعجل">جلسة الحكم المستعجل</option>
+                    <option value="جلسة الخبراء">جلسة الخبراء</option>
+                    <option value="جلسة الصلح">جلسة الصلح</option>
+                    <option value="جلسة المحاكمة">جلسة المحاكمة</option>
+                    <option value="جلسة المراجعة">جلسة المراجعة</option>
+                    <option value="جلسة الوصاية">جلسة الوصاية</option>
+                    <option value="جلسة تقصي الحقائق">جلسة تقصي الحقائق</option>
+                    <option value="جلسة تنفيذ الأحكام">جلسة تنفيذ الأحكام</option>
+                    <option value="جلسة هيئة المحكمة">جلسة هيئة المحكمة</option>
                 </select>
+            </div>
+
+            <!-- عرض تفاصيل الجلسة في بوابة العميل -->
+            <div style="margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border-color);">
+                <label for="edit_show_in_client_portal" style="font-weight: 600; color: var(--secondary-color); cursor: pointer; margin: 0;">عرض تفاصيل الجلسة في بوابة العميل</label>
+                <input type="checkbox" name="show_in_client_portal" id="edit_show_in_client_portal" value="1" style="width: 20px; height: 20px; cursor: pointer; accent-color: var(--primary-color);">
+            </div>
+
+            <!-- رفع الملفات -->
+            <div class="form-group" style="margin-bottom: 20px;">
+                <div style="border: 2px dashed #cbd5e1; border-radius: 12px; padding: 25px 15px; text-align: center; background: #f8fafc; cursor: pointer; transition: 0.2s;" onclick="document.getElementById('edit_hearing_file').click();" ondragover="event.preventDefault(); this.style.borderColor='var(--primary-color)';" ondragleave="this.style.borderColor='#cbd5e1';" ondrop="event.preventDefault(); this.style.borderColor='#cbd5e1'; document.getElementById('edit_hearing_file').files = event.dataTransfer.files; updateEditFileName(event.dataTransfer.files[0]?.name);">
+                    <div style="width: 50px; height: 50px; background: #1e3a8a; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: white; font-size: 1.4rem; margin-bottom: 10px;">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                    </div>
+                    <p style="margin: 0; font-weight: 600; color: #1e3a8a; font-size: 0.95rem;">ضع الملفات هنا للتحميل أو <span style="text-decoration: underline;">تصفحها</span></p>
+                    <input type="file" name="attachment" id="edit_hearing_file" style="display: none;" onchange="updateEditFileName(this.files[0]?.name)">
+                    <small id="edit_file_name_display" style="display: block; margin-top: 8px; color: #64748b; font-size: 0.85rem;"></small>
+                </div>
+            </div>
+
+            <!-- رقم الغرفة ورقم الدور -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px;">
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">رقم الغرفة</label>
+                    <input type="text" name="chamber_number" id="edit_hearing_chamber" placeholder="رقم الغرفة" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                </div>
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">رقم الدور</label>
+                    <input type="text" name="floor_number" id="edit_hearing_floor" placeholder="رقم الدور" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                </div>
             </div>
             
             <div style="display: flex; gap: 10px; justify-content: flex-end;">
@@ -184,13 +290,27 @@
 
 {% block scripts %}
 <script>
-    function openEditHearingModal(id, title, hearingAt, nextHearing, statusKey, caseId) {
+    function updateAddFileName(name) {
+        const display = document.getElementById('add_file_name_display');
+        if (display) display.textContent = name ? 'الملف المختار: ' + name : '';
+    }
+
+    function updateEditFileName(name) {
+        const display = document.getElementById('edit_file_name_display');
+        if (display) display.textContent = name ? 'الملف المختار: ' + name : '';
+    }
+
+    function openEditHearingModal(id, title, hearingAt, nextHearing, statusKey, caseId, chamber, floor, showInPortal) {
         document.getElementById('edit_hearing_id').value = id;
         document.getElementById('edit_hearing_title').value = title;
         document.getElementById('edit_hearing_at').value = hearingAt;
-        document.getElementById('edit_hearing_next').value = nextHearing;
-        document.getElementById('edit_hearing_status').value = statusKey;
-        document.getElementById('edit_hearing_case_id').value = caseId;
+        document.getElementById('edit_hearing_next').value = nextHearing || '';
+        document.getElementById('edit_hearing_status').value = statusKey || 'pending';
+        document.getElementById('edit_hearing_case_id').value = caseId || '';
+        document.getElementById('edit_hearing_chamber').value = chamber || '';
+        document.getElementById('edit_hearing_floor').value = floor || '';
+        document.getElementById('edit_show_in_client_portal').checked = (showInPortal !== '0' && showInPortal !== 0 && showInPortal !== false);
+        document.getElementById('edit_file_name_display').textContent = '';
         document.getElementById('editHearingModal').style.display = 'flex';
     }
     
