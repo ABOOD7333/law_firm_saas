@@ -124,6 +124,7 @@
                                 {% endif %}
                             </td>
                             <td>
+                                {% if hearing.attachment_path and has_perm(user, 'hearings', 'view') %}<a class="action-btn" href="/hearings/{{ hearing.id }}/attachment" title="تنزيل المرفق"><i class="fa-solid fa-download"></i> المرفق</a>{% endif %}
                                 {% if has_perm(user, 'hearings', 'edit') %}
                                 <button class="action-btn" style="color: var(--primary-color);" title="تعديل" onclick="openEditHearingModal('{{ hearing.id }}', '{{ hearing.title }}', '{{ hearing.hearing_at }}', '{{ hearing.next_hearing_date or '' }}', '{{ hearing.status_key }}', '{{ case.id }}', '{{ hearing.chamber_number or '' }}', '{{ hearing.floor_number or '' }}', '{{ hearing.show_in_client_portal }}')"><i class="fa-solid fa-pen"></i></button>
                                 {% endif %}
@@ -216,7 +217,7 @@
             <button onclick="document.getElementById('addHearingModal').style.display='none'" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted);">&times;</button>
         </div>
         
-        <form action="/hearings/add" method="post">
+        <form action="/hearings/add" method="post" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
             <input type="hidden" name="case_id" value="{{ case.id }}">
             <input type="hidden" name="redirect_to_case" value="true">

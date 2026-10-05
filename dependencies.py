@@ -127,15 +127,20 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
         # 1. الموكل (Client)
         if user.role == 'موكل':
             allowed = ['/', '/dashboard', '/logout']
-            if not any(path == p for p in allowed) and not path.startswith('/static') and not path.startswith('/api/mobile'):
+            if not any(path == p for p in allowed) and not path.startswith(('/static/', '/api/mobile/', '/client-portal/')) and path != '/client-portal':
                 if path.startswith('/api/'):
                     raise HTTPException(status_code=403, detail="غير مصرح للموكلين بالوصول")
                 raise HTTPException(status_code=status.HTTP_303_SEE_OTHER, headers={"Location": "/dashboard"})
                 
         # 2. المحاسب (Accountant)
         elif user.role == 'محاسب':
-            allowed_prefixes = ('/', '/dashboard', '/finance', '/expenses', '/timesheet', '/reports', '/clients', '/logout', '/static', '/api/finance', '/api/expenses', '/api/timesheets', '/api/ai')
-            if not path.startswith(allowed_prefixes):
+            allowed_exact = {'/', '/logout'}
+            allowed_prefixes = ('/dashboard', '/finance', '/expenses', '/timesheet', '/reports', '/clients', '/static', '/api/finance', '/api/expenses', '/api/timesheets', '/api/ai')
+            is_allowed = path in allowed_exact or any(
+                path == prefix or path.startswith(prefix + '/')
+                for prefix in allowed_prefixes
+            )
+            if not is_allowed:
                 if path.startswith('/api/'):
                     raise HTTPException(status_code=403, detail="غير مصرح للمحاسبين بالوصول")
                 raise HTTPException(status_code=status.HTTP_303_SEE_OTHER, headers={"Location": "/dashboard"})

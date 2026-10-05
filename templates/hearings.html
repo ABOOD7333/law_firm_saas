@@ -63,6 +63,7 @@
                     </td>
                     <td>
                         <div style="display:flex;gap:5px;">
+                            {% if hearing.attachment_path and has_perm(user, 'hearings', 'view') %}<a class="action-btn" href="/hearings/{{ hearing.id }}/attachment" title="تنزيل المرفق"><i class="fa-solid fa-download"></i> المرفق</a>{% endif %}
                             {% if has_perm(user, 'hearings', 'edit') %}
                             <button class="action-btn" style="color:var(--primary-color);" title="تعديل" onclick="openEditHearingModal('{{ hearing.id }}', '{{ hearing.title }}', '{{ hearing.hearing_at }}', '{{ hearing.next_hearing_date or '' }}', '{{ hearing.status_key }}', '{{ hearing.case_id or '' }}', '{{ hearing.chamber_number or '' }}', '{{ hearing.floor_number or '' }}', '{{ hearing.show_in_client_portal }}')">
                                 <i class="fa-solid fa-pen-to-square"></i> تعديل
@@ -92,7 +93,7 @@
             <button onclick="document.getElementById('addHearingModal').style.display='none'" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted);">&times;</button>
         </div>
         
-        <form action="/hearings/add" method="post">
+        <form action="/hearings/add" method="post" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
             <div class="form-group" style="margin-bottom: 15px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">القضية المرتبطة <span style="color: red;">*</span></label>

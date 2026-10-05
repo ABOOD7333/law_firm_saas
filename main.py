@@ -103,7 +103,30 @@ _safe_makedirs("static/js")
 _safe_makedirs("static/img")
 _safe_makedirs("static/uploads/documents")
 _safe_makedirs("private_uploads/documents")
+_safe_makedirs("private_uploads/hearings")
 _safe_makedirs("templates")
+
+async def _save_hearing_attachment(upload: UploadFile) -> str:
+    """Validate and save hearing attachments outside the public static tree."""
+    from pathlib import Path
+    from core.security import validate_file_signature
+
+    extension = Path(upload.filename or "").suffix.lower().lstrip(".")
+    allowed_extensions = {"pdf", "doc", "docx", "jpg", "jpeg", "png", "txt"}
+    if extension not in allowed_extensions:
+        raise HTTPException(status_code=400, detail="نوع ملف المرفق غير مسموح")
+
+    content = await upload.read(20 * 1024 * 1024 + 1)
+    if len(content) > 20 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="حجم المرفق يتجاوز 20 ميجابايت")
+    if not validate_file_signature(content, extension):
+        raise HTTPException(status_code=400, detail="محتوى الملف لا يطابق امتداده")
+
+    file_name = f"{uuid.uuid4().hex}.{extension}"
+    file_path = os.path.join("private_uploads", "hearings", file_name)
+    with open(file_path, "wb") as output:
+        output.write(content)
+    return file_path
 
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -1950,14 +1973,8 @@ async def add_hearing(
         if not case: return HTMLResponse(content="<script>alert('غير مصرح'); window.history.back();</script>", status_code=403)
 
     attachment_path = None
-    if attachment and attachment.filename and "".join(c for c in attachment.filename if c.isalnum() or c in ' ._-'):
-        import time, shutil
-        upload_dir = "static/uploads/hearings"
-        os.makedirs(upload_dir, exist_ok=True)
-        safe_filename = f"{int(time.time())}_" + "".join(c for c in attachment.filename if c.isalnum() or c in ' ._-')
-        attachment_path = f"{upload_dir}/{safe_filename}"
-        with open(attachment_path, "wb") as buffer:
-            shutil.copyfileobj(attachment.file, buffer)
+    if attachment and attachment.filename:
+        attachment_path = await _save_hearing_attachment(attachment)
 
     new_hearing = LawHearings(
 
@@ -2594,15 +2611,8 @@ async def edit_hearing(
 
         hearing.show_in_client_portal = 1 if str(show_in_client_portal) in ("1", "true", "True") else 0
 
-        if attachment and attachment.filename and "".join(c for c in attachment.filename if c.isalnum() or c in ' ._-'):
-            import time, shutil
-            upload_dir = "static/uploads/hearings"
-            os.makedirs(upload_dir, exist_ok=True)
-            safe_filename = f"{int(time.time())}_" + "".join(c for c in attachment.filename if c.isalnum() or c in ' ._-')
-            attachment_path = f"{upload_dir}/{safe_filename}"
-            with open(attachment_path, "wb") as buffer:
-                shutil.copyfileobj(attachment.file, buffer)
-            hearing.attachment_path = attachment_path
+        if attachment and attachment.filename:
+            hearing.attachment_path = await _save_hearing_attachment(attachment)
 
         db.commit()
 
@@ -2611,6 +2621,49 @@ async def edit_hearing(
         return RedirectResponse(url=f"/cases/{case_id}", status_code=303)
 
     return RedirectResponse(url="/hearings", status_code=303)
+
+@app.get("/hearings/{hearing_id}/attachment")
+async def download_hearing_attachment(
+    hearing_id: int,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user),
+):
+    if not user:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    if not user.office_id or not check_user_permission(user, "hearings", "view"):
+        raise HTTPException(status_code=403, detail="غير مصرح بالوصول للمرفق")
+
+    hearing = db.query(LawHearings).filter(
+        LawHearings.id == hearing_id,
+        LawHearings.office_id == user.office_id,
+        LawHearings.is_deleted == 0,
+    ).first()
+    if not hearing or not hearing.attachment_path:
+        raise HTTPException(status_code=404, detail="المرفق غير موجود")
+
+    case = db.query(LawCases).filter(
+        LawCases.id == hearing.case_id,
+        LawCases.office_id == user.office_id,
+        LawCases.is_deleted == 0,
+    ).first()
+    if not case:
+        raise HTTPException(status_code=404, detail="القضية غير موجودة")
+    if user.role in ["محامي", "محامٍ"] and not user.can_view_all_cases and case.lead_lawyer_id != user.id:
+        raise HTTPException(status_code=403, detail="غير مصرح لك بمرفق هذه القضية")
+
+    from pathlib import Path
+    file_name = Path(hearing.attachment_path).name
+    allowed_dirs = [Path("private_uploads/hearings"), Path("static/uploads/hearings")]
+    for directory in allowed_dirs:
+        candidate = directory / file_name
+        if candidate.is_file():
+            return FileResponse(
+                str(candidate),
+                filename=file_name,
+                media_type="application/octet-stream",
+                headers={"X-Content-Type-Options": "nosniff"},
+            )
+    raise HTTPException(status_code=404, detail="ملف المرفق غير موجود على الخادم")
 
 # الأدوار المسموح لها بإدارة المستخدمين
 
