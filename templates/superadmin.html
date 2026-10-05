@@ -175,7 +175,11 @@ async function fixSubscriptions() {
     if(!confirm("تحذير: سيتم تحويل جميع المكاتب القديمة (باستثناء مكتبك) إلى النسخة التجريبية (14 يوم) ابتداءً من اليوم. هل تريد الاستمرار؟")) return;
     
     try {
-        const res = await fetch('/api/superadmin/fix-subscriptions', { method: 'GET' });
+        const csrfToken = document.cookie.split('; ').find(r => r.startsWith('csrf_token='))?.split('=')[1] || '';
+        const res = await fetch('/api/superadmin/fix-subscriptions', {
+            method: 'POST',
+            headers: { 'X-CSRF-Token': csrfToken }
+        });
         const data = await res.json();
         
         alert(data.message || data.error);

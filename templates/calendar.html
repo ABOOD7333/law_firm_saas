@@ -228,6 +228,10 @@ const monthName = "{{ month_name }}";
 const year = {{ year }};
 const month = {{ month }};
 
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+
 function showDayEvents(day) {
     const evs = allEvents[day] || [];
     const title = day + ' ' + monthName + ' ' + year;
@@ -240,12 +244,13 @@ function showDayEvents(day) {
         evs.forEach(ev => {
             const icon = ev.type === 'hearing' ? 'fa-gavel' : 'fa-list-check';
             const label = ev.type === 'hearing' ? 'جلسة' : 'مهمة';
-            html += `<div style="display:flex;align-items:flex-start;gap:12px;padding:12px;border-radius:8px;border:1px solid #e2e8f0;margin-bottom:10px;border-right:4px solid ${ev.color};">
-                <i class="fa-solid ${icon}" style="color:${ev.color};font-size:1rem;margin-top:2px;"></i>
+            const color = /^#[0-9a-f]{6}$/i.test(ev.color || '') ? ev.color : '#64748b';
+            html += `<div style="display:flex;align-items:flex-start;gap:12px;padding:12px;border-radius:8px;border:1px solid #e2e8f0;margin-bottom:10px;border-right:4px solid ${color};">
+                <i class="fa-solid ${icon}" style="color:${color};font-size:1rem;margin-top:2px;"></i>
                 <div>
-                    <span style="font-size:.75rem;background:${ev.color}20;color:${ev.color};padding:2px 8px;border-radius:10px;font-weight:600;">${label}</span>
-                    <p style="font-weight:700;margin:5px 0 2px;color:#0f172a;">${ev.title}</p>
-                    ${ev.time ? `<p style="color:#64748b;font-size:.85rem;margin:0;" dir="ltr">⏰ ${ev.time}</p>` : ''}
+                    <span style="font-size:.75rem;background:${color}20;color:${color};padding:2px 8px;border-radius:10px;font-weight:600;">${label}</span>
+                    <p style="font-weight:700;margin:5px 0 2px;color:#0f172a;">${escapeHtml(ev.title)}</p>
+                    ${ev.time ? `<p style="color:#64748b;font-size:.85rem;margin:0;" dir="ltr">⏰ ${escapeHtml(ev.time)}</p>` : ''}
                 </div>
             </div>`;
         });

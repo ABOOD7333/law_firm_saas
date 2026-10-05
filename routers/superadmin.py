@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
 import json
+import html
 
 from database.database import get_db
 from database.models import AccessProfiles, LawOffices, PaymentRequest
@@ -75,7 +76,7 @@ async def superadmin_page(request: Request, db: Session = Depends(get_db), user:
     except Exception as e:
         import traceback
         app_logger.error(f"Superadmin page error: {e}\n{traceback.format_exc()}")
-        return HTMLResponse(content=f"An error occurred: {e}", status_code=500)
+        return HTMLResponse(content="حدث خطأ داخلي", status_code=500)
 
 @router.post("/api/superadmin/toggle-office/{office_id}")
 async def toggle_office(office_id: int, request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
@@ -107,29 +108,36 @@ async def approve_payment(payment_id: int, request: Request, db: Session = Depen
         
     try:
         data = await request.json()
+        if not isinstance(data, dict):
+            return JSONResponse({"success": False, "error": "طلب غير صالح"}, status_code=400)
         action = data.get("action") # 'approve' or 'reject'
-        notes = data.get("notes", "")
+        notes = str(data.get("notes", ""))[:1000]
         
         payment = db.query(PaymentRequest).filter(PaymentRequest.id == payment_id).first()
         if not payment:
             return JSONResponse({"success": False, "error": "طلب الدفع غير موجود"}, status_code=404)
-            
+        if payment.status != "pending":
+            return JSONResponse({"success": False, "error": "تمت مراجعة طلب الدفع مسبقاً"}, status_code=409)
+
         office = db.query(LawOffices).filter(LawOffices.id == payment.office_id).first()
+        if not office:
+            return JSONResponse({"success": False, "error": "المكتب المرتبط بالطلب غير موجود"}, status_code=404)
         office_owner = db.query(AccessProfiles).filter(AccessProfiles.id == payment.user_id).first()
         
         from datetime import datetime, timezone, timedelta
         now = datetime.now(timezone.utc).replace(tzinfo=None)
         
         if action == 'approve':
-            if office:
-                # Update Office Subscription
-                if payment.plan == 'yearly':
-                    end_date = now + timedelta(days=365)
-                else:
-                    end_date = now + timedelta(days=30)
-                office.subscription_plan = payment.plan
-                office.subscription_end = end_date.strftime("%Y-%m-%d %H:%M:%S")
-                office.is_active = 1
+            if payment.plan not in {"monthly", "yearly"}:
+                return JSONResponse({"success": False, "error": "خطة الدفع غير صالحة"}, status_code=400)
+            expected_amount = 49.99 if payment.plan == "monthly" else 499.99
+            if payment.amount is None or abs(float(payment.amount) - expected_amount) > 0.001:
+                return JSONResponse({"success": False, "error": "مبلغ طلب الدفع غير مطابق للخطة"}, status_code=400)
+            days = 365 if payment.plan == 'yearly' else 30
+            end_date = now + timedelta(days=days)
+            office.subscription_plan = payment.plan
+            office.subscription_end = end_date.strftime("%Y-%m-%d %H:%M:%S")
+            office.is_active = 1
                 
             payment.status = 'approved'
             payment.reviewed_at = now.strftime("%Y-%m-%d %H:%M:%S")
@@ -147,7 +155,7 @@ async def approve_payment(payment_id: int, request: Request, db: Session = Depen
                         <p>لقد تم تأكيد دفعتك وتفعيل باقتك ({payment.plan}).</p>
                     </div>
                     """
-                    asyncio.create_task(send_email_async(office_owner.email, "✅ تم تفعيل اشتراكك - LawSaaS", html_content))
+                    asyncio.create_task(send_email_async(office_owner.email, "تم تفعيل اشتراكك - LawSaaS", html_content))
                 except Exception:
                     pass
                     
@@ -169,11 +177,11 @@ async def approve_payment(payment_id: int, request: Request, db: Session = Depen
                     <div dir="rtl">
                         <h2 style="color: #ef4444;">❌ لم يتم قبول طلب الدفع</h2>
                         <p>مرحباً، تم رفض إيصال الدفع الذي رفعته لسبب التالي:</p>
-                        <p style="background: #f1f5f9; padding: 10px; border-radius: 5px;">{notes}</p>
+                        <p style="background: #f1f5f9; padding: 10px; border-radius: 5px;">{html.escape(notes)}</p>
                         <p>يرجى التأكد من بيانات التحويل والمحاولة مرة أخرى.</p>
                     </div>
                     """
-                    asyncio.create_task(send_email_async(office_owner.email, "❌ تنبيه بشأن طلب الدفع - LawSaaS", html_content))
+                    asyncio.create_task(send_email_async(office_owner.email, "تنبيه بشأن طلب الدفع - LawSaaS", html_content))
                 except Exception:
                     pass
                     
@@ -186,37 +194,13 @@ async def approve_payment(payment_id: int, request: Request, db: Session = Depen
         app_logger.error(f"Superadmin payment approval error: {e}")
         return JSONResponse({"success": False, "error": "حدث خطأ داخلي"}, status_code=500)
 
-@router.get("/api/superadmin/fix-subscriptions")
+@router.post("/api/superadmin/fix-subscriptions")
 async def fix_legacy_subscriptions(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     if not user or not is_superadmin(user):
         return JSONResponse({"success": False, "error": "غير مصرح"}, status_code=403)
-        
-    try:
-        from datetime import datetime, timezone, timedelta
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
-        trial_end = now + timedelta(days=14)
-        trial_end_str = trial_end.strftime("%Y-%m-%d %H:%M:%S")
-        
-        offices = db.query(LawOffices).all()
-        updated_count = 0
-        for off in offices:
-            owner = db.query(AccessProfiles).filter(AccessProfiles.id == off.owner_user_id).first() if off.owner_user_id else None
-            is_main = off.id == 1 or off.name == 'المكتب الرئيسي' or (owner and getattr(owner, 'is_superadmin', 0) == 1)
-            
-            if is_main:
-                off.subscription_plan = 'lifetime'
-                off.subscription_end = None
-                off.receipt_status = 'approved'
-            else:
-                off.subscription_plan = 'trial'
-                off.subscription_end = trial_end_str
-                off.receipt_status = None
-            
-            updated_count += 1
-            
-        db.commit()
-        return JSONResponse({"success": True, "message": f"تم تحديث اشتراكات {updated_count} مكتب بنجاح. المكتب الرئيسي أصبح مجاني دائماً والبقية تم إعطاؤهم 14 يوم من اليوم."})
-    except Exception as e:
-        db.rollback()
-        app_logger.error(f"Superadmin fix subscriptions error: {e}")
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    # This legacy maintenance endpoint reset every customer subscription and
+    # receipt state, so it is intentionally disabled to prevent accidental data loss.
+    return JSONResponse(
+        {"success": False, "error": "تم تعطيل أداة إعادة ضبط الاشتراكات لحماية بيانات العملاء"},
+        status_code=410,
+    )

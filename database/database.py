@@ -68,10 +68,10 @@ def init_db():
     try:
         Base.metadata.create_all(bind=engine)
         print("[Database] create_all completed successfully.")
-    except Exception as e:
-        print(f"[Database] ERROR in create_all: {e}")
-        import traceback
-        traceback.print_exc()
+    except Exception:
+        # Do not print the connection URL or driver exception (which may embed
+        # deployment credentials). A partially initialized app must not start.
+        raise RuntimeError("Database schema initialization failed; startup aborted") from None
 
     
     # محاولة إضافة الأعمدة الجديدة للتحديث التلقائي بدون تهيئة يدوية
@@ -79,6 +79,13 @@ def init_db():
         from sqlalchemy import text
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE law_clients ADD COLUMN username TEXT;"))
+    except Exception:
+        pass
+
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE law_clients ADD COLUMN user_id INTEGER;"))
     except Exception:
         pass
     
@@ -121,6 +128,13 @@ def init_db():
     try:
         from sqlalchemy import text
         with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE access_profiles ADD COLUMN locked_until TEXT;"))
+    except Exception:
+        pass
+
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
             conn.execute(text("ALTER TABLE access_profiles ADD COLUMN permissions_json TEXT;"))
     except Exception:
         pass
@@ -139,14 +153,6 @@ def init_db():
     except Exception:
         pass
         
-    try:
-        from seed_real_offices import seed_real_offices
-        db_session = SessionLocal()
-        seed_real_offices(db_session)
-        db_session.close()
-    except Exception as e:
-        print(f"[Database Seed Error] {e}")
-
-    print(f"[Database] Connected to: {SQLALCHEMY_DATABASE_URL.split('?')[0]}")
+    # Never log DATABASE_URL: it may contain a username and password.
+    print(f"[Database] Connected using dialect: {engine.dialect.name}")
     print(f"[Database] Tables initialized successfully.")
-

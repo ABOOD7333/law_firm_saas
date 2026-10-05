@@ -418,7 +418,7 @@ async function runConflictCheck() {
         if (data.results.length === 0) {
             res.innerHTML = `<div style="text-align:center;padding:16px;background:#f0fdf4;border-radius:8px;color:#166534;font-weight:700;">
                 <i class="fa-solid fa-check-circle" style="font-size:1.4rem;margin-bottom:6px;display:block;"></i>
-                لا يوجد تضارب — "${name}" غير موجود في أي قضية أخرى</div>`;
+                لا يوجد تضارب — "${escapeHtml(name)}" غير موجود في أي قضية أخرى</div>`;
         } else {
             res.innerHTML = `<div style="background:#fef3c7;border-radius:8px;padding:10px 14px;margin-bottom:12px;color:#d97706;font-weight:700;">
                 <i class="fa-solid fa-triangle-exclamation"></i> تحذير: وُجد ${data.count} تطابق محتمل</div>`;
@@ -426,8 +426,8 @@ async function runConflictCheck() {
                 res.innerHTML += `<div class="result-row">
                     <i class="fa-solid fa-user-shield" style="color:#ef4444;font-size:1.2rem;flex-shrink:0;"></i>
                     <div>
-                        <strong>${r.name}</strong> — <span style="color:#6366f1;">${r.role}</span> (${r.type})<br>
-                        <small style="color:var(--text-muted);">القضية: ${r.case_number} — ${r.case_title}</small>
+                        <strong>${escapeHtml(r.name)}</strong> — <span style="color:#6366f1;">${escapeHtml(r.role)}</span> (${escapeHtml(r.type)})<br>
+                        <small style="color:var(--text-muted);">القضية: ${escapeHtml(r.case_number)} — ${escapeHtml(r.case_title)}</small>
                     </div>
                 </div>`;
             });
@@ -455,12 +455,12 @@ async function showTimeline() {
                 <div style="position:absolute;right:-8px;top:6px;width:16px;height:16px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 0 0 2px ${color};"></div>
                 <div style="background:#f8fafc;border-radius:10px;padding:12px 16px;border:1px solid #e2e8f0;">
                     <div style="display:flex;justify-content:space-between;align-items:center;">
-                        <strong><i class="fa-solid ${icon}" style="color:${color};"></i> ${ev.title}</strong>
-                        <span style="font-size:.8rem;color:var(--text-muted);" dir="ltr">${ev.date}</span>
+                        <strong><i class="fa-solid ${icon}" style="color:${color};"></i> ${escapeHtml(ev.title)}</strong>
+                        <span style="font-size:.8rem;color:var(--text-muted);" dir="ltr">${escapeHtml(ev.date)}</span>
                     </div>
                     <div style="margin-top:4px;">
-                        <span style="background:${color}22;color:${color};padding:2px 10px;border-radius:10px;font-size:.78rem;font-weight:700;">${ev.type}</span>
-                        ${ev.status ? `<span style="margin-right:8px;font-size:.8rem;color:var(--text-muted);">${ev.status}</span>` : ''}
+                        <span style="background:${color}22;color:${color};padding:2px 10px;border-radius:10px;font-size:.78rem;font-weight:700;">${escapeHtml(ev.type)}</span>
+                        ${ev.status ? `<span style="margin-right:8px;font-size:.8rem;color:var(--text-muted);">${escapeHtml(ev.status)}</span>` : ''}
                     </div>
                 </div>
             </div>`;
@@ -650,6 +650,10 @@ const rawTemplates = {
         </div>`
 };
 
+function escapeHtml(value) {
+    return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 async function openTemplateEditor() {
     document.getElementById('templateModal').style.display = 'flex';
     loadTemplateForEditing();
@@ -662,7 +666,7 @@ async function loadTemplateForEditing() {
     try {
         const res = await fetch(`/api/templates/${encodeURIComponent(type)}`).then(r=>r.json());
         if (res && res.template_text) {
-            editor.innerHTML = res.template_text;
+            editor.innerHTML = sanitizeLegalHtml(res.template_text);
         } else {
             editor.innerHTML = rawTemplates[type] || '';
         }
@@ -693,12 +697,31 @@ async function saveTemplate() {
     }
 }
 
+function sanitizeLegalHtml(value) {
+    const allowed = new Set(['P','DIV','BR','H1','H2','H3','H4','STRONG','B','EM','I','U','UL','OL','LI','TABLE','THEAD','TBODY','TR','TH','TD','BLOCKQUOTE','SPAN','HR']);
+    const parsed = new DOMParser().parseFromString(String(value || ''), 'text/html');
+    const clean = node => {
+        for (const child of [...node.childNodes]) {
+            if (child.nodeType === Node.ELEMENT_NODE) {
+                if (!allowed.has(child.tagName)) {
+                    child.replaceWith(document.createTextNode(child.textContent || ''));
+                    continue;
+                }
+                [...child.attributes].forEach(attr => child.removeAttribute(attr.name));
+                clean(child);
+            } else if (child.nodeType !== Node.TEXT_NODE) child.remove();
+        }
+    };
+    clean(parsed.body);
+    return parsed.body.innerHTML;
+}
+
 async function generateDoc(type) {
     if (!selectedCaseData) { alert('اختر قضية أولاً من القائمة أعلاه'); return; }
     const fmt = document.getElementById('saveFormat').value;
     const modal = document.getElementById('docModal');
     
-    document.getElementById('docModalTitle').innerHTML = `<i class="fa-solid fa-file-signature" style="color:var(--primary-color);"></i> معاينة: ${type}`;
+    document.getElementById('docModalTitle').textContent = `معاينة: ${type}`;
     
     document.getElementById('docModalBody').innerHTML = '<p style="text-align:center;padding:50px;">جاري التوليد...</p>';
     modal.style.display = 'flex';
@@ -718,14 +741,15 @@ async function generateDoc(type) {
         }
     } catch(e) { console.error(e); }
 
-    content = content.replace(/\[تاريخ_اليوم\]/g, today)
-                     .replace(/\[اسم_الموكل\]/g, client)
-                     .replace(/\[اسم_المحكمة\]/g, court)
-                     .replace(/\[رقم_القضية\]/g, caseNum)
-                     .replace(/\[موضوع_القضية\]/g, title)
+    const escapeTemplateValue = value => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    content = content.replace(/\[تاريخ_اليوم\]/g, escapeTemplateValue(today))
+                     .replace(/\[اسم_الموكل\]/g, escapeTemplateValue(client))
+                     .replace(/\[اسم_المحكمة\]/g, escapeTemplateValue(court))
+                     .replace(/\[رقم_القضية\]/g, escapeTemplateValue(caseNum))
+                     .replace(/\[موضوع_القضية\]/g, escapeTemplateValue(title))
                      .replace(/\[رقم_الفاتورة\]/g, Math.floor(Math.random()*10000));
 
-    document.getElementById('docModalBody').innerHTML = content;
+    document.getElementById('docModalBody').innerHTML = sanitizeLegalHtml(content);
 }
 
 function checkLimitations() {
@@ -766,7 +790,7 @@ async function loadWorkflows() {
                 html += `
                 <div style="display:flex; justify-content:space-between; align-items:center; background:white; padding:15px; border-radius:10px; border:1px solid var(--border-color); box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
                     <div style="flex-grow:1; padding-left:15px; text-align:right;">
-                        <strong style="color:var(--secondary-color); font-size:0.92rem; display:block; margin-bottom:4px;">${r.name}</strong>
+                        <strong style="color:var(--secondary-color); font-size:0.92rem; display:block; margin-bottom:4px;">${escapeHtml(String(r.name || ''))}</strong>
                         <span style="font-size:0.8rem; color:var(--text-muted);"><i class="fa-solid fa-bolt" style="color:#f59e0b; margin-left:4px;"></i> ${triggerDesc}</span>
                     </div>
                     <div style="display:flex; align-items:center; gap:12px;">
@@ -797,7 +821,7 @@ async function loadWorkflows() {
                         <span style="font-weight:700; color:#10b981;"><i class="fa-solid fa-circle-check"></i> تم التنفيذ بنجاح</span>
                         <span style="color:var(--text-muted); font-size:0.75rem;" dir="ltr">${l.created_at}</span>
                     </div>
-                    <div>${l.details}</div>
+                    <div>${escapeHtml(String(l.details || ''))}</div>
                 </div>
                 `;
             });

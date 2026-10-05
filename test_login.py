@@ -1,31 +1,32 @@
-import requests
-import re
+"""Manual login checker; requires an explicitly supplied non-production URL."""
+
+import getpass
+import os
 import sys
-sys.stdout.reconfigure(encoding='utf-8')
+
+import requests
+
+
+url = os.getenv("LOGIN_TEST_URL", "").strip()
+username = os.getenv("LOGIN_TEST_USERNAME", "").strip()
+if not url or not username:
+    raise SystemExit("Set LOGIN_TEST_URL and LOGIN_TEST_USERNAME explicitly before running.")
+if "railway.app" in url or "railway.com" in url:
+    raise SystemExit("Refusing to submit credentials to a production Railway URL from this script.")
 
 session = requests.Session()
-url = 'https://web-production-80e9e.up.railway.app/'
+response = session.get(url, timeout=15)
+csrf = session.cookies.get("csrf_token")
+if not csrf:
+    raise SystemExit("The site did not issue a CSRF token.")
 
-res_get = session.get(url)
-csrf_cookie = session.cookies.get('csrf_token')
-
-data = {
-    'email': 'ABOOD',
-    'password': 'admin123456',
-    'csrf_token': csrf_cookie
-}
-headers = {'X-CSRF-Token': csrf_cookie}
-
-res_post = session.post(url, data=data, headers=headers, allow_redirects=False)
-
-print('POST Status:', res_post.status_code)
-if res_post.status_code in [302, 303]:
-    print('Redirected to:', res_post.headers.get('Location'))
-elif res_post.status_code == 500:
-    print('Error 500 occurred!')
-    print(res_post.text[:1000])
-else:
-    print('HTML length:', len(res_post.text))
-    # Look for the error message in the login HTML
-    matches = re.findall(r'<div[^>]*class=["\'][^"\']*alert error[^"\']*["\'][^>]*>(.*?)</div>', res_post.text, re.IGNORECASE | re.DOTALL)
-    print('Errors:', matches)
+response = session.post(
+    url,
+    data={"email": username, "password": getpass.getpass("Password: "), "csrf_token": csrf},
+    headers={"X-CSRF-Token": csrf},
+    allow_redirects=False,
+    timeout=15,
+)
+print(f"HTTP {response.status_code}")
+if response.status_code in (302, 303):
+    print(f"Redirect: {response.headers.get('Location', '')}")

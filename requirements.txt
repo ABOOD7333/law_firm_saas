@@ -28,6 +28,7 @@ python-dotenv==1.1.0
 
 # --- Security ---
 # مدمج مع Python (hashlib, hmac, secrets)
+cryptography>=42.0.0,<47.0.0
 
 # --- Production Servers ---
 gunicorn==21.2.0

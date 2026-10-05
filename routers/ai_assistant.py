@@ -214,7 +214,7 @@ async def ai_chat(request: Request, db: Session = Depends(get_db), current_user:
             try:
                 db_data = db_engine.answer_query(intent.type, intent.entities)
             except Exception as e:
-                db_data = {"error": str(e)}
+                db_data = {"error": "تعذر تحميل بيانات الحساب"}
 
         # ب. البحث في القوانين
         if intent.type in ["search_law", "legal_advice", "unknown"]:
@@ -234,7 +234,7 @@ async def ai_chat(request: Request, db: Session = Depends(get_db), current_user:
                 search_results = []
 
         # ج. البحث الموحد (موكلين + قضايا + قوانين)
-        unified_results = _unified_assistant_search(db, office_id, question)
+        unified_results = _unified_assistant_search(db, office_id, question, current_user)
 
         # ──────────────────────────────────────
         # 4. بناء السياق الشامل لـ Gemini
@@ -347,7 +347,7 @@ async def ai_chat(request: Request, db: Session = Depends(get_db), current_user:
         traceback.print_exc()
         return JSONResponse({
             "success": False,
-            "error": f"حدث خطأ: {str(e)}"
+            "error": "حدث خطأ داخلي. يرجى المحاولة مرة أخرى."
         }, status_code=500)
 
 
@@ -414,7 +414,7 @@ async def generate_document(request: Request, db: Session = Depends(get_db), cur
             return JSONResponse({"success": False, "error": result}, status_code=400)
 
     except Exception as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+        return JSONResponse({"success": False, "error": "حدث خطأ داخلي. يرجى المحاولة مرة أخرى."}, status_code=500)
 
 
 @router.get("/history")
@@ -443,7 +443,7 @@ async def get_chat_history(request: Request, db: Session = Depends(get_db), curr
             ]
         })
     except Exception as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+        return JSONResponse({"success": False, "error": "حدث خطأ داخلي. يرجى المحاولة مرة أخرى."}, status_code=500)
 
 
 @router.get("/suggestions")
@@ -488,7 +488,7 @@ async def add_knowledge(request: Request, db: Session = Depends(get_db), current
         return JSONResponse({"success": True, "message": "تمت إضافة المعرفة بنجاح"})
     except Exception as e:
         db.rollback()
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+        return JSONResponse({"success": False, "error": "حدث خطأ داخلي. يرجى المحاولة مرة أخرى."}, status_code=500)
 
 
 @router.get("/knowledge/list")
@@ -517,7 +517,7 @@ async def list_knowledge(request: Request, db: Session = Depends(get_db), curren
             ]
         })
     except Exception as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+        return JSONResponse({"success": False, "error": "حدث خطأ داخلي. يرجى المحاولة مرة أخرى."}, status_code=500)
 
 
 @router.get("/quota")
@@ -540,7 +540,7 @@ async def get_user_quota(request: Request, db: Session = Depends(get_db), curren
             "date": today_str
         })
     except Exception as e:
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+        return JSONResponse({"success": False, "error": "حدث خطأ داخلي. يرجى المحاولة مرة أخرى."}, status_code=500)
 
 
 # ══════════════════════════════════════════════
@@ -767,7 +767,7 @@ def _search_custom_knowledge(db: Session, office_id: int, query: str):
         return []
 
 
-def _unified_assistant_search(db: Session, office_id: int, query_text: str) -> dict:
+def _unified_assistant_search(db: Session, office_id: int, query_text: str, current_user: AccessProfiles) -> dict:
     """بحث موحد في قاعدة البيانات والقوانين"""
     results = {
         "clients": [],
@@ -788,10 +788,24 @@ def _unified_assistant_search(db: Session, office_id: int, query_text: str) -> d
     # 1. البحث في الموكلين
     try:
         from database.models import LawClients, LawCases
-        all_clients = db.query(LawClients).filter(
+        client_query = db.query(LawClients).filter(
             LawClients.office_id == office_id,
             LawClients.is_deleted == 0
-        ).all()
+        )
+        case_query = db.query(LawCases).filter(
+            LawCases.office_id == office_id,
+            LawCases.is_deleted == 0,
+        )
+        if current_user.role in ['محامي', 'محامٍ'] and not getattr(current_user, "can_view_all_cases", 0):
+            case_query = case_query.filter(LawCases.lead_lawyer_id == current_user.id)
+            allowed_case_ids = case_query.with_entities(LawCases.id).subquery()
+            allowed_client_ids = db.query(LawClients.id).filter(
+                LawClients.office_id == office_id,
+                LawClients.case_id.in_(allowed_case_ids),
+                LawClients.is_deleted == 0,
+            ).subquery()
+            client_query = client_query.filter(LawClients.id.in_(allowed_client_ids))
+        all_clients = client_query.all()
 
         for c in all_clients:
             c_words = [w for w in c.name.split() if len(w) > 2]
@@ -819,10 +833,7 @@ def _unified_assistant_search(db: Session, office_id: int, query_text: str) -> d
     # 2. البحث في القضايا
     try:
         from database.models import LawCases
-        all_cases = db.query(LawCases).filter(
-            LawCases.office_id == office_id,
-            LawCases.is_deleted == 0
-        ).all()
+        all_cases = case_query.all()
 
         for case in all_cases:
             if case.case_number in query_clean:

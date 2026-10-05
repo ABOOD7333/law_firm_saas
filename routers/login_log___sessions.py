@@ -8,8 +8,18 @@ from core.error_handler import safe_error_html
 from database.database import get_db
 from database.models import AccessProfiles, AuthSessions
 from dependencies import get_current_user, templates
+from core.security import hash_session_token
+from dependencies import check_user_permission
 
 router = APIRouter()
+
+
+def _can_manage_office_sessions(user: AccessProfiles) -> bool:
+    return bool(
+        getattr(user, "is_superadmin", 0) == 1
+        or user.role in {"مدير", "مدير المكتب", "مدير مكتب", "صاحب المكتب", "صاحب مكتب", "مدير النظام", "admin", "owner"}
+        or check_user_permission(user, "team", "edit")
+    )
 
 
 @router.get("/login_log", response_class=HTMLResponse)
@@ -17,9 +27,13 @@ async def login_log_page(request: Request, db: Session = Depends(get_db), user: 
     if not user: return RedirectResponse(url="/", status_code=303)
     try:
         from datetime import datetime
-        office_id = user.office_id or 1
-        # Fetch sessions for all users in the office
-        users = db.query(AccessProfiles).filter(AccessProfiles.office_id == office_id).all()
+        if not user.office_id:
+            raise HTTPException(status_code=403, detail="الحساب غير مرتبط بمكتب")
+        can_manage = _can_manage_office_sessions(user)
+        users_query = db.query(AccessProfiles).filter(AccessProfiles.office_id == user.office_id)
+        if not can_manage:
+            users_query = users_query.filter(AccessProfiles.id == user.id)
+        users = users_query.all()
         user_dict = {u.id: u for u in users}
         user_ids = list(user_dict.keys())
         sessions = db.query(AuthSessions).filter(AuthSessions.user_id.in_(user_ids)).order_by(AuthSessions.created_at.desc()).all()
@@ -52,17 +66,18 @@ async def login_log_page(request: Request, db: Session = Depends(get_db), user: 
 async def session_revoke(session_id: int, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     from fastapi.responses import JSONResponse
     if not user: return JSONResponse({"ok": False, "message": "غير مصرح"}, status_code=401)
+    if not user.office_id:
+        return JSONResponse({"ok": False, "message": "الحساب غير مرتبط بمكتب"}, status_code=403)
     s = db.query(AuthSessions).filter(AuthSessions.id == session_id).first()
     if not s: return JSONResponse({"ok": False, "message": "الجلسة غير موجودة"})
     
     # 🔴 IDOR protection: Verify the target user belongs to the same office
     target_user = db.query(AccessProfiles).filter(AccessProfiles.id == s.user_id).first()
-    if not target_user or target_user.office_id != user.office_id:
+    if not target_user or (target_user.office_id != user.office_id and not getattr(user, "is_superadmin", 0)):
         return JSONResponse({"ok": False, "message": "غير مصرح لك بإنهاء هذه الجلسة"}, status_code=403)
         
     # 🔴 Privilege restriction: Non-admins can only revoke their own sessions
-    _ADMIN_ROLES = {'مدير', 'مدير المكتب', 'صاحب المكتب', 'مدير النظام'}
-    if user.role not in _ADMIN_ROLES and user.id != target_user.id:
+    if not _can_manage_office_sessions(user) and user.id != target_user.id:
         return JSONResponse({"ok": False, "message": "غير مصرح لك بإنهاء جلسات الآخرين"}, status_code=403)
         
     s.is_active = 0
@@ -74,15 +89,24 @@ async def session_revoke_all(request: Request, db: Session = Depends(get_db), us
     from fastapi.responses import JSONResponse
     if not user: return JSONResponse({"ok": False, "message": "غير مصرح"}, status_code=401)
     token = request.cookies.get("session_token")
-    office_id = user.office_id or 1
-    users = db.query(AccessProfiles.id).filter(AccessProfiles.office_id == office_id).all()
+    if not token:
+        auth_header = request.headers.get("Authorization", "")
+        token = auth_header[7:] if auth_header.startswith("Bearer ") else None
+    if not user.office_id:
+        return JSONResponse({"ok": False, "message": "الحساب غير مرتبط بمكتب"}, status_code=403)
+    users_query = db.query(AccessProfiles.id).filter(AccessProfiles.office_id == user.office_id)
+    if not _can_manage_office_sessions(user):
+        users_query = users_query.filter(AccessProfiles.id == user.id)
+    users = users_query.all()
     user_ids = [u[0] for u in users]
     
     # Revoke all active sessions except the current one
+    current_hash = hash_session_token(token) if token else None
+    current_values = [current_hash, token] if token else []
     sessions = db.query(AuthSessions).filter(
         AuthSessions.user_id.in_(user_ids), 
         AuthSessions.is_active == 1,
-        AuthSessions.session_token != token
+        ~AuthSessions.session_token.in_(current_values) if current_values else True
     ).all()
     
     count = 0

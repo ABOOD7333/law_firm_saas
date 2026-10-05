@@ -16,6 +16,11 @@ def hash_pin(pin: str) -> str:
     return f"pbkdf2:sha256:{iterations}${salt_b64}${hash_b64}"
 
 def seed_real_offices(db: Session):
+    if os.getenv("APP_ENV", "production").lower() == "production" or os.getenv("ALLOW_DEMO_SEED") != "1":
+        raise RuntimeError("Demo seed disabled. Set APP_ENV=development and ALLOW_DEMO_SEED=1 explicitly to run it.")
+    demo_password = os.getenv("DEMO_SEED_PASSWORD", "")
+    if len(demo_password) < 12:
+        raise RuntimeError("Set a unique DEMO_SEED_PASSWORD with at least 12 characters.")
     try:
         from database.models import LawOffices, AccessProfiles, LawClients, LawCases
         
@@ -41,7 +46,7 @@ def seed_real_offices(db: Session):
                 email="superadmin@lawsaas.com",
                 role="مدير",
                 office_id=1,
-                access_pin_hash=hash_pin("admin123456"),
+                access_pin_hash=hash_pin(demo_password),
                 is_active=1,
                 failed_attempts=0,
                 is_superadmin=1
@@ -103,7 +108,7 @@ def seed_real_offices(db: Session):
                     email=off["email"],
                     role="صاحب المكتب",
                     office_id=off["id"],
-                    access_pin_hash=hash_pin("admin123456"),
+                    access_pin_hash=hash_pin(demo_password),
                     is_active=1,
                     failed_attempts=0,
                     is_superadmin=0

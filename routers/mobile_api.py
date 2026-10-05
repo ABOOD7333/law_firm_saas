@@ -10,9 +10,34 @@ from sqlalchemy import or_
 
 from database.database import get_db
 from database.models import AccessProfiles, AuthSessions, AuthVerificationTokens, LawCases, LawDocuments, LawOffices, LawClients, LawHearings, LawTasks
-from dependencies import get_current_user
+from dependencies import get_current_user, check_user_permission
+from core.security import hash_session_token
+from core.security import login_lockout_active, record_login_failure, client_records_for_user
 
 router = APIRouter(prefix="/api/mobile", tags=["Mobile API"])
+
+
+def _client_ids(db: Session, user: AccessProfiles) -> list[int]:
+    if user.role != "موكل":
+        return []
+    return [record.id for record in client_records_for_user(db, user)]
+
+
+def _client_case_ids_query(db: Session, user: AccessProfiles):
+    client_ids = _client_ids(db, user)
+    if not client_ids or not user.office_id:
+        return None
+    return db.query(LawClients.case_id).filter(
+        LawClients.id.in_(client_ids),
+        LawClients.office_id == user.office_id,
+        LawClients.is_deleted == 0,
+        LawClients.case_id.isnot(None),
+    )
+
+
+def _require_case_permission(user: AccessProfiles, action: str) -> None:
+    if user.role == "موكل" or not check_user_permission(user, "cases", action):
+        raise HTTPException(status_code=403, detail="غير مصرح بهذا الإجراء")
 
 class LoginRequest(BaseModel):
     email: str
@@ -61,24 +86,28 @@ async def login(req: LoginRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="البريد الإلكتروني أو كلمة المرور غير صحيحة.")
 
     # [SECURITY FIX MED-04] التحقق من القفل قبل محاولة كلمة المرور
-    if getattr(user, 'failed_attempts', 0) >= 10:
+    if login_lockout_active(user, db):
         raise HTTPException(
             status_code=429,
             detail="تم قفل الحساب مؤقتاً بسبب كثرة المحاولات الفاشلة. يرجى التواصل مع المسؤول."
         )
         
-    # Client login case verification
-    if user.role == "موكل" and req.case_number:
-        case_num = req.case_number.strip()
-        case_exists = db.query(LawCases).filter(
-            LawCases.client_id == user.id,
-            LawCases.case_number == case_num
+    # Require a matching office-owned case number for client accounts.
+    if user.role == "موكل":
+        case_ids = _client_case_ids_query(db, user)
+        case_exists = db.query(LawCases.id).filter(
+            LawCases.office_id == user.office_id,
+            LawCases.id.in_(case_ids) if case_ids is not None else LawCases.id == -1,
+            LawCases.case_number == (req.case_number or "").strip(),
+            LawCases.is_deleted == 0,
         ).first()
         if not case_exists:
+            record_login_failure(user, db)
             raise HTTPException(status_code=400, detail="رقم القضية غير مطابق للبيانات.")
             
     if _verify_pin(req.password, user.access_pin_hash):
         user.failed_attempts = 0
+        user.locked_until = None
         db.commit()
         
         # Check 2FA
@@ -118,7 +147,7 @@ async def login(req: LoginRequest, db: Session = Depends(get_db)):
         token = str(uuid.uuid4())
         expires = datetime.now(timezone.utc) + timedelta(days=7)
         new_session = AuthSessions(
-            session_token=token,
+            session_token=hash_session_token(token),
             user_id=user.id,
             is_active=1,
             expires_at=expires.strftime("%Y-%m-%d %H:%M:%S")
@@ -141,8 +170,7 @@ async def login(req: LoginRequest, db: Session = Depends(get_db)):
             }
         }
     else:
-        user.failed_attempts += 1
-        db.commit()
+        record_login_failure(user, db)
         raise HTTPException(status_code=400, detail="البريد الإلكتروني أو كلمة المرور غير صحيحة.")
 
 @router.post("/login-2fa")
@@ -183,7 +211,7 @@ async def verify_2fa(req: Verify2faRequest, db: Session = Depends(get_db)):
         token = str(uuid.uuid4())
         expires = datetime.now(timezone.utc) + timedelta(days=7)
         new_session = AuthSessions(
-            session_token=token,
+            session_token=hash_session_token(token),
             user_id=user.id,
             is_active=1,
             expires_at=expires.strftime("%Y-%m-%d %H:%M:%S")
@@ -204,8 +232,11 @@ async def verify_2fa(req: Verify2faRequest, db: Session = Depends(get_db)):
                 "is_2fa_enabled": getattr(user, "is_2fa_enabled", 0)
             }
         }
-    else:
-        raise HTTPException(status_code=400, detail="رمز التحقق غير صحيح أو منتهي الصلاحية.")
+    db_token.attempts += 1
+    if db_token.attempts >= 5:
+        db_token.consumed_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    db.commit()
+    raise HTTPException(status_code=400, detail="رمز التحقق غير صحيح أو منتهي الصلاحية.")
 
 @router.get("/profile")
 async def get_profile(user: AccessProfiles = Depends(get_current_user)):
@@ -226,13 +257,17 @@ async def get_dashboard_stats(db: Session = Depends(get_db), user: AccessProfile
     if not user:
         raise HTTPException(status_code=401, detail="غير مصرح")
         
-    office_id = user.office_id or 1
+    office_id = user.office_id
+    if not office_id:
+        raise HTTPException(status_code=403, detail="الحساب غير مرتبط بمكتب")
     
     if user.role == 'موكل':
-        client_records = db.query(LawClients).filter(
-            (LawClients.phone == user.phone) | (LawClients.email == user.email)
-        ).all()
-        case_ids = [c.case_id for c in client_records if c.case_id]
+        case_ids_query = _client_case_ids_query(db, user)
+        case_ids = [row.id for row in db.query(LawCases.id).filter(
+            LawCases.office_id == office_id,
+            LawCases.id.in_(case_ids_query) if case_ids_query is not None else LawCases.id == -1,
+            LawCases.is_deleted == 0,
+        ).all()]
         
         total_cases = db.query(LawCases).filter(LawCases.id.in_(case_ids), LawCases.is_deleted == 0).count() if case_ids else 0
         open_cases = db.query(LawCases).filter(LawCases.id.in_(case_ids), LawCases.status_key == 'نشط', LawCases.is_deleted == 0).count() if case_ids else 0
@@ -241,16 +276,40 @@ async def get_dashboard_stats(db: Session = Depends(get_db), user: AccessProfile
         upcoming_hearings = db.query(LawHearings).filter(LawHearings.case_id.in_(case_ids), LawHearings.status_key == 'pending', LawHearings.is_deleted == 0).count() if case_ids else 0
         pending_tasks = db.query(LawTasks).filter(LawTasks.case_id.in_(case_ids), LawTasks.status_key.in_(['pending', 'in_progress']), LawTasks.is_deleted == 0).count() if case_ids else 0
     else:
-        total_cases = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0).count()
-        open_cases = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.status_key == 'نشط', LawCases.is_deleted == 0).count()
+        cases_query = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0)
+        if user.role in ['محامي', 'محامٍ'] and getattr(user, "can_view_all_cases", 0) == 0:
+            cases_query = cases_query.filter(LawCases.lead_lawyer_id == user.id)
+        total_cases = cases_query.count()
+        open_cases = cases_query.filter(LawCases.status_key == 'نشط').count()
         closed_cases = total_cases - open_cases
-        total_clients = db.query(LawClients).filter(LawClients.office_id == office_id, LawClients.is_deleted == 0).count()
-        upcoming_hearings = db.query(LawHearings).filter(LawHearings.office_id == office_id, LawHearings.status_key == 'pending', LawHearings.is_deleted == 0).count()
-        pending_tasks = db.query(LawTasks).filter(
+        if user.role in ['محامي', 'محامٍ'] and getattr(user, "can_view_all_cases", 0) == 0:
+            accessible_ids = cases_query.with_entities(LawCases.id).subquery()
+            total_clients = db.query(LawClients).filter(
+                LawClients.office_id == office_id,
+                LawClients.case_id.in_(accessible_ids),
+                LawClients.is_deleted == 0,
+            ).count()
+            upcoming_hearings = db.query(LawHearings).filter(
+                LawHearings.office_id == office_id,
+                LawHearings.case_id.in_(accessible_ids),
+                LawHearings.status_key == 'pending',
+                LawHearings.is_deleted == 0,
+            ).count()
+        else:
+            total_clients = db.query(LawClients).filter(LawClients.office_id == office_id, LawClients.is_deleted == 0).count()
+            upcoming_hearings = db.query(LawHearings).filter(LawHearings.office_id == office_id, LawHearings.status_key == 'pending', LawHearings.is_deleted == 0).count()
+        task_query = db.query(LawTasks).filter(
+            LawTasks.office_id == office_id,
             LawTasks.assignee_user_id == user.id,
             LawTasks.status_key.in_(['pending', 'in_progress']),
             LawTasks.is_deleted == 0
-        ).count()
+        )
+        if user.role in ['محامي', 'محامٍ'] and getattr(user, "can_view_all_cases", 0) == 0:
+            accessible_ids = cases_query.with_entities(LawCases.id).subquery()
+            task_query = task_query.filter(
+                (LawTasks.case_id.in_(accessible_ids)) | (LawTasks.case_id.is_(None))
+            )
+        pending_tasks = task_query.count()
         
     return {
         "total_cases": total_cases,
@@ -272,7 +331,9 @@ async def get_cases(
     if not user:
         raise HTTPException(status_code=401, detail="غير مصرح")
         
-    office_id = user.office_id or 1
+    office_id = user.office_id
+    if not office_id:
+        raise HTTPException(status_code=403, detail="الحساب غير مرتبط بمكتب")
     
     # Enforce lawyer visibility constraints
     query = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0)
@@ -280,9 +341,8 @@ async def get_cases(
     if user.role in ['محامي', 'محامٍ'] and getattr(user, "can_view_all_cases", 0) == 0:
         query = query.filter(LawCases.lead_lawyer_id == user.id)
     elif user.role == 'موكل':
-        # Mapped indirectly via LawClients
-        client_cases = db.query(LawClients.case_id).filter(LawClients.client_id == user.id).subquery()
-        query = query.filter(LawCases.id.in_(client_cases))
+        case_ids = _client_case_ids_query(db, user)
+        query = query.filter(LawCases.id.in_(case_ids)) if case_ids is not None else query.filter(False)
         
     if q:
         query = query.filter(
@@ -321,8 +381,11 @@ class MobileCaseCreate(BaseModel):
 async def create_case(req: MobileCaseCreate, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     if not user:
         raise HTTPException(status_code=401, detail="غير مصرح")
+    _require_case_permission(user, "add")
     
-    office_id = user.office_id or 1
+    office_id = user.office_id
+    if not office_id:
+        raise HTTPException(status_code=403, detail="الحساب غير مرتبط بمكتب")
     new_case = LawCases(
         office_id=office_id,
         case_number=req.case_number,
@@ -345,10 +408,15 @@ async def create_case(req: MobileCaseCreate, db: Session = Depends(get_db), user
 async def update_case(case_id: int, req: MobileCaseCreate, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     if not user:
         raise HTTPException(status_code=401, detail="غير مصرح")
+    _require_case_permission(user, "edit")
+    if not user.office_id:
+        raise HTTPException(status_code=403, detail="الحساب غير مرتبط بمكتب")
         
-    case_obj = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == (user.office_id or 1)).first()
+    case_obj = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == user.office_id).first()
     if not case_obj:
         raise HTTPException(status_code=404, detail="غير موجود")
+    if user.role in ['محامي', 'محامٍ'] and not getattr(user, "can_view_all_cases", 0) and case_obj.lead_lawyer_id != user.id:
+        raise HTTPException(status_code=403, detail="غير مصرح بهذه القضية")
         
     case_obj.title = req.title
     case_obj.case_number = req.case_number
@@ -364,10 +432,15 @@ async def update_case(case_id: int, req: MobileCaseCreate, db: Session = Depends
 async def delete_case(case_id: int, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     if not user:
         raise HTTPException(status_code=401, detail="غير مصرح")
+    _require_case_permission(user, "delete")
+    if not user.office_id:
+        raise HTTPException(status_code=403, detail="الحساب غير مرتبط بمكتب")
         
-    case_obj = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == (user.office_id or 1)).first()
+    case_obj = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == user.office_id).first()
     if not case_obj:
         raise HTTPException(status_code=404, detail="غير موجود")
+    if user.role in ['محامي', 'محامٍ'] and not getattr(user, "can_view_all_cases", 0) and case_obj.lead_lawyer_id != user.id:
+        raise HTTPException(status_code=403, detail="غير مصرح بهذه القضية")
         
     case_obj.is_deleted = 1
     db.commit()
@@ -378,15 +451,23 @@ async def get_documents(db: Session = Depends(get_db), user: AccessProfiles = De
     if not user:
         raise HTTPException(status_code=401, detail="غير مصرح")
         
-    office_id = user.office_id or 1
+    office_id = user.office_id
+    if not office_id:
+        raise HTTPException(status_code=403, detail="الحساب غير مرتبط بمكتب")
     
     # Fetch cases accessible by this user to filter documents
     cases_query = db.query(LawCases).filter(LawCases.office_id == office_id)
     if user.role in ['محامي', 'محامٍ'] and getattr(user, "can_view_all_cases", 0) == 0:
         cases_query = cases_query.filter(LawCases.lead_lawyer_id == user.id)
     elif user.role == 'موكل':
-        client_cases = db.query(LawClients.case_id).filter(LawClients.client_id == user.id).subquery()
-        cases_query = cases_query.filter(LawCases.id.in_(client_cases))
+        client_ids = _client_ids(db, user)
+        case_ids = db.query(LawClients.case_id).filter(
+            LawClients.id.in_(client_ids),
+            LawClients.office_id == office_id,
+            LawClients.is_deleted == 0,
+            LawClients.case_id.isnot(None),
+        ) if client_ids else None
+        cases_query = cases_query.filter(LawCases.id.in_(case_ids)) if case_ids is not None else cases_query.filter(False)
         
     accessible_case_ids = [c.id for c in cases_query.all()]
     
@@ -400,7 +481,7 @@ async def get_documents(db: Session = Depends(get_db), user: AccessProfiles = De
         "name": doc.name,
         "case_id": doc.case_id,
         "document_type_key": doc.document_type_key,
-        "file_path": doc.file_path,
+        "download_url": f"/documents/download/{doc.file_path.rsplit('/', 1)[-1]}" if doc.file_path else None,
         "doc_date": doc.doc_date,
         "notes": doc.notes
     } for doc in documents]

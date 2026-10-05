@@ -38,6 +38,16 @@ env/
 tests/
 pytest.ini
 .pytest_cache/
+test_*.py
+verify_syntax.py
+
+# One-off maintenance and patch utilities (not part of the runtime image)
+fix_*.py
+patch_*.py
+check_db.py
+seed_real_offices.py
+update_company_credentials.py
+export_all_databases.py
 
 # Documentation
 *.md
@@ -49,6 +59,12 @@ Thumbs.db
 
 # Uploads (يُضاف كـ volume في وقت التشغيل)
 static/uploads/
+private_uploads/
+rag_engine/knowledge_data/
+rag_engine/chroma_db/
+logs/
+temp_contract_*
+temp_compare_*
 
 # Video files
 *.mp4

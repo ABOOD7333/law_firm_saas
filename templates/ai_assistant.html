@@ -749,11 +749,12 @@
             if (data.success) {
                 const grid = document.getElementById('suggestionsGrid');
                 grid.innerHTML = data.suggestions.slice(0, 9).map(s => `
-                <div class="suggestion-card" onclick="sendQuickQ('${s.text.replace(/'/g, "\\'")}')">
-                    <span class="s-icon">${s.icon}</span>
-                    <span class="s-text">${s.text}</span>
+                <div class="suggestion-card" role="button" tabindex="0">
+                    <span class="s-icon">${escapeHtml(String(s.icon || ''))}</span>
+                    <span class="s-text">${escapeHtml(String(s.text || ''))}</span>
                 </div>
             `).join('');
+                grid.querySelectorAll('.suggestion-card').forEach((card, i) => card.addEventListener('click', () => sendQuickQ(String(data.suggestions[i].text || ''))));
             }
         } catch (e) { }
     });
@@ -1014,7 +1015,7 @@
     function formatMessage(text) {
         // اكتشاف المستندات القانونية أولاً
         if (text.includes('بسم الله الرحمن الرحيم')) {
-            const cleanText = text.replace(/\*\*(.*?)\*\*/g, '$1');
+            const cleanText = escapeHtml(text.replace(/\*\*(.*?)\*\*/g, '$1'));
             return `
             <div>سأعرض لك المستند القانوني:</div>
             <div class="document-output" id="docOutput">${cleanText}</div>
@@ -1023,6 +1024,8 @@
         `;
         }
 
+        // Escape model and user-derived content before adding our limited Markdown markup.
+        text = escapeHtml(String(text));
         // Markdown: Headers (### ← h3, ## ← h2, # ← h1)
         text = text.replace(/^### (.*$)/gm, '<h3>$1</h3>');
         text = text.replace(/^## (.*$)/gm, '<h2>$1</h2>');
@@ -1066,12 +1069,14 @@
         if (!suggestions || suggestions.length === 0) return;
         let html = '<div class="follow-up-suggestions" style="padding: 0 50px;">';
         suggestions.forEach(s => {
-            html += `<button class="follow-up-btn" onclick="sendQuickQ('${s.replace(/'/g, "\\'")}')">
-            💡 ${s}
+            html += `<button class="follow-up-btn" type="button">
+            💡 ${escapeHtml(String(s))}
         </button>`;
         });
         html += '</div>';
         appendMessage(html);
+        const buttons = document.querySelectorAll('#chatMessages .follow-up-suggestions .follow-up-btn');
+        suggestions.forEach((s, i) => buttons[buttons.length - suggestions.length + i]?.addEventListener('click', () => sendQuickQ(String(s))));
     }
 
     function addTypingIndicator() {
@@ -1126,7 +1131,7 @@
         const el = document.getElementById('docOutput');
         if (el) {
             const w = window.open('', '_blank');
-            w.document.write(`<html dir="rtl"><head><style>body{font-family:'Amiri',serif;padding:40px;font-size:14px;line-height:2;}</style></head><body><pre>${el.textContent}</pre></body></html>`);
+            w.document.write(`<html dir="rtl"><head><style>body{font-family:'Amiri',serif;padding:40px;font-size:14px;line-height:2;}</style></head><body><pre>${escapeHtml(el.textContent)}</pre></body></html>`);
             w.print();
         }
     }

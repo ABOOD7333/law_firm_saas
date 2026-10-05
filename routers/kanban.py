@@ -17,6 +17,16 @@ def get_authorized_user(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=303, headers={"Location": "/client-portal"})
     return user
 
+
+def _visible_case_ids_query(db: Session, user: AccessProfiles):
+    query = db.query(LawCases.id).filter(
+        LawCases.office_id == user.office_id,
+        LawCases.is_deleted == 0,
+    )
+    if user.role in ["محامي", "محامٍ"] and getattr(user, "can_view_all_cases", 0) == 0:
+        query = query.filter(LawCases.lead_lawyer_id == user.id)
+    return query
+
 @router.get("", response_class=HTMLResponse)
 async def kanban_board(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_authorized_user)):
     if not check_user_permission(user, 'tasks', 'view'):
@@ -34,10 +44,17 @@ async def get_tasks(db: Session = Depends(get_db), user: AccessProfiles = Depend
     if not check_user_permission(user, 'tasks', 'view'):
         return JSONResponse({"ok": False, "error": "غير مصرح لك"}, status_code=403)
         
-    tasks = db.query(LawTasks).filter(
+    tasks_query = db.query(LawTasks).filter(
         LawTasks.office_id == user.office_id,
         LawTasks.is_deleted == 0
-    ).order_by(LawTasks.kanban_order.asc(), LawTasks.id.desc()).all()
+    )
+    if user.role in ["محامي", "محامٍ"] and getattr(user, "can_view_all_cases", 0) == 0:
+        visible_case_ids = _visible_case_ids_query(db, user)
+        tasks_query = tasks_query.filter(
+            (LawTasks.assignee_user_id == user.id) |
+            (LawTasks.case_id.in_(visible_case_ids))
+        )
+    tasks = tasks_query.order_by(LawTasks.kanban_order.asc(), LawTasks.id.desc()).all()
     
     # Enrich with case info and assignee info
     assignees_ids = list(set([t.assignee_user_id for t in tasks if t.assignee_user_id]))
@@ -81,11 +98,16 @@ async def move_task(
         
     task = db.query(LawTasks).filter(
         LawTasks.id == task_id, 
-        LawTasks.office_id == user.office_id
+        LawTasks.office_id == user.office_id,
+        LawTasks.is_deleted == 0,
     ).first()
     
     if not task:
         return JSONResponse({"ok": False, "error": "المهمة غير موجودة"}, status_code=404)
+    if user.role in ["محامي", "محامٍ"] and getattr(user, "can_view_all_cases", 0) == 0:
+        visible_case_ids = _visible_case_ids_query(db, user)
+        if task.assignee_user_id != user.id and (task.case_id is None or not db.query(visible_case_ids.filter(LawCases.id == task.case_id).exists()).scalar()):
+            raise HTTPException(status_code=403, detail="غير مصرح بتعديل هذه المهمة")
         
     new_status = data.get("status_key")
     new_order = data.get("kanban_order", 0)
@@ -108,6 +130,8 @@ async def reorder_tasks(
         return JSONResponse({"ok": False, "error": "غير مصرح لك"}, status_code=403)
         
     updates = data.get("updates", [])
+    if not isinstance(updates, list) or len(updates) > 500:
+        raise HTTPException(status_code=400, detail="قائمة التحديثات غير صالحة")
     # updates: [{"id": 1, "order": 0, "status": "pending"}, ...]
     
     for update in updates:
@@ -115,10 +139,18 @@ async def reorder_tasks(
         t_order = update.get("order")
         t_status = update.get("status")
         
-        db.query(LawTasks).filter(
+        query = db.query(LawTasks).filter(
             LawTasks.id == t_id, 
-            LawTasks.office_id == user.office_id
-        ).update({
+            LawTasks.office_id == user.office_id,
+            LawTasks.is_deleted == 0,
+        )
+        if user.role in ["محامي", "محامٍ"] and getattr(user, "can_view_all_cases", 0) == 0:
+            visible_case_ids = _visible_case_ids_query(db, user)
+            query = query.filter(
+                (LawTasks.assignee_user_id == user.id) |
+                (LawTasks.case_id.in_(visible_case_ids))
+            )
+        query.update({
             LawTasks.kanban_order: t_order,
             LawTasks.status_key: t_status
         }, synchronize_session=False)
@@ -131,10 +163,13 @@ async def get_cases(db: Session = Depends(get_db), user: AccessProfiles = Depend
     if not check_user_permission(user, 'cases', 'view'):
         return JSONResponse({"ok": False, "error": "غير مصرح لك"}, status_code=403)
         
-    cases = db.query(LawCases).filter(
+    cases_query = db.query(LawCases).filter(
         LawCases.office_id == user.office_id,
         LawCases.is_deleted == 0
-    ).order_by(LawCases.updated_at.desc(), LawCases.id.desc()).all()
+    )
+    if user.role in ["محامي", "محامٍ"] and getattr(user, "can_view_all_cases", 0) == 0:
+        cases_query = cases_query.filter(LawCases.lead_lawyer_id == user.id)
+    cases = cases_query.order_by(LawCases.updated_at.desc(), LawCases.id.desc()).all()
     
     data = []
     for c in cases:
@@ -166,6 +201,8 @@ async def move_case(
     
     if not case:
         return JSONResponse({"ok": False, "error": "القضية غير موجودة"}, status_code=404)
+    if user.role in ["محامي", "محامٍ"] and getattr(user, "can_view_all_cases", 0) == 0 and case.lead_lawyer_id != user.id:
+        raise HTTPException(status_code=403, detail="غير مصرح بتعديل هذه القضية")
         
     new_status = data.get("status_key")
     if new_status:

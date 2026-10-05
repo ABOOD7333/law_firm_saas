@@ -10,7 +10,7 @@ from database.models import (
     AccessProfiles, LawCases, LawHearings, LawJudgments,
     LawTransactions, LawExpenses, LawTasks, LawClients, LawParties
 )
-from dependencies import get_current_user, templates
+from dependencies import get_current_user, templates, check_user_permission
 from core.logger import app_logger
 
 router = APIRouter()
@@ -23,23 +23,25 @@ async def reports_page(
     user: AccessProfiles = Depends(get_current_user)
 ):
     if not user: return RedirectResponse(url="/", status_code=303)
+    if not user.office_id or not check_user_permission(user, "reports", "view"):
+        raise HTTPException(status_code=403, detail="غير مصرح")
     from sqlalchemy import func
     try:
-        office_id = user.office_id or 1
+        office_id = user.office_id
 
         # --- Cases stats ---
-        total_cases   = db.query(LawCases).filter(LawCases.office_id == office_id).count()
-        open_cases    = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.status_key.in_(['ongoing','new','مفتوحة','قيد المتابعة','جديدة','draft'])).count()
-        closed_cases  = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.status_key.in_(['closed','مغلقة'])).count()
+        total_cases   = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0).count()
+        open_cases    = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0, LawCases.status_key.in_(['ongoing','new','مفتوحة','قيد المتابعة','جديدة','draft'])).count()
+        closed_cases  = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0, LawCases.status_key.in_(['closed','مغلقة'])).count()
 
         # Cases by type
         cases_by_type = db.query(LawCases.case_type_key, func.count(LawCases.id).label('cnt'))\
-            .filter(LawCases.office_id == office_id, LawCases.case_type_key != None)\
+            .filter(LawCases.office_id == office_id, LawCases.is_deleted == 0, LawCases.case_type_key != None)\
             .group_by(LawCases.case_type_key).order_by(func.count(LawCases.id).desc()).limit(8).all()
 
         # Cases by status
         cases_by_status = db.query(LawCases.status_key, func.count(LawCases.id).label('cnt'))\
-            .filter(LawCases.office_id == office_id)\
+            .filter(LawCases.office_id == office_id, LawCases.is_deleted == 0)\
             .group_by(LawCases.status_key).all()
 
         # --- Financials ---
@@ -76,7 +78,7 @@ async def reports_page(
         # عدد القضايا لكل محامٍ — استعلام واحد
         cases_agg = dict(
             db.query(LawCases.lead_lawyer_id, func.count(LawCases.id))
-            .filter(LawCases.lead_lawyer_id.in_(lawyer_ids))
+            .filter(LawCases.office_id == office_id, LawCases.is_deleted == 0, LawCases.lead_lawyer_id.in_(lawyer_ids))
             .group_by(LawCases.lead_lawyer_id).all()
         ) if lawyer_ids else {}
 

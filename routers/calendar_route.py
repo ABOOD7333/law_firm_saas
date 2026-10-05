@@ -5,7 +5,7 @@ import traceback
 from core.error_handler import safe_error_html
 
 from database.database import get_db
-from database.models import AccessProfiles, LawHearings, LawTasks
+from database.models import AccessProfiles, LawCases, LawHearings, LawTasks
 from dependencies import get_current_user, templates
 
 router = APIRouter()
@@ -20,6 +20,8 @@ async def calendar_page(
     user: AccessProfiles = Depends(get_current_user)
 ):
     if not user: return RedirectResponse(url="/", status_code=303)
+    if not user.office_id:
+        raise HTTPException(status_code=403, detail="حسابك غير مرتبط بمكتب")
     import calendar as cal_mod
     from datetime import date
     today = date.today()
@@ -37,13 +39,30 @@ async def calendar_page(
 
     # Fetch hearings this month
     month_str = f"{year}-{month:02d}"
-    hearings = db.query(LawHearings).filter(
+    hearings_query = db.query(LawHearings).filter(
+        LawHearings.office_id == user.office_id,
+        LawHearings.is_deleted == 0,
         LawHearings.hearing_at.like(f"{month_str}%")
-    ).all()
-    tasks = db.query(LawTasks).filter(
+    )
+    tasks_query = db.query(LawTasks).filter(
+        LawTasks.office_id == user.office_id,
+        LawTasks.is_deleted == 0,
         LawTasks.due_at.like(f"{month_str}%"),
         LawTasks.status_key != "completed"
-    ).all()
+    )
+    if user.role in ["محامي", "محامٍ"]:
+        visible_case_ids = db.query(LawCases.id).filter(
+            LawCases.office_id == user.office_id,
+            LawCases.lead_lawyer_id == user.id,
+            LawCases.is_deleted == 0,
+        )
+        hearings_query = hearings_query.filter(LawHearings.case_id.in_(visible_case_ids))
+        tasks_query = tasks_query.filter(
+            (LawTasks.assignee_user_id == user.id) |
+            (LawTasks.case_id.in_(visible_case_ids))
+        )
+    hearings = hearings_query.all()
+    tasks = tasks_query.all()
 
     # Build events dict keyed by day number
     events = {}

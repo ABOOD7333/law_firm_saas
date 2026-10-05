@@ -4,6 +4,8 @@
 import uuid
 import json
 import hashlib
+import base64
+import re
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -52,7 +54,7 @@ async def intake_dashboard(
         default_form = ClientIntakeForms(
             office_id=user.office_id,
             title="نموذج استشارة واستقطاب موكل جديد",
-            form_token=str(uuid.uuid4())[:8],
+            form_token=uuid.uuid4().hex,
             description="يرجى ملء تفاصيل القضية والأطراف للبدء في دراسة ملفك والتعاقد.",
             is_active=1,
             require_signature=1,
@@ -96,10 +98,14 @@ async def create_intake_form(
     db: Session = Depends(get_db),
     user: AccessProfiles = Depends(get_authorized_user)
 ):
+    if not check_user_permission(user, "cases", "add") or not user.office_id:
+        raise HTTPException(status_code=403, detail="غير مصرح")
+    if require_signature not in (0, 1) or not title.strip() or len(title) > 200:
+        raise HTTPException(status_code=400, detail="بيانات النموذج غير صالحة")
     new_form = ClientIntakeForms(
         office_id=user.office_id,
         title=title.strip(),
-        form_token=str(uuid.uuid4())[:8],
+        form_token=uuid.uuid4().hex,
         description=description.strip() if description else None,
         is_active=1,
         require_signature=require_signature,
@@ -116,6 +122,8 @@ async def convert_submission_to_case(
     db: Session = Depends(get_db),
     user: AccessProfiles = Depends(get_authorized_user)
 ):
+    if not check_user_permission(user, "cases", "add"):
+        raise HTTPException(status_code=403, detail="غير مصرح")
     sub = db.query(IntakeSubmissions).filter(
         IntakeSubmissions.id == sub_id,
         IntakeSubmissions.office_id == user.office_id
@@ -208,6 +216,12 @@ async def submit_public_intake_form(
     opposing_party_id: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
+    fields = (full_name, phone, email or "", national_id or "", case_type or "", case_summary,
+              opposing_party_name or "", opposing_party_id or "")
+    if any(len(value) > limit for value, limit in zip(fields, (200, 40, 254, 80, 120, 10000, 200, 80))):
+        raise HTTPException(status_code=400, detail="أحد الحقول يتجاوز الطول المسموح")
+    if len(full_name.strip()) < 2 or len(phone.strip()) < 5 or not case_summary.strip():
+        raise HTTPException(status_code=400, detail="الاسم والهاتف وملخص القضية مطلوبة")
     form_obj = db.query(ClientIntakeForms).filter(
         ClientIntakeForms.form_token == form_token,
         ClientIntakeForms.is_active == 1
@@ -304,17 +318,30 @@ async def process_e_signature(
     
     if not sub:
         return JSONResponse({"ok": False, "error": "الطلب غير موجود"}, status_code=404)
+
+    if sub.status != "pending":
+        return JSONResponse({"ok": False, "error": "رابط التوقيع غير صالح أو تم استخدامه"}, status_code=409)
         
     signature_base64 = data.get("signature")
-    if not signature_base64:
+    if not isinstance(signature_base64, str) or len(signature_base64) > 1_500_000:
         return JSONResponse({"ok": False, "error": "التوقيع مطلوب"}, status_code=400)
+    match = re.fullmatch(r"data:image/png;base64,([A-Za-z0-9+/]+={0,2})", signature_base64)
+    if not match:
+        return JSONResponse({"ok": False, "error": "صيغة التوقيع غير صالحة"}, status_code=400)
+    try:
+        signature_bytes = base64.b64decode(match.group(1), validate=True)
+    except ValueError:
+        return JSONResponse({"ok": False, "error": "صيغة التوقيع غير صالحة"}, status_code=400)
+    if not signature_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
+        return JSONResponse({"ok": False, "error": "محتوى التوقيع غير صالح"}, status_code=400)
         
     client_ip = request.client.host if request.client else "unknown"
     user_agent = request.headers.get("user-agent", "unknown")
     now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
     
     # إنشاء بصمة تحقق رقمية للعقد والتوقيع (Digital Verification Hash)
-    hash_raw = f"{sub.id}-{sub.full_name}-{now_str}-{client_ip}"
+    signature_digest = hashlib.sha256(signature_bytes).hexdigest()
+    hash_raw = f"{sub.id}-{sub.full_name}-{sub.case_summary}-{signature_digest}-{now_str}-{client_ip}"
     v_hash = hashlib.sha256(hash_raw.encode()).hexdigest()[:16].upper()
     
     agreement = db.query(RetainerAgreements).filter(
@@ -338,13 +365,7 @@ async def process_e_signature(
         )
         db.add(agreement)
     else:
-        agreement.signature_base64 = signature_base64
-        agreement.signer_name = sub.full_name
-        agreement.signer_ip = client_ip
-        agreement.signer_user_agent = user_agent
-        agreement.is_signed = 1
-        agreement.signed_at = now_str
-        agreement.verification_hash = v_hash
+        return JSONResponse({"ok": False, "error": "تم اعتماد هذا العقد مسبقاً"}, status_code=409)
 
     sub.status = "signed"
     sub.updated_at = now_str
@@ -356,9 +377,15 @@ async def process_e_signature(
 async def view_signed_agreement(
     agreement_id: int,
     request: Request,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_authorized_user),
 ):
-    agreement = db.query(RetainerAgreements).filter(RetainerAgreements.id == agreement_id).first()
+    if not check_user_permission(user, "cases", "view"):
+        raise HTTPException(status_code=403, detail="غير مصرح لك بعرض العقود")
+    agreement = db.query(RetainerAgreements).filter(
+        RetainerAgreements.id == agreement_id,
+        RetainerAgreements.office_id == user.office_id,
+    ).first()
     if not agreement:
         return HTMLResponse("<div style='text-align:center;'>العقد غير موجود</div>", status_code=404)
         

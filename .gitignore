@@ -38,6 +38,7 @@ ENV/
 
 # --- Uploads (لا نرفع ملفات المستخدمين) ---
 static/uploads/
+private_uploads/
 
 # --- Alembic ---
 # نرفع migrations لكن لا نرفع قاعدة بيانات الـ alembic temp
@@ -60,6 +61,9 @@ build/
 # --- Local Runtime / Data ---
 tessdata/
 rag_engine/chroma_db/
+rag_engine/knowledge_data/
+temp_contract_*
+temp_compare_*
 
 # --- ملفات اختبار مؤقتة (تحتوي مفاتيح) ---
 scratch/

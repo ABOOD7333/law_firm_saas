@@ -5,7 +5,8 @@ Used for OTP verification in forgot_password and register flows.
 """
 import smtplib
 import os
-import random
+import secrets
+import hmac
 import string
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -62,14 +63,17 @@ def _load_smtp_config() -> dict:
 
 def generate_otp(length: int = 6) -> str:
     """يولد رمز OTP عشوائي من الأرقام."""
-    return ''.join(random.choices(string.digits, k=length))
+    if not 4 <= length <= 8:
+        raise ValueError("OTP length must be between 4 and 8 digits")
+    return f"{secrets.randbelow(10 ** length):0{length}d}"
 
 
 def store_otp(identifier: str, code: str, ttl_minutes: int = 10):
     """يحفظ رمز OTP لمعرف معين (email/phone) لمدة ttl_minutes."""
     _otp_store[identifier.lower()] = {
         "code": code,
-        "expires_at": datetime.now() + timedelta(minutes=ttl_minutes)
+        "expires_at": datetime.now() + timedelta(minutes=ttl_minutes),
+        "attempts": 0,
     }
 
 
@@ -81,9 +85,12 @@ def verify_otp(identifier: str, code: str) -> bool:
     if datetime.now() > entry["expires_at"]:
         del _otp_store[identifier.lower()]
         return False
-    if entry["code"] == code:
+    if hmac.compare_digest(str(entry["code"]), str(code)):
         del _otp_store[identifier.lower()]
         return True
+    entry["attempts"] += 1
+    if entry["attempts"] >= 5:
+        del _otp_store[identifier.lower()]
     return False
 
 
@@ -198,3 +205,40 @@ def send_otp_email(to_email: str, otp_code: str, purpose: str = "forgot_password
     except Exception as e:
         print(f"[EmailService] ❌ Failed to send email: {e}")
         return False
+
+
+async def send_email_async(to_email: str, subject: str, html_content: str) -> bool:
+    """Send an application email without blocking the event loop."""
+    import asyncio
+
+    def _send() -> bool:
+        config = _load_smtp_config()
+        if not config:
+            return False
+        try:
+            webhook_url = os.getenv("GMAIL_WEBHOOK_URL")
+            if webhook_url:
+                import json
+                import urllib.request
+                payload = json.dumps({"to": to_email, "subject": subject, "html": html_content}).encode("utf-8")
+                req = urllib.request.Request(webhook_url, data=payload, headers={"Content-Type": "application/json"})
+                with urllib.request.urlopen(req, timeout=15) as response:
+                    return 200 <= response.status < 300
+
+            message = MIMEMultipart()
+            message["From"] = f"LawSaaS <{config.get('sender') or config.get('username', '')}>"
+            message["To"] = to_email
+            message["Subject"] = subject
+            message.attach(MIMEText(html_content, "html", "utf-8"))
+            with smtplib.SMTP(config.get("host", "smtp.gmail.com"), int(config.get("port", 587)), timeout=15) as server:
+                if str(config.get("use_tls", "true")).lower() in {"1", "true", "yes"}:
+                    server.starttls()
+                if config.get("username") and config.get("password"):
+                    server.login(config["username"], config["password"])
+                server.send_message(message)
+            return True
+        except Exception as exc:
+            print(f"[EmailService] Notification delivery failed: {type(exc).__name__}")
+            return False
+
+    return await asyncio.to_thread(_send)

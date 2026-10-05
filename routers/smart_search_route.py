@@ -25,10 +25,21 @@ async def search_page(
     if q and q.strip():
         term = q.strip()
         like = f"%{term}%"
-        office_id = user.office_id or 1
+        office_id = user.office_id
+        if not office_id:
+            raise HTTPException(status_code=403, detail="حسابك غير مرتبط بمكتب")
+        visible_case_ids = db.query(LawCases.id).filter(
+            LawCases.office_id == office_id,
+            LawCases.is_deleted == 0,
+        )
+        if user.role in ["محامي", "محامٍ"]:
+            visible_case_ids = visible_case_ids.filter(LawCases.lead_lawyer_id == user.id)
+        case_ids = [row[0] for row in visible_case_ids.all()]
         if scope in ("all", "cases"):
             results["cases"] = db.query(LawCases).filter(
                 LawCases.office_id == office_id,
+                LawCases.is_deleted == 0,
+                *([LawCases.lead_lawyer_id == user.id] if user.role in ["محامي", "محامٍ"] else []),
                 (LawCases.title.ilike(like)) |
                 (LawCases.case_number.ilike(like)) |
                 (LawCases.summary.ilike(like)) |
@@ -37,6 +48,7 @@ async def search_page(
         if scope in ("all", "clients"):
             results["clients"] = db.query(LawClients).filter(
                 LawClients.office_id == office_id,
+                LawClients.case_id.in_(case_ids) if case_ids else LawClients.id == -1,
                 (LawClients.name.ilike(like)) |
                 (LawClients.phone.ilike(like)) |
                 (LawClients.national_id.ilike(like))
@@ -44,6 +56,7 @@ async def search_page(
         if scope in ("all", "parties"):
             results["parties"] = db.query(LawParties).filter(
                 LawParties.office_id == office_id,
+                LawParties.case_id.in_(case_ids) if case_ids else LawParties.id == -1,
                 (LawParties.name.ilike(like)) |
                 (LawParties.phone.ilike(like)) |
                 (LawParties.id_number.ilike(like))
@@ -51,18 +64,21 @@ async def search_page(
         if scope in ("all", "hearings"):
             results["hearings"] = db.query(LawHearings).filter(
                 LawHearings.office_id == office_id,
+                LawHearings.case_id.in_(case_ids) if case_ids else LawHearings.id == -1,
                 (LawHearings.title.ilike(like)) |
                 (LawHearings.result_summary.ilike(like))
             ).limit(15).all()
         if scope in ("all", "pleadings"):
             results["pleadings"] = db.query(LawPleadings).filter(
                 LawPleadings.office_id == office_id,
+                LawPleadings.case_id.in_(case_ids) if case_ids else LawPleadings.id == -1,
                 (LawPleadings.title.ilike(like)) |
                 (LawPleadings.content_html.ilike(like))
             ).limit(15).all()
         if scope in ("all", "judgments"):
             results["judgments"] = db.query(LawJudgments).filter(
                 LawJudgments.office_id == office_id,
+                LawJudgments.case_id.in_(case_ids) if case_ids else LawJudgments.id == -1,
                 (LawJudgments.court_name.ilike(like)) |
                 (LawJudgments.judge_name.ilike(like)) |
                 (LawJudgments.judgment_text.ilike(like)) |
@@ -71,6 +87,7 @@ async def search_page(
         if scope in ("all", "notes"):
             results["notes"] = db.query(LawNotes).filter(
                 LawNotes.office_id == office_id,
+                LawNotes.case_id.in_(case_ids) if case_ids else LawNotes.id == -1,
                 (LawNotes.title.ilike(like)) |
                 (LawNotes.content.ilike(like))
             ).limit(15).all()

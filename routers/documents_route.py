@@ -24,8 +24,20 @@ os.makedirs("private_uploads/documents", exist_ok=True)
 async def documents_page(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     if not user: return RedirectResponse(url="/", status_code=303)
     try:
-        docs = db.query(LawDocuments).filter(LawDocuments.office_id == (user.office_id or 1)).order_by(LawDocuments.id.desc()).all()
-        cases = db.query(LawCases).filter(LawCases.office_id == (user.office_id or 1), LawCases.is_deleted == 0).all()
+        if not user.office_id:
+            raise HTTPException(status_code=403, detail="الحساب غير مرتبط بمكتب")
+        docs_query = db.query(LawDocuments).filter(LawDocuments.office_id == user.office_id)
+        cases_query = db.query(LawCases).filter(LawCases.office_id == user.office_id, LawCases.is_deleted == 0)
+        if user.role in ['محامي', 'محامٍ'] and user.can_view_all_cases == 0:
+            accessible_ids = db.query(LawCases.id).filter(
+                LawCases.office_id == user.office_id,
+                LawCases.lead_lawyer_id == user.id,
+                LawCases.is_deleted == 0,
+            ).subquery()
+            docs_query = docs_query.filter(LawDocuments.case_id.in_(accessible_ids))
+            cases_query = cases_query.filter(LawCases.lead_lawyer_id == user.id)
+        docs = docs_query.order_by(LawDocuments.id.desc()).all()
+        cases = cases_query.all()
         return templates.TemplateResponse(request=request, name="documents.html",
             context={"user": user, "docs": docs, "cases": cases, "active_page": "documents"})
     except Exception as exc:
@@ -44,7 +56,11 @@ async def add_document(
     user: AccessProfiles = Depends(get_current_user)
 ):
     if not user: return RedirectResponse(url="/", status_code=303)
-    office_id = user.office_id or 1
+    office_id = user.office_id
+    if not office_id:
+        raise HTTPException(status_code=403, detail="الحساب غير مرتبط بمكتب")
+    if not name.strip() or len(name) > 200 or len(notes or "") > 5000:
+        raise HTTPException(status_code=400, detail="بيانات المستند غير صالحة")
     
     # IDOR Check: Ensure case belongs to the user's office
     case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
@@ -64,7 +80,7 @@ async def add_document(
 
         # ── ثغرة DoS: التحقق من حجم الملف قبل الحفظ (حد أقصى 20MB) ──
         MAX_SIZE_BYTES = 20 * 1024 * 1024  # 20 MB
-        file_bytes = await file.read()
+        file_bytes = await file.read(MAX_SIZE_BYTES + 1)
         if len(file_bytes) > MAX_SIZE_BYTES:
             return HTMLResponse(content="<script>alert('حجم الملف يتجاوز الحد المسموح به (20 ميجابايت)'); window.history.back();</script>", status_code=400)
 
@@ -99,9 +115,21 @@ async def edit_document(
     user: AccessProfiles = Depends(get_current_user)
 ):
     if not user: return RedirectResponse(url="/", status_code=303)
-    office_id = user.office_id or 1
+    office_id = user.office_id
+    if not office_id:
+        raise HTTPException(status_code=403, detail="الحساب غير مرتبط بمكتب")
+    if not name.strip() or len(name) > 200 or len(notes or "") > 5000:
+        raise HTTPException(status_code=400, detail="بيانات المستند غير صالحة")
     d = db.query(LawDocuments).filter(LawDocuments.id == doc_id, LawDocuments.office_id == office_id).first()
     if d:
+        current_case = db.query(LawCases).filter(
+            LawCases.id == d.case_id,
+            LawCases.office_id == office_id,
+        ).first()
+        if not current_case:
+            raise HTTPException(status_code=404, detail="المستند غير موجود")
+        if user.role in ['محامي', 'محامٍ'] and user.can_view_all_cases == 0 and current_case.lead_lawyer_id != user.id:
+            raise HTTPException(status_code=403, detail="غير مصرح لك بتعديل هذا المستند")
         case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
         if not case: return HTMLResponse(content="<script>alert('غير مصرح'); window.history.back();</script>", status_code=403)
         
@@ -117,7 +145,7 @@ async def edit_document(
 
             # ── ثغرة DoS: التحقق من حجم الملف قبل الحفظ (حد أقصى 20MB) ──
             MAX_SIZE_BYTES = 20 * 1024 * 1024  # 20 MB
-            file_bytes = await file.read()
+            file_bytes = await file.read(MAX_SIZE_BYTES + 1)
             if len(file_bytes) > MAX_SIZE_BYTES:
                 return HTMLResponse(content="<script>alert('حجم الملف يتجاوز الحد المسموح به (20 ميجابايت)'); window.history.back();</script>", status_code=400)
 
@@ -148,7 +176,9 @@ async def delete_document(
     user: AccessProfiles = Depends(get_current_user)
 ):
     if not user: return RedirectResponse(url="/", status_code=303)
-    d = db.query(LawDocuments).filter(LawDocuments.id == doc_id, LawDocuments.office_id == (user.office_id or 1)).first()
+    if not user.office_id:
+        raise HTTPException(status_code=403, detail="الحساب غير مرتبط بمكتب")
+    d = db.query(LawDocuments).filter(LawDocuments.id == doc_id, LawDocuments.office_id == user.office_id).first()
     if d:
         # RBAC Check: Ensure lawyer owns the case referenced by the document
         case = db.query(LawCases).filter(LawCases.id == d.case_id).first()
@@ -160,7 +190,7 @@ async def delete_document(
 
 # [SECURITY FIX HIGH-02] Secure File Access Endpoints
 @router.get("/private_uploads/documents/{filename}")
-@router.get("/static/uploads/documents/{filename}")
+@router.get("/documents/download/{filename}")
 async def download_document(
     filename: str,
     db: Session = Depends(get_db),

@@ -164,9 +164,9 @@
         <tbody>
             {% for payment in payments %}
             <tr>
-                <td><strong>#INV-{{ payment.id }}</strong></td>
-                <td>{{ payment.created_at[:10] if payment.created_at else 'غير محدد' }}</td>
-                <td>{{ payment.description }}</td>
+                <td><strong>{{ payment.invoice_number }}</strong></td>
+                <td>{{ payment.issue_date[:10] if payment.issue_date else 'غير محدد' }}</td>
+                <td>{{ payment.notes or 'أتعاب وخدمات قانونية' }}</td>
                 <td>
                     {% if payment.case_id %}
                         <a href="/client-portal/cases/{{ payment.case_id }}" style="color: var(--primary-color); text-decoration: none;">عرض القضية</a>
@@ -174,19 +174,21 @@
                         -
                     {% endif %}
                 </td>
-                <td style="font-weight: 700;">{{ payment.amount }} ريال</td>
+                <td style="font-weight: 700;">{{ payment.grand_total }} ريال</td>
                 <td>
-                    {% if payment.status == 'مدفوعة' %}
+                    {% if payment.status == 'Paid' %}
                         <span class="status status-paid">مدفوعة</span>
-                    {% elif payment.status == 'غير مدفوعة' or payment.status == 'معلقة' %}
+                    {% elif payment.status == 'Unpaid' %}
                         <span class="status status-due">غير مسددة</span>
+                    {% elif payment.status == 'Partial' %}
+                        <span class="status status-partial">مدفوعة جزئياً</span>
                     {% else %}
                         <span class="status status-partial">{{ payment.status }}</span>
                     {% endif %}
                 </td>
                 <td style="display: flex; gap: 8px;">
                     <a href="#" class="invoice-btn" onclick="alert('سيتم تفعيل عرض الفاتورة قريباً')"><i class="fa-regular fa-file-pdf"></i> عرض PDF</a>
-                    {% if payment.status != 'مدفوعة' %}
+                    {% if payment.status != 'Paid' %}
                         <!-- This button will link to a payment gateway in the future -->
                         <a href="#" class="pay-btn" onclick="alert('سيتم تفعيل بوابة الدفع الإلكتروني قريباً')"><i class="fa-regular fa-credit-card"></i> سداد الآن</a>
                     {% endif %}

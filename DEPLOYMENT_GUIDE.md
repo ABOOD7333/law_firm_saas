@@ -60,8 +60,9 @@ DATABASE_URL=postgresql://user:password@localhost/lawsaas_db
    Group=www-data
    WorkingDirectory=/var/www/law_firm1
    Environment="PATH=/var/www/law_firm1/venv/bin"
-   # تشغيل النظام بـ 4 عمال (Workers) لتحمل الضغط
-   ExecStart=/var/www/law_firm1/venv/bin/gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 127.0.0.1:8000
+   # رمز OTP وحالة التسجيل المؤقتة مخزنان في الذاكرة؛ استخدم عاملاً واحداً
+   # حتى نقل هذه الحالة إلى مخزن مشترك ودائم.
+   ExecStart=/var/www/law_firm1/venv/bin/gunicorn main:app -w 1 -k uvicorn.workers.UvicornWorker --bind 127.0.0.1:8000
 
    [Install]
    WantedBy=multi-user.target
@@ -98,7 +99,13 @@ DATABASE_URL=postgresql://user:password@localhost/lawsaas_db
            proxy_set_header X-Forwarded-Proto $scheme;
        }
 
-       # مسار الملفات الثابتة (CSS, JS, Images, Uploads) لتسريع الأداء
+       # لا تعرض ملفات العملاء المرفوعة مباشرة؛ تنزيلها يمر عبر صلاحيات التطبيق.
+       location ^~ /static/uploads/ {
+           deny all;
+           return 404;
+       }
+
+       # ملفات الواجهة العامة فقط (CSS, JS, Images)
        location /static/ {
            alias /var/www/law_firm1/static/;
            expires 30d;
@@ -126,10 +133,12 @@ sudo certbot --nginx -d your-domain.com -d www.your-domain.com
 ---
 
 ## 7. إعطاء الصلاحيات لملفات الرفع (Uploads Permission)
-نظامنا يقوم بحفظ المستندات في مجلد `static/uploads`. يجب إعطاء السيرفر صلاحية الكتابة داخله لتجنب خطأ `500 Permission Denied` عند رفع المحامين للمستندات:
+يحفظ النظام الملفات في `static/uploads` و`private_uploads`. اربط المجلدين بتخزين دائم ومشفّر، وضمّنهما في خطة النسخ الاحتياطي. لا تخدم `static/uploads` مباشرة عبر Nginx؛ تنزيل الملفات يجب أن يمر عبر التطبيق للتحقق من صلاحية المستخدم.
+
+يجب إعطاء التطبيق صلاحية الكتابة إلى المجلدين:
 ```bash
-sudo chown -R www-data:www-data /var/www/law_firm1/static/uploads
-sudo chmod -R 755 /var/www/law_firm1/static/uploads
+sudo chown -R www-data:www-data /var/www/law_firm1/static/uploads /var/www/law_firm1/private_uploads
+sudo chmod -R 750 /var/www/law_firm1/static/uploads /var/www/law_firm1/private_uploads
 ```
 
 **الآن نظام LawSaaS يعمل باحترافية، محمي بشهادة SSL، ويتحمل ضغط المكاتب والمحامين! 🎉**
