@@ -22,6 +22,13 @@ def create_superadmin():
     email = os.getenv("SUPERADMIN_EMAIL", "").strip().lower()
     phone = os.getenv("SUPERADMIN_PHONE", "").strip()
     db = SessionLocal()
+
+    # Missing bootstrap settings must never mutate or disable existing users.
+    if not username or len(password) < 12 or not email or not phone:
+        db.close()
+        print("[SuperAdmin] Bootstrap skipped: configure SUPERADMIN_USERNAME, SUPERADMIN_EMAIL, SUPERADMIN_PHONE, and a 12+ character SUPERADMIN_PASSWORD.")
+        return
+
     # Disable accounts created by the old shared-credential demo seed unless
     # the operator explicitly enables demo mode for a development environment.
     if os.getenv("ALLOW_DEMO_SEED") != "1":
@@ -37,10 +44,6 @@ def create_superadmin():
         if legacy_users:
             db.commit()
 
-    if not username or len(password) < 12 or not email or not phone:
-        db.close()
-        print("[SuperAdmin] Bootstrap skipped: configure SUPERADMIN_USERNAME, SUPERADMIN_EMAIL, SUPERADMIN_PHONE, and a 12+ character SUPERADMIN_PASSWORD.")
-        return
     try:
         office = db.query(LawOffices).filter(LawOffices.name == "مكتب إدارة النظام (المنصة الرئيسية)").first()
         if not office:
