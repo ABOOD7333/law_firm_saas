@@ -195,6 +195,34 @@ def init_db():
         except Exception:
             pass
 
+    # Add comprehensive litigation party fields to law_parties if not exists
+    new_party_cols = [
+        ('party_type', "TEXT DEFAULT 'individual'"),
+        ('nationality', 'TEXT'),
+        ('cr_number', 'TEXT'),
+        ('legal_capacity', 'TEXT'),
+        ('representation_status', 'TEXT'),
+        ('alt_phone', 'TEXT'),
+        ('city', 'TEXT'),
+        ('national_address', 'TEXT'),
+        ('service_method', 'TEXT'),
+        ('lawyer_name', 'TEXT'),
+        ('lawyer_phone', 'TEXT'),
+        ('lawyer_license_no', 'TEXT'),
+        ('poa_number', 'TEXT'),
+        ('poa_date', 'TEXT'),
+        ('conflict_status', "TEXT DEFAULT 'clear'"),
+        ('internal_notes', 'TEXT')
+    ]
+    for col_name, col_type in new_party_cols:
+        try:
+            from sqlalchemy import text
+            with engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE law_parties ADD COLUMN {col_name} {col_type};"))
+        except Exception:
+            pass
+
+
 
         
     try:

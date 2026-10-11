@@ -1,300 +1,796 @@
 {% extends "base.html" %}
-{% block title %}الأطراف | LawSaaS{% endblock %}
+{% block title %}الأطراف والمتقاضون | LawSaaS{% endblock %}
+
 {% block content %}
-<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 24px;">
     <div>
-        <h1><i class="fa-solid fa-people-arrows" style="color: var(--primary-color);"></i> إدارة الأطراف</h1>
-        <p>تسجيل أطراف القضايا — الموكلون، الخصوم، المستشارون، وسائر الأطراف المعنية.</p>
+        <h1 style="font-size: 1.6rem; color: #1e293b; margin: 0 0 5px 0; font-weight: 800;">
+            <i class="fa-solid fa-people-arrows" style="color: #1e40af; margin-left: 8px;"></i> سجل الأطراف والمتقاضين
+        </h1>
+        <p style="color: #64748b; margin: 0; font-size: 0.95rem;">إدارة بيانات أطراف النزاع القضائي، الممثلين القانونيين، عناوين التبليغ، وفحص تضارب المصالح</p>
     </div>
-    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-        <button class="btn-secondary" onclick="addNewRole()" style="background: white; color: var(--primary-color); border: 2px solid var(--primary-color); padding: 10px 20px; border-radius: 12px; font-weight: bold; cursor: pointer; font-family: 'Cairo', sans-serif;">
-            <i class="fa-solid fa-tags"></i> إضافة أدوار
+    <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+        <button class="btn" style="background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; padding: 10px 16px; border-radius: 8px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-family: 'Cairo', sans-serif;" onclick="addCustomRefData('party_role', 'select[name=\'role_key\'], #roleFilter', 'أدخل صفة الطرف الجديدة (مثال: محكّم، مصفّي):')">
+            <i class="fa-solid fa-plus-circle"></i> إضافة دور / صفة
         </button>
-        <button class="btn-primary" onclick="document.getElementById('addPartyModal').style.display='flex'">
-            <i class="fa-solid fa-user-plus"></i> إضافة طرف جديد
+        {% if has_perm(user, 'cases', 'edit') or has_perm(user, 'cases', 'add') %}
+        <button class="btn-primary" style="padding: 10px 20px; font-family: 'Cairo', sans-serif; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; border-radius: 8px; cursor: pointer;" onclick="openAddPartyModal()">
+            <i class="fa-solid fa-user-plus"></i> إضافة طرف قضائي جديد
         </button>
+        {% endif %}
     </div>
 </div>
 
-<!-- Filters -->
-<div class="card" style="padding: 15px; margin-bottom: 20px;">
-    <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
-        <input type="text" id="searchInput" placeholder="🔍 ابحث بالاسم أو الجوال..." oninput="filterTable()" style="flex:1; padding: 10px 15px; border: 1px solid var(--border-color); border-radius: 8px; font-family:'Cairo',sans-serif; min-width: 200px;">
-        <select id="roleFilter" onchange="filterTable()" style="padding: 10px 15px; border: 1px solid var(--border-color); border-radius: 8px; font-family:'Cairo',sans-serif;">
-            <option value="">جميع الأدوار</option>
-            <option value="موكل">موكل</option>
-            <option value="خصم">خصم</option>
-            <option value="شاهد">شاهد</option>
-            <option value="مستشار">مستشار</option>
-            <option value="وسيط">وسيط</option>
-        </select>
+<!-- Stats Counter -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 22px;">
+    <div class="card" style="padding: 16px 20px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 15px; background: #fff;">
+        <div style="width: 48px; height: 48px; border-radius: 12px; background: #eff6ff; color: #1d4ed8; display: flex; align-items: center; justify-content: center; font-size: 1.4rem;">
+            <i class="fa-solid fa-users"></i>
+        </div>
+        <div>
+            <div style="font-size: 1.5rem; font-weight: 900; color: #0f172a;">{{ total_parties }}</div>
+            <div style="color: #64748b; font-size: 0.85rem; font-weight: 600;">إجمالي الأطراف</div>
+        </div>
+    </div>
+
+    <div class="card" style="padding: 16px 20px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 15px; background: #fff;">
+        <div style="width: 48px; height: 48px; border-radius: 12px; background: #ecfdf5; color: #047857; display: flex; align-items: center; justify-content: center; font-size: 1.4rem;">
+            <i class="fa-solid fa-user-shield"></i>
+        </div>
+        <div>
+            <div style="font-size: 1.5rem; font-weight: 900; color: #0f172a;">{{ total_clients }}</div>
+            <div style="color: #64748b; font-size: 0.85rem; font-weight: 600;">الموكلون (طرفنا)</div>
+        </div>
+    </div>
+
+    <div class="card" style="padding: 16px 20px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 15px; background: #fff;">
+        <div style="width: 48px; height: 48px; border-radius: 12px; background: #fee2e2; color: #b91c1c; display: flex; align-items: center; justify-content: center; font-size: 1.4rem;">
+            <i class="fa-solid fa-user-xmark"></i>
+        </div>
+        <div>
+            <div style="font-size: 1.5rem; font-weight: 900; color: #0f172a;">{{ total_opponents }}</div>
+            <div style="color: #64748b; font-size: 0.85rem; font-weight: 600;">الخصوم المقابلون</div>
+        </div>
+    </div>
+
+    <div class="card" style="padding: 16px 20px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 15px; background: #fff;">
+        <div style="width: 48px; height: 48px; border-radius: 12px; background: #e0e7ff; color: #4338ca; display: flex; align-items: center; justify-content: center; font-size: 1.4rem;">
+            <i class="fa-solid fa-building"></i>
+        </div>
+        <div>
+            <div style="font-size: 1.5rem; font-weight: 900; color: #0f172a;">{{ total_corporates }}</div>
+            <div style="color: #64748b; font-size: 0.85rem; font-weight: 600;">شركات وهيئات</div>
+        </div>
     </div>
 </div>
 
-<div class="card">
+<!-- Search & Filter Card -->
+<div class="card" style="padding: 18px 20px; border-radius: 12px; border: 1px solid #e2e8f0; background: #fff; margin-bottom: 20px;">
+    <form action="/parties" method="get" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto auto; gap: 12px; align-items: center;">
+        <div>
+            <input type="text" name="q" value="{{ filters.q }}" placeholder="🔍 بحث بالاسم، الهوية، السجل، الجوال، محامي الخصم..." style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.9rem;">
+        </div>
+
+        <div>
+            <select name="role" id="roleFilter" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.9rem;">
+                <option value="">جميع الأدوار</option>
+                <option value="موكل" {% if filters.role == 'موكل' %}selected{% endif %}>موكل</option>
+                <option value="خصم" {% if filters.role == 'خصم' %}selected{% endif %}>خصم</option>
+                <option value="شاهد" {% if filters.role == 'شاهد' %}selected{% endif %}>شاهد</option>
+                <option value="مستشار" {% if filters.role == 'مستشار' %}selected{% endif %}>مستشار</option>
+                <option value="وسيط" {% if filters.role == 'وسيط' %}selected{% endif %}>وسيط / خبير</option>
+            </select>
+        </div>
+
+        <div>
+            <select name="capacity" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.9rem;">
+                <option value="">الصفة الإجرائية</option>
+                <option value="مدعي" {% if filters.capacity == 'مدعي' %}selected{% endif %}>مدعي</option>
+                <option value="مدعى عليه" {% if filters.capacity == 'مدعى عليه' %}selected{% endif %}>مدعى عليه</option>
+                <option value="مستأنف" {% if filters.capacity == 'مستأنف' %}selected{% endif %}>مستأنف</option>
+                <option value="مستأنف ضده" {% if filters.capacity == 'مستأنف ضده' %}selected{% endif %}>مستأنف ضده</option>
+                <option value="متدخل في الدعوى" {% if filters.capacity == 'متدخل في الدعوى' %}selected{% endif %}>متدخل في الدعوى</option>
+                <option value="متهم" {% if filters.capacity == 'متهم' %}selected{% endif %}>متهم</option>
+                <option value="مجني عليه" {% if filters.capacity == 'مجني عليه' %}selected{% endif %}>مجني عليه</option>
+            </select>
+        </div>
+
+        <div>
+            <select name="case_id" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.9rem;">
+                <option value="">جميع القضايا</option>
+                {% for c in cases %}
+                <option value="{{ c.id }}" {% if filters.case_id and filters.case_id|string == c.id|string %}selected{% endif %}>{{ c.case_number }} - {{ c.title }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <button type="submit" class="btn-primary" style="padding: 10px 18px; font-family: 'Cairo', sans-serif; font-weight: 700; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-filter"></i> تصفية
+        </button>
+
+        {% if filters.q or filters.role or filters.capacity or filters.case_id %}
+        <a href="/parties" style="padding: 10px 14px; background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 0.85rem;" title="إعادة ضبط">
+            <i class="fa-solid fa-arrow-rotate-right"></i>
+        </a>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Parties Data Table -->
+<div class="card" style="border-radius: 12px; border: 1px solid #e2e8f0; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
     <div style="overflow-x: auto;">
-        <table class="data-table" id="partiesTable">
+        <table class="data-table" style="width: 100%; border-collapse: collapse;">
             <thead>
-                <tr>
-                    <th>#</th>
-                    <th>الاسم الكامل</th>
-                    <th>الدور في القضية</th>
-                    <th>رقم الهوية</th>
-                    <th>الجوال</th>
-                    <th>البريد الإلكتروني</th>
-                    <th>القضية المرتبطة</th>
-                    <th>إجراءات</th>
+                <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; text-align: right; color: #475569;">
+                    <th style="padding: 14px 16px;">الاسم والكيان</th>
+                    <th style="padding: 14px 16px;">الدور والصفة القضائية</th>
+                    <th style="padding: 14px 16px;">رقم الهوية / السجل</th>
+                    <th style="padding: 14px 16px;">بيانات التواصل</th>
+                    <th style="padding: 14px 16px;">القضية المرتبطة</th>
+                    <th style="padding: 14px 16px;">الممثل القانوني / محامي الخصم</th>
+                    <th style="padding: 14px 16px;">فحص التعارض</th>
+                    <th style="padding: 14px 16px; text-align: center;">إجراءات</th>
                 </tr>
             </thead>
             <tbody>
                 {% for party in parties %}
-                <tr class="party-row" data-role="{{ party.role_key }}">
-                    <td>{{ loop.index }}</td>
-                    <td>
-                        <div style="display:flex; align-items:center; gap:10px;">
-                            <div style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;color:white;flex-shrink:0;
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 14px 16px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; color: white; flex-shrink: 0; font-size: 0.95rem;
                             {% if party.role_key == 'موكل' %}background:#10b981;
                             {% elif party.role_key == 'خصم' %}background:#ef4444;
+                            {% elif party.role_key == 'شاهد' %}background:#f59e0b;
                             {% else %}background:#6366f1;{% endif %}">
                                 {{ party.name[0] }}
                             </div>
-                            <strong>{{ party.name }}</strong>
+                            <div>
+                                <strong style="color: #0f172a; font-size: 0.95rem; display: block;">{{ party.name }}</strong>
+                                <small style="color: #64748b; font-size: 0.8rem;">
+                                    {% if party.party_type == 'corporate' %}<i class="fa-solid fa-building"></i> منشأة / شركة
+                                    {% elif party.party_type == 'government' %}<i class="fa-solid fa-landmark"></i> جهة حكومية
+                                    {% else %}<i class="fa-solid fa-user"></i> فرد
+                                    {% endif %}
+                                    {% if party.nationality %} | {{ party.nationality }}{% endif %}
+                                </small>
+                            </div>
                         </div>
                     </td>
-                    <td>
-                        {% if party.role_key == 'موكل' %}
-                        <span style="background:#dcfce7;color:#166534;padding:4px 12px;border-radius:20px;font-size:.85rem;font-weight:600;">موكل</span>
-                        {% elif party.role_key == 'خصم' %}
-                        <span style="background:#fee2e2;color:#b91c1c;padding:4px 12px;border-radius:20px;font-size:.85rem;font-weight:600;">خصم</span>
-                        {% elif party.role_key == 'شاهد' %}
-                        <span style="background:#fef9c3;color:#854d0e;padding:4px 12px;border-radius:20px;font-size:.85rem;font-weight:600;">شاهد</span>
-                        {% else %}
-                        <span style="background:#e0e7ff;color:#3730a3;padding:4px 12px;border-radius:20px;font-size:.85rem;font-weight:600;">{{ party.role_key }}</span>
+                    <td style="padding: 14px 16px;">
+                        <div>
+                            {% if party.role_key == 'موكل' %}
+                            <span style="background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700;">موكل</span>
+                            {% elif party.role_key == 'خصم' %}
+                            <span style="background: #fee2e2; color: #b91c1c; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700;">خصم</span>
+                            {% elif party.role_key == 'شاهد' %}
+                            <span style="background: #fef9c3; color: #854d0e; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700;">شاهد</span>
+                            {% else %}
+                            <span style="background: #e0e7ff; color: #3730a3; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700;">{{ party.role_key }}</span>
+                            {% endif %}
+                        </div>
+                        {% if party.legal_capacity %}
+                        <small style="color: #475569; display: block; margin-top: 4px; font-weight: 600;">{{ party.legal_capacity }}</small>
                         {% endif %}
                     </td>
-                    <td dir="ltr">{{ party.id_number or '-' }}</td>
-                    <td dir="ltr">{{ party.phone or '-' }}</td>
-                    <td dir="ltr" style="font-size:.9rem;">{{ party.email or '-' }}</td>
-                    <td>
-                        {% if party.law_case %}
-                        <a href="/cases/{{ party.case_id }}" style="color:var(--primary-color);text-decoration:none;font-size:.9rem;">
-                            <i class="fa-solid fa-gavel"></i> {{ party.law_case.title[:30] }}
-                        </a>
-                        {% else %}-{% endif %}
+                    <td style="padding: 14px 16px; font-family: monospace; font-size: 0.9rem; color: #334155;">
+                        {{ party.id_number or party.cr_number or '-' }}
                     </td>
-                    <td>
-                        <button class="action-btn" style="color:var(--primary-color);" title="تعديل"
-                            onclick="openEditParty({{ party.id|tojson|forceescape }},{{ party.name|tojson|forceescape }},{{ party.role_key|tojson|forceescape }},{{ (party.id_number or '')|tojson|forceescape }},{{ (party.phone or '')|tojson|forceescape }},{{ (party.email or '')|tojson|forceescape }},{{ (party.address or '')|tojson|forceescape }},{{ party.case_id|tojson|forceescape }})">
-                            <i class="fa-solid fa-pen"></i>
-                        </button>
-                        <form action="/parties/delete" method="post" style="display:inline;" onsubmit="return confirm('هل أنت متأكد من حذف هذا الطرف؟')">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
-                            <input type="hidden" name="party_id" value="{{ party.id }}">
-                            <input type="hidden" name="case_id" value="{{ party.case_id }}">
-                            <button type="submit" class="action-btn" style="color:#ef4444;" title="حذف"><i class="fa-solid fa-trash"></i></button>
-                        </form>
+                    <td style="padding: 14px 16px; font-size: 0.85rem; color: #334155;">
+                        {% if party.phone %}
+                        <div dir="ltr" style="text-align: right;"><i class="fa-solid fa-phone" style="font-size: 0.75rem; color: #64748b;"></i> {{ party.phone }}</div>
+                        {% endif %}
+                        {% if party.email %}
+                        <div dir="ltr" style="text-align: right; color: #0284c7; margin-top: 2px;">{{ party.email }}</div>
+                        {% endif %}
+                        {% if not party.phone and not party.email %}
+                        <span style="color: #94a3b8;">-</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 14px 16px;">
+                        {% if party.law_case %}
+                        <a href="/cases/{{ party.case_id }}" style="color: #1e40af; text-decoration: none; font-weight: 700; font-size: 0.88rem; display: block;">
+                            <i class="fa-solid fa-scale-balanced" style="font-size: 0.8rem;"></i> {{ party.law_case.case_number }}
+                        </a>
+                        <small style="color: #64748b; font-size: 0.8rem;">{{ party.law_case.title[:35] }}</small>
+                        {% else %}
+                        <span style="color: #94a3b8;">-</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 14px 16px; font-size: 0.85rem;">
+                        {% if party.lawyer_name %}
+                        <strong style="color: #0f172a; display: block;"><i class="fa-solid fa-user-tie" style="color: #1e40af;"></i> {{ party.lawyer_name }}</strong>
+                        {% if party.lawyer_phone %}<small dir="ltr" style="color: #64748b;">{{ party.lawyer_phone }}</small>{% endif %}
+                        {% else %}
+                        <span style="color: #94a3b8;">أصيل عن نفسه</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 14px 16px;">
+                        {% if party.conflict_status == 'conflict_detected' %}
+                        <span style="background: #fee2e2; color: #991b1b; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 800; display: inline-flex; align-items: center; gap: 4px;" title="تنبيه: هذا الطرف مسجل كموكل سابق في المكتب!">
+                            <i class="fa-solid fa-triangle-exclamation"></i> تعارض محتمل
+                        </span>
+                        {% else %}
+                        <span style="color: #166534; font-size: 0.8rem; font-weight: 700;">
+                            <i class="fa-solid fa-circle-check"></i> سليم
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 14px 16px; text-align: center;">
+                        <div style="display: flex; gap: 6px; justify-content: center; flex-wrap: wrap;">
+                            <button class="action-btn" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 6px; padding: 6px 10px; cursor: pointer;" title="عرض التفاصيل" onclick="viewPartyDetails({{ party.id }})">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                            {% if has_perm(user, 'cases', 'edit') %}
+                            <button class="action-btn" style="background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; cursor: pointer;" title="تعديل" onclick="openEditPartyModalById({{ party.id }})">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <form action="/parties/delete" method="post" style="display: inline;" onsubmit="return confirm('هل أنت متأكد من حذف هذا الطرف من سجلات القضية؟')">
+                                <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+                                <input type="hidden" name="party_id" value="{{ party.id }}">
+                                <input type="hidden" name="redirect_to" value="parties">
+                                <button type="submit" class="action-btn" style="background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; border-radius: 6px; padding: 6px 10px; cursor: pointer;" title="حذف">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
                     </td>
                 </tr>
                 {% else %}
-                <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);">
-                    <i class="fa-solid fa-people-arrows" style="font-size:3rem;opacity:.4;margin-bottom:10px;"></i>
-                    <p>لا توجد أطراف مسجلة. ابدأ بإضافة أطراف القضايا.</p>
-                </td></tr>
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 60px 20px; color: var(--text-muted);">
+                        <i class="fa-solid fa-people-arrows" style="font-size: 3.5rem; opacity: 0.3; display: block; margin-bottom: 12px; color: #94a3b8;"></i>
+                        <p style="font-size: 1.1rem; font-weight: 700; margin-bottom: 5px; color: #334155;">لا توجد أطراف مسجلة وفق معايير البحث</p>
+                        <p style="color: #94a3b8; font-size: 0.9rem;">اضغط على «إضافة طرف قضائي جديد» لتسجيل أطراف المخاصمة والشهود</p>
+                    </td>
+                </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
 
-<!-- Add Party Modal -->
-<div id="addPartyModal" class="modal-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:1000;">
-    <div style="background:white;padding:30px;border-radius:12px;width:560px;max-width:90%;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-            <h2 style="margin:0;color:var(--secondary-color);">إضافة طرف جديد</h2>
-            <button onclick="document.getElementById('addPartyModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+<!-- ============================================================== -->
+<!-- 1. MODAL: إضافة طرف قضائي جديد (مقسم إلى 4 أقسام منظمة) -->
+<!-- ============================================================== -->
+<div id="addPartyModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.65); align-items: center; justify-content: center; z-index: 1100; backdrop-filter: blur(4px);">
+    <div class="modal-content" style="background: white; border-radius: 16px; width: 900px; max-width: 95%; max-height: 92vh; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); overflow: hidden;">
+        
+        <!-- Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 44px; height: 44px; background: #eff6ff; color: #1d4ed8; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+                    <i class="fa-solid fa-user-plus"></i>
+                </div>
+                <div>
+                    <h2 style="margin: 0; font-size: 1.25rem; color: #0f172a; font-weight: 700;">إضافة طرف قضائي جديد</h2>
+                    <p style="margin: 2px 0 0 0; font-size: 0.85rem; color: #64748b;">توثيق أطراف الدعوى، الممثلين القانونيين، وعناوين التبليغ القضائي</p>
+                </div>
+            </div>
+            <button type="button" onclick="closeAddPartyModal()" style="background: none; border: none; font-size: 1.6rem; cursor: pointer; color: #94a3b8; line-height: 1; padding: 4px 8px;">&times;</button>
         </div>
-        <form action="/parties/add" method="post">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
-                <div>
-                    <label style="display:block;margin-bottom:6px;font-weight:600;">الاسم الكامل <span style="color:red">*</span></label>
-                    <input type="text" name="name" required style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+
+        <!-- Form Body (Scrollable) -->
+        <div style="padding: 24px; overflow-y: auto; flex: 1;">
+            <form action="/parties/add" method="post" id="addPartyForm">
+                <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+                <input type="hidden" name="redirect_to" value="parties">
+
+                <!-- 1. هوية الطرف وتصنيفه القانوني -->
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px 20px; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                    <div style="font-weight: 700; color: #1e3a8a; margin-bottom: 16px; font-size: 0.98rem; display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-id-card"></i> أولاً: هوية الطرف وتصنيفه القانوني
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 16px; margin-bottom: 14px;">
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">نوع الطرف <span style="color: red;">*</span></label>
+                            <select name="party_type" required style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                                <option value="individual">شخص طبيعي (فرد)</option>
+                                <option value="corporate">شخص اعتباري (شركة / مؤسسة)</option>
+                                <option value="government">جهة حكومية / عامة</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">الاسم الكامل / اسم المنشأة <span style="color: red;">*</span></label>
+                            <input type="text" name="name" required placeholder="الاسم الرباعي أو الاسم التجاري المعتمد" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        </div>
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">الجنسية</label>
+                            <input type="text" name="nationality" placeholder="مثال: يمني / سعودي" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">رقم الهوية الوطنية / الإقامة / الجواز</label>
+                            <input type="text" name="id_number" dir="ltr" placeholder="رقم الهوية الرسمية" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        </div>
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">رقم السجل التجاري / الترخيص (للشركات)</label>
+                            <input type="text" name="cr_number" dir="ltr" placeholder="رقم السجل التجاري إن وجد" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        </div>
+                    </div>
                 </div>
-                <div>
-                    <label style="display:block;margin-bottom:6px;font-weight:600;">الدور في القضية <span style="color:red">*</span></label>
-                    <select name="role_key" id="roleSelect" required style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
-                        <option value="موكل">موكل</option>
-                        <option value="خصم">خصم</option>
-                        <option value="شاهد">شاهد</option>
-                        <option value="مستشار">مستشار</option>
-                        <option value="وسيط">وسيط</option>
-                        <option value="أخرى">أخرى</option>
-                    </select>
+
+                <!-- 2. الصفة الإجرائية والقضية المرتبطة -->
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px 20px; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                    <div style="font-weight: 700; color: #1e3a8a; margin-bottom: 16px; font-size: 0.98rem; display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-gavel"></i> ثانياً: الصفة الإجرائية والقضية
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 16px; margin-bottom: 14px;">
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">القضية المرتبطة <span style="color: red;">*</span></label>
+                            <select name="case_id" required style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                                <option value="">-- اختر القضية المسجلة --</option>
+                                {% for case in cases %}
+                                <option value="{{ case.id }}">{{ case.case_number }} - {{ case.title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">الدور العام في القضية <span style="color: red;">*</span></label>
+                            <select name="role_key" required style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                                <option value="موكل">موكل (طرفنا)</option>
+                                <option value="خصم">خصم (الطرف المقابل)</option>
+                                <option value="شاهد">شاهد</option>
+                                <option value="مستشار">مستشار</option>
+                                <option value="وسيط">وسيط / خبير</option>
+                                <option value="أخرى">أخرى</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">الصفة القضائية الدقيقة</label>
+                            <select name="legal_capacity" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                                <option value="مدعي">مدعي</option>
+                                <option value="مدعى عليه">مدعى عليه</option>
+                                <option value="مستأنف">مستأنف</option>
+                                <option value="مستأنف ضده">مستأنف ضده</option>
+                                <option value="طاعن">طاعن</option>
+                                <option value="مطعون ضده">مطعون ضده</option>
+                                <option value="متدخل في الدعوى">متدخل في الدعوى</option>
+                                <option value="متهم">متهم</option>
+                                <option value="مجني عليه">مجني عليه</option>
+                                <option value="منضم">منضم</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">حالة التمثيل القانوني</label>
+                        <select name="representation_status" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                            <option value="اصيل">أصيل عن نفسه (يحضر بنفسه)</option>
+                            <option value="محامي">ممثَّل بمحامٍ / وكيل شرعي</option>
+                            <option value="وصي">قاصر ممثَّل بولي / وصي شرعي</option>
+                            <option value="مفوض">مفوض عن شركة / جهة اعتبارية</option>
+                        </select>
+                    </div>
                 </div>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
-                <div>
-                    <label style="display:block;margin-bottom:6px;font-weight:600;">رقم الهوية / السجل</label>
-                    <input type="text" name="id_number" dir="ltr" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+
+                <!-- 3. بيانات التواصل ومقر التبليغ القضائي -->
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px 20px; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                    <div style="font-weight: 700; color: #1e3a8a; margin-bottom: 16px; font-size: 0.98rem; display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-map-location-dot"></i> ثالثاً: بيانات التواصل وعنوان التبليغ القضائي
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 14px;">
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">رقم الجوال الأساسي</label>
+                            <input type="text" name="phone" dir="ltr" placeholder="مثال: 777123456" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        </div>
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">هاتف إضافي / أرضي</label>
+                            <input type="text" name="alt_phone" dir="ltr" placeholder="هاتف بديل أو العمل" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        </div>
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">البريد الإلكتروني للتبليغ</label>
+                            <input type="email" name="email" dir="ltr" placeholder="example@domain.com" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 16px; margin-bottom: 14px;">
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">المدينة / المحافظة</label>
+                            <input type="text" name="city" placeholder="مثال: صنعاء / عدن / الرياض" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        </div>
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">العنوان التفصيلي (الحي، الشارع، علامة مميزة)</label>
+                            <input type="text" name="address" placeholder="العنوان الفعلي للإقامة أو مقر العمل" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px;">
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">العنوان الوطني / المختار المعتمد للتبليغ القضائي</label>
+                            <input type="text" name="national_address" placeholder="الرمز البريدي / المبنى أو عاقل الحارة المعتمد للتبليغ" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        </div>
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">طريقة التبليغ المفضلة</label>
+                            <select name="service_method" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                                <option value="محضر_المحكمة">محضر المحكمة الرسمي</option>
+                                <option value="رسالة_نصية">رسالة نصية SMS مسجلة</option>
+                                <option value="بريد_الكتروني">بريد إلكتروني رسمي</option>
+                                <option value="عاقل_الحارة">عاقل الحارة / المختار</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
-                <div>
-                    <label style="display:block;margin-bottom:6px;font-weight:600;">رقم الجوال</label>
-                    <input type="text" name="phone" dir="ltr" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+
+                <!-- 4. الممثل القانوني / محامي الخصم والملاحظات الداخلية -->
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px 20px; margin-bottom: 24px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                    <div style="font-weight: 700; color: #1e3a8a; margin-bottom: 16px; font-size: 0.98rem; display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-user-tie"></i> رابعاً: الممثل القانوني / محامي الخصم والملاحظات
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 16px; margin-bottom: 14px;">
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">اسم محامي الطرف / الوكيل</label>
+                            <input type="text" name="lawyer_name" placeholder="اسم المحامي الموكّل بالترافع عن هذا الطرف" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        </div>
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">هاتف المحامي</label>
+                            <input type="text" name="lawyer_phone" dir="ltr" placeholder="رقم هاتف المحامي" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        </div>
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">رقم قيد المحامي بالنقابة</label>
+                            <input type="text" name="lawyer_license_no" dir="ltr" placeholder="رقم القيد النقابي" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 14px;">
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">رقم سند الوكالة الشرعية</label>
+                            <input type="text" name="poa_number" placeholder="رقم الوكالة القضائية" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        </div>
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">تاريخ صدور الوكالة</label>
+                            <input type="date" name="poa_date" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px;">
+                        </div>
+                    </div>
+
+                    <!-- ملاحظات سرية داخلية -->
+                    <div class="form-group" style="background: #fffbeb; border: 1px dashed #f59e0b; padding: 14px; border-radius: 8px;">
+                        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+                            <i class="fa-solid fa-lock" style="color: #b45309;"></i>
+                            <label style="font-weight: 700; color: #92400e; font-size: 0.9rem; margin: 0;">ملاحظات قانونية خاصة بالمكتب (سرية للغاية)</label>
+                        </div>
+                        <textarea name="internal_notes" rows="2" placeholder="ملاحظات حول سلوك الخصم، نقاط الضعف، استراتيجية التفاوض..." style="width: 100%; padding: 10px 12px; border: 1px solid #fde68a; border-radius: 8px; font-family: 'Cairo', sans-serif; resize: vertical; background: #fff;"></textarea>
+                    </div>
                 </div>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
-                <div>
-                    <label style="display:block;margin-bottom:6px;font-weight:600;">البريد الإلكتروني</label>
-                    <input type="email" name="email" dir="ltr" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+
+                <!-- Footer Buttons -->
+                <div style="display: flex; gap: 10px; justify-content: flex-end; padding-top: 10px; border-top: 1px solid #e2e8f0;">
+                    <button type="button" onclick="closeAddPartyModal()" style="padding: 10px 20px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer; font-family: 'Cairo', sans-serif; font-weight: 700;">
+                        إلغاء
+                    </button>
+                    <button type="submit" class="btn-primary" style="padding: 10px 24px; font-family: 'Cairo', sans-serif; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; border-radius: 8px;">
+                        <i class="fa-solid fa-check"></i> حفظ بيانات الطرف
+                    </button>
                 </div>
-                <div>
-                    <label style="display:block;margin-bottom:6px;font-weight:600;">القضية المرتبطة <span style="color:red">*</span></label>
-                    <select name="case_id" required style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
-                        <option value="">-- اختر القضية --</option>
-                        {% for case in cases %}
-                        <option value="{{ case.id }}">{{ case.case_number }} - {{ case.title }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-            <div style="margin-bottom:20px;">
-                <label style="display:block;margin-bottom:6px;font-weight:600;">العنوان</label>
-                <input type="text" name="address" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
-            </div>
-            <div style="display:flex;gap:10px;justify-content:flex-end;">
-                <button type="button" onclick="document.getElementById('addPartyModal').style.display='none'" style="padding:11px 20px;background:#e2e8f0;color:#475569;border:none;border-radius:8px;cursor:pointer;font-family:'Cairo',sans-serif;font-weight:600;">إلغاء</button>
-                <button type="submit" class="btn-primary" style="padding:11px 20px;font-family:'Cairo',sans-serif;">حفظ الطرف</button>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
 </div>
 
-<!-- Edit Party Modal -->
-<div id="editPartyModal" class="modal-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:1000;">
-    <div style="background:white;padding:30px;border-radius:12px;width:560px;max-width:90%;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-            <h2 style="margin:0;color:var(--secondary-color);">تعديل بيانات الطرف</h2>
-            <button onclick="document.getElementById('editPartyModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+<!-- ============================================================== -->
+<!-- 2. MODAL: عرض تفاصيل الطرف القضائي (View Details Modal) -->
+<!-- ============================================================== -->
+<div id="viewPartyModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.65); align-items: center; justify-content: center; z-index: 1200; backdrop-filter: blur(4px);">
+    <div class="modal-content" style="background: white; border-radius: 16px; width: 850px; max-width: 95%; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); overflow: hidden;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 40px; height: 40px; background: #eff6ff; color: #1d4ed8; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                    <i class="fa-solid fa-id-card"></i>
+                </div>
+                <div>
+                    <h3 style="margin: 0; font-size: 1.2rem; color: #0f172a; font-weight: 700;" id="view_party_name">تفاصيل الطرف القضائي</h3>
+                    <p style="margin: 2px 0 0 0; font-size: 0.85rem; color: #64748b;" id="view_party_subtitle">-</p>
+                </div>
+            </div>
+            <button type="button" onclick="document.getElementById('viewPartyModal').style.display='none'" style="background: none; border: none; font-size: 1.6rem; cursor: pointer; color: #94a3b8; line-height: 1;">&times;</button>
         </div>
-        <form action="/parties/edit" method="post">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
-            <input type="hidden" name="party_id" id="ep_id">
-            <input type="hidden" name="case_id" id="ep_case_id">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
-                <div>
-                    <label style="display:block;margin-bottom:6px;font-weight:600;">الاسم الكامل <span style="color:red">*</span></label>
-                    <input type="text" name="name" id="ep_name" required style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
-                </div>
-                <div>
-                    <label style="display:block;margin-bottom:6px;font-weight:600;">الدور في القضية</label>
-                    <select name="role_key" id="ep_role" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
-                        <option value="موكل">موكل</option>
-                        <option value="خصم">خصم</option>
-                        <option value="شاهد">شاهد</option>
-                        <option value="مستشار">مستشار</option>
-                        <option value="وسيط">وسيط</option>
-                        <option value="أخرى">أخرى</option>
-                    </select>
-                </div>
+
+        <div style="padding: 24px; overflow-y: auto; flex: 1;" id="viewPartyContent">
+            <div style="text-align: center; padding: 40px; color: #64748b;">
+                <i class="fa-solid fa-spinner fa-spin" style="font-size: 2rem;"></i>
+                <p style="margin-top: 10px;">جاري تحميل تفاصيل الطرف...</p>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
-                <div>
-                    <label style="display:block;margin-bottom:6px;font-weight:600;">رقم الهوية</label>
-                    <input type="text" name="id_number" id="ep_id_number" dir="ltr" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+        </div>
+
+        <div style="padding: 14px 24px; border-top: 1px solid #e2e8f0; background: #f8fafc; display: flex; justify-content: flex-end; gap: 10px;">
+            <button type="button" onclick="document.getElementById('viewPartyModal').style.display='none'" style="padding: 8px 18px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 8px; font-weight: 700; cursor: pointer; font-family: 'Cairo', sans-serif;">
+                إغلاق
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- 3. MODAL: تعديل بيانات الطرف القضائي (Edit Modal) -->
+<!-- ============================================================== -->
+<div id="editPartyModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.65); align-items: center; justify-content: center; z-index: 1100; backdrop-filter: blur(4px);">
+    <div class="modal-content" style="background: white; border-radius: 16px; width: 900px; max-width: 95%; max-height: 92vh; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); overflow: hidden;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
+            <h2 style="margin: 0; font-size: 1.25rem; color: #0f172a; font-weight: 700;">تعديل بيانات الطرف القضائي</h2>
+            <button onclick="document.getElementById('editPartyModal').style.display='none'" style="background: none; border: none; font-size: 1.6rem; cursor: pointer; color: #94a3b8; line-height: 1;">&times;</button>
+        </div>
+
+        <div style="padding: 24px; overflow-y: auto; flex: 1;">
+            <form action="/parties/edit" method="post" id="editPartyForm">
+                <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+                <input type="hidden" name="party_id" id="edit_party_id">
+                <input type="hidden" name="redirect_to" value="parties">
+
+                <!-- 1. هوية الطرف -->
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+                    <div style="font-weight: 700; color: #1e3a8a; margin-bottom: 12px; font-size: 0.95rem;">
+                        <i class="fa-solid fa-id-card"></i> هوية الطرف وتصنيفه
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 14px; margin-bottom: 12px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155;">نوع الطرف</label>
+                            <select name="party_type" id="edit_party_type" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                                <option value="individual">شخص طبيعي (فرد)</option>
+                                <option value="corporate">شخص اعتباري (شركة / مؤسسة)</option>
+                                <option value="government">جهة حكومية / عامة</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155;">الاسم الكامل <span style="color: red;">*</span></label>
+                            <input type="text" name="name" id="edit_party_name" required style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155;">الجنسية</label>
+                            <input type="text" name="nationality" id="edit_party_nationality" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155;">رقم الهوية</label>
+                            <input type="text" name="id_number" id="edit_party_id_number" dir="ltr" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155;">السجل التجاري</label>
+                            <input type="text" name="cr_number" id="edit_party_cr_number" dir="ltr" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        </div>
+                    </div>
                 </div>
-                <div>
-                    <label style="display:block;margin-bottom:6px;font-weight:600;">رقم الجوال</label>
-                    <input type="text" name="phone" id="ep_phone" dir="ltr" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+
+                <!-- 2. الصفة والقضية -->
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+                    <div style="font-weight: 700; color: #1e3a8a; margin-bottom: 12px; font-size: 0.95rem;">
+                        <i class="fa-solid fa-gavel"></i> الصفة الإجرائية والقضية
+                    </div>
+                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 14px; margin-bottom: 12px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155;">القضية <span style="color: red;">*</span></label>
+                            <select name="case_id" id="edit_party_case_id" required style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                                {% for case in cases %}
+                                <option value="{{ case.id }}">{{ case.case_number }} - {{ case.title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155;">الدور في القضية</label>
+                            <select name="role_key" id="edit_party_role_key" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                                <option value="موكل">موكل</option>
+                                <option value="خصم">خصم</option>
+                                <option value="شاهد">شاهد</option>
+                                <option value="مستشار">مستشار</option>
+                                <option value="وسيط">وسيط / خبير</option>
+                                <option value="أخرى">أخرى</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155;">الصفة القضائية</label>
+                            <select name="legal_capacity" id="edit_party_legal_capacity" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                                <option value="مدعي">مدعي</option>
+                                <option value="مدعى عليه">مدعى عليه</option>
+                                <option value="مستأنف">مستأنف</option>
+                                <option value="مستأنف ضده">مستأنف ضده</option>
+                                <option value="طاعن">طاعن</option>
+                                <option value="مطعون ضده">مطعون ضده</option>
+                                <option value="متدخل في الدعوى">متدخل في الدعوى</option>
+                                <option value="متهم">متهم</option>
+                                <option value="مجني عليه">مجني عليه</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
-                <div>
-                    <label style="display:block;margin-bottom:6px;font-weight:600;">البريد الإلكتروني</label>
-                    <input type="email" name="email" id="ep_email" dir="ltr" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+
+                <!-- 3. التواصل وعناوين التبليغ -->
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+                    <div style="font-weight: 700; color: #1e3a8a; margin-bottom: 12px; font-size: 0.95rem;">
+                        <i class="fa-solid fa-phone"></i> بيانات التواصل ومقر التبليغ
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 12px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155;">الجوال</label>
+                            <input type="text" name="phone" id="edit_party_phone" dir="ltr" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155;">هاتف بديل</label>
+                            <input type="text" name="alt_phone" id="edit_party_alt_phone" dir="ltr" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155;">البريد الإلكتروني</label>
+                            <input type="email" name="email" id="edit_party_email" dir="ltr" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 14px; margin-bottom: 12px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155;">المدينة</label>
+                            <input type="text" name="city" id="edit_party_city" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155;">العنوان الفعلي</label>
+                            <input type="text" name="address" id="edit_party_address" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 14px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155;">العنوان الوطني للتبليغ</label>
+                            <input type="text" name="national_address" id="edit_party_national_address" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155;">طريقة التبليغ</label>
+                            <select name="service_method" id="edit_party_service_method" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                                <option value="محضر_المحكمة">محضر المحكمة</option>
+                                <option value="رسالة_نصية">رسالة SMS</option>
+                                <option value="بريد_الكتروني">بريد إلكتروني</option>
+                                <option value="عاقل_الحارة">عاقل الحارة / المختار</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
-                <div>
-                    <label style="display:block;margin-bottom:6px;font-weight:600;">العنوان</label>
-                    <input type="text" name="address" id="ep_address" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+
+                <!-- 4. الممثل القانوني والملاحظات -->
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+                    <div style="font-weight: 700; color: #1e3a8a; margin-bottom: 12px; font-size: 0.95rem;">
+                        <i class="fa-solid fa-user-tie"></i> الممثل القانوني والملاحظات
+                    </div>
+                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 14px; margin-bottom: 12px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155;">محامي الطرف</label>
+                            <input type="text" name="lawyer_name" id="edit_party_lawyer_name" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155;">هاتف المحامي</label>
+                            <input type="text" name="lawyer_phone" id="edit_party_lawyer_phone" dir="ltr" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155;">القيد النقابي</label>
+                            <input type="text" name="lawyer_license_no" id="edit_party_lawyer_license_no" dir="ltr" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #92400e;">ملاحظات داخلية خاصة (سرية)</label>
+                        <textarea name="internal_notes" id="edit_party_internal_notes" rows="2" style="width: 100%; padding: 9px 12px; border: 1px solid #fde68a; border-radius: 8px; font-family: 'Cairo', sans-serif; resize: vertical; background: #fff;"></textarea>
+                    </div>
                 </div>
-            </div>
-            <div style="display:flex;gap:10px;justify-content:flex-end;">
-                <button type="button" onclick="document.getElementById('editPartyModal').style.display='none'" style="padding:11px 20px;background:#e2e8f0;color:#475569;border:none;border-radius:8px;cursor:pointer;font-family:'Cairo',sans-serif;font-weight:600;">إلغاء</button>
-                <button type="submit" class="btn-primary" style="padding:11px 20px;font-family:'Cairo',sans-serif;">حفظ التعديلات</button>
-            </div>
-        </form>
+
+                <div style="display: flex; gap: 10px; justify-content: flex-end; padding-top: 10px; border-top: 1px solid #e2e8f0;">
+                    <button type="button" onclick="document.getElementById('editPartyModal').style.display='none'" style="padding: 10px 20px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer; font-family: 'Cairo', sans-serif; font-weight: 700;">إلغاء</button>
+                    <button type="submit" class="btn-primary" style="padding: 10px 24px; font-family: 'Cairo', sans-serif; font-weight: 700; border-radius: 8px;">حفظ التعديلات</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 {% endblock %}
+
 {% block scripts %}
 <script>
-function openEditParty(id, name, role, idNum, phone, email, address, caseId) {
-    document.getElementById('ep_id').value = id;
-    document.getElementById('ep_case_id').value = caseId;
-    document.getElementById('ep_name').value = name;
-    document.getElementById('ep_role').value = role;
-    document.getElementById('ep_id_number').value = idNum;
-    document.getElementById('ep_phone').value = phone;
-    document.getElementById('ep_email').value = email !== 'None' ? email : '';
-    document.getElementById('ep_address').value = address !== 'None' ? address : '';
-    document.getElementById('editPartyModal').style.display = 'flex';
-}
-function filterTable() {
-    const search = document.getElementById('searchInput').value.toLowerCase();
-    const role = document.getElementById('roleFilter').value;
-    document.querySelectorAll('.party-row').forEach(row => {
-        const text = row.textContent.toLowerCase();
-        const rowRole = row.dataset.role;
-        const matchSearch = !search || text.includes(search);
-        const matchRole = !role || rowRole === role;
-        row.style.display = matchSearch && matchRole ? '' : 'none';
-    });
-}
-
-// Custom Roles Logic
-document.addEventListener('DOMContentLoaded', () => {
-    loadCustomRoles();
-});
-
-function loadCustomRoles() {
-    const savedRoles = JSON.parse(localStorage.getItem('custom_party_roles') || '[]');
-    const selects = [document.getElementById('roleFilter'), document.getElementById('roleSelect'), document.getElementById('ep_role')];
-    
-    savedRoles.forEach(role => {
-        selects.forEach(select => {
-            if (select && !Array.from(select.options).some(opt => opt.value === role)) {
-                const option = new Option(role, role);
-                select.add(option);
-            }
-        });
-    });
-}
-
-function addNewRole() {
-    const newRole = prompt("أدخل اسم الدور الجديد (مثال: خبير، محكم، مترجم):");
-    if (newRole && newRole.trim() !== '') {
-        const role = newRole.trim();
-        const savedRoles = JSON.parse(localStorage.getItem('custom_party_roles') || '[]');
-        if (!savedRoles.includes(role)) {
-            savedRoles.push(role);
-            localStorage.setItem('custom_party_roles', JSON.stringify(savedRoles));
-            
-            // Add to all dropdowns immediately
-            const selects = [document.getElementById('roleFilter'), document.getElementById('roleSelect'), document.getElementById('ep_role')];
-            selects.forEach(select => {
-                if (select) {
-                    const option = new Option(role, role);
-                    select.add(option);
-                }
-            });
-            
-            alert("تمت إضافة الدور الجديد ('" + role + "') بنجاح إلى القوائم!");
-            // Optionally, open the add party modal with this role pre-selected
-            // document.getElementById('roleSelect').value = role;
-            // document.getElementById('addPartyModal').style.display='flex';
-        } else {
-            alert("هذا الدور موجود مسبقاً في القائمة!");
-        }
+    function openAddPartyModal() {
+        document.getElementById('addPartyModal').style.display = 'flex';
     }
-}
+
+    function closeAddPartyModal() {
+        document.getElementById('addPartyModal').style.display = 'none';
+    }
+
+    function viewPartyDetails(partyId) {
+        const modal = document.getElementById('viewPartyModal');
+        const content = document.getElementById('viewPartyContent');
+        modal.style.display = 'flex';
+        content.innerHTML = '<div style="text-align: center; padding: 40px; color: #64748b;"><i class="fa-solid fa-spinner fa-spin" style="font-size: 2rem;"></i><p style="margin-top: 10px;">جاري تحميل تفاصيل الطرف...</p></div>';
+
+        fetch('/api/parties/' + partyId)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('view_party_name').textContent = data.name;
+                document.getElementById('view_party_subtitle').textContent = (data.role_key || '') + (data.legal_capacity ? ' (' + data.legal_capacity + ')' : '') + (data.case_number ? ' | القضية: ' + data.case_number : '');
+
+                content.innerHTML = `
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; background: #f8fafc; padding: 16px; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+                        <div><strong style="color: #64748b; font-size: 0.8rem; display: block;">الاسم الكامل:</strong> <span style="font-weight: 700;">${escapeHtml(data.name)}</span></div>
+                        <div><strong style="color: #64748b; font-size: 0.8rem; display: block;">نوع الطرف:</strong> ${data.party_type === 'corporate' ? 'شركة / مؤسسة' : (data.party_type === 'government' ? 'جهة حكومية' : 'شخص طبيعي')}</div>
+                        <div><strong style="color: #64748b; font-size: 0.8rem; display: block;">الجنسية:</strong> ${escapeHtml(data.nationality || '-')}</div>
+                        <div><strong style="color: #64748b; font-size: 0.8rem; display: block;">رقم الهوية:</strong> <span dir="ltr">${escapeHtml(data.id_number || '-')}</span></div>
+                        <div><strong style="color: #64748b; font-size: 0.8rem; display: block;">السجل التجاري:</strong> <span dir="ltr">${escapeHtml(data.cr_number || '-')}</span></div>
+                        <div><strong style="color: #64748b; font-size: 0.8rem; display: block;">الدور في القضية:</strong> <span style="font-weight: 700; color: #1e40af;">${escapeHtml(data.role_key)}</span></div>
+                        <div><strong style="color: #64748b; font-size: 0.8rem; display: block;">الصفة القضائية:</strong> ${escapeHtml(data.legal_capacity || '-')}</div>
+                        <div><strong style="color: #64748b; font-size: 0.8rem; display: block;">تمثيل الخصومة:</strong> ${escapeHtml(data.representation_status || 'أصيل')}</div>
+                    </div>
+
+                    <div style="margin-bottom: 18px;">
+                        <h4 style="margin: 0 0 8px 0; color: #1e3a8a; font-size: 0.95rem;"><i class="fa-solid fa-map-location-dot"></i> عناوين التبليغ والتواصل</h4>
+                        <div style="background: #fff; border: 1px solid #e2e8f0; padding: 14px; border-radius: 8px; font-size: 0.88rem; line-height: 1.6;">
+                            <div><strong>رقم الجوال:</strong> <span dir="ltr">${escapeHtml(data.phone || '-')}</span> ${data.alt_phone ? ' | بديل: <span dir="ltr">' + escapeHtml(data.alt_phone) + '</span>' : ''}</div>
+                            <div><strong>البريد الإلكتروني:</strong> <span dir="ltr">${escapeHtml(data.email || '-')}</span></div>
+                            <div><strong>المدينة والعنوان:</strong> ${escapeHtml((data.city || '') + ' - ' + (data.address || ''))}</div>
+                            <div><strong>العنوان الوطني / المختار:</strong> ${escapeHtml(data.national_address || '-')}</div>
+                            <div><strong>طريقة التبليغ المعتمدة:</strong> ${escapeHtml(data.service_method || '-')}</div>
+                        </div>
+                    </div>
+
+                    ${(data.lawyer_name || data.poa_number) ? `
+                    <div style="margin-bottom: 18px;">
+                        <h4 style="margin: 0 0 8px 0; color: #1e3a8a; font-size: 0.95rem;"><i class="fa-solid fa-user-tie"></i> بيانات الوكيل / محامي الخصم</h4>
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 14px; border-radius: 8px; font-size: 0.88rem;">
+                            <div><strong>اسم المحامي:</strong> ${escapeHtml(data.lawyer_name || '-')}</div>
+                            <div><strong>هاتف المحامي:</strong> <span dir="ltr">${escapeHtml(data.lawyer_phone || '-')}</span></div>
+                            <div><strong>رقم القيد النقابي:</strong> <span dir="ltr">${escapeHtml(data.lawyer_license_no || '-')}</span></div>
+                            <div><strong>سند الوكالة:</strong> رقم ${escapeHtml(data.poa_number || '-')} بتاريخ ${escapeHtml(data.poa_date || '-')}</div>
+                        </div>
+                    </div>` : ''}
+
+                    ${data.conflict_status === 'conflict_detected' ? `
+                    <div style="margin-bottom: 18px; background: #fee2e2; border: 1px solid #fecdd3; padding: 12px; border-radius: 8px; color: #991b1b; font-size: 0.88rem;">
+                        <strong><i class="fa-solid fa-triangle-exclamation"></i> تنبيه تعارض مصالح محتمل:</strong>
+                        هذا الطرف يطابق اسم أحد موكلي المكتب في سجلات العملاء. يرجى التحقق من أهليتك للترافع في مواجهته.
+                    </div>` : ''}
+
+                    ${data.internal_notes ? `
+                    <div style="margin-bottom: 16px; background: #fffbeb; border: 1px dashed #f59e0b; padding: 12px; border-radius: 8px;">
+                        <h4 style="margin: 0 0 6px 0; color: #92400e; font-size: 0.9rem;"><i class="fa-solid fa-lock"></i> ملاحظات المحامي الداخلية (سرية):</h4>
+                        <div style="font-size: 0.85rem; color: #78350f; line-height: 1.5;">${escapeHtml(data.internal_notes)}</div>
+                    </div>` : ''}
+                `;
+            })
+            .catch(err => {
+                content.innerHTML = '<div style="color: #dc2626; padding: 20px; text-align: center;">تعذر تحميل تفاصيل الطرف.</div>';
+            });
+    }
+
+    function openEditPartyModalById(partyId) {
+        fetch('/api/parties/' + partyId)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('edit_party_id').value = data.id;
+                document.getElementById('edit_party_case_id').value = data.case_id;
+                document.getElementById('edit_party_name').value = data.name || '';
+                document.getElementById('edit_party_type').value = data.party_type || 'individual';
+                document.getElementById('edit_party_nationality').value = data.nationality || '';
+                document.getElementById('edit_party_id_number').value = data.id_number || '';
+                document.getElementById('edit_party_cr_number').value = data.cr_number || '';
+                document.getElementById('edit_party_role_key').value = data.role_key || 'موكل';
+                document.getElementById('edit_party_legal_capacity').value = data.legal_capacity || 'مدعي';
+                document.getElementById('edit_party_phone').value = data.phone || '';
+                document.getElementById('edit_party_alt_phone').value = data.alt_phone || '';
+                document.getElementById('edit_party_email').value = data.email || '';
+                document.getElementById('edit_party_city').value = data.city || '';
+                document.getElementById('edit_party_address').value = data.address || '';
+                document.getElementById('edit_party_national_address').value = data.national_address || '';
+                document.getElementById('edit_party_service_method').value = data.service_method || 'محضر_المحكمة';
+                document.getElementById('edit_party_lawyer_name').value = data.lawyer_name || '';
+                document.getElementById('edit_party_lawyer_phone').value = data.lawyer_phone || '';
+                document.getElementById('edit_party_lawyer_license_no').value = data.lawyer_license_no || '';
+                document.getElementById('edit_party_internal_notes').value = data.internal_notes || '';
+                document.getElementById('editPartyModal').style.display = 'flex';
+            });
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+        return String(text).replace(/[&<>"']/g, m => map[m]);
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        loadRefDataDropdown('party_role', 'select[name="role_key"], #roleFilter');
+    });
 </script>
 {% endblock %}
