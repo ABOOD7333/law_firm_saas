@@ -2,30 +2,43 @@
 Database-backed Rate Limiter — LawSaaS Platform
 يخزن محاولات تسجيل الدخول في قاعدة البيانات بدلاً من الرام.
 يعمل بشكل صحيح مع عدة Workers ويحافظ على البيانات عند إعادة التشغيل.
+متوافق مع SQLite و PostgreSQL.
 """
 import time
+import os
 from sqlalchemy import text
 
 
-def _get_db_connection():
-    """Get a raw DB connection for rate limiting (lightweight, no ORM overhead)."""
-    from database.database import engine
-    return engine.connect()
+def _is_postgres():
+    """Check if we're using PostgreSQL (Railway) or SQLite (local)."""
+    db_url = os.getenv("DATABASE_URL", "sqlite:///./law_firm.db")
+    return "postgres" in db_url.lower()
 
 
 def _ensure_rate_limit_table():
-    """Create rate_limit_attempts table if it doesn't exist."""
+    """Create rate_limit_attempts table if it doesn't exist (PostgreSQL & SQLite compatible)."""
     from database.database import engine
     with engine.begin() as conn:
-        conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS rate_limit_attempts (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                ip_address TEXT NOT NULL,
-                attempt_type TEXT NOT NULL DEFAULT 'login',
-                attempted_at REAL NOT NULL,
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP
-            )
-        """))
+        if _is_postgres():
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS rate_limit_attempts (
+                    id SERIAL PRIMARY KEY,
+                    ip_address VARCHAR(255) NOT NULL,
+                    attempt_type VARCHAR(50) NOT NULL DEFAULT 'login',
+                    attempted_at DOUBLE PRECISION NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+        else:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS rate_limit_attempts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ip_address TEXT NOT NULL,
+                    attempt_type TEXT NOT NULL DEFAULT 'login',
+                    attempted_at REAL NOT NULL,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
         conn.execute(text("""
             CREATE INDEX IF NOT EXISTS idx_rate_limit_ip_type 
             ON rate_limit_attempts(ip_address, attempt_type)
@@ -35,8 +48,8 @@ def _ensure_rate_limit_table():
 # تهيئة الجدول عند أول import
 try:
     _ensure_rate_limit_table()
-except Exception:
-    pass  # سيتم إنشاؤه لاحقاً عند أول استخدام
+except Exception as e:
+    print(f"[RateLimiter] Table init deferred: {e}")
 
 
 def record_attempt(ip: str, attempt_type: str = "login"):

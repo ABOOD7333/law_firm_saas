@@ -134,11 +134,26 @@ class CSRFMiddleware(BaseHTTPMiddleware):
 
             csrf_cookie = str(uuid.uuid4())
 
+        # إعفاء مسارات تسجيل الدخول وما قبل المصادقة من CSRF
+        # (محمية بواسطة Rate Limiting ولا توجد جلسة نشطة لاختطافها)
+        PRE_AUTH_PATHS = {
+            "/",
+            "/login",
+            "/api/login",
+            "/api/superadmin-login",
+            "/api/forgot-send-otp",
+            "/api/verify-forgot-otp",
+            "/api/register-send-otp",
+            "/api/verify-register-otp",
+        }
+        if request.url.path in PRE_AUTH_PATHS:
+            response = await call_next(request)
+            if not request.cookies.get("csrf_token"):
+                is_secure = not (request.url.hostname in ["127.0.0.1", "localhost"])
+                response.set_cookie("csrf_token", csrf_cookie, httponly=False, secure=is_secure, samesite="Lax")
+            return response
+
         if request.method in ["POST", "PUT", "DELETE", "PATCH"]:
-
-            # ── ثغرة 6 مُصلحة: تفعيل CSRF لجميع المسارات بما فيها صفحة الدخول ──
-
-            if True:
 
                 # Security Fix: Only check the CSRF token in the form body (or header), avoid URL query parameters.
 
