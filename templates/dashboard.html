@@ -1,140 +1,322 @@
 {% extends "base.html" %}
 
-{% block title %}لوحة التحكم | LawSaaS{% endblock %}
+{% block title %}لوحة التحكم الرئيسية | LawSaaS{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1>
-        {% if user.role == 'مدير' %}
-        <i class="fa-solid fa-shield-halved" style="color: var(--primary-color);"></i> لوحة تحكم المدير
-        {% else %}
-        <i class="fa-solid fa-scale-balanced" style="color: var(--primary-color);"></i> مساحة عملي
-        {% endif %}
-    </h1>
-    <p>مرحباً <strong>{{ user.name }}</strong>! {{ "إليك ملخص شامل لنشاط المكتب." if user.role == 'مدير' else "إليك مهامك ومتطلباتك للجلسة القادمة." }}</p>
-</div>
-
-<!-- Stats Cards -->
-<div class="stats-grid">
-    <div class="stat-card primary-gradient">
-        <div class="stat-icon"><i class="fa-solid fa-briefcase"></i></div>
-        <div class="stat-details">
-            <h3>إجمالي القضايا</h3>
-            <p class="stat-number">{{ total_cases }}</p>
-        </div>
+<!-- Page Header & Welcome Banner -->
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 24px;">
+    <div>
+        <h1 style="font-size: 1.6rem; color: #1e293b; margin: 0 0 5px 0; font-weight: 800;">
+            {% if user.role in ['مدير المكتب', 'صاحب المكتب', 'مدير', 'مدير النظام', 'admin', 'owner'] %}
+            <i class="fa-solid fa-shield-halved" style="color: #1e40af; margin-left: 8px;"></i> لوحة القيادة التنفيذية للمكتب
+            {% else %}
+            <i class="fa-solid fa-scale-balanced" style="color: #1e40af; margin-left: 8px;"></i> مساحة العمل اليومية للمحامي
+            {% endif %}
+        </h1>
+        <p style="color: #64748b; margin: 0; font-size: 0.95rem;">
+            مرحباً بك، أستاذ <strong>{{ user.name }}</strong>! 
+            {% if user.role in ['مدير المكتب', 'صاحب المكتب', 'مدير'] %}
+            إليك الرؤية الشاملة والمؤشرات التشغيلية لنشاط المكتب وقضاياه اليوم.
+            {% else %}
+            إليك جدول جلساتك ومهامك القضائية والمواعيد الإجرائية المستحقة اليوم.
+            {% endif %}
+        </p>
     </div>
-    <div class="stat-card success-gradient">
-        <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
-        <div class="stat-details">
-            <h3>إجمالي الموكلين</h3>
-            <p class="stat-number">{{ total_clients }}</p>
-        </div>
-    </div>
-    <div class="stat-card warning-gradient">
-        <div class="stat-icon"><i class="fa-solid fa-list-check"></i></div>
-        <div class="stat-details">
-            <h3>مهامي المعلقة</h3>
-            <p class="stat-number">{{ pending_tasks_count }}</p>
-            <span class="stat-trend">مهام تنتظر إنجازك</span>
-        </div>
-    </div>
-</div>
-
-<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 25px; margin-top: 25px;">
     
-    <!-- My Tasks Widget -->
-    <div class="content-section">
-        <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <h2>
-                {% if user.role == 'مدير' %}
-                <i class="fa-solid fa-list-check" style="color: var(--primary-color);"></i> المهام المعلقة (مُسندة إليك)
-                {% else %}
-                <i class="fa-solid fa-list-check" style="color: var(--primary-color);"></i> مهامي
-                {% endif %}
-            </h2>
-            <a href="/tasks" style="color: var(--primary-color); text-decoration: none; font-weight: 600; font-size: 0.9rem;">عرض الكل →</a>
+    <!-- Quick Launcher Actions -->
+    <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+        {% if has_perm(user, 'cases', 'add') %}
+        <a href="/cases" class="btn" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 9px 14px; border-radius: 8px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-size: 0.88rem;">
+            <i class="fa-solid fa-plus-circle"></i> قضية جديدة
+        </a>
+        {% endif %}
+        {% if has_perm(user, 'hearings', 'add') %}
+        <a href="/hearings?action=new" class="btn" style="background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; padding: 9px 14px; border-radius: 8px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-size: 0.88rem;">
+            <i class="fa-solid fa-file-signature"></i> محضر جلسة
+        </a>
+        {% endif %}
+        {% if has_perm(user, 'documents', 'add') %}
+        <a href="/documents" class="btn" style="background: #fefce8; color: #a16207; border: 1px solid #fef08a; padding: 9px 14px; border-radius: 8px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-size: 0.88rem;">
+            <i class="fa-solid fa-folder-plus"></i> أرشفة مستند
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 1. شريط المؤشرات الحيوية (Vital Operations KPIs Ribbon) -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; margin-bottom: 24px;">
+    <!-- إجمالي القضايا النشطة -->
+    <div class="card" style="padding: 16px 20px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 14px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+        <div style="width: 48px; height: 48px; border-radius: 12px; background: #eff6ff; color: #1d4ed8; display: flex; align-items: center; justify-content: center; font-size: 1.4rem;">
+            <i class="fa-solid fa-briefcase"></i>
+        </div>
+        <div>
+            <div style="font-size: 1.55rem; font-weight: 900; color: #0f172a;">{{ total_cases }}</div>
+            <div style="color: #64748b; font-size: 0.85rem; font-weight: 600;">القضايا المتداولة</div>
+        </div>
+    </div>
+
+    <!-- الجلسات القضائية القادمة -->
+    <div class="card" style="padding: 16px 20px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 14px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+        <div style="width: 48px; height: 48px; border-radius: 12px; background: #ecfdf5; color: #047857; display: flex; align-items: center; justify-content: center; font-size: 1.4rem;">
+            <i class="fa-solid fa-calendar-days"></i>
+        </div>
+        <div>
+            <div style="font-size: 1.55rem; font-weight: 900; color: #047857;">{{ upcoming_hearings_count }}</div>
+            <div style="color: #64748b; font-size: 0.85rem; font-weight: 600;">الجلسات القادمة</div>
+        </div>
+    </div>
+
+    <!-- المهام المطلوب إنجازها -->
+    <div class="card" style="padding: 16px 20px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 14px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+        <div style="width: 48px; height: 48px; border-radius: 12px; background: #fef3c7; color: #b45309; display: flex; align-items: center; justify-content: center; font-size: 1.4rem;">
+            <i class="fa-solid fa-list-check"></i>
+        </div>
+        <div>
+            <div style="font-size: 1.55rem; font-weight: 900; color: #b45309;">{{ pending_tasks_count }}</div>
+            <div style="color: #64748b; font-size: 0.85rem; font-weight: 600;">مهامي المعلقة</div>
+        </div>
+    </div>
+
+    <!-- المواعيد والمهل القانونية الحرجة -->
+    <div class="card" style="padding: 16px 20px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 14px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+        <div style="width: 48px; height: 48px; border-radius: 12px; background: #fee2e2; color: #b91c1c; display: flex; align-items: center; justify-content: center; font-size: 1.4rem;">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+        </div>
+        <div>
+            <div style="font-size: 1.55rem; font-weight: 900; color: #b91c1c;">{{ active_limitations_count }}</div>
+            <div style="color: #64748b; font-size: 0.85rem; font-weight: 600;">المهل ومواعيد الطعن</div>
+        </div>
+    </div>
+
+    <!-- إجمالي الموكلين -->
+    <div class="card" style="padding: 16px 20px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 14px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+        <div style="width: 48px; height: 48px; border-radius: 12px; background: #e0e7ff; color: #4338ca; display: flex; align-items: center; justify-content: center; font-size: 1.4rem;">
+            <i class="fa-solid fa-users"></i>
+        </div>
+        <div>
+            <div style="font-size: 1.55rem; font-weight: 900; color: #0f172a;">{{ total_clients }}</div>
+            <div style="color: #64748b; font-size: 0.85rem; font-weight: 600;">الموكلون المسجلون</div>
+        </div>
+    </div>
+</div>
+
+<!-- 2. منطقة العمليات والودجات (Operations Grid) -->
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
+    
+    <!-- الجانب الأيمن: الجلسات القضائية القادمة + المهام والأولويات -->
+    <div style="display: flex; flex-direction: column; gap: 24px;">
+        
+        <!-- ودجت 1: جدول الجلسات القضائية القادمة -->
+        <div class="card" style="padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px;">
+                <h3 style="margin: 0; font-size: 1.1rem; color: #0f172a; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-gavel" style="color: #1e40af;"></i> مواعيد الجلسات القضائية القادمة
+                </h3>
+                <a href="/hearings" style="color: #1e40af; text-decoration: none; font-size: 0.85rem; font-weight: 700;">سجل الجلسات الكامل ←</a>
+            </div>
+
+            {% if upcoming_hearings %}
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.88rem;">
+                    <thead>
+                        <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; text-align: right; color: #64748b;">
+                            <th style="padding: 10px 12px;">تاريخ ووقت الجلسة</th>
+                            <th style="padding: 10px 12px;">موضوع الجلسة / المحكمة</th>
+                            <th style="padding: 10px 12px;">القضية</th>
+                            <th style="padding: 10px 12px; text-align: center;">إجراء</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for h in upcoming_hearings %}
+                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                            <td style="padding: 10px 12px; white-space: nowrap;">
+                                <div style="font-weight: 700; color: #1e3a8a;" dir="ltr">{{ h.hearing_at }}</div>
+                                {% if h.litigation_level %}
+                                <span style="font-size: 0.75rem; background: #eff6ff; color: #1d4ed8; padding: 2px 6px; border-radius: 4px;">{{ h.litigation_level }}</span>
+                                {% endif %}
+                            </td>
+                            <td style="padding: 10px 12px;">
+                                <strong style="color: #0f172a; display: block;">{{ h.title }}</strong>
+                                <small style="color: #64748b;">
+                                    <i class="fa-solid fa-landmark" style="font-size: 0.75rem;"></i> {{ h.court_name or (h.law_case.court_name if h.law_case else 'المحكمة') }}
+                                    {% if h.judge_name %} | الدائرة: {{ h.judge_name }}{% endif %}
+                                </small>
+                            </td>
+                            <td style="padding: 10px 12px;">
+                                {% if h.law_case %}
+                                <a href="/cases/{{ h.case_id }}" style="color: #0f766e; text-decoration: none; font-weight: 700; display: block;">
+                                    {{ h.law_case.case_number }}
+                                </a>
+                                <small style="color: #64748b;">{{ h.law_case.title[:25] }}</small>
+                                {% else %}-{% endif %}
+                            </td>
+                            <td style="padding: 10px 12px; text-align: center;">
+                                <a href="/cases/{{ h.case_id }}" class="action-btn" style="background: #f8fafc; color: #1e40af; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 10px; text-decoration: none; font-size: 0.8rem; font-weight: 700;" title="فتح ملف القضية">
+                                    <i class="fa-solid fa-folder-open"></i> فتح
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: 30px; color: #64748b; background: #f8fafc; border-radius: 8px;">
+                <i class="fa-solid fa-calendar-check" style="font-size: 2.2rem; color: #10b981; margin-bottom: 8px; opacity: 0.7;"></i>
+                <p style="margin: 0; font-size: 0.95rem; font-weight: 600;">لا توجد جلسات مجدولة في الأيام القريبة القادمة.</p>
+            </div>
+            {% endif %}
         </div>
 
-        {% if my_tasks %}
-        <div style="display: flex; flex-direction: column; gap: 12px;">
-            {% for task in my_tasks %}
-            <div style="background: #f8fafc; border: 1px solid var(--border-color); border-right: 4px solid {% if task.priority_level == 1 %}#ef4444{% elif task.priority_level == 2 %}#f59e0b{% else %}#10b981{% endif %}; border-radius: 8px; padding: 15px;">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                    <div style="flex: 1;">
-                        <strong style="font-size: 1rem; display: block; margin-bottom: 5px;">{{ task.title }}</strong>
-                        {% if task.law_case %}
-                        <a href="/cases/{{ task.case_id }}" style="font-size: 0.85rem; color: var(--primary-color); text-decoration: none;">
-                            <i class="fa-solid fa-gavel"></i> {{ task.law_case.title }}
-                        </a>
-                        {% endif %}
-                        {% if task.due_at %}
-                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 5px;" dir="ltr">
-                            <i class="fa-regular fa-clock"></i> الاستحقاق: {{ task.due_at }}
-                        </p>
-                        {% endif %}
+        <!-- ودجت 2: قائمة المهام والأولويات اليومية -->
+        <div class="card" style="padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px;">
+                <h3 style="margin: 0; font-size: 1.1rem; color: #0f172a; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-list-check" style="color: #b45309;"></i> مهامي المعلقة وأولويات اليوم
+                </h3>
+                <a href="/tasks" style="color: #1e40af; text-decoration: none; font-size: 0.85rem; font-weight: 700;">جميع المهام ←</a>
+            </div>
+
+            {% if my_tasks %}
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                {% for task in my_tasks %}
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-right: 4px solid {% if task.priority_level == 1 %}#ef4444{% elif task.priority_level == 2 %}#f59e0b{% else %}#10b981{% endif %}; border-radius: 8px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <div style="flex: 1; min-width: 200px;">
+                        <strong style="color: #0f172a; font-size: 0.95rem; display: block;">{{ task.title }}</strong>
+                        <div style="display: flex; gap: 12px; align-items: center; margin-top: 4px; font-size: 0.8rem; color: #64748b;">
+                            {% if task.law_case %}
+                            <span><i class="fa-solid fa-scale-balanced"></i> القضية: {{ task.law_case.case_number }}</span>
+                            {% endif %}
+                            {% if task.due_at %}
+                            <span dir="ltr"><i class="fa-regular fa-clock"></i> {{ task.due_at }}</span>
+                            {% endif %}
+                        </div>
                     </div>
-                    <div style="display: flex; flex-direction: column; gap: 6px; margin-right: 10px;">
+                    <div style="display: flex; gap: 8px; align-items: center;">
                         {% if task.status_key == 'pending' %}
                         <form action="/tasks/update_status" method="post" style="display: inline;">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+                            <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
                             <input type="hidden" name="task_id" value="{{ task.id }}">
                             <input type="hidden" name="status_key" value="in_progress">
-                            <button type="submit" style="background: #dbeafe; color: #1d4ed8; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-family: 'Cairo', sans-serif; font-size: 0.8rem; font-weight: 600; white-space: nowrap;">
-                                <i class="fa-solid fa-play"></i> قبول المهمة
+                            <button type="submit" style="background: #dbeafe; color: #1d4ed8; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-family: 'Cairo', sans-serif; font-size: 0.8rem; font-weight: 700;">
+                                <i class="fa-solid fa-play"></i> بدء
                             </button>
                         </form>
                         {% elif task.status_key == 'in_progress' %}
                         <form action="/tasks/update_status" method="post" style="display: inline;">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+                            <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
                             <input type="hidden" name="task_id" value="{{ task.id }}">
                             <input type="hidden" name="status_key" value="completed">
-                            <button type="submit" style="background: #dcfce7; color: #166534; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-family: 'Cairo', sans-serif; font-size: 0.8rem; font-weight: 600; white-space: nowrap;">
-                                <i class="fa-solid fa-check-double"></i> تم الإنجاز
+                            <button type="submit" style="background: #dcfce7; color: #166534; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-family: 'Cairo', sans-serif; font-size: 0.8rem; font-weight: 700;">
+                                <i class="fa-solid fa-check-double"></i> إنجاز
                             </button>
                         </form>
-                        {% endif %}
-                        
-                        {% if task.status_key == 'pending' %}
-                        <span style="background: #e2e8f0; color: #475569; padding: 3px 8px; border-radius: 20px; font-size: 0.75rem; text-align: center;">قيد الانتظار</span>
-                        {% elif task.status_key == 'in_progress' %}
-                        <span style="background: #dbeafe; color: #1d4ed8; padding: 3px 8px; border-radius: 20px; font-size: 0.75rem; text-align: center;">قيد التنفيذ</span>
                         {% endif %}
                     </div>
                 </div>
+                {% endfor %}
             </div>
-            {% endfor %}
+            {% else %}
+            <div style="text-align: center; padding: 30px; color: #64748b; background: #f8fafc; border-radius: 8px;">
+                <i class="fa-solid fa-circle-check" style="font-size: 2.2rem; color: #10b981; margin-bottom: 8px; opacity: 0.7;"></i>
+                <p style="margin: 0; font-size: 0.95rem; font-weight: 600;">رائع! تم إنجاز جميع المهام المسندة إليك.</p>
+            </div>
+            {% endif %}
         </div>
-        {% else %}
-        <div style="text-align: center; padding: 40px; color: var(--text-muted); border: 2px dashed var(--border-color); border-radius: 12px;">
-            <i class="fa-solid fa-circle-check" style="font-size: 3rem; color: #10b981; margin-bottom: 10px; opacity: 0.7;"></i>
-            <p style="font-size: 1.1rem; font-weight: 600; color: #10b981;">أحسنت! لا توجد مهام معلقة.</p>
-        </div>
-        {% endif %}
+
     </div>
 
-    <!-- Quick Links -->
-    <div style="display: flex; flex-direction: column; gap: 15px;">
-        <div class="content-section">
-            <h3 style="margin-bottom: 15px; color: var(--secondary-color); font-size: 1.1rem;">
-                <i class="fa-solid fa-bolt" style="color: #f59e0b;"></i> وصول سريع
-            </h3>
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-                <a href="/cases" style="display: flex; align-items: center; gap: 10px; padding: 12px; background: #f0f9ff; border-radius: 8px; text-decoration: none; color: var(--secondary-color); font-weight: 600; transition: all 0.2s;">
-                    <i class="fa-solid fa-gavel" style="color: var(--primary-color);"></i> القضايا
-                </a>
-                <a href="/hearings" style="display: flex; align-items: center; gap: 10px; padding: 12px; background: #fefce8; border-radius: 8px; text-decoration: none; color: var(--secondary-color); font-weight: 600; transition: all 0.2s;">
-                    <i class="fa-solid fa-calendar-days" style="color: #f59e0b;"></i> الجلسات
-                </a>
-                <a href="/tasks" style="display: flex; align-items: center; gap: 10px; padding: 12px; background: #f0fdf4; border-radius: 8px; text-decoration: none; color: var(--secondary-color); font-weight: 600; transition: all 0.2s;">
-                    <i class="fa-solid fa-list-check" style="color: #10b981;"></i> مهامي
-                </a>
-                {% if user.role == 'مدير' %}
-                <a href="/activity" style="display: flex; align-items: center; gap: 10px; padding: 12px; background: #faf5ff; border-radius: 8px; text-decoration: none; color: var(--secondary-color); font-weight: 600; transition: all 0.2s;">
-                    <i class="fa-solid fa-chart-line" style="color: #8b5cf6;"></i> نشاط الفريق
-                </a>
-                {% endif %}
+    <!-- الجانب الأيسر: المهل القضائية العاجلة + توزيع القضايا + آخر الأنشطة -->
+    <div style="display: flex; flex-direction: column; gap: 24px;">
+        
+        <!-- ودجت 3: المهل ومواعيد الطعن العاجلة (Statute of Limitations) -->
+        <div class="card" style="padding: 18px 20px; border-radius: 12px; border: 1px solid #fee2e2; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #fee2e2; padding-bottom: 10px;">
+                <h4 style="margin: 0; font-size: 1rem; color: #991b1b; font-weight: 800; display: flex; align-items: center; gap: 6px;">
+                    <i class="fa-solid fa-triangle-exclamation" style="color: #dc2626;"></i> مواعيد الطعن والمهل العاجلة
+                </h4>
+                <a href="/limitations" style="color: #dc2626; text-decoration: none; font-size: 0.8rem; font-weight: 700;">المزيد ←</a>
+            </div>
+
+            {% if urgent_limitations %}
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                {% for lim in urgent_limitations %}
+                <div style="background: #fff5f5; border: 1px solid #fecdd3; border-radius: 8px; padding: 10px 12px;">
+                    <strong style="color: #991b1b; font-size: 0.88rem; display: block;">{{ lim.title }}</strong>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px; font-size: 0.78rem;">
+                        <span style="color: #475569;">القضية: {{ lim.law_case.case_number if lim.law_case else '-' }}</span>
+                        <span style="color: #b91c1c; font-weight: 800;" dir="ltr"><i class="fa-regular fa-clock"></i> {{ lim.due_date }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: 16px; color: #047857; background: #f0fdf4; border-radius: 8px; font-size: 0.85rem; font-weight: 600;">
+                <i class="fa-solid fa-shield-check"></i> لا توجد مهل قضائية حرجة قريبة الانتهاء.
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- ودجت 4: توزيع حالات القضايا المتداولة -->
+        <div class="card" style="padding: 18px 20px; border-radius: 12px; border: 1px solid #e2e8f0; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+            <h4 style="margin: 0 0 14px 0; font-size: 1rem; color: #0f172a; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-chart-pie" style="color: #4338ca;"></i> تحليل سير القضايا
+            </h4>
+
+            <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.88rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: #f8fafc; border-radius: 6px;">
+                    <span><i class="fa-solid fa-folder-open" style="color: #1d4ed8; margin-left: 6px;"></i> قضايا مفتوحة وجديدة</span>
+                    <strong style="color: #1d4ed8;">{{ case_status_counts.open }}</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: #f8fafc; border-radius: 6px;">
+                    <span><i class="fa-solid fa-calendar-clock" style="color: #d97706; margin-left: 6px;"></i> بانتظار جلسة أو مرافعة</span>
+                    <strong style="color: #d97706;">{{ case_status_counts.awaiting_hearing }}</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: #f8fafc; border-radius: 6px;">
+                    <span><i class="fa-solid fa-gavel" style="color: #7c3aed; margin-left: 6px;"></i> محجوزة بانتظار الحكم</span>
+                    <strong style="color: #7c3aed;">{{ case_status_counts.awaiting_judgment }}</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: #f8fafc; border-radius: 6px;">
+                    <span><i class="fa-solid fa-check-circle" style="color: #059669; margin-left: 6px;"></i> قضايا محكومة / منتهية</span>
+                    <strong style="color: #059669;">{{ case_status_counts.closed }}</strong>
+                </div>
             </div>
         </div>
+
+        <!-- ودجت 5: آخر العمليات والأنشطة في المكتب (Audit Activity Stream) -->
+        <div class="card" style="padding: 18px 20px; border-radius: 12px; border: 1px solid #e2e8f0; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px;">
+                <h4 style="margin: 0; font-size: 1rem; color: #0f172a; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-bolt" style="color: #f59e0b;"></i> آخر أنشطة المكتب
+                </h4>
+                {% if user.role in ['مدير المكتب', 'صاحب المكتب', 'مدير', 'مدير النظام', 'admin', 'owner'] %}
+                <a href="/activity" style="color: #1e40af; text-decoration: none; font-size: 0.8rem; font-weight: 700;">السجل الكامل ←</a>
+                {% endif %}
+            </div>
+
+            {% if recent_activities %}
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                {% for act in recent_activities %}
+                <div style="border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; font-size: 0.82rem;">
+                    <div style="display: flex; justify-content: space-between; color: #64748b; margin-bottom: 2px;">
+                        <span style="font-weight: 700; color: #334155;">{{ act.actor_name }}</span>
+                        <span dir="ltr">{{ act.created_at.split(' ')[0] if act.created_at else '' }}</span>
+                    </div>
+                    <div style="color: #0f172a; font-weight: 600;">{{ act.action_name }}</div>
+                    {% if act.details %}
+                    <small style="color: #64748b; font-size: 0.75rem;">{{ act.details[:40] }}</small>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div style="color: #94a3b8; font-size: 0.85rem; text-align: center; padding: 10px 0;">
+                لا توجد سجلات نشاط حديثة.
+            </div>
+            {% endif %}
+        </div>
+
     </div>
 
 </div>

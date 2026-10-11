@@ -1137,86 +1137,135 @@ async def toggle_2fa(
     return RedirectResponse(url="/settings", status_code=303)
 
 @app.get("/dashboard", response_class=HTMLResponse)
-
 async def dashboard_page(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
-
     if not user:
-
         return RedirectResponse(url="/", status_code=303)
-
     try:
-
         # ── بوابة الموكلين (Client Portal) ──
-
         if user.role == 'موكل':
-
             client_records = db.query(LawClients).filter(
-
                 (LawClients.phone == user.phone) | (LawClients.email == user.email)
-
             ).all()
-
             case_ids = [c.case_id for c in client_records if c.case_id]
-
             my_cases = db.query(LawCases).filter(LawCases.id.in_(case_ids), LawCases.is_deleted == 0).all() if case_ids else []
-
             my_hearings = db.query(LawHearings).filter(
-
                 LawHearings.case_id.in_(case_ids),
-
                 LawHearings.show_in_client_portal == 1,
-
                 LawHearings.is_deleted == 0
-
             ).order_by(LawHearings.hearing_at.asc()).limit(5).all() if case_ids else []
-
             return templates.TemplateResponse(
-
                 request=request, name="client_portal.html",
-
                 context={"user": user, "my_cases": my_cases, "my_hearings": my_hearings, "active_page": "dashboard"}
-
             )
 
-        # ── لوحة تحكم المحامين والمدراء ──
-
+        # ── لوحة تحكم المحامين والمدراء التنفيذية (Enterprise Legal Dashboard) ──
         office_id = user.office_id
+        is_restricted_lawyer = (user.role in ['محامي', 'محامٍ'] and getattr(user, 'can_view_all_cases', 1) == 0)
 
-        my_tasks = db.query(LawTasks).filter(
+        # 1. القضايا (Cases Base Query)
+        cases_query = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0)
+        if is_restricted_lawyer:
+            cases_query = cases_query.filter(LawCases.lead_lawyer_id == user.id)
 
+        all_my_cases = cases_query.all()
+        accessible_case_ids = [c.id for c in all_my_cases]
+        total_cases = len(all_my_cases)
+
+        # تفصيل حالات القضايا
+        case_status_counts = {
+            "open": sum(1 for c in all_my_cases if c.status_key in ['open', 'مفتوحة', 'جديدة', 'new']),
+            "awaiting_hearing": sum(1 for c in all_my_cases if c.status_key in ['awaiting_hearing', 'بانتظار جلسة', 'قيد المرافعة']),
+            "awaiting_judgment": sum(1 for c in all_my_cases if c.status_key in ['awaiting_judgment', 'بانتظار الحكم']),
+            "closed": sum(1 for c in all_my_cases if c.status_key in ['closed', 'مغلقة', 'منتهية', 'judged'])
+        }
+
+        # 2. الجلسات القضائية القادمة (Upcoming Hearings)
+        hearings_query = db.query(LawHearings).filter(
+            LawHearings.office_id == office_id,
+            LawHearings.is_deleted == 0
+        )
+        if is_restricted_lawyer:
+            hearings_query = hearings_query.filter(LawHearings.case_id.in_(accessible_case_ids) if accessible_case_ids else LawHearings.case_id == -1)
+
+        upcoming_hearings = hearings_query.filter(
+            LawHearings.status_key.in_(['pending', 'قادمة'])
+        ).order_by(LawHearings.hearing_at.asc()).limit(6).all()
+        upcoming_hearings_count = hearings_query.filter(LawHearings.status_key.in_(['pending', 'قادمة'])).count()
+
+        # 3. المهام المعلقة والأولويات (My Pending Tasks)
+        tasks_query = db.query(LawTasks).filter(
             LawTasks.assignee_user_id == user.id,
-
             LawTasks.status_key.in_(['pending', 'in_progress'])
+        )
+        my_tasks = tasks_query.order_by(LawTasks.priority_level.asc(), LawTasks.due_at.asc()).limit(6).all()
+        pending_tasks_count = tasks_query.count()
 
-        ).order_by(LawTasks.priority_level.asc()).limit(5).all()
+        # 4. المهل القضائية ومواعيد الطعن العاجلة (Urgent Limitations & Deadlines)
+        from database.models import LawLimitations
+        limitations_query = db.query(LawLimitations).filter(
+            LawLimitations.office_id == office_id,
+            LawLimitations.is_deleted == 0,
+            LawLimitations.status_key == 'active'
+        )
+        if is_restricted_lawyer:
+            limitations_query = limitations_query.filter(LawLimitations.case_id.in_(accessible_case_ids) if accessible_case_ids else LawLimitations.case_id == -1)
 
-        total_cases = db.query(LawCases).filter(LawCases.office_id == office_id).count()
+        urgent_limitations = limitations_query.order_by(LawLimitations.due_date.asc()).limit(4).all()
+        active_limitations_count = limitations_query.count()
 
+        # 5. إجمالي الموكلين والمستندات
         total_clients = db.query(LawClients).filter(LawClients.office_id == office_id).count()
+        total_docs = db.query(LawDocuments).filter(LawDocuments.office_id == office_id, LawDocuments.is_deleted == 0).count()
 
-        pending_tasks_count = db.query(LawTasks).filter(
-
-            LawTasks.assignee_user_id == user.id,
-
-            LawTasks.status_key.in_(['pending', 'in_progress'])
-
-        ).count()
+        # 6. سجل آخر الأنشطة في المكتب (Recent Activity Stream)
+        from database.models import LawAuditLog
+        recent_activities = db.query(LawAuditLog).filter(
+            LawAuditLog.office_id == office_id
+        ).order_by(LawAuditLog.created_at.desc()).limit(5).all()
 
         return templates.TemplateResponse(
-
-            request=request, name="dashboard.html",
-
-            context={"user": user, "active_page": "dashboard", "my_tasks": my_tasks, "total_cases": total_cases, "total_clients": total_clients, "pending_tasks_count": pending_tasks_count}
-
+            request=request,
+            name="dashboard.html",
+            context={
+                "user": user,
+                "active_page": "dashboard",
+                "total_cases": total_cases,
+                "total_clients": total_clients,
+                "total_docs": total_docs,
+                "pending_tasks_count": pending_tasks_count,
+                "upcoming_hearings_count": upcoming_hearings_count,
+                "active_limitations_count": active_limitations_count,
+                "case_status_counts": case_status_counts,
+                "my_tasks": my_tasks,
+                "upcoming_hearings": upcoming_hearings,
+                "urgent_limitations": urgent_limitations,
+                "recent_activities": recent_activities
+            }
         )
-
-    except Exception:
-
+    except Exception as e:
+        import traceback
+        print(f"[Dashboard Error] {traceback.format_exc()}")
         if user.role == 'موكل':
-
             return templates.TemplateResponse(request=request, name="client_portal.html", context={"user": user, "my_cases": [], "my_hearings": [], "active_page": "dashboard"})
-
-        return templates.TemplateResponse(request=request, name="dashboard.html", context={"user": user, "active_page": "dashboard", "my_tasks": [], "total_cases": 0, "total_clients": 0, "pending_tasks_count": 0})
+        return templates.TemplateResponse(
+            request=request,
+            name="dashboard.html",
+            context={
+                "user": user,
+                "active_page": "dashboard",
+                "total_cases": 0,
+                "total_clients": 0,
+                "total_docs": 0,
+                "pending_tasks_count": 0,
+                "upcoming_hearings_count": 0,
+                "active_limitations_count": 0,
+                "case_status_counts": {"open": 0, "awaiting_hearing": 0, "awaiting_judgment": 0, "closed": 0},
+                "my_tasks": [],
+                "upcoming_hearings": [],
+                "urgent_limitations": [],
+                "recent_activities": []
+            }
+        )
 
 @app.get("/api/case-numbers")
 
