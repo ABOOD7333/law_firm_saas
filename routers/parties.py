@@ -9,8 +9,7 @@ from core.error_handler import safe_error_html
 
 from database.database import get_db
 from database.models import AccessProfiles, LawCases, LawParties, LawClients, LawAuditLog
-from dependencies import get_current_user, templates
-from utils.permissions import check_user_permission
+from dependencies import get_current_user, templates, check_user_permission
 
 router = APIRouter()
 
