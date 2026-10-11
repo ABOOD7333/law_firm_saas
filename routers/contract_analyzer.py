@@ -9,11 +9,10 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 
 from database.database import get_db
-from dependencies import get_current_user, check_user_permission
+from dependencies import get_current_user, check_user_permission, templates
 from database.models import AccessProfiles, LawCases, LawDocuments, LawAuditLog
 
 router = APIRouter(tags=["Contract Analyzer"])
-templates = Jinja2Templates(directory="templates")
 
 
 @router.get("/contract-analyzer", response_class=HTMLResponse)
@@ -45,11 +44,13 @@ async def contract_analyzer_page(
 
     return templates.TemplateResponse("contract_analyzer.html", {
         "request": request,
+        "user": current_user,
         "current_user": current_user,
         "cases": cases,
         "contracts": contracts,
         "selected_case_id": case_id,
         "selected_doc_id": doc_id,
+        "active_page": "contract-analyzer",
         "page_title": "محلل العقود الذكي"
     })
 
