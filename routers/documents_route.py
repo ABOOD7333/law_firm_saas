@@ -12,7 +12,7 @@ from database.database import get_db
 from database.models import AccessProfiles, LawCases, LawDocuments
 
 # نستخدم الاستيراد المتأخر لتجنب التكرار (Circular Imports)
-from dependencies import get_current_user, templates, require_user_permission, user_can_access_case
+from dependencies import get_current_user, templates
 
 router = APIRouter()
 
@@ -23,7 +23,6 @@ os.makedirs("private_uploads/documents", exist_ok=True)
 @router.get("/documents", response_class=HTMLResponse)
 async def documents_page(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     if not user: return RedirectResponse(url="/", status_code=303)
-    require_user_permission(user, "documents", "view")
     try:
         if not user.office_id:
             raise HTTPException(status_code=403, detail="الحساب غير مرتبط بمكتب")
@@ -57,7 +56,6 @@ async def add_document(
     user: AccessProfiles = Depends(get_current_user)
 ):
     if not user: return RedirectResponse(url="/", status_code=303)
-    require_user_permission(user, "documents", "add")
     office_id = user.office_id
     if not office_id:
         raise HTTPException(status_code=403, detail="الحساب غير مرتبط بمكتب")
@@ -65,31 +63,31 @@ async def add_document(
         raise HTTPException(status_code=400, detail="بيانات المستند غير صالحة")
     
     # IDOR Check: Ensure case belongs to the user's office
-    if not user_can_access_case(db, user, case_id):
-        return HTMLResponse(content="<script>alert('غير مصرح لك بإضافة مستندات لهذه القضية'); window.history.back();</script>", status_code=403)
     case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
+    if not case:
+        raise HTTPException(status_code=403, detail="غير مصرح لك بإضافة مستندات لهذه القضية")
         
     # RBAC Check: Restrict lawyers to their assigned cases only if they cannot view all
     if user.role in ['محامي', 'محامٍ'] and user.can_view_all_cases == 0 and case.lead_lawyer_id != user.id:
-        return HTMLResponse(content="<script>alert('غير مصرح لك بإضافة مستندات لهذه القضية'); window.history.back();</script>", status_code=403)
+        raise HTTPException(status_code=403, detail="غير مصرح لك بإضافة مستندات لهذه القضية")
     
     file_path_str = None
     if file and "".join(c for c in file.filename if c.isalnum() or c in ' ._-'):
         ext = "".join(c for c in file.filename if c.isalnum() or c in ' ._-').split('.')[-1].lower()
         allowed_exts = {'pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'txt'}
         if ext not in allowed_exts:
-            return HTMLResponse(content=f"<script>alert('عذراً، نوع الملف غير مسموح به ({ext})'); window.history.back();</script>", status_code=400)
+            raise HTTPException(status_code=400, detail="عذراً، نوع الملف غير مسموح به (" + str(ext) + ")")
 
         # ── ثغرة DoS: التحقق من حجم الملف قبل الحفظ (حد أقصى 20MB) ──
         MAX_SIZE_BYTES = 20 * 1024 * 1024  # 20 MB
         file_bytes = await file.read(MAX_SIZE_BYTES + 1)
         if len(file_bytes) > MAX_SIZE_BYTES:
-            return HTMLResponse(content="<script>alert('حجم الملف يتجاوز الحد المسموح به (20 ميجابايت)'); window.history.back();</script>", status_code=400)
+            raise HTTPException(status_code=400, detail="حجم الملف يتجاوز الحد المسموح به (20 ميجابايت)")
 
         # ── ثغرة MIME & Payload: التحقق من التوقيع الرقمي للملف (Magic Bytes) ──
         from core.security import validate_file_signature
         if not validate_file_signature(file_bytes, ext):
-            return HTMLResponse(content="<script>alert('فشل التحقق من أمان محتوى الملف. يرجى رفع ملف سليم وصحيح.'); window.history.back();</script>", status_code=400)
+            raise HTTPException(status_code=400, detail="فشل التحقق من أمان محتوى الملف. يرجى رفع ملف سليم وصحيح.")
 
         filename = f"{uuid.uuid4().hex}.{ext}"
         path = os.path.join("private_uploads", "documents", filename)
@@ -97,7 +95,7 @@ async def add_document(
             f_out.write(file_bytes)
         file_path_str = f"private_uploads/documents/{filename}"
 
-    d = LawDocuments(case_id=case_id, office_id=user.office_id or 1,
+    d = LawDocuments(case_id=case_id, office_id = user.office_id,
         name=name, document_type_key=document_type_key,
         doc_date=doc_date, notes=notes, file_path=file_path_str)
     db.add(d); db.commit()
@@ -117,7 +115,6 @@ async def edit_document(
     user: AccessProfiles = Depends(get_current_user)
 ):
     if not user: return RedirectResponse(url="/", status_code=303)
-    require_user_permission(user, "documents", "edit")
     office_id = user.office_id
     if not office_id:
         raise HTTPException(status_code=403, detail="الحساب غير مرتبط بمكتب")
@@ -129,33 +126,33 @@ async def edit_document(
             LawCases.id == d.case_id,
             LawCases.office_id == office_id,
         ).first()
-        if not current_case or not user_can_access_case(db, user, current_case.id):
+        if not current_case:
             raise HTTPException(status_code=404, detail="المستند غير موجود")
         if user.role in ['محامي', 'محامٍ'] and user.can_view_all_cases == 0 and current_case.lead_lawyer_id != user.id:
             raise HTTPException(status_code=403, detail="غير مصرح لك بتعديل هذا المستند")
         case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
-        if not case or not user_can_access_case(db, user, case_id): return HTMLResponse(content="<script>alert('غير مصرح'); window.history.back();</script>", status_code=403)
+        if not case: raise HTTPException(status_code=403, detail="غير مصرح")
         
         # RBAC Check: Restrict lawyers to their assigned cases only if they cannot view all
         if user.role in ['محامي', 'محامٍ'] and user.can_view_all_cases == 0 and case.lead_lawyer_id != user.id:
-            return HTMLResponse(content="<script>alert('غير مصرح لك بتعديل مستندات هذه القضية'); window.history.back();</script>", status_code=403)
+            raise HTTPException(status_code=403, detail="غير مصرح لك بتعديل مستندات هذه القضية")
             
         if file and "".join(c for c in file.filename if c.isalnum() or c in ' ._-'):
             ext = "".join(c for c in file.filename if c.isalnum() or c in ' ._-').split('.')[-1].lower()
             allowed_exts = {'pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'txt'}
             if ext not in allowed_exts:
-                return HTMLResponse(content=f"<script>alert('عذراً، نوع الملف غير مسموح به ({ext})'); window.history.back();</script>", status_code=400)
+                raise HTTPException(status_code=400, detail="عذراً، نوع الملف غير مسموح به (" + str(ext) + ")")
 
             # ── ثغرة DoS: التحقق من حجم الملف قبل الحفظ (حد أقصى 20MB) ──
             MAX_SIZE_BYTES = 20 * 1024 * 1024  # 20 MB
             file_bytes = await file.read(MAX_SIZE_BYTES + 1)
             if len(file_bytes) > MAX_SIZE_BYTES:
-                return HTMLResponse(content="<script>alert('حجم الملف يتجاوز الحد المسموح به (20 ميجابايت)'); window.history.back();</script>", status_code=400)
+                raise HTTPException(status_code=400, detail="حجم الملف يتجاوز الحد المسموح به (20 ميجابايت)")
 
             # ── ثغرة MIME & Payload: التحقق من التوقيع الرقمي للملف (Magic Bytes) ──
             from core.security import validate_file_signature
             if not validate_file_signature(file_bytes, ext):
-                return HTMLResponse(content="<script>alert('فشل التحقق من أمان محتوى الملف. يرجى رفع ملف سليم وصحيح.'); window.history.back();</script>", status_code=400)
+                raise HTTPException(status_code=400, detail="فشل التحقق من أمان محتوى الملف. يرجى رفع ملف سليم وصحيح.")
 
             filename = f"{uuid.uuid4().hex}.{ext}"
             path = os.path.join("private_uploads", "documents", filename)
@@ -179,15 +176,14 @@ async def delete_document(
     user: AccessProfiles = Depends(get_current_user)
 ):
     if not user: return RedirectResponse(url="/", status_code=303)
-    require_user_permission(user, "documents", "delete")
     if not user.office_id:
         raise HTTPException(status_code=403, detail="الحساب غير مرتبط بمكتب")
     d = db.query(LawDocuments).filter(LawDocuments.id == doc_id, LawDocuments.office_id == user.office_id).first()
     if d:
         # RBAC Check: Ensure lawyer owns the case referenced by the document
         case = db.query(LawCases).filter(LawCases.id == d.case_id).first()
-        if not case or not user_can_access_case(db, user, case.id):
-            return HTMLResponse(content="<script>alert('غير مصرح لك بحذف مستندات هذه القضية'); window.history.back();</script>", status_code=403)
+        if case and user.role in ['محامي', 'محامٍ'] and user.can_view_all_cases == 0 and case.lead_lawyer_id != user.id:
+            raise HTTPException(status_code=403, detail="غير مصرح لك بحذف مستندات هذه القضية")
         db.delete(d); db.commit()
     return RedirectResponse(url="/documents", status_code=303)
 
@@ -202,7 +198,6 @@ async def download_document(
 ):
     if not user:
         raise HTTPException(status_code=401, detail="غير مصرح")
-    require_user_permission(user, "documents", "view")
         
     # Find the document in database by file path (either private_uploads or static)
     doc = db.query(LawDocuments).filter(
@@ -214,7 +209,7 @@ async def download_document(
         raise HTTPException(status_code=404, detail="المستند غير موجود في قاعدة البيانات")
         
     # Check authorization: must belong to the user's office
-    if doc.office_id != user.office_id or not user_can_access_case(db, user, doc.case_id):
+    if doc.office_id != user.office_id:
         raise HTTPException(status_code=403, detail="غير مصرح لك بالوصول لهذا المستند")
         
     # RBAC Check: Restrict lawyers to their assigned cases only if they cannot view all

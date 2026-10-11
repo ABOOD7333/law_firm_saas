@@ -12,7 +12,6 @@ from core.security import hash_session_token, login_lockout_active, record_login
 
 import hashlib
 import uuid
-import html
 from datetime import datetime, timedelta, timezone
 from fastapi import FastAPI, Request, Form, Depends, Cookie, UploadFile, File, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, PlainTextResponse
@@ -39,7 +38,7 @@ from fastapi.responses import FileResponse
 import urllib.request
 import tempfile
 
-app = FastAPI(title="Lexzur Clone - SaaS Law Firm Management", version="1.0")
+app = FastAPI(title="LawSaaS Platform - Enterprise Legal Management", version="1.0")
 
 # Ensure database tables are created (critical for Railway deployment)
 init_db()
@@ -48,15 +47,22 @@ async def daily_scheduler():
     import asyncio
     from database.database import SessionLocal
     from core.workflow_engine import run_daily_limitation_checks
+    from core.rate_limiter import cleanup_old_attempts
     while True:
+        db = None
         try:
             print("[Scheduler] Running daily limitation checks...")
             db = SessionLocal()
             run_daily_limitation_checks(db)
-            db.close()
             print("[Scheduler] Daily limitation checks completed.")
+            # تنظيف سجلات Rate Limiting القديمة (أكثر من ساعة)
+            cleanup_old_attempts(older_than_seconds=3600)
+            print("[Scheduler] Rate limit cleanup completed.")
         except Exception as e:
             print(f"[Scheduler Error] {e}")
+        finally:
+            if db:
+                db.close()
         # Run every 24 hours
         await asyncio.sleep(86400)
 
@@ -103,30 +109,7 @@ _safe_makedirs("static/js")
 _safe_makedirs("static/img")
 _safe_makedirs("static/uploads/documents")
 _safe_makedirs("private_uploads/documents")
-_safe_makedirs("private_uploads/hearings")
 _safe_makedirs("templates")
-
-async def _save_hearing_attachment(upload: UploadFile) -> str:
-    """Validate and save hearing attachments outside the public static tree."""
-    from pathlib import Path
-    from core.security import validate_file_signature
-
-    extension = Path(upload.filename or "").suffix.lower().lstrip(".")
-    allowed_extensions = {"pdf", "doc", "docx", "jpg", "jpeg", "png", "txt"}
-    if extension not in allowed_extensions:
-        raise HTTPException(status_code=400, detail="نوع ملف المرفق غير مسموح")
-
-    content = await upload.read(20 * 1024 * 1024 + 1)
-    if len(content) > 20 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="حجم المرفق يتجاوز 20 ميجابايت")
-    if not validate_file_signature(content, extension):
-        raise HTTPException(status_code=400, detail="محتوى الملف لا يطابق امتداده")
-
-    file_name = f"{uuid.uuid4().hex}.{extension}"
-    file_path = os.path.join("private_uploads", "hearings", file_name)
-    with open(file_path, "wb") as output:
-        output.write(content)
-    return file_path
 
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -266,7 +249,7 @@ import time
 
 from fastapi.responses import JSONResponse
 
-_ip_login_attempts = {}
+from core.rate_limiter import record_attempt, is_rate_limited
 
 class LoginRateLimitMiddleware(BaseHTTPMiddleware):
 
@@ -276,21 +259,11 @@ class LoginRateLimitMiddleware(BaseHTTPMiddleware):
 
             ip = request.client.host or "127.0.0.1"
 
-            now = time.time()
-
-            attempts, last_time = _ip_login_attempts.get(ip, (0, 0))
-
-            if now - last_time < 300:
-
-                if attempts >= 10:
+            if is_rate_limited(ip, "login", max_attempts=10, window_seconds=300):
 
                     return JSONResponse({"success": False, "error": "تم حظر الـ IP مؤقتاً بسبب كثرة المحاولات. انتظر 5 دقائق."}, status_code=429)
 
-            else:
-
-                attempts = 0
-
-            _ip_login_attempts[ip] = (attempts + 1, now)
+            record_attempt(ip, "login")
 
         return await call_next(request)
 
@@ -377,7 +350,7 @@ app.mount("/static", SafeStaticFiles(directory="static"), name="static")
 
 # Templates setup - imported from dependencies to avoid circular imports in routers
 
-from dependencies import templates, get_current_user, check_user_permission, user_can_access_case
+from dependencies import templates, get_current_user, check_user_permission
 
 @app.get("/", response_class=HTMLResponse)
 async def login_page(request: Request, user: AccessProfiles = Depends(get_current_user)):
@@ -468,9 +441,7 @@ import secrets
 
 import time
 
-_otp_rate_limit = {}
-
-_ip_rate_limit = {}  # لتتبع محاولات تسجيل الدخول الخاطئة لكل IP
+# Rate limiting is now handled by core.rate_limiter (database-backed)
 
 @app.post("/api/forgot-send-otp")
 
@@ -511,23 +482,11 @@ async def api_forgot_send_otp(request: Request, db: Session = Depends(get_db)):
 
     # Rate Limiting Check (3 محاولات كل 15 دقيقة)
 
-    now = time.time()
-
-    user_requests = _otp_rate_limit.get(email, [])
-
-    # تنظيف المحاولات القديمة (أقدم من 15 دقيقة = 900 ثانية)
-
-    user_requests = [req_time for req_time in user_requests if now - req_time < 900]
-
-    if len(user_requests) >= 3:
-
-        _otp_rate_limit[email] = user_requests
+    if is_rate_limited(email, "otp", max_attempts=3, window_seconds=900):
 
         return _JSONResponse({"success": False, "error": "تجاوزت الحد المسموح من المحاولات. يرجى الانتظار 15 دقيقة."}, status_code=429)
 
-    user_requests.append(now)
-
-    _otp_rate_limit[email] = user_requests
+    record_attempt(email, "otp")
 
     code = generate_otp(6)
 
@@ -754,9 +713,7 @@ async def login_submit(
 
     now = time.time()
 
-    _ip_rate_limit[client_ip] = [t for t in _ip_rate_limit.get(client_ip, []) if now - t < 900]
-
-    if len(_ip_rate_limit[client_ip]) >= 15:
+    if is_rate_limited(client_ip, "login_form", max_attempts=15, window_seconds=900):
 
         return templates.TemplateResponse(
 
@@ -943,7 +900,7 @@ async def login_submit(
 
             locked = record_login_failure(user, db)
 
-            _ip_rate_limit.setdefault(client_ip, []).append(now)
+            record_attempt(client_ip, "login_form")
 
             app_logger.warning(f"LOGIN_FAIL | user={user.id} | attempts={user.failed_attempts}")
 
@@ -963,7 +920,7 @@ async def login_submit(
 
         await asyncio.sleep(0.3)
 
-        _ip_rate_limit.setdefault(client_ip, []).append(now)
+        record_attempt(client_ip, "login_form")
 
         app_logger.warning(f"LOGIN_FAIL | user_not_found | input={email[:20]}")
 
@@ -1177,22 +1134,20 @@ async def dashboard_page(request: Request, db: Session = Depends(get_db), user: 
         # ── بوابة الموكلين (Client Portal) ──
 
         if user.role == 'موكل':
-            from core.security import client_records_for_user
-            client_records = client_records_for_user(db, user)
+
+            client_records = db.query(LawClients).filter(
+
+                (LawClients.phone == user.phone) | (LawClients.email == user.email)
+
+            ).all()
 
             case_ids = [c.case_id for c in client_records if c.case_id]
 
-            my_cases = db.query(LawCases).filter(
-                LawCases.id.in_(case_ids),
-                LawCases.office_id == user.office_id,
-                LawCases.is_deleted == 0,
-            ).all() if case_ids else []
+            my_cases = db.query(LawCases).filter(LawCases.id.in_(case_ids), LawCases.is_deleted == 0).all() if case_ids else []
 
             my_hearings = db.query(LawHearings).filter(
 
                 LawHearings.case_id.in_(case_ids),
-                LawHearings.office_id == user.office_id,
-                LawHearings.is_deleted == 0,
 
                 LawHearings.show_in_client_portal == 1,
 
@@ -1210,7 +1165,7 @@ async def dashboard_page(request: Request, db: Session = Depends(get_db), user: 
 
         # ── لوحة تحكم المحامين والمدراء ──
 
-        office_id = user.office_id or 1
+        office_id = user.office_id
 
         my_tasks = db.query(LawTasks).filter(
 
@@ -1256,10 +1211,7 @@ async def get_case_numbers(db: Session = Depends(get_db), user: AccessProfiles =
 
         return _JSONResponse([])
 
-    if not check_user_permission(user, "cases", "view"):
-        raise HTTPException(status_code=403, detail="لا تملك صلاحية عرض القضايا")
-
-    office_id = user.office_id or 1
+    office_id = user.office_id
 
     query = db.query(LawCases.case_number).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0)
 
@@ -1281,11 +1233,11 @@ async def clients_page(request: Request, db: Session = Depends(get_db), user: Ac
 
     if not check_user_permission(user, 'clients', 'view'):
 
-        return HTMLResponse(content="<script>alert('غير مصرح لك بدخول قسم الموكلين'); window.location.href='/dashboard';</script>", status_code=403)
+        raise HTTPException(status_code=403, detail="غير مصرح لك بدخول قسم الموكلين")
 
     try:
 
-        office_id = user.office_id or 1
+        office_id = user.office_id
 
         clients = db.query(LawClients).filter(LawClients.office_id == office_id).order_by(LawClients.created_at.desc()).all()
 
@@ -1337,7 +1289,7 @@ async def add_client(
 
     if not check_user_permission(user, 'clients', 'add'):
 
-        return HTMLResponse(content="<script>alert('غير مصرح لك بإضافة موكل'); window.history.back();</script>", status_code=403)
+        raise HTTPException(status_code=403, detail="غير مصرح لك بإضافة موكل")
 
     if len(password) < 12 or not name.strip() or len(name) > 200:
         return HTMLResponse(content="بيانات الموكل غير صالحة؛ كلمة المرور يجب أن تكون 12 حرفاً على الأقل.", status_code=400)
@@ -1446,7 +1398,7 @@ async def edit_client(
 
     if not check_user_permission(user, 'clients', 'edit'):
 
-        return HTMLResponse(content="<script>alert('غير مصرح لك بتعديل بيانات موكل'); window.history.back();</script>", status_code=403)
+        raise HTTPException(status_code=403, detail="غير مصرح لك بتعديل بيانات موكل")
 
     if password and len(password) < 12:
         return HTMLResponse(content="كلمة المرور يجب أن تكون 12 حرفاً على الأقل.", status_code=400)
@@ -1500,11 +1452,11 @@ async def cases_page(request: Request, db: Session = Depends(get_db), user: Acce
 
     if not check_user_permission(user, 'cases', 'view'):
 
-        return HTMLResponse(content="<script>alert('غير مصرح لك بدخول قسم القضايا'); window.location.href='/dashboard';</script>", status_code=403)
+        raise HTTPException(status_code=403, detail="غير مصرح لك بدخول قسم القضايا")
 
     try:
 
-        office_id = user.office_id or 1
+        office_id = user.office_id
 
         query = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0)
 
@@ -1568,30 +1520,21 @@ async def add_case(
 
     if not check_user_permission(user, 'cases', 'add'):
 
-        return HTMLResponse(content="<script>alert('غير مصرح لك بإضافة قضية'); window.history.back();</script>", status_code=403)
+        raise HTTPException(status_code=403, detail="غير مصرح لك بإضافة قضية")
 
-    office_id = user.office_id
-    if not office_id:
-        raise HTTPException(status_code=403, detail="الحساب غير مرتبط بمكتب")
+    office = db.query(LawOffices).first()
 
-    client = db.query(LawClients).filter(
-        LawClients.id == client_id,
-        LawClients.office_id == office_id,
-        LawClients.is_deleted == 0,
-    ).first()
-    if not client:
-        raise HTTPException(status_code=400, detail="الموكل غير موجود في هذا المكتب")
-    if not title.strip() or len(title) > 300 or not case_number.strip() or len(case_number) > 100:
-        raise HTTPException(status_code=400, detail="بيانات القضية غير صالحة")
-    if lead_lawyer_id:
-        assigned_lawyer = db.query(AccessProfiles).filter(
-            AccessProfiles.id == lead_lawyer_id,
-            AccessProfiles.office_id == office_id,
-            AccessProfiles.is_active == 1,
-            AccessProfiles.role.in_(["محامي", "محامٍ", "مدير المكتب", "صاحب المكتب"]),
-        ).first()
-        if not assigned_lawyer:
-            raise HTTPException(status_code=400, detail="المحامي المحدد غير تابع لهذا المكتب")
+    if not office:
+
+        office = LawOffices(name="المكتب الرئيسي", status_key="active")
+
+        db.add(office)
+
+        db.commit()
+
+        db.refresh(office)
+
+    office_id = user.office_id if user.office_id else office.id
 
     new_case = LawCases(
 
@@ -1610,10 +1553,20 @@ async def add_case(
     )
 
     db.add(new_case)
-    db.flush()
-    client.case_id = new_case.id
-    client.case_number = new_case.case_number
+
     db.commit()
+
+    db.refresh(new_case)
+
+    client = db.query(LawClients).filter(LawClients.id == client_id, LawClients.office_id == office_id).first()
+
+    if client:
+
+        client.case_id = new_case.id
+
+        client.case_number = new_case.case_number
+
+        db.commit()
 
     return RedirectResponse(url="/cases", status_code=303)
 
@@ -1641,10 +1594,7 @@ async def export_case_report(
 
         return RedirectResponse(url="/", status_code=303)
 
-    if not check_user_permission(user, "reports", "view") or not check_user_permission(user, "cases", "view"):
-        raise HTTPException(status_code=403, detail="لا تملك صلاحية عرض التقرير")
-
-    office_id = user.office_id or 1
+    office_id = user.office_id
 
     query = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0)
 
@@ -1742,14 +1692,11 @@ async def case_details_page(case_id: int, request: Request, db: Session = Depend
 
         return RedirectResponse(url="/", status_code=303)
 
-    if not check_user_permission(user, "cases", "view"):
-        raise HTTPException(status_code=403, detail="لا تملك صلاحية عرض القضايا")
-
     try:
 
-        office_id = user.office_id or 1
+        office_id = user.office_id
 
-        case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id, LawCases.is_deleted == 0).first()
+        case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
 
         if not case:
 
@@ -1757,9 +1704,9 @@ async def case_details_page(case_id: int, request: Request, db: Session = Depend
 
         # منع المحامي من دخول قضية غير تابعة له
 
-        if not user_can_access_case(db, user, case_id):
+        if user.role in ['محامي', 'محامٍ'] and case.lead_lawyer_id != user.id:
 
-            return HTMLResponse(content="<script>alert('غير مصرح لك بالدخول لهذه القضية'); window.location.href='/cases';</script>", status_code=403)
+            raise HTTPException(status_code=403, detail="غير مصرح لك بالدخول لهذه القضية")
 
         hearings = db.query(LawHearings).filter(LawHearings.case_id == case_id).order_by(LawHearings.hearing_at.desc()).all()
 
@@ -1820,54 +1767,39 @@ async def edit_case(
 
     if not check_user_permission(user, 'cases', 'edit'):
 
-        return HTMLResponse(content="<script>alert('غير مصرح لك بتعديل قضية'); window.history.back();</script>", status_code=403)
+        raise HTTPException(status_code=403, detail="غير مصرح لك بتعديل قضية")
 
     office_id = user.office_id
-    if not office_id:
-        raise HTTPException(status_code=403, detail="الحساب غير مرتبط بمكتب")
 
     case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
-    if not case or case.is_deleted:
-        raise HTTPException(status_code=404, detail="القضية غير موجودة")
 
     if user.role in ['محامي', 'محامٍ'] and case and case.lead_lawyer_id != user.id:
 
-        return HTMLResponse(content="<script>alert('غير مصرح لك بتعديل هذه القضية'); window.history.back();</script>", status_code=403)
+        raise HTTPException(status_code=403, detail="غير مصرح لك بتعديل هذه القضية")
 
-    if not title.strip() or len(title) > 300 or not case_number.strip() or len(case_number) > 100:
-        raise HTTPException(status_code=400, detail="بيانات القضية غير صالحة")
-    client = db.query(LawClients).filter(
-        LawClients.id == client_id,
-        LawClients.office_id == office_id,
-        LawClients.is_deleted == 0,
-    ).first()
-    if not client:
-        raise HTTPException(status_code=400, detail="الموكل المحدد غير تابع لهذا المكتب")
-    if lead_lawyer_id:
-        assigned_lawyer = db.query(AccessProfiles).filter(
-            AccessProfiles.id == lead_lawyer_id,
-            AccessProfiles.office_id == office_id,
-            AccessProfiles.is_active == 1,
-            AccessProfiles.role.in_(["محامي", "محامٍ", "مدير المكتب", "صاحب المكتب"]),
-        ).first()
-        if not assigned_lawyer:
-            raise HTTPException(status_code=400, detail="المحامي المحدد غير تابع لهذا المكتب")
+    if case:
 
-    old_clients = db.query(LawClients).filter(
-        LawClients.case_id == case.id,
-        LawClients.office_id == office_id,
-        LawClients.id != client.id,
-    ).all()
-    for old_client in old_clients:
-        old_client.case_id = None
-        old_client.case_number = None
-    case.title = title.strip()
-    case.case_number = case_number.strip()
-    case.lead_lawyer_id = lead_lawyer_id
-    case.status_key = status_key
-    client.case_id = case.id
-    client.case_number = case.case_number
-    db.commit()
+        case.title = title
+
+        case.case_number = case_number
+
+        case.lead_lawyer_id = lead_lawyer_id
+
+        case.status_key = status_key
+
+        db.commit()
+
+        # Check if client was changed/updated
+
+        client = db.query(LawClients).filter(LawClients.id == client_id, LawClients.office_id == office_id).first()
+
+        if client and client.case_id != case.id:
+
+            client.case_id = case.id
+
+            client.case_number = case.case_number
+
+            db.commit()
 
     return RedirectResponse(url=f"/cases/{case_id}", status_code=303)
 
@@ -1881,11 +1813,11 @@ async def hearings_page(request: Request, db: Session = Depends(get_db), user: A
 
     if not check_user_permission(user, 'hearings', 'view'):
 
-        return HTMLResponse(content="<script>alert('غير مصرح لك بدخول قسم الجلسات'); window.location.href='/dashboard';</script>", status_code=403)
+        raise HTTPException(status_code=403, detail="غير مصرح لك بدخول قسم الجلسات")
 
     try:
 
-        office_id = user.office_id or 1
+        office_id = user.office_id
 
         cases_query = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0)
 
@@ -1959,27 +1891,37 @@ async def add_hearing(
 
     if not check_user_permission(user, 'hearings', 'add'):
 
-        return HTMLResponse(content="<script>alert('غير مصرح لك بإضافة جلسة'); window.history.back();</script>", status_code=403)
+        raise HTTPException(status_code=403, detail="غير مصرح لك بإضافة جلسة")
+
+    # Get user office or default to first
 
     office_id = user.office_id
 
     if not office_id:
-        raise HTTPException(status_code=403, detail="الحساب غير مرتبط بمكتب")
+
+        first_office = db.query(LawOffices).first()
+
+        office_id = first_office.id if first_office else 1
 
     # Clean datetime format from HTML5 datetime-local (e.g. 2023-05-10T14:30)
 
     formatted_hearing_at = hearing_at.replace('T', ' ') if hearing_at else None
 
-    case = db.query(LawCases).filter(
-        LawCases.id == case_id, LawCases.office_id == office_id,
-        LawCases.is_deleted == 0,
-    ).first()
-    if not case or not user_can_access_case(db, user, case_id):
-        return HTMLResponse(content="<script>alert('غير مصرح'); window.history.back();</script>", status_code=403)
+    if case_id:
+
+        case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
+
+        if not case: raise HTTPException(status_code=403, detail="غير مصرح")
 
     attachment_path = None
-    if attachment and attachment.filename:
-        attachment_path = await _save_hearing_attachment(attachment)
+    if attachment and attachment.filename and "".join(c for c in attachment.filename if c.isalnum() or c in ' ._-'):
+        import time, shutil
+        upload_dir = "static/uploads/hearings"
+        os.makedirs(upload_dir, exist_ok=True)
+        safe_filename = f"{int(time.time())}_" + "".join(c for c in attachment.filename if c.isalnum() or c in ' ._-')
+        attachment_path = f"{upload_dir}/{safe_filename}"
+        with open(attachment_path, "wb") as buffer:
+            shutil.copyfileobj(attachment.file, buffer)
 
     new_hearing = LawHearings(
 
@@ -2062,9 +2004,9 @@ async def finance_page(
 
     if not check_user_permission(user, 'finance', 'view'):
 
-        return HTMLResponse(content="<script>alert('غير مصرح لك بدخول قسم المالية'); window.location.href='/dashboard';</script>", status_code=403)
+        raise HTTPException(status_code=403, detail="غير مصرح لك بدخول قسم المالية")
     try:
-        office_id = user.office_id or 1
+        office_id = user.office_id
         transactions = db.query(LawTransactions).filter(LawTransactions.office_id == office_id).order_by(LawTransactions.transaction_at.desc()).all()
         expenses = db.query(LawExpenses).filter(LawExpenses.office_id == office_id).order_by(LawExpenses.expense_at.desc()).all()
         cases = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0).all()
@@ -2108,13 +2050,13 @@ async def export_invoice_pdf(
 ):
     if not user:
         return RedirectResponse(url="/", status_code=303)
-    office_id = user.office_id or 1
+    office_id = user.office_id
     trans = db.query(LawTransactions).filter(
         LawTransactions.id == transaction_id,
         LawTransactions.office_id == office_id
     ).first()
     if not trans:
-        return HTMLResponse(content="<script>alert('الفاتورة غير موجودة'); window.history.back();</script>", status_code=404)
+        raise HTTPException(status_code=404, detail="الفاتورة غير موجودة")
 
     case_title = "عام"
     client_name = "عميل عام"
@@ -2123,14 +2065,11 @@ async def export_invoice_pdf(
         case = db.query(LawCases).filter(LawCases.id == trans.case_id).first()
         if case:
             case_title = case.title
-            client = db.query(LawClients).filter(
-                LawClients.case_id == case.id,
-                LawClients.office_id == office_id,
-                LawClients.is_deleted == 0,
-            ).first()
-            if client:
-                client_name = client.name
-                client_phone = client.phone or "-"
+            if case.client_id:
+                client = db.query(LawClients).filter(LawClients.id == case.client_id).first()
+                if client:
+                    client_name = client.full_name
+                    client_phone = client.phone_number or "-"
 
     temp_dir = tempfile.gettempdir()
     pdf_path = os.path.join(temp_dir, f"invoice_{transaction_id}.pdf")
@@ -2285,17 +2224,13 @@ async def add_transaction(
 
     if not check_user_permission(user, 'finance', 'add'):
 
-        return HTMLResponse(content="<script>alert('غير مصرح لك بإضافة إيرادات'); window.history.back();</script>", status_code=403)
+        raise HTTPException(status_code=403, detail="غير مصرح لك بإضافة إيرادات")
 
-    office_id = user.office_id or 1
+    office_id = user.office_id
 
     if case_id:
-        case = db.query(LawCases).filter(
-            LawCases.id == case_id, LawCases.office_id == office_id,
-            LawCases.is_deleted == 0,
-        ).first()
-        if not case or not user_can_access_case(db, user, case_id):
-            return HTMLResponse(content="<script>alert('غير مصرح'); window.history.back();</script>", status_code=403)
+        case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
+        if not case: raise HTTPException(status_code=403, detail="غير مصرح")
 
     # Calculate stored exchange rate relative to SAR base
     stored_rate = 1.0
@@ -2339,13 +2274,13 @@ async def add_expense(
 
     if not check_user_permission(user, 'finance', 'add'):
 
-        return HTMLResponse(content="<script>alert('غير مصرح لك بإضافة مصروفات'); window.history.back();</script>", status_code=403)
+        raise HTTPException(status_code=403, detail="غير مصرح لك بإضافة مصروفات")
 
-    office_id = user.office_id or 1
+    office_id = user.office_id
 
     if case_id:
         case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
-        if not case: return HTMLResponse(content="<script>alert('غير مصرح'); window.history.back();</script>", status_code=403)
+        if not case: raise HTTPException(status_code=403, detail="غير مصرح")
 
     # Calculate stored exchange rate relative to SAR base
     stored_rate = 1.0
@@ -2380,7 +2315,7 @@ async def settings_page(request: Request, db: Session = Depends(get_db), user: A
 
     try:
 
-        office_id = user.office_id or 1
+        office_id = user.office_id
 
         # فقط مستخدمو نفس المكتب
 
@@ -2426,7 +2361,7 @@ async def update_office(
 
     if user.role not in ['مدير', 'مدير المكتب', 'صاحب المكتب']:
 
-        return HTMLResponse(content="<script>alert('غير مصرح لك بتعديل بيانات المكتب'); window.history.back();</script>", status_code=403)
+        raise HTTPException(status_code=403, detail="غير مصرح لك بتعديل بيانات المكتب")
 
     office_id_to_update = office_id or user.office_id
 
@@ -2436,7 +2371,7 @@ async def update_office(
 
         # نتحقق أن المستخدم ينتمي لهذا المكتب قبل التعديل (أو أنه سوبر آدمن)
 
-        if office and (user.office_id == office.id or getattr(user, "is_superadmin", 0) == 1):
+        if office and (user.office_id == office.id or user.id == 1):
 
             office.name = name
 
@@ -2482,7 +2417,7 @@ async def add_user(
 
     if user.role not in ['صاحب المكتب', 'صاحب مكتب', 'مدير المكتب', 'مدير مكتب']:
 
-        return HTMLResponse(content="<script>alert('ليس لديك صلاحية لإضافة مستخدمين'); window.history.back();</script>", status_code=403)
+        raise HTTPException(status_code=403, detail="ليس لديك صلاحية لإضافة مستخدمين")
 
     if len(password) < 12 or not user.office_id:
         return HTMLResponse(content="كلمة المرور يجب أن تكون 12 حرفاً على الأقل والحساب مرتبطاً بمكتب.", status_code=400)
@@ -2492,7 +2427,7 @@ async def add_user(
 
     if role not in ALLOWED_OFFICE_ROLES:
 
-        return HTMLResponse(content="<script>alert('دور العضو المختار غير صالح'); window.history.back();</script>", status_code=400)
+        raise HTTPException(status_code=400, detail="دور العضو المختار غير صالح")
 
     new_user = AccessProfiles(
 
@@ -2544,7 +2479,7 @@ async def edit_client(
 
     if not user: return RedirectResponse(url="/", status_code=303)
 
-    office_id = user.office_id or 1
+    office_id = user.office_id
 
     client = db.query(LawClients).filter(LawClients.id == client_id, LawClients.office_id == office_id).first()
 
@@ -2598,16 +2533,13 @@ async def edit_hearing(
 
     if not check_user_permission(user, 'hearings', 'edit'):
 
-        return HTMLResponse(content="<script>alert('غير مصرح لك بتعديل جلسة'); window.history.back();</script>", status_code=403)
+        raise HTTPException(status_code=403, detail="غير مصرح لك بتعديل جلسة")
 
-    office_id = user.office_id or 1
+    office_id = user.office_id
 
     hearing = db.query(LawHearings).filter(LawHearings.id == hearing_id, LawHearings.office_id == office_id).first()
 
     if hearing:
-
-        if not user_can_access_case(db, user, hearing.case_id):
-            raise HTTPException(status_code=403, detail="غير مصرح بتعديل جلسات هذه القضية")
 
         hearing.title = title
 
@@ -2623,8 +2555,15 @@ async def edit_hearing(
 
         hearing.show_in_client_portal = 1 if str(show_in_client_portal) in ("1", "true", "True") else 0
 
-        if attachment and attachment.filename:
-            hearing.attachment_path = await _save_hearing_attachment(attachment)
+        if attachment and attachment.filename and "".join(c for c in attachment.filename if c.isalnum() or c in ' ._-'):
+            import time, shutil
+            upload_dir = "static/uploads/hearings"
+            os.makedirs(upload_dir, exist_ok=True)
+            safe_filename = f"{int(time.time())}_" + "".join(c for c in attachment.filename if c.isalnum() or c in ' ._-')
+            attachment_path = f"{upload_dir}/{safe_filename}"
+            with open(attachment_path, "wb") as buffer:
+                shutil.copyfileobj(attachment.file, buffer)
+            hearing.attachment_path = attachment_path
 
         db.commit()
 
@@ -2633,49 +2572,6 @@ async def edit_hearing(
         return RedirectResponse(url=f"/cases/{case_id}", status_code=303)
 
     return RedirectResponse(url="/hearings", status_code=303)
-
-@app.get("/hearings/{hearing_id}/attachment")
-async def download_hearing_attachment(
-    hearing_id: int,
-    db: Session = Depends(get_db),
-    user: AccessProfiles = Depends(get_current_user),
-):
-    if not user:
-        raise HTTPException(status_code=401, detail="غير مصرح")
-    if not user.office_id or not check_user_permission(user, "hearings", "view"):
-        raise HTTPException(status_code=403, detail="غير مصرح بالوصول للمرفق")
-
-    hearing = db.query(LawHearings).filter(
-        LawHearings.id == hearing_id,
-        LawHearings.office_id == user.office_id,
-        LawHearings.is_deleted == 0,
-    ).first()
-    if not hearing or not hearing.attachment_path:
-        raise HTTPException(status_code=404, detail="المرفق غير موجود")
-
-    case = db.query(LawCases).filter(
-        LawCases.id == hearing.case_id,
-        LawCases.office_id == user.office_id,
-        LawCases.is_deleted == 0,
-    ).first()
-    if not case:
-        raise HTTPException(status_code=404, detail="القضية غير موجودة")
-    if user.role in ["محامي", "محامٍ"] and not user.can_view_all_cases and case.lead_lawyer_id != user.id:
-        raise HTTPException(status_code=403, detail="غير مصرح لك بمرفق هذه القضية")
-
-    from pathlib import Path
-    file_name = Path(hearing.attachment_path).name
-    allowed_dirs = [Path("private_uploads/hearings"), Path("static/uploads/hearings")]
-    for directory in allowed_dirs:
-        candidate = directory / file_name
-        if candidate.is_file():
-            return FileResponse(
-                str(candidate),
-                filename=file_name,
-                media_type="application/octet-stream",
-                headers={"X-Content-Type-Options": "nosniff"},
-            )
-    raise HTTPException(status_code=404, detail="ملف المرفق غير موجود على الخادم")
 
 # الأدوار المسموح لها بإدارة المستخدمين
 
@@ -2723,7 +2619,7 @@ async def edit_user(
 
         return RedirectResponse(url="/settings", status_code=303)
 
-    office_id = user.office_id or 1
+    office_id = user.office_id
 
     # 🔴 IDOR protection — الهدف يجب أن يكون في نفس المكتب
 
@@ -2759,7 +2655,7 @@ async def edit_user(
 
         if role not in ALLOWED_OFFICE_ROLES:
 
-            return HTMLResponse(content="<script>alert('دور العضو المختار غير صالح'); window.history.back();</script>", status_code=400)
+            raise HTTPException(status_code=400, detail="دور العضو المختار غير صالح")
 
         target_user.name = name
 
@@ -3053,7 +2949,7 @@ async def add_document(
 
             shutil.copyfileobj(file.file, buffer)
 
-    office_id = user.office_id or 1
+    office_id = user.office_id
 
     new_doc = LawDocuments(
 
@@ -3089,7 +2985,7 @@ async def tasks_page(request: Request, db: Session = Depends(get_db), user: Acce
 
     try:
 
-        office_id = user.office_id or 1
+        office_id = user.office_id
 
         # Manager sees all tasks in office, lawyer sees only their own
 
@@ -3151,13 +3047,13 @@ async def add_task(
 
     if not user: return RedirectResponse(url="/", status_code=303)
 
-    office_id = user.office_id or 1
+    office_id = user.office_id
 
     if case_id:
 
         case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
 
-        if not case: return HTMLResponse(content="<script>alert('غير مصرح'); window.history.back();</script>", status_code=403)
+        if not case: raise HTTPException(status_code=403, detail="غير مصرح")
 
     task = LawTasks(
 
@@ -3215,7 +3111,7 @@ async def edit_task(
 
     if not user: return RedirectResponse(url="/", status_code=303)
 
-    office_id = user.office_id or 1
+    office_id = user.office_id
 
     task = db.query(LawTasks).filter(LawTasks.id == task_id, LawTasks.office_id == office_id).first()
 
@@ -3225,7 +3121,7 @@ async def edit_task(
 
             case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
 
-            if not case: return HTMLResponse(content="<script>alert('غير مصرح'); window.history.back();</script>", status_code=403)
+            if not case: raise HTTPException(status_code=403, detail="غير مصرح")
 
         task.title = title
 
@@ -3263,7 +3159,7 @@ async def update_task_status(
 
     if not user: return RedirectResponse(url="/", status_code=303)
 
-    office_id = user.office_id or 1
+    office_id = user.office_id
 
     task = db.query(LawTasks).filter(LawTasks.id == task_id, LawTasks.office_id == office_id).first()
 
@@ -3289,7 +3185,7 @@ async def activity_page(request: Request, db: Session = Depends(get_db), user: A
 
     try:
 
-        office_id = user.office_id or 1
+        office_id = user.office_id
 
         # Recent task activity - all tasks with their assignees
 
@@ -3428,7 +3324,7 @@ async def activity_page(request: Request, db: Session = Depends(get_db), user: A
 
 # ============ ROUTERS INTEGRATION ============
 
-from routers import parties, client_portal
+from routers import parties
 
 from routers import pleadings
 
@@ -3477,7 +3373,6 @@ from routers import superadmin
 from routers import mobile_api, mobile_sync, mobile_biometrics
 
 app.include_router(parties.router)
-app.include_router(client_portal.router)
 
 app.include_router(mobile_api.router)
 
@@ -3588,9 +3483,6 @@ async def view_subscription(request: Request, db: Session = Depends(get_db)):
 @app.post("/api/subscription/checkout")
 async def api_subscription_checkout(request: Request, db: Session = Depends(get_db)):
     from fastapi.responses import JSONResponse as _J
-    from decimal import Decimal, InvalidOperation
-    import base64
-    import re
     user = get_current_user(request, db)
     if not user:
         return _J({"success": False, "error": "غير مصرح"}, status_code=403)
@@ -3600,45 +3492,26 @@ async def api_subscription_checkout(request: Request, db: Session = Depends(get_
 
     data = await request.json()
     plan = data.get("plan")
-    amount_input = data.get("amount")
+    amount = data.get("amount")
     transfer_ref = data.get("transfer_ref")
     receipt_base64 = data.get("receipt_base64", "")
 
     if plan not in ['monthly', 'yearly']:
         return _J({"success": False, "error": "خطة غير صالحة"}, status_code=400)
 
-    expected_amount = {"monthly": Decimal("49.99"), "yearly": Decimal("499.99")}[plan]
-    try:
-        amount = Decimal(str(amount_input))
-    except (InvalidOperation, TypeError, ValueError):
-        return _J({"success": False, "error": "المبلغ غير صالح"}, status_code=400)
-    if not amount.is_finite() or amount != expected_amount:
-        return _J({"success": False, "error": "المبلغ لا يطابق سعر الخطة المحددة"}, status_code=400)
-    if not isinstance(transfer_ref, str):
-        return _J({"success": False, "error": "رقم مرجع التحويل غير صالح"}, status_code=400)
-    transfer_ref = transfer_ref.strip()
-    if not 4 <= len(transfer_ref) <= 100:
-        return _J({"success": False, "error": "رقم مرجع التحويل غير صالح"}, status_code=400)
-
     office = db.query(LawOffices).filter(LawOffices.id == user.office_id).first()
     if not office:
         return _J({"success": False, "error": "المكتب غير موجود"}, status_code=404)
 
-    if not isinstance(receipt_base64, str) or not receipt_base64:
+    if not receipt_base64 or not transfer_ref:
         return _J({"success": False, "error": "يرجى إرفاق صورة السند ورقم المرجع"}, status_code=400)
+
+    allowed_prefixes = ('data:image/jpeg', 'data:image/jpg', 'data:image/png', 'data:image/gif', 'data:image/webp')
+    if not any(receipt_base64.startswith(p) for p in allowed_prefixes):
+        return _J({"success": False, "error": "يرجى رفع صورة فقط (JPG, PNG, WEBP)"}, status_code=400)
 
     if len(receipt_base64) > 7_000_000:
         return _J({"success": False, "error": "حجم الصورة كبير جداً. يرجى ضغطها قبل الرفع"}, status_code=400)
-    receipt_match = re.fullmatch(r"data:image/(jpeg|jpg|png|gif);base64,([A-Za-z0-9+/]+={0,2})", receipt_base64)
-    if not receipt_match:
-        return _J({"success": False, "error": "يرجى رفع صورة فقط (JPG, PNG, WEBP)"}, status_code=400)
-    from core.security import validate_file_signature
-    try:
-        receipt_bytes = base64.b64decode(receipt_match.group(2), validate=True)
-    except ValueError:
-        return _J({"success": False, "error": "محتوى صورة الإيصال غير صالح"}, status_code=400)
-    if len(receipt_bytes) > 5 * 1024 * 1024 or not validate_file_signature(receipt_bytes, receipt_match.group(1)):
-        return _J({"success": False, "error": "محتوى صورة الإيصال غير صالح"}, status_code=400)
 
     existing_pending = db.query(PaymentRequest).filter(
         PaymentRequest.office_id == office.id,
@@ -3652,7 +3525,7 @@ async def api_subscription_checkout(request: Request, db: Session = Depends(get_
         office_id=office.id,
         user_id=user.id,
         plan=plan,
-        amount=float(amount),
+        amount=amount,
         transfer_ref=transfer_ref,
         receipt_base64=receipt_base64,
         status='pending'
@@ -3661,21 +3534,18 @@ async def api_subscription_checkout(request: Request, db: Session = Depends(get_
     db.commit()
 
     try:
-        billing_email = os.getenv("BILLING_ADMIN_EMAIL", "").strip()
-        if not billing_email:
-            raise RuntimeError("BILLING_ADMIN_EMAIL is not configured")
         from email_service import send_email_async
         import asyncio
         html_content = f"""
         <div dir="rtl" style="font-family: Arial, sans-serif;">
             <h2 style="color: #5c2d91;">طلب دفع جديد 💰</h2>
-            <p><strong>المكتب:</strong> {html.escape(office.name)}</p>
+            <p><strong>المكتب:</strong> {office.name}</p>
             <p><strong>المبلغ:</strong> ${amount} ({plan})</p>
-            <p><strong>المرجع:</strong> {html.escape(transfer_ref)}</p>
+            <p><strong>المرجع:</strong> {transfer_ref}</p>
             <p>يرجى الدخول إلى لوحة تحكم SuperAdmin لمراجعة الإيصال وتفعيل الحساب.</p>
         </div>
         """
-        asyncio.create_task(send_email_async(billing_email, f"طلب دفع جديد - {office.name}", html_content))
+        asyncio.create_task(send_email_async("aboodalalimi@icloud.com", f"💰 طلب دفع جديد - {office.name}", html_content))
     except Exception as e:
         pass
 

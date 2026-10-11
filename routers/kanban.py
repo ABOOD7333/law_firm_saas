@@ -30,7 +30,7 @@ def _visible_case_ids_query(db: Session, user: AccessProfiles):
 @router.get("", response_class=HTMLResponse)
 async def kanban_board(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_authorized_user)):
     if not check_user_permission(user, 'tasks', 'view'):
-        return HTMLResponse("<script>alert('غير مصرح لك'); window.location.href='/dashboard';</script>")
+        raise HTTPException(status_code=403, detail="غير مصرح لك")
     
     # We will fetch data via API in the template
     return templates.TemplateResponse("kanban/board.html", {

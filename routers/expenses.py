@@ -15,10 +15,10 @@ router = APIRouter()
 async def expenses_page(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     if not user: return RedirectResponse(url="/", status_code=303)
     if not check_user_permission(user, 'expenses', 'view'):
-        return HTMLResponse(content="<script>alert('غير مصرح لك بدخول قسم المصروفات'); window.location.href='/dashboard';</script>", status_code=403)
+        raise HTTPException(status_code=403, detail="غير مصرح لك بدخول قسم المصروفات")
     try:
         import json
-        office_id = user.office_id or 1
+        office_id = user.office_id
         cases = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0).all()
         records = db.query(LawExpenses).filter(LawExpenses.office_id == office_id).all()
         records_json = json.dumps([{
@@ -39,7 +39,7 @@ async def expenses_save(request: Request, db: Session = Depends(get_db), user: A
         data = await request.json()
         rec_id = data.get("id")
         case_id = data.get("case_id")
-        office_id = user.office_id or 1
+        office_id = user.office_id
         
         if rec_id:
             if not check_user_permission(user, 'expenses', 'edit'):
@@ -87,7 +87,7 @@ async def expenses_delete(rec_id: int, db: Session = Depends(get_db), user: Acce
     if not user: return JSONResponse({"ok": False, "message": "غير مصرح"}, status_code=401)
     if not check_user_permission(user, 'expenses', 'delete'):
         return JSONResponse({"ok": False, "message": "غير مصرح لك بحذف المصاريف"})
-    office_id = user.office_id or 1
+    office_id = user.office_id
     r = db.query(LawExpenses).filter(LawExpenses.id == rec_id, LawExpenses.office_id == office_id).first()
     if r:
         # Check lawyer case visibility permission

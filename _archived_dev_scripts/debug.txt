@@ -1,0 +1,28 @@
+# ——— Logging ——————————————————————————————————————————————————————
+# ChromaDB sqlite3 version override for production environment (Docker / Railway)
+try:
+    __import__('pysqlite3')
+    import sys
+    sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+except ImportError:
+    pass
+
+
+try:
+    from create_superadmin import create_superadmin
+    create_superadmin()
+except Exception as e:
+    print(f"Failed to auto-create superadmin: {e}")
+
+# Ensure static and templates directories exist for the server
+os.makedirs("static/css", exist_ok=True)
+os.makedirs("static/js", exist_ok=True)
+os.makedirs("static/img", exist_ok=True)
+os.makedirs("static/uploads/documents", exist_ok=True)
+os.makedirs("templates", exist_ok=True)
+
+from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi.responses import JSONResponse
+import uuid
+
+cl

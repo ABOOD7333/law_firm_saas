@@ -23,7 +23,7 @@ async def team_page(request: Request, db: Session = Depends(get_db), user: Acces
         return RedirectResponse(url="/dashboard", status_code=303)
     try:
         import json
-        office_id = user.office_id or 1
+        office_id = user.office_id
         office = db.query(LawOffices).filter(LawOffices.id == office_id).first()
         owner = None
         if office and office.owner_user_id:
@@ -57,7 +57,7 @@ async def team_save(request: Request, db: Session = Depends(get_db), user: Acces
     try:
         import hashlib, json as _json
         data = await request.json()
-        office_id = user.office_id or 1
+        office_id = user.office_id
         name     = (data.get("name") or "").strip()
         username = (data.get("username") or "").strip()
         phone    = (data.get("phone") or "").strip()
@@ -146,7 +146,7 @@ async def team_toggle(member_id: int, db: Session = Depends(get_db), user: Acces
     if user.role not in _ALLOWED_TEAM_ROLES:
         app_logger.warning(f"SECURITY | team_toggle blocked | actor={user.id} target={member_id}")
         return JSONResponse({"ok": False, "message": "ليس لديك صلاحية"}, status_code=403)
-    office_id = user.office_id or 1
+    office_id = user.office_id
     m = db.query(AccessProfiles).filter(
         AccessProfiles.id == member_id,
         AccessProfiles.office_id == office_id
@@ -169,7 +169,7 @@ async def team_delete(member_id: int, db: Session = Depends(get_db), user: Acces
     if user.role not in _ALLOWED_TEAM_ROLES:
         app_logger.warning(f"SECURITY | team_delete blocked | actor={user.id} target={member_id}")
         return JSONResponse({"ok": False, "message": "ليس لديك صلاحية"}, status_code=403)
-    office_id = user.office_id or 1
+    office_id = user.office_id
     m = db.query(AccessProfiles).filter(
         AccessProfiles.id == member_id,
         AccessProfiles.office_id == office_id

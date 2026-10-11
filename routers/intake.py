@@ -42,7 +42,7 @@ async def intake_dashboard(
     user: AccessProfiles = Depends(get_authorized_user)
 ):
     if not check_user_permission(user, 'cases', 'view'):
-        return HTMLResponse("<script>alert('غير مصرح لك'); window.location.href='/dashboard';</script>")
+        raise HTTPException(status_code=403, detail="غير مصرح لك")
     
     # 1. جلب نماذج الاستقطاب النشطة للمكتب
     forms = db.query(ClientIntakeForms).filter(

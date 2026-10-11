@@ -15,10 +15,10 @@ router = APIRouter()
 async def timesheet_page(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     if not user: return RedirectResponse(url="/", status_code=303)
     if not check_user_permission(user, 'timesheet', 'view'):
-        return HTMLResponse(content="<script>alert('غير مصرح لك بدخول قسم سجل الساعات'); window.location.href='/dashboard';</script>", status_code=403)
+        raise HTTPException(status_code=403, detail="غير مصرح لك بدخول قسم سجل الساعات")
     try:
         import json
-        office_id = user.office_id or 1
+        office_id = user.office_id
         cases = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0).all()
         users = db.query(AccessProfiles).filter(AccessProfiles.office_id == office_id, AccessProfiles.is_active == 1).all()
         records = db.query(LawTimesheets).filter(LawTimesheets.office_id == office_id).all()
@@ -41,7 +41,7 @@ async def timesheets_save(request: Request, db: Session = Depends(get_db), user:
         rec_id = data.get("id")
         case_id = data.get("case_id")
         target_user_id = data.get("user_id") or user.id
-        office_id = user.office_id or 1
+        office_id = user.office_id
         
         if rec_id:
             if not check_user_permission(user, 'timesheet', 'edit'):
@@ -93,7 +93,7 @@ async def timesheets_delete(rec_id: int, db: Session = Depends(get_db), user: Ac
     if not user: return JSONResponse({"ok": False, "message": "غير مصرح"}, status_code=401)
     if not check_user_permission(user, 'timesheet', 'delete'):
         return JSONResponse({"ok": False, "message": "غير مصرح لك بحذف الساعات"})
-    office_id = user.office_id or 1
+    office_id = user.office_id
     r = db.query(LawTimesheets).filter(LawTimesheets.id == rec_id, LawTimesheets.office_id == office_id).first()
     if r:
         # Check lawyer case visibility permission

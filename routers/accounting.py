@@ -23,7 +23,7 @@ def get_admin_user(user: AccessProfiles = Depends(get_current_user)):
 @router.get("/invoices", response_class=HTMLResponse)
 async def list_invoices(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_admin_user)):
     if not check_user_permission(user, 'accounting', 'view'):
-        return HTMLResponse("<script>alert('غير مصرح لك'); window.location.href='/dashboard';</script>")
+        raise HTTPException(status_code=403, detail="غير مصرح لك")
     
     invoices = db.query(Invoices).filter(Invoices.office_id == user.office_id).order_by(Invoices.id.desc()).all()
     
@@ -56,7 +56,7 @@ async def list_invoices(request: Request, db: Session = Depends(get_db), user: A
 @router.get("/invoices/new", response_class=HTMLResponse)
 async def new_invoice_page(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_admin_user)):
     if not check_user_permission(user, 'accounting', 'add'):
-        return HTMLResponse("<script>alert('غير مصرح لك'); window.location.href='/accounting/invoices';</script>")
+        raise HTTPException(status_code=403, detail="غير مصرح لك")
     
     clients = db.query(LawClients).filter(LawClients.office_id == user.office_id).all()
     cases = db.query(LawCases).filter(LawCases.office_id == user.office_id).all()

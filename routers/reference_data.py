@@ -16,7 +16,7 @@ async def reference_data_page(request: Request, db: Session = Depends(get_db), u
     if not user: return RedirectResponse(url="/", status_code=303)
     try:
         import json
-        office_id = user.office_id or 1
+        office_id = user.office_id
         records = db.query(LawReferenceData).filter(LawReferenceData.office_id == office_id).all()
         records_json = json.dumps([{
             "id": r.id, "ref_type": r.ref_type, "ref_name": r.ref_name, "notes": r.notes or ""
@@ -33,7 +33,7 @@ async def refdata_save(request: Request, db: Session = Depends(get_db), user: Ac
     if not user: return JSONResponse({"ok": False, "message": "غير مصرح"}, status_code=401)
     try:
         data = await request.json()
-        office_id = user.office_id or 1
+        office_id = user.office_id
         rec_id = data.get("id")
         if rec_id:
             r = db.query(LawReferenceData).filter(LawReferenceData.id == int(rec_id), LawReferenceData.office_id == office_id).first()
@@ -60,7 +60,7 @@ async def refdata_save(request: Request, db: Session = Depends(get_db), user: Ac
 async def refdata_delete(rec_id: int, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     from fastapi.responses import JSONResponse
     if not user: return JSONResponse({"ok": False, "message": "غير مصرح"}, status_code=401)
-    r = db.query(LawReferenceData).filter(LawReferenceData.id == rec_id, LawReferenceData.office_id == (user.office_id or 1)).first()
+    r = db.query(LawReferenceData).filter(LawReferenceData.id == rec_id, LawReferenceData.office_id == user.office_id).first()
     if not r: return JSONResponse({"ok": False, "message": "السجل غير موجود أو غير مصرح"})
     db.delete(r); db.commit()
     return JSONResponse({"ok": True, "message": "تم الحذف بنجاح"})
@@ -69,7 +69,7 @@ async def refdata_delete(rec_id: int, db: Session = Depends(get_db), user: Acces
 async def refdata_list(ref_type: str, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     from fastapi.responses import JSONResponse
     if not user: return JSONResponse([], status_code=401)
-    office_id = user.office_id or 1
+    office_id = user.office_id
     records = db.query(LawReferenceData).filter(LawReferenceData.office_id == office_id, LawReferenceData.ref_type == ref_type).all()
     return JSONResponse([r.ref_name for r in records])
 

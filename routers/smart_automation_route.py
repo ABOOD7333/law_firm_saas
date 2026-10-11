@@ -9,13 +9,9 @@ from database.models import (
     AccessProfiles, LawCases, LawParties, LawClients,
     LawHearings, LawTasks, LawTemplates
 )
-from dependencies import get_current_user, templates, check_user_permission
+from dependencies import get_current_user, templates
 
 router = APIRouter()
-
-def _require(user, action="view"):
-    if not user or not user.office_id or not check_user_permission(user, "automation", action):
-        raise HTTPException(status_code=403, detail="غير مصرح")
 
 
 @router.get("/automation", response_class=HTMLResponse)
@@ -25,9 +21,9 @@ async def automation_page(
     user: AccessProfiles = Depends(get_current_user)
 ):
     if not user: return RedirectResponse(url="/", status_code=303)
-    _require(user)
     try:
-        cases = db.query(LawCases).filter(LawCases.office_id == user.office_id, LawCases.is_deleted == 0).all()
+        _office_id = user.office_id
+        cases = db.query(LawCases).filter(LawCases.office_id == _office_id).all()
         return templates.TemplateResponse(request=request, name="automation.html",
             context={"user": user, "cases": cases, "active_page": "automation"})
     except Exception as exc:
@@ -41,20 +37,15 @@ async def conflict_check(
 ):
     from fastapi.responses import JSONResponse
     if not user: return JSONResponse({"error":"unauthorized"}, status_code=401)
-    _require(user)
-    name = (name or "").strip()
-    if len(name) < 2 or len(name) > 120:
-        raise HTTPException(status_code=400, detail="أدخل اسمًا من حرفين إلى 120 حرفًا")
     office_id = user.office_id
     results = []
     # Check in parties
     parties = db.query(LawParties).filter(
         LawParties.office_id == office_id,
-        LawParties.is_deleted == 0,
         LawParties.name.ilike(f"%{name}%")
-    ).limit(100).all()
+    ).all()
     for p in parties:
-        case = db.query(LawCases).filter(LawCases.id == p.case_id, LawCases.office_id == office_id, LawCases.is_deleted == 0).first()
+        case = db.query(LawCases).filter(LawCases.id == p.case_id, LawCases.office_id == office_id).first()
         results.append({
             "type": "طرف في قضية",
             "name": p.name,
@@ -65,11 +56,10 @@ async def conflict_check(
     # Check in clients
     clients = db.query(LawClients).filter(
         LawClients.office_id == office_id,
-        LawClients.is_deleted == 0,
         LawClients.name.ilike(f"%{name}%")
-    ).limit(100).all()
+    ).all()
     for c in clients:
-        case = db.query(LawCases).filter(LawCases.id == c.case_id, LawCases.office_id == office_id, LawCases.is_deleted == 0).first()
+        case = db.query(LawCases).filter(LawCases.id == c.case_id, LawCases.office_id == office_id).first()
         results.append({
             "type": "موكل",
             "name": c.name,
@@ -87,11 +77,8 @@ async def case_timeline(
 ):
     from fastapi.responses import JSONResponse
     if not user: return JSONResponse({"error":"unauthorized"}, status_code=401)
-    _require(user)
     office_id = user.office_id
-    query = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id, LawCases.is_deleted == 0)
-    if user.role == "محامٍ": query = query.filter(LawCases.lead_lawyer_id == user.id)
-    case = query.first()
+    case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
     if not case: return JSONResponse({"error":"not found"}, status_code=404)
     
     events = []
@@ -114,7 +101,6 @@ async def get_template(
 ):
     from fastapi.responses import JSONResponse
     if not user: return JSONResponse({"error": "unauthorized"}, status_code=401)
-    _require(user)
     office_id = user.office_id
     tmpl = db.query(LawTemplates).filter(
         LawTemplates.office_id == office_id, 
@@ -131,16 +117,13 @@ async def update_template(
 ):
     from fastapi.responses import JSONResponse
     if not user: return JSONResponse({"error": "unauthorized"}, status_code=401)
-    _require(user, "edit")
     office_id = user.office_id
     data = await request.json()
     template_key = data.get("template_key")
     template_text = data.get("template_text")
     
-    if not isinstance(template_key, str) or len(template_key) > 100 or not isinstance(template_text, str) or not template_text.strip():
+    if not template_key or not template_text:
         return JSONResponse({"error": "Missing data"}, status_code=400)
-    if len(template_text) > 200_000:
-        return JSONResponse({"error": "Template is too large"}, status_code=413)
         
     tmpl = db.query(LawTemplates).filter(
         LawTemplates.office_id == office_id, 
@@ -167,7 +150,6 @@ async def get_workflows(
     from fastapi.responses import JSONResponse
     from database.models import LawWorkflowRules, LawAuditLog
     if not user: return JSONResponse({"error": "unauthorized"}, status_code=401)
-    _require(user)
     office_id = user.office_id
     
     # Get rules
@@ -209,7 +191,6 @@ async def toggle_workflow(
     from fastapi.responses import JSONResponse
     from database.models import LawWorkflowRules
     if not user: return JSONResponse({"error": "unauthorized"}, status_code=401)
-    _require(user, "edit")
     office_id = user.office_id
     
     data = await request.json()
@@ -239,7 +220,6 @@ async def save_workflow_config(
     from database.models import LawWorkflowRules
     import json
     if not user: return JSONResponse({"error": "unauthorized"}, status_code=401)
-    _require(user, "edit")
     office_id = user.office_id
     
     data = await request.json()
@@ -262,8 +242,6 @@ async def save_workflow_config(
         if isinstance(action_config, dict):
             rule.action_config = json.dumps(action_config, ensure_ascii=False)
         else:
-            if not isinstance(action_config, str) or len(action_config) > 20_000:
-                return JSONResponse({"error": "Config is too large or invalid"}, status_code=400)
             json.loads(action_config) # test parse
             rule.action_config = action_config
     except Exception as e:
