@@ -1491,13 +1491,27 @@ async def cases_page(request: Request, db: Session = Depends(get_db), user: Acce
 
         lawyers = db.query(AccessProfiles).filter(AccessProfiles.office_id == office_id, AccessProfiles.role != "موكل").all()
 
+        # جلب القيم المرجعية المخصصة للمكتب (إن وجدت)
+        from database.models import LawReferenceData
+        custom_ref_data = db.query(LawReferenceData).filter(LawReferenceData.office_id == office_id).all()
+        custom_statuses = [r.ref_name for r in custom_ref_data if r.ref_type in ['case_status', 'حالة_قضية', 'status']]
+        custom_levels = [r.ref_name for r in custom_ref_data if r.ref_type in ['litigation_level', 'درجة_تقاضي', 'litigation']]
+
         return templates.TemplateResponse(
 
             request=request,
 
             name="cases.html",
 
-            context={"user": user, "cases": cases, "clients": clients, "lawyers": lawyers, "active_page": "cases"}
+            context={
+                "user": user, 
+                "cases": cases, 
+                "clients": clients, 
+                "lawyers": lawyers, 
+                "custom_statuses": custom_statuses,
+                "custom_levels": custom_levels,
+                "active_page": "cases"
+            }
 
         )
 
@@ -1521,7 +1535,25 @@ async def add_case(
 
     lead_lawyer_id: int = Form(None),
 
-    status_key: str = Form("draft"),
+    case_type_key: str = Form("civil"),
+
+    status_key: str = Form("new"),
+
+    litigation_level_key: str = Form("first_instance"),
+
+    court_name: str = Form(None),
+
+    court_case_number: str = Form(None),
+
+    judgment_number: str = Form(None),
+
+    judgment_date: str = Form(None),
+
+    appeal_status: str = Form(None),
+
+    stage_start_date: str = Form(None),
+
+    outcome_key: str = Form("not_determined"),
 
     db: Session = Depends(get_db),
 
@@ -1557,7 +1589,25 @@ async def add_case(
 
         case_number=case_number,
 
+        case_type_key=case_type_key,
+
         status_key=status_key,
+
+        litigation_level_key=litigation_level_key,
+
+        court_name=court_name,
+
+        court_case_number=court_case_number,
+
+        judgment_number=judgment_number,
+
+        judgment_date=judgment_date,
+
+        appeal_status=appeal_status,
+
+        stage_start_date=stage_start_date,
+
+        outcome_key=outcome_key,
 
         lead_lawyer_id=lead_lawyer_id,
 
@@ -1768,7 +1818,25 @@ async def edit_case(
 
     lead_lawyer_id: int = Form(None),
 
-    status_key: str = Form(...),
+    case_type_key: str = Form(None),
+
+    status_key: str = Form("new"),
+
+    litigation_level_key: str = Form(None),
+
+    court_name: str = Form(None),
+
+    court_case_number: str = Form(None),
+
+    judgment_number: str = Form(None),
+
+    judgment_date: str = Form(None),
+
+    appeal_status: str = Form(None),
+
+    stage_start_date: str = Form(None),
+
+    outcome_key: str = Form(None),
 
     db: Session = Depends(get_db),
 
@@ -1800,7 +1868,34 @@ async def edit_case(
 
         case.lead_lawyer_id = lead_lawyer_id
 
+        if case_type_key:
+            case.case_type_key = case_type_key
+
         case.status_key = status_key
+
+        if litigation_level_key:
+            case.litigation_level_key = litigation_level_key
+
+        if court_name is not None:
+            case.court_name = court_name
+
+        if court_case_number is not None:
+            case.court_case_number = court_case_number
+
+        if judgment_number is not None:
+            case.judgment_number = judgment_number
+
+        if judgment_date is not None:
+            case.judgment_date = judgment_date
+
+        if appeal_status is not None:
+            case.appeal_status = appeal_status
+
+        if stage_start_date is not None:
+            case.stage_start_date = stage_start_date
+
+        if outcome_key is not None:
+            case.outcome_key = outcome_key
 
         db.commit()
 

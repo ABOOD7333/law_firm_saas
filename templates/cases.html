@@ -3,17 +3,26 @@
 {% block title %}القضايا | LawSaaS{% endblock %}
 
 {% block content %}
-<div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
     <div>
         <h1>سجل القضايا</h1>
-        <p>إدارة وتتبع سير القضايا في مكتبك بكل احترافية وسهولة.</p>
+        <p>إدارة وتتبع سير القضايا في مكتبك بكل احترافية وسهولة وفق درجات التقاضي المعتمدة.</p>
     </div>
-    <div style="display: flex; gap: 10px;">
-        <button class="btn" style="background: #f1f5f9; color: #334155; padding: 10px 20px; border-radius: 8px; font-weight: 700; border: 1px solid #cbd5e1; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-family: 'Cairo', sans-serif;" onclick="openReportModal()">
+    <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+        <button class="btn" style="background: #f8fafc; color: #334155; padding: 10px 16px; border-radius: 8px; font-weight: 700; border: 1px solid #cbd5e1; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-family: 'Cairo', sans-serif;" onclick="openReportModal()">
             <i class="fa-solid fa-file-invoice"></i> التقارير
         </button>
+
         {% if has_perm(user, 'cases', 'add') %}
-        <button class="primary-btn" onclick="openAddCaseModal()">
+        <button class="btn" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 10px 16px; border-radius: 8px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-family: 'Cairo', sans-serif;" onclick="openQuickLevelModal()">
+            <i class="fa-solid fa-plus-circle"></i> إضافة درجة تقاضي
+        </button>
+
+        <button class="btn" style="background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; padding: 10px 16px; border-radius: 8px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-family: 'Cairo', sans-serif;" onclick="openQuickStatusModal()">
+            <i class="fa-solid fa-plus-circle"></i> إضافة حالة إجرائية
+        </button>
+
+        <button class="primary-btn" onclick="openAddCaseModal()" style="display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px;">
             <i class="fa-solid fa-plus"></i> فتح قضية جديدة
         </button>
         {% endif %}
@@ -27,6 +36,8 @@
                 <tr>
                     <th>رقم القضية</th>
                     <th>العنوان</th>
+                    <th>نوع القضية</th>
+                    <th>درجة التقاضي</th>
                     <th>حالة القضية</th>
                     <th>المحامي المسؤول</th>
                     <th>تاريخ الفتح</th>
@@ -39,9 +50,68 @@
                     <td><strong>{{ case.case_number }}</strong></td>
                     <td>{{ case.title }}</td>
                     <td>
-                        {% if case.status_key == 'draft' %}<span class="status-badge status-pending">قيد الدراسة</span>{% endif %}
-                        {% if case.status_key == 'active' %}<span class="status-badge status-active">نشطة</span>{% endif %}
-                        {% if case.status_key == 'closed' %}<span class="status-badge" style="background:#e2e8f0; color:#475569;">مغلقة</span>{% endif %}
+                        <span style="font-size: 0.85rem; font-weight: 600; color: #334155;">
+                            {% if case.case_type_key == 'criminal' %}جنائية
+                            {% elif case.case_type_key == 'civil' %}مدنية
+                            {% elif case.case_type_key == 'commercial' %}تجارية
+                            {% elif case.case_type_key == 'personal_status' %}أحوال شخصية
+                            {% elif case.case_type_key == 'inheritance' %}ميراث وتركات
+                            {% elif case.case_type_key == 'labor' %}عمالية
+                            {% elif case.case_type_key == 'real_estate' %}عقارية
+                            {% elif case.case_type_key == 'administrative' %}إدارية
+                            {% elif case.case_type_key == 'financial' %}مالية وديون
+                            {% elif case.case_type_key == 'corporate' %}شركات
+                            {% elif case.case_type_key == 'intellectual_property' %}حقوق وملكية فكرية
+                            {% elif case.case_type_key == 'tax' %}ضريبية
+                            {% elif case.case_type_key == 'insurance' %}تأمينية
+                            {% elif case.case_type_key == 'traffic' %}مرورية
+                            {% elif case.case_type_key == 'enforcement' %}تنفيذ أحكام وسندات
+                            {% elif case.case_type_key == 'arbitration_mediation' %}تحكيم ووساطة
+                            {% elif case.case_type_key == 'constitutional' %}دستورية
+                            {% elif case.case_type_key == 'other' %}أخرى
+                            {% else %}{{ case.case_type_key or 'مدنية' }}
+                            {% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        <span style="background: #eff6ff; color: #1e40af; padding: 4px 10px; border-radius: 6px; font-size: 0.82rem; font-weight: 700;">
+                            {% if case.litigation_level_key == 'supreme_court' %}المحكمة العليا
+                            {% elif case.litigation_level_key == 'appeal' %}الاستئناف
+                            {% elif case.litigation_level_key == 'first_instance' %}الدرجة الابتدائية
+                            {% elif case.litigation_level_key == 'not_specified' %}لم تُحدد
+                            {% else %}{{ case.litigation_level_key or 'الدرجة الابتدائية' }}
+                            {% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="status-badge" style="
+                            {% if case.status_key in ['draft', 'preparation'] %}background: #f1f5f9; color: #475569;
+                            {% elif case.status_key in ['new', 'open'] %}background: #dbeafe; color: #1d4ed8;
+                            {% elif case.status_key in ['awaiting_hearing', 'awaiting_judgment'] %}background: #fef3c7; color: #b45309;
+                            {% elif case.status_key in ['completed', 'settled'] %}background: #dcfce7; color: #15803d;
+                            {% elif case.status_key in ['closed', 'archived'] %}background: #e2e8f0; color: #334155;
+                            {% elif case.status_key in ['suspended', 'cancelled'] %}background: #fee2e2; color: #b91c1c;
+                            {% else %}background: #e0f2fe; color: #0369a1;{% endif %}">
+                            {% if case.status_key == 'draft' %}مسودة
+                            {% elif case.status_key == 'new' %}جديدة
+                            {% elif case.status_key == 'under_review' %}قيد المراجعة
+                            {% elif case.status_key == 'open' %}مفتوحة
+                            {% elif case.status_key == 'preparation' %}قيد التجهيز
+                            {% elif case.status_key == 'filing' %}قيد التسجيل
+                            {% elif case.status_key == 'awaiting_hearing' %}بانتظار جلسة
+                            {% elif case.status_key == 'postponed' %}مؤجلة
+                            {% elif case.status_key == 'awaiting_judgment' %}بانتظار الحكم
+                            {% elif case.status_key == 'suspended' %}معلقة
+                            {% elif case.status_key == 'enforcement' %}قيد التنفيذ
+                            {% elif case.status_key == 'settled' %}تمت التسوية
+                            {% elif case.status_key == 'completed' %}منتهية
+                            {% elif case.status_key == 'closed' %}مغلقة
+                            {% elif case.status_key == 'archived' %}مؤرشفة
+                            {% elif case.status_key == 'cancelled' %}ملغاة
+                            {% elif case.status_key == 'active' %}نشطة
+                            {% else %}{{ case.status_key }}
+                            {% endif %}
+                        </span>
                     </td>
                     <td>
                         {% if case.lead_lawyer_id %}
@@ -59,7 +129,7 @@
                                 <i class="fa-solid fa-folder-open"></i> عرض
                             </a>
                             {% if has_perm(user, 'cases', 'edit') %}
-                            <button class="action-btn" style="color:var(--primary-color);" title="تعديل القضية" onclick="openEditCaseModal({{ case.id|tojson|forceescape }}, {{ case.title|tojson|forceescape }}, {{ case.case_number|tojson|forceescape }}, {{ (case.law_clients[0].id if case.law_clients else '')|tojson|forceescape }}, {{ (case.lead_lawyer_id or '')|tojson|forceescape }}, {{ case.status_key|tojson|forceescape }})">
+                            <button class="action-btn" style="color:var(--primary-color);" title="تعديل القضية" onclick='openEditCaseModal({{ case.id|tojson }}, {{ case.title|tojson }}, {{ case.case_number|tojson }}, {{ (case.law_clients[0].id if case.law_clients else "")|tojson }}, {{ (case.lead_lawyer_id or "")|tojson }}, {{ case.status_key|tojson }}, {{ case.case_type_key|tojson }}, {{ case.litigation_level_key|tojson }}, {{ case.court_name|tojson }}, {{ case.court_case_number|tojson }}, {{ case.judgment_number|tojson }}, {{ case.judgment_date|tojson }}, {{ case.appeal_status|tojson }}, {{ case.stage_start_date|tojson }}, {{ case.outcome_key|tojson }})'>
                                 <i class="fa-solid fa-pen-to-square"></i> تعديل
                             </button>
                             {% endif %}
@@ -68,7 +138,7 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="6" style="text-align: center; padding: 40px; color: #64748b;">
+                    <td colspan="8" style="text-align: center; padding: 40px; color: #64748b;">
                         <i class="fa-solid fa-gavel" style="font-size: 3rem; margin-bottom: 10px; opacity: 0.5;"></i>
                         <br>
                         لا توجد قضايا مضافة حتى الآن.<br>اضغط على "فتح قضية جديدة" للبدء!
@@ -82,36 +152,37 @@
 
 <!-- Add Case Modal -->
 <div id="addCaseModal" class="modal-overlay">
-    <div class="modal-content" style="width: 100%; max-width: 600px;">
+    <div class="modal-content" style="width: 100%; max-width: 750px; max-height: 90vh; overflow-y: auto;">
         <div class="modal-header">
-            <h2>فتح قضية جديدة</h2>
+            <h2><i class="fa-solid fa-folder-plus" style="color: var(--primary-color);"></i> فتح قضية جديدة</h2>
             <button class="close-btn" onclick="closeAddCaseModal()"><i class="fa-solid fa-xmark"></i></button>
         </div>
         <div class="modal-body">
             <form id="addCaseForm" method="POST" action="/cases/add">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+                <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+                
+                <!-- البيانات الأساسية -->
                 <div class="form-row">
                     <div class="form-group">
-                        <label>عنوان القضية الوصفي (مثال: نزاع تجاري) *</label>
-                        <input type="text" name="title" required class="form-control" placeholder="اكتب وصفاً قصيراً...">
+                        <label>عنوان القضية الوصفي *</label>
+                        <input type="text" name="title" required class="form-control" placeholder="اكتب وصفاً أو موضوع الدعوى...">
                     </div>
                     <div class="form-group">
-                        <label>رقم القضية الداخلي (مميّز) *</label>
+                        <label>رقم القضية الداخلي بالمكتب *</label>
                         <input type="text" name="case_number" required class="form-control" placeholder="CAS-2026-001">
                     </div>
                 </div>
                 
-                <div class="form-group">
-                    <label>اختيار الموكل المرتبط *</label>
-                    <select name="client_id" required class="form-control">
-                        <option value="">-- اختر موكلاً من السجل --</option>
-                        {% for client in clients %}
-                        <option value="{{ client.id }}">{{ client.name }} ({{ client.national_id or 'بدون هوية' }})</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                
                 <div class="form-row">
+                    <div class="form-group">
+                        <label>اختيار الموكل المرتبط *</label>
+                        <select name="client_id" required class="form-control">
+                            <option value="">-- اختر موكلاً من السجل --</option>
+                            {% for client in clients %}
+                            <option value="{{ client.id }}">{{ client.name }} ({{ client.national_id or 'بدون هوية' }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                     <div class="form-group">
                         <label>المحامي المسؤول</label>
                         <select name="lead_lawyer_id" class="form-control">
@@ -121,18 +192,149 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label>الحالة المبدئية</label>
-                        <select name="status_key" class="form-control">
-                            <option value="draft">قيد الدراسة المبدئية</option>
-                            <option value="active">نشطة ومرافعة جارية</option>
-                        </select>
+                </div>
+
+                <!-- تصنيفات وحالات القضية -->
+                <div style="background: #f8fafc; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+                    <div style="font-weight: 700; color: #1e293b; margin-bottom: 12px; font-size: 0.95rem;">
+                        <i class="fa-solid fa-layer-group" style="color: #3b82f6;"></i> تصنيف وسير القضية
+                    </div>
+                    <div class="form-row" style="margin-bottom: 0;">
+                        <!-- القائمة 1: نوع القضية -->
+                        <div class="form-group">
+                            <label>نوع القضية</label>
+                            <select name="case_type_key" class="form-control" id="add_case_type">
+                                <option value="civil">مدنية (مطالبة بحقوق، تعويض، نزاع تعاقدي)</option>
+                                <option value="criminal">جنائية (سرقة، احتيال، اعتداء، تزوير)</option>
+                                <option value="commercial">تجارية (نزاع تجاري، إخلال بعقد، بيع وتوريد)</option>
+                                <option value="personal_status">أحوال شخصية (زواج، طلاق، نفقة، حضانة)</option>
+                                <option value="inheritance">ميراث وتركات (قسمة تركة، نزاع ورثة)</option>
+                                <option value="labor">عمالية (أجور، مستحقات، نزاع عقد عمل)</option>
+                                <option value="real_estate">عقارية (ملكية عقار، نزاع أرض، إيجار، إخلاء)</option>
+                                <option value="administrative">إدارية (نزاع إداري، طعن في قرار إداري)</option>
+                                <option value="financial">مالية وديون (مطالبة بدين، مستحقات مالية)</option>
+                                <option value="corporate">شركات (نزاع شركاء، تصفية شركات)</option>
+                                <option value="intellectual_property">حقوق وملكية فكرية (علامة تجارية، مؤلف)</option>
+                                <option value="tax">ضريبية (نزاع ضريبي، اعتراض على ربط)</option>
+                                <option value="insurance">تأمينية (مطالبة تأمين، نزاع تعويض)</option>
+                                <option value="traffic">مرورية (حادث مروري، تعويضات سير)</option>
+                                <option value="enforcement">تنفيذ أحكام وسندات (تحصيل حق وتنفيذ جبري)</option>
+                                <option value="arbitration_mediation">تحكيم ووساطة (تسوية ودية، هيئة تحكيم)</option>
+                                <option value="constitutional">دستورية (مسألة أو طعن دستوري)</option>
+                                <option value="other">أخرى (تصنيف قضائي آخر)</option>
+                            </select>
+                        </div>
+
+                        <!-- القائمة 2: حالة القضية -->
+                        <div class="form-group">
+                            <label>حالة القضية الإدارية</label>
+                            <select name="status_key" class="form-control" id="add_case_status">
+                                <option value="new">جديدة (سُجلت القضية حديثاً)</option>
+                                <option value="draft">مسودة (بيانات قيد الإدخال)</option>
+                                <option value="under_review">قيد المراجعة (تدقيق المستندات)</option>
+                                <option value="open">مفتوحة (متابعة نشطة بالمكتب)</option>
+                                <option value="preparation">قيد التجهيز (إعداد المذكرات)</option>
+                                <option value="filing">قيد التسجيل (استكمال قيد الدعوى)</option>
+                                <option value="awaiting_hearing">بانتظار جلسة (ترقب موعد الجلسة)</option>
+                                <option value="postponed">مؤجلة (تأجيل خطوة إجرائية)</option>
+                                <option value="awaiting_judgment">بانتظار الحكم (حجز القضية للحكم)</option>
+                                <option value="suspended">معلقة (إيقاف مؤقت مسجل)</option>
+                                <option value="enforcement">قيد التنفيذ (متابعة السند التنفيذي)</option>
+                                <option value="settled">تمت التسوية (إنهاء ودي بالتراضي)</option>
+                                <option value="completed">منتهية (اكتمال أعمال المكتب)</option>
+                                <option value="closed">مغلقة (إغلاق الملف إدارياً)</option>
+                                <option value="archived">مؤرشفة (نُقلت إلى الأرشيف)</option>
+                                <option value="cancelled">ملغاة (إلغاء الملف بالكامل)</option>
+                                {% for cs in custom_statuses %}
+                                <option value="{{ cs }}">{{ cs }} (مخصص)</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- درجات التقاضي وبيانات المحكمة -->
+                <div style="background: #f8fafc; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+                    <div style="font-weight: 700; color: #1e293b; margin-bottom: 12px; font-size: 0.95rem;">
+                        <i class="fa-solid fa-scale-balanced" style="color: #6366f1;"></i> درجات التقاضي وبيانات المحكمة
+                    </div>
+                    <div class="form-row">
+                        <!-- القائمة 3: درجة التقاضي -->
+                        <div class="form-group">
+                            <label>درجة التقاضي</label>
+                            <select name="litigation_level_key" class="form-control" id="add_litigation_level">
+                                <option value="first_instance">الدرجة الابتدائية (تنظر المحكمة الابتدائية)</option>
+                                <option value="appeal">الاستئناف (تُنظر أمام محكمة الاستئناف)</option>
+                                <option value="supreme_court">المحكمة العليا (الفصل في الطعون العليا)</option>
+                                <option value="not_specified">لم تُحدد بعد</option>
+                                {% for cl in custom_levels %}
+                                <option value="{{ cl }}">{{ cl }} (مخصص)</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>اسم المحكمة</label>
+                            <input type="text" name="court_name" class="form-control" placeholder="مثال: محكمة جنوب الأمانة الابتدائية">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>رقم القضية لدى المحكمة</label>
+                            <input type="text" name="court_case_number" class="form-control" placeholder="الرقم القضائي الرسمي...">
+                        </div>
+                        <div class="form-group">
+                            <label>تاريخ بدء المرحلة</label>
+                            <input type="date" name="stage_start_date" class="form-control">
+                        </div>
+                    </div>
+                    <div class="form-row" style="margin-bottom: 0;">
+                        <div class="form-group">
+                            <label>رقم الحكم (إن وجد)</label>
+                            <input type="text" name="judgment_number" class="form-control" placeholder="رقم الحكم الصادر...">
+                        </div>
+                        <div class="form-group">
+                            <label>تاريخ الحكم (إن وجد)</label>
+                            <input type="date" name="judgment_date" class="form-control">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- نتيجة القضية والمآل النهائي -->
+                <div style="background: #f8fafc; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+                    <div style="font-weight: 700; color: #1e293b; margin-bottom: 12px; font-size: 0.95rem;">
+                        <i class="fa-solid fa-gavel" style="color: #10b981;"></i> نتيجة القضية (المآل النهائي)
+                    </div>
+                    <div class="form-row" style="margin-bottom: 0;">
+                        <!-- القائمة 4: نتيجة القضية -->
+                        <div class="form-group">
+                            <label>نتيجة القضية</label>
+                            <select name="outcome_key" class="form-control" id="add_case_outcome">
+                                <option value="not_determined">لم تُحدد النتيجة بعد</option>
+                                <option value="won">الحكم لصالح الموكل</option>
+                                <option value="lost">الحكم ضد الموكل</option>
+                                <option value="partially_granted">قبول جزئي للمطالبات</option>
+                                <option value="dismissed">رفض الدعوى</option>
+                                <option value="inadmissible">عدم قبول الدعوى</option>
+                                <option value="amicable_settlement">تسوية ودية</option>
+                                <option value="withdrawn">تنازل عن الدعوى</option>
+                                <option value="referred">إحالة إلى جهة أخرى</option>
+                                <option value="other">نتيجة أخرى</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>حالة الطعن</label>
+                            <select name="appeal_status" class="form-control">
+                                <option value="none">غير مقدم</option>
+                                <option value="pending">قيد النظر</option>
+                                <option value="completed">انتهى وتم البت فيه</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
                 
                 <div class="modal-footer">
                     <button type="button" class="cancel-btn" onclick="closeAddCaseModal()">إلغاء</button>
-                    <button type="submit" class="submit-btn">حفظ القضية</button>
+                    <button type="submit" class="submit-btn" style="background: var(--primary-color); color: white; padding: 10px 24px; border-radius: 8px; font-weight: bold; border: none; cursor: pointer;">حفظ وتسجيل القضية</button>
                 </div>
             </form>
         </div>
@@ -141,15 +343,15 @@
 
 <!-- Edit Case Modal -->
 <div id="editCaseModal" class="modal-overlay">
-    <div class="modal-content" style="width: 100%; max-width: 600px;">
+    <div class="modal-content" style="width: 100%; max-width: 750px; max-height: 90vh; overflow-y: auto;">
         <div class="modal-header">
-            <h2>تعديل بيانات القضية</h2>
+            <h2><i class="fa-solid fa-pen-to-square" style="color: var(--primary-color);"></i> تعديل بيانات القضية</h2>
             <button class="close-btn" onclick="closeEditCaseModal()"><i class="fa-solid fa-xmark"></i></button>
         </div>
         <div class="modal-body">
-            <!-- The action targets the existing edit_case route in main.py -->
             <form id="editCaseForm" method="POST" action="">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+                <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+                
                 <div class="form-row">
                     <div class="form-group">
                         <label>عنوان القضية الوصفي *</label>
@@ -161,17 +363,16 @@
                     </div>
                 </div>
                 
-                <div class="form-group">
-                    <label>اختيار الموكل المرتبط *</label>
-                    <select name="client_id" id="edit_case_client" required class="form-control">
-                        <option value="">-- اختر الموكل --</option>
-                        {% for client in clients %}
-                        <option value="{{ client.id }}">{{ client.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                
                 <div class="form-row">
+                    <div class="form-group">
+                        <label>اختيار الموكل المرتبط *</label>
+                        <select name="client_id" id="edit_case_client" required class="form-control">
+                            <option value="">-- اختر الموكل --</option>
+                            {% for client in clients %}
+                            <option value="{{ client.id }}">{{ client.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                     <div class="form-group">
                         <label>المحامي المسؤول</label>
                         <select name="lead_lawyer_id" id="edit_case_lawyer" class="form-control">
@@ -181,21 +382,194 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label>الحالة المبدئية</label>
-                        <select name="status_key" id="edit_case_status" class="form-control">
-                            <option value="draft">قيد الدراسة المبدئية</option>
-                            <option value="active">نشطة ومرافعة جارية</option>
-                            <option value="closed">مغلقة / منتهية</option>
-                        </select>
+                </div>
+
+                <!-- تصنيفات وحالات القضية -->
+                <div style="background: #f8fafc; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+                    <div style="font-weight: 700; color: #1e293b; margin-bottom: 12px; font-size: 0.95rem;">
+                        <i class="fa-solid fa-layer-group" style="color: #3b82f6;"></i> تصنيف وسير القضية
+                    </div>
+                    <div class="form-row" style="margin-bottom: 0;">
+                        <div class="form-group">
+                            <label>نوع القضية</label>
+                            <select name="case_type_key" id="edit_case_type" class="form-control">
+                                <option value="civil">مدنية</option>
+                                <option value="criminal">جنائية</option>
+                                <option value="commercial">تجارية</option>
+                                <option value="personal_status">أحوال شخصية</option>
+                                <option value="inheritance">ميراث وتركات</option>
+                                <option value="labor">عمالية</option>
+                                <option value="real_estate">عقارية</option>
+                                <option value="administrative">إدارية</option>
+                                <option value="financial">مالية وديون</option>
+                                <option value="corporate">شركات</option>
+                                <option value="intellectual_property">حقوق وملكية فكرية</option>
+                                <option value="tax">ضريبية</option>
+                                <option value="insurance">تأمينية</option>
+                                <option value="traffic">مرورية</option>
+                                <option value="enforcement">تنفيذ أحكام وسندات</option>
+                                <option value="arbitration_mediation">تحكيم ووساطة</option>
+                                <option value="constitutional">دستورية</option>
+                                <option value="other">أخرى</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>حالة القضية الإدارية</label>
+                            <select name="status_key" id="edit_case_status" class="form-control">
+                                <option value="new">جديدة</option>
+                                <option value="draft">مسودة</option>
+                                <option value="under_review">قيد المراجعة</option>
+                                <option value="open">مفتوحة</option>
+                                <option value="preparation">قيد التجهيز</option>
+                                <option value="filing">قيد التسجيل</option>
+                                <option value="awaiting_hearing">بانتظار جلسة</option>
+                                <option value="postponed">مؤجلة</option>
+                                <option value="awaiting_judgment">بانتظار الحكم</option>
+                                <option value="suspended">معلقة</option>
+                                <option value="enforcement">قيد التنفيذ</option>
+                                <option value="settled">تمت التسوية</option>
+                                <option value="completed">منتهية</option>
+                                <option value="closed">مغلقة</option>
+                                <option value="archived">مؤرشفة</option>
+                                <option value="cancelled">ملغاة</option>
+                                {% for cs in custom_statuses %}
+                                <option value="{{ cs }}">{{ cs }} (مخصص)</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- درجات التقاضي وبيانات المحكمة -->
+                <div style="background: #f8fafc; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+                    <div style="font-weight: 700; color: #1e293b; margin-bottom: 12px; font-size: 0.95rem;">
+                        <i class="fa-solid fa-scale-balanced" style="color: #6366f1;"></i> درجات التقاضي وبيانات المحكمة
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>درجة التقاضي</label>
+                            <select name="litigation_level_key" id="edit_litigation_level" class="form-control">
+                                <option value="first_instance">الدرجة الابتدائية</option>
+                                <option value="appeal">الاستئناف</option>
+                                <option value="supreme_court">المحكمة العليا</option>
+                                <option value="not_specified">لم تُحدد بعد</option>
+                                {% for cl in custom_levels %}
+                                <option value="{{ cl }}">{{ cl }} (مخصص)</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>اسم المحكمة</label>
+                            <input type="text" name="court_name" id="edit_court_name" class="form-control">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>رقم القضية لدى المحكمة</label>
+                            <input type="text" name="court_case_number" id="edit_court_case_number" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>تاريخ بدء المرحلة</label>
+                            <input type="date" name="stage_start_date" id="edit_stage_start_date" class="form-control">
+                        </div>
+                    </div>
+                    <div class="form-row" style="margin-bottom: 0;">
+                        <div class="form-group">
+                            <label>رقم الحكم</label>
+                            <input type="text" name="judgment_number" id="edit_judgment_number" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>تاريخ الحكم</label>
+                            <input type="date" name="judgment_date" id="edit_judgment_date" class="form-control">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- نتيجة القضية والمآل النهائي -->
+                <div style="background: #f8fafc; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+                    <div style="font-weight: 700; color: #1e293b; margin-bottom: 12px; font-size: 0.95rem;">
+                        <i class="fa-solid fa-gavel" style="color: #10b981;"></i> نتيجة القضية (المآل النهائي)
+                    </div>
+                    <div class="form-row" style="margin-bottom: 0;">
+                        <div class="form-group">
+                            <label>نتيجة القضية</label>
+                            <select name="outcome_key" id="edit_outcome_key" class="form-control">
+                                <option value="not_determined">لم تُحدد النتيجة بعد</option>
+                                <option value="won">الحكم لصالح الموكل</option>
+                                <option value="lost">الحكم ضد الموكل</option>
+                                <option value="partially_granted">قبول جزئي للمطالبات</option>
+                                <option value="dismissed">رفض الدعوى</option>
+                                <option value="inadmissible">عدم قبول الدعوى</option>
+                                <option value="amicable_settlement">تسوية ودية</option>
+                                <option value="withdrawn">تنازل عن الدعوى</option>
+                                <option value="referred">إحالة إلى جهة أخرى</option>
+                                <option value="other">نتيجة أخرى</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>حالة الطعن</label>
+                            <select name="appeal_status" id="edit_appeal_status" class="form-control">
+                                <option value="none">غير مقدم</option>
+                                <option value="pending">قيد النظر</option>
+                                <option value="completed">انتهى وتم البت فيه</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
                 
                 <div class="modal-footer">
                     <button type="button" class="cancel-btn" onclick="closeEditCaseModal()">إلغاء</button>
-                    <button type="submit" class="submit-btn">حفظ التعديلات</button>
+                    <button type="submit" class="submit-btn" style="background: var(--primary-color); color: white; padding: 10px 24px; border-radius: 8px; font-weight: bold; border: none; cursor: pointer;">حفظ التعديلات</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 1: Quick Add Litigation Level -->
+<div id="quickLevelModal" class="modal-overlay">
+    <div class="modal-content" style="width: 100%; max-width: 440px;">
+        <div class="modal-header">
+            <h2><i class="fa-solid fa-scale-balanced" style="color: #1d4ed8;"></i> إضافة درجة تقاضي جديدة</h2>
+            <button class="close-btn" onclick="closeQuickLevelModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>اسم درجة التقاضي *</label>
+                <input type="text" id="new_level_name" class="form-control" placeholder="مثال: لجان تسوية المنازعات المصرفية">
+            </div>
+            <div class="form-group">
+                <label>ملاحظات إضافية</label>
+                <input type="text" id="new_level_notes" class="form-control" placeholder="وصف اختياري...">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="cancel-btn" onclick="closeQuickLevelModal()">إلغاء</button>
+                <button type="button" onclick="saveQuickRef('litigation_level', 'new_level_name', 'new_level_notes', 'quickLevelModal')" class="submit-btn" style="background: #1d4ed8; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer;">حفظ وإضافة للقائمة</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 2: Quick Add Case Status -->
+<div id="quickStatusModal" class="modal-overlay">
+    <div class="modal-content" style="width: 100%; max-width: 440px;">
+        <div class="modal-header">
+            <h2><i class="fa-solid fa-clock-rotate-left" style="color: #15803d;"></i> إضافة حالة إجرائية جديدة</h2>
+            <button class="close-btn" onclick="closeQuickStatusModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>اسم الحالة الإجرائية *</label>
+                <input type="text" id="new_status_name" class="form-control" placeholder="مثال: بانتظار تقرير الخبير الحسابي">
+            </div>
+            <div class="form-group">
+                <label>ملاحظات إضافية</label>
+                <input type="text" id="new_status_notes" class="form-control" placeholder="وصف اختياري...">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="cancel-btn" onclick="closeQuickStatusModal()">إلغاء</button>
+                <button type="button" onclick="saveQuickRef('case_status', 'new_status_name', 'new_status_notes', 'quickStatusModal')" class="submit-btn" style="background: #15803d; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer;">حفظ وإضافة للقائمة</button>
+            </div>
         </div>
     </div>
 </div>
@@ -208,42 +582,37 @@
             <button class="close-btn" onclick="closeReportModal()"><i class="fa-solid fa-xmark"></i></button>
         </div>
         <div class="modal-body">
-            <form id="reportCaseForm" method="GET" action="/cases/export_report" target="_blank">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>رقم القضية (اتركه فارغاً للكل)</label>
-                        <input type="text" name="case_number" id="rep_case_number" class="form-control" autocomplete="off" oninput="matchCaseData('number')">
-                        <datalist id="rep_case_numbers_list"></datalist>
-                    </div>
-                    <div class="form-group">
-                        <label>اسم القضية (اتركه فارغاً للكل)</label>
-                        <input type="text" name="case_title" id="rep_case_title" class="form-control" autocomplete="off" oninput="matchCaseData('title')">
-                        <datalist id="rep_case_titles_list"></datalist>
-                    </div>
+            <form action="/cases/export_report" method="GET" target="_blank">
+                <div class="form-group">
+                    <label>رقم القضية (اختياري)</label>
+                    <input type="text" name="case_number" id="rep_case_number" class="form-control" placeholder="اكتب أو اختر رقم القضية..." oninput="matchCaseData('number')">
+                    <datalist id="rep_case_numbers_list"></datalist>
                 </div>
-                
+                <div class="form-group">
+                    <label>عنوان القضية (اختياري)</label>
+                    <input type="text" name="case_title" id="rep_case_title" class="form-control" placeholder="اكتب أو اختر عنوان القضية..." oninput="matchCaseData('title')">
+                    <datalist id="rep_case_titles_list"></datalist>
+                </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>من تاريخ (بداية التقرير)</label>
+                        <label>من تاريخ</label>
                         <input type="date" name="start_date" id="rep_start_date" class="form-control">
                     </div>
                     <div class="form-group">
-                        <label>إلى تاريخ (نهاية التقرير)</label>
+                        <label>إلى تاريخ</label>
                         <input type="date" name="end_date" id="rep_end_date" class="form-control">
                     </div>
                 </div>
-                
                 <div class="modal-footer">
                     <button type="button" class="cancel-btn" onclick="closeReportModal()">إلغاء</button>
-                    <button type="submit" class="submit-btn" style="background: linear-gradient(135deg, #0f172a, #334155);"><i class="fa-solid fa-file-export"></i> تصدير التقرير</button>
+                    <button type="submit" class="submit-btn"><i class="fa-solid fa-print"></i> عرض وطباعة التقرير</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
 <style>
-/* Same Modal Styles as Clients Page are handled by inline and base CSS for now */
 .modal-overlay {
     position: fixed; top: 0; left: 0; right: 0; bottom: 0;
     background-color: rgba(15, 23, 42, 0.6);
@@ -258,15 +627,15 @@
 .modal-header h2 { font-size: 1.25rem; color: var(--secondary-color); }
 .close-btn { background: none; border: none; font-size: 1.25rem; color: var(--text-muted); cursor: pointer; }
 .modal-body { padding: 24px; }
-.form-group { margin-bottom: 20px; }
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
-.form-group label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; color: var(--text-main); }
-.form-control { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.95rem; font-family: inherit; }
+.form-group { margin-bottom: 16px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.form-group label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.88rem; color: var(--text-main); }
+.form-control { width: 100%; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.9rem; font-family: inherit; }
 .form-control:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
 .modal-footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
 .cancel-btn { background: white; border: 1px solid var(--border-color); padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--text-main); }
 .submit-btn { background: var(--primary-color); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; }
-.primary-btn { background-color: var(--primary-color); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 1rem; transition: all 0.3s; }
+.primary-btn { background-color: var(--primary-color); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.95rem; transition: all 0.3s; }
 .primary-btn:hover { background-color: var(--primary-dark); }
 .action-btn { background: none; border: none; padding: 6px; cursor: pointer; border-radius: 4px; font-size: 1.1rem; }
 .view-btn { color: var(--primary-color); }
@@ -283,13 +652,57 @@
     function openAddCaseModal() { document.getElementById('addCaseModal').classList.add('active'); }
     function closeAddCaseModal() { document.getElementById('addCaseModal').classList.remove('active'); }
     
-    function openEditCaseModal(id, title, number, clientId, lawyerId, status) {
+    function openQuickLevelModal() { document.getElementById('quickLevelModal').classList.add('active'); }
+    function closeQuickLevelModal() { document.getElementById('quickLevelModal').classList.remove('active'); }
+
+    function openQuickStatusModal() { document.getElementById('quickStatusModal').classList.add('active'); }
+    function closeQuickStatusModal() { document.getElementById('quickStatusModal').classList.remove('active'); }
+
+    async function saveQuickRef(refType, nameInputId, notesInputId, modalId) {
+        const nameVal = document.getElementById(nameInputId).value.trim();
+        const notesVal = document.getElementById(notesInputId).value.trim();
+        if(!nameVal) {
+            alert('يرجى كتابة الاسم أولاً');
+            return;
+        }
+
+        try {
+            const csrfToken = document.cookie.split('; ').find(r => r.startsWith('csrf_token='))?.split('=')[1] || '';
+            const res = await fetch('/api/refdata/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                body: JSON.stringify({ ref_type: refType, ref_name: nameVal, notes: notesVal })
+            });
+            const data = await res.json();
+            if(data.ok) {
+                alert('تم الحفظ بنجاح! سيتم إضافتها للقائمة فوراً.');
+                document.getElementById(modalId).classList.remove('active');
+                window.location.reload();
+            } else {
+                alert(data.message || 'حدث خطأ');
+            }
+        } catch(e) {
+            alert('خطأ في الاتصال');
+        }
+    }
+
+    function openEditCaseModal(id, title, number, clientId, lawyerId, status, caseType, litLevel, courtName, courtNumber, judgmentNum, judgmentDate, appealStatus, stageDate, outcomeKey) {
         document.getElementById('editCaseForm').action = "/cases/" + id + "/edit";
-        document.getElementById('edit_case_title').value = title;
-        document.getElementById('edit_case_number').value = number;
-        document.getElementById('edit_case_client').value = clientId;
-        document.getElementById('edit_case_lawyer').value = lawyerId;
-        document.getElementById('edit_case_status').value = status;
+        document.getElementById('edit_case_title').value = title || '';
+        document.getElementById('edit_case_number').value = number || '';
+        document.getElementById('edit_case_client').value = clientId || '';
+        document.getElementById('edit_case_lawyer').value = lawyerId || '';
+        if(document.getElementById('edit_case_status')) document.getElementById('edit_case_status').value = status || 'new';
+        if(document.getElementById('edit_case_type')) document.getElementById('edit_case_type').value = caseType || 'civil';
+        if(document.getElementById('edit_litigation_level')) document.getElementById('edit_litigation_level').value = litLevel || 'first_instance';
+        if(document.getElementById('edit_court_name')) document.getElementById('edit_court_name').value = courtName || '';
+        if(document.getElementById('edit_court_case_number')) document.getElementById('edit_court_case_number').value = courtNumber || '';
+        if(document.getElementById('edit_judgment_number')) document.getElementById('edit_judgment_number').value = judgmentNum || '';
+        if(document.getElementById('edit_judgment_date')) document.getElementById('edit_judgment_date').value = judgmentDate || '';
+        if(document.getElementById('edit_appeal_status')) document.getElementById('edit_appeal_status').value = appealStatus || 'none';
+        if(document.getElementById('edit_stage_start_date')) document.getElementById('edit_stage_start_date').value = stageDate || '';
+        if(document.getElementById('edit_outcome_key')) document.getElementById('edit_outcome_key').value = outcomeKey || 'not_determined';
+        
         document.getElementById('editCaseModal').classList.add('active');
     }
     function closeEditCaseModal() { document.getElementById('editCaseModal').classList.remove('active'); }
@@ -307,13 +720,11 @@
 
     function openReportModal() {
         document.getElementById('reportCaseModal').classList.add('active');
-        // Clear fields initially
         document.getElementById('rep_case_number').value = '';
         document.getElementById('rep_case_title').value = '';
         document.getElementById('rep_start_date').value = '';
         document.getElementById('rep_end_date').value = '';
         
-        // Populate datalists
         const dlNum = document.getElementById('rep_case_numbers_list');
         const dlTitle = document.getElementById('rep_case_titles_list');
         dlNum.innerHTML = '';
@@ -351,7 +762,6 @@
         }
         
         if(match) {
-            // Fill dates
             startInput.value = match.created_at;
             let today = new Date().toISOString().split('T')[0];
             endInput.value = today;

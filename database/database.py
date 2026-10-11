@@ -117,6 +117,25 @@ def init_db():
             conn.execute(text("ALTER TABLE law_offices ADD COLUMN disabled_modules_json TEXT DEFAULT '[]';"))
     except Exception:
         pass
+    # Add new litigation and outcome fields to law_cases if not exists
+    new_case_cols = [
+        ('litigation_level_key', 'TEXT'),
+        ('court_name', 'TEXT'),
+        ('court_case_number', 'TEXT'),
+        ('judgment_number', 'TEXT'),
+        ('judgment_date', 'TEXT'),
+        ('appeal_status', 'TEXT'),
+        ('stage_start_date', 'TEXT'),
+        ('outcome_key', 'TEXT')
+    ]
+    for col_name, col_type in new_case_cols:
+        try:
+            from sqlalchemy import text
+            with engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE law_cases ADD COLUMN {col_name} {col_type};"))
+        except Exception:
+            pass
+
         
     try:
         from sqlalchemy import text
