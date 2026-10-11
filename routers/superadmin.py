@@ -1,12 +1,16 @@
 from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
+from sqlalchemy import func
+from datetime import datetime, timezone, timedelta
 import json
 import html
+import uuid
 
 from database.database import get_db
-from database.models import AccessProfiles, LawOffices, PaymentRequest
+from database.models import AccessProfiles, LawOffices, PaymentRequest, LawCases, LawDocuments, AuthSessions
 from dependencies import get_current_user, templates
+from core.security import hash_session_token
 from core.logger import app_logger
 
 router = APIRouter()
@@ -25,12 +29,37 @@ async def superadmin_page(request: Request, db: Session = Depends(get_db), user:
         # Fetch all offices
         offices = db.query(LawOffices).all()
         
-        # Fetch the owner details for each office
+        # Calculate SaaS KPI metrics
+        total_offices = len(offices)
+        active_offices = sum(1 for o in offices if o.is_active == 1)
+        trial_offices = sum(1 for o in offices if getattr(o, 'subscription_plan', 'trial') == 'trial')
+        paid_offices = sum(1 for o in offices if getattr(o, 'subscription_plan', 'trial') in ['monthly', 'yearly'])
+        
+        # Calculate Estimated MRR ($49.99/mo or $499.99/yr -> ~$41.67/mo)
+        mrr = 0.0
+        for o in offices:
+            if o.is_active == 1:
+                plan = getattr(o, 'subscription_plan', 'trial')
+                if plan == 'monthly':
+                    mrr += 49.99
+                elif plan == 'yearly':
+                    mrr += (499.99 / 12.0)
+        
+        # Payment requests
+        payment_requests = db.query(PaymentRequest).order_by(PaymentRequest.id.desc()).all()
+        total_revenue = sum(float(pr.amount or 0) for pr in payment_requests if pr.status == 'approved')
+        pending_payments_count = sum(1 for pr in payment_requests if pr.status == 'pending')
+        
+        # Fetch details for each office
         office_data = []
         for office in offices:
             owner = db.query(AccessProfiles).filter(AccessProfiles.id == office.owner_user_id).first() if office.owner_user_id else None
-            # Count users in this office
             user_count = db.query(AccessProfiles).filter(AccessProfiles.office_id == office.id).count()
+            case_count = db.query(LawCases).filter(LawCases.office_id == office.id, LawCases.is_deleted == 0).count()
+            doc_count = db.query(LawDocuments).filter(LawDocuments.office_id == office.id).count()
+            
+            # Approximate storage quota usage (estimated average 2MB per document)
+            est_storage_mb = doc_count * 2.5
             
             office_data.append({
                 "id": office.id,
@@ -39,6 +68,10 @@ async def superadmin_page(request: Request, db: Session = Depends(get_db), user:
                 "is_active": office.is_active,
                 "created_at": office.created_at,
                 "user_count": user_count,
+                "case_count": case_count,
+                "doc_count": doc_count,
+                "storage_mb": round(est_storage_mb, 1),
+                "owner_id": owner.id if owner else None,
                 "owner_name": owner.name if owner else "غير محدد",
                 "owner_email": owner.email if owner else "غير محدد",
                 "owner_phone": owner.phone if owner else "غير محدد",
@@ -48,7 +81,6 @@ async def superadmin_page(request: Request, db: Session = Depends(get_db), user:
                 "receipt_base64": getattr(office, 'receipt_base64', None)
             })
             
-        payment_requests = db.query(PaymentRequest).order_by(PaymentRequest.id.desc()).all()
         pr_data = []
         for pr in payment_requests:
             pr_office = db.query(LawOffices).filter(LawOffices.id == pr.office_id).first()
@@ -67,11 +99,25 @@ async def superadmin_page(request: Request, db: Session = Depends(get_db), user:
                 "admin_notes": pr.admin_notes
             })
             
+        metrics = {
+            "total_offices": total_offices,
+            "active_offices": active_offices,
+            "trial_offices": trial_offices,
+            "paid_offices": paid_offices,
+            "mrr": round(mrr, 2),
+            "arr": round(mrr * 12, 2),
+            "total_revenue": round(total_revenue, 2),
+            "pending_payments": pending_payments_count,
+            "total_users": db.query(AccessProfiles).count(),
+            "total_cases": db.query(LawCases).filter(LawCases.is_deleted == 0).count()
+        }
+            
         return templates.TemplateResponse(request=request, name="superadmin.html", context={
             "user": user,
             "active_page": "superadmin",
             "offices": office_data,
-            "payment_requests": pr_data
+            "payment_requests": pr_data,
+            "metrics": metrics
         })
     except Exception as e:
         import traceback
@@ -92,7 +138,7 @@ async def toggle_office(office_id: int, request: Request, db: Session = Depends(
         office.is_active = 1 if office.is_active == 0 else 0
         db.commit()
         
-        status_text = "تفعيل" if office.is_active == 1 else "إيقاف"
+        status_text = "تفعيل" if office.is_active == 1 else "إيقاف / تجميد"
         app_logger.info(f"SUPERADMIN | Office {office.id} toggled to {office.is_active} by user {user.id}")
         
         return JSONResponse({"success": True, "message": f"تم {status_text} المكتب بنجاح", "is_active": office.is_active})
@@ -100,6 +146,91 @@ async def toggle_office(office_id: int, request: Request, db: Session = Depends(
         db.rollback()
         app_logger.error(f"Superadmin toggle error: {e}")
         return JSONResponse({"success": False, "error": "حدث خطأ داخلي"}, status_code=500)
+
+@router.post("/api/superadmin/impersonate/{office_id}")
+async def impersonate_office(office_id: int, request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
+    """الدخول بالنيابة (Login as Tenant) لتقديم الدعم الفني لمكتب محدد"""
+    if not user or not is_superadmin(user):
+        return JSONResponse({"success": False, "error": "غير مصرح لك بالقيام بهذا الإجراء"}, status_code=403)
+    
+    try:
+        office = db.query(LawOffices).filter(LawOffices.id == office_id).first()
+        if not office:
+            return JSONResponse({"success": False, "error": "المكتب غير موجود"}, status_code=404)
+        
+        # Get office owner or any active admin user in that office
+        target_user = None
+        if office.owner_user_id:
+            target_user = db.query(AccessProfiles).filter(AccessProfiles.id == office.owner_user_id).first()
+        if not target_user:
+            target_user = db.query(AccessProfiles).filter(AccessProfiles.office_id == office.id, AccessProfiles.is_active == 1).first()
+            
+        if not target_user:
+            return JSONResponse({"success": False, "error": "لا يوجد مستخدمون نشطون في هذا المكتب لتسجيل الدخول كبديل لهم"}, status_code=404)
+            
+        # Create a new active session for the target user
+        token = str(uuid.uuid4())
+        expires = datetime.now(timezone.utc) + timedelta(hours=4)  # 4 hours support session
+        new_session = AuthSessions(
+            session_token=hash_session_token(token),
+            user_id=target_user.id,
+            is_active=1,
+            expires_at=expires.strftime("%Y-%m-%d %H:%M:%S")
+        )
+        db.add(new_session)
+        db.commit()
+        
+        app_logger.info(f"SUPERADMIN_IMPERSONATE | SuperAdmin {user.id} logged in as User {target_user.id} (Office {office.id})")
+        
+        response = JSONResponse({
+            "success": True, 
+            "message": f"تم تجهيز جلسة الدعم الفني للمكتب: {office.name}",
+            "redirect_url": "/dashboard"
+        })
+        is_secure = not (request.url.hostname in ["127.0.0.1", "localhost"])
+        response.set_cookie(
+            key="session_token",
+            value=token,
+            httponly=True,
+            secure=is_secure,
+            samesite="Lax",
+            max_age=14400
+        )
+        return response
+    except Exception as e:
+        db.rollback()
+        app_logger.error(f"Superadmin impersonate error: {e}")
+        return JSONResponse({"success": False, "error": "حدث خطأ أثناء إنشاء جلسة الدخول"}, status_code=500)
+
+@router.post("/api/superadmin/update-plan/{office_id}")
+async def update_office_plan(office_id: int, request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
+    """ترقية أو تمديد خطة المكتب يدوياً"""
+    if not user or not is_superadmin(user):
+        return JSONResponse({"success": False, "error": "غير مصرح"}, status_code=403)
+        
+    try:
+        data = await request.json()
+        new_plan = data.get("plan") # 'trial', 'monthly', 'yearly', 'enterprise'
+        extend_days = int(data.get("days", 30))
+        
+        office = db.query(LawOffices).filter(LawOffices.id == office_id).first()
+        if not office:
+            return JSONResponse({"success": False, "error": "المكتب غير موجود"}, status_code=404)
+            
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        end_date = now + timedelta(days=extend_days)
+        
+        office.subscription_plan = new_plan
+        office.subscription_end = end_date.strftime("%Y-%m-%d %H:%M:%S")
+        office.is_active = 1
+        db.commit()
+        
+        app_logger.info(f"SUPERADMIN | Office {office.id} plan updated to {new_plan} (+{extend_days}d) by user {user.id}")
+        return JSONResponse({"success": True, "message": f"تم تحديث باقة المكتب إلى {new_plan} بنجاح حتى {office.subscription_end[:10]}"})
+    except Exception as e:
+        db.rollback()
+        app_logger.error(f"Superadmin plan update error: {e}")
+        return JSONResponse({"success": False, "error": "فشل تحديث الخطة"}, status_code=500)
 
 @router.post("/api/superadmin/approve-payment/{payment_id}")
 async def approve_payment(payment_id: int, request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
@@ -124,7 +255,6 @@ async def approve_payment(payment_id: int, request: Request, db: Session = Depen
             return JSONResponse({"success": False, "error": "المكتب المرتبط بالطلب غير موجود"}, status_code=404)
         office_owner = db.query(AccessProfiles).filter(AccessProfiles.id == payment.user_id).first()
         
-        from datetime import datetime, timezone, timedelta
         now = datetime.now(timezone.utc).replace(tzinfo=None)
         
         if action == 'approve':
@@ -193,14 +323,3 @@ async def approve_payment(payment_id: int, request: Request, db: Session = Depen
         db.rollback()
         app_logger.error(f"Superadmin payment approval error: {e}")
         return JSONResponse({"success": False, "error": "حدث خطأ داخلي"}, status_code=500)
-
-@router.post("/api/superadmin/fix-subscriptions")
-async def fix_legacy_subscriptions(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
-    if not user or not is_superadmin(user):
-        return JSONResponse({"success": False, "error": "غير مصرح"}, status_code=403)
-    # This legacy maintenance endpoint reset every customer subscription and
-    # receipt state, so it is intentionally disabled to prevent accidental data loss.
-    return JSONResponse(
-        {"success": False, "error": "تم تعطيل أداة إعادة ضبط الاشتراكات لحماية بيانات العملاء"},
-        status_code=410,
-    )

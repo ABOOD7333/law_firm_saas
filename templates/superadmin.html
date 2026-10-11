@@ -1,69 +1,152 @@
 {% extends "base.html" %}
 
-{% block title %}لوحة تحكم المنصة (SuperAdmin){% endblock %}
+{% block title %}لوحة تحكم المنصة (SuperAdmin) - LawSaaS{% endblock %}
 
 {% block content %}
-<div class="header-banner" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 30px; border-radius: 20px; margin-bottom: 30px;">
-    <div class="banner-content">
-        <h1 style="color: white; font-size: 2rem;"><i class="fas fa-crown"></i> لوحة تحكم المنصة</h1>
-        <p style="color: #94a3b8; font-size: 1.1rem; margin-top: 8px;">خاص بصاحب النظام: إدارة جميع مكاتب المحاماة المسجلة</p>
+<div class="header-banner" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 32px; border-radius: 20px; margin-bottom: 25px; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.4); border: 1px solid rgba(255,255,255,0.08);">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+        <div>
+            <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; color: #93c5fd; margin-bottom: 12px;">
+                <i class="fas fa-shield-halved"></i> الإدارة المركزية لمنصة SaaS
+            </div>
+            <h1 style="color: white; font-size: 2.2rem; margin: 0; font-weight: 800; display: flex; align-items: center; gap: 12px;">
+                <i class="fas fa-crown" style="color: #fbbf24;"></i> لوحة المدير العام للمنصة
+            </h1>
+            <p style="color: #94a3b8; font-size: 1.05rem; margin-top: 8px; margin-bottom: 0;">
+                مراقبة المشتركين، مؤشرات النمو السحابي (MRR/ARR)، الدخول بالنيابة للدعم الفني، وإدارة خطط المكاتب
+            </p>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <div style="background: rgba(255,255,255,0.06); padding: 10px 18px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); text-align: center;">
+                <div style="color: #94a3b8; font-size: 0.8rem;">حالة المنصة</div>
+                <div style="color: #10b981; font-weight: bold; font-size: 1rem;"><i class="fas fa-circle" style="font-size: 0.6rem;"></i> خوادم تعمل بكفاءة</div>
+            </div>
+        </div>
     </div>
 </div>
 
-<div class="dashboard-stats" style="margin-top: -30px; position: relative; z-index: 10; margin-bottom: 2rem;">
-    <div class="stat-card" style="box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);">
-        <div class="stat-icon" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">
-            <i class="fas fa-building"></i>
+<!-- SaaS KPI Stats Cards -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; margin-bottom: 25px;">
+    <!-- MRR -->
+    <div class="card" style="padding: 20px; border-radius: 16px; border: 1px solid #e2e8f0; background: white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); position: relative; overflow: hidden;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <span style="color: #64748b; font-size: 0.85rem; font-weight: 600;">الإيراد المتكرر (MRR)</span>
+            <div style="width: 36px; height: 36px; border-radius: 10px; background: #ecfdf5; color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1rem;">
+                <i class="fas fa-chart-line"></i>
+            </div>
         </div>
-        <div class="stat-info">
-            <h3>إجمالي المكاتب</h3>
-            <div class="stat-value">{{ offices|length }}</div>
+        <div style="font-size: 1.8rem; font-weight: 800; color: #0f172a;" dir="ltr">${{ metrics.mrr }}</div>
+        <div style="font-size: 0.8rem; color: #64748b; margin-top: 6px;">
+            المتوقع سنوياً (ARR): <strong style="color: #10b981;" dir="ltr">${{ metrics.arr }}</strong>
+        </div>
+    </div>
+
+    <!-- Active Tenants -->
+    <div class="card" style="padding: 20px; border-radius: 16px; border: 1px solid #e2e8f0; background: white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <span style="color: #64748b; font-size: 0.85rem; font-weight: 600;">المكاتب المشتركة</span>
+            <div style="width: 36px; height: 36px; border-radius: 10px; background: #eff6ff; color: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 1rem;">
+                <i class="fas fa-building-user"></i>
+            </div>
+        </div>
+        <div style="font-size: 1.8rem; font-weight: 800; color: #0f172a;">{{ metrics.active_offices }} <span style="font-size: 0.9rem; color: #64748b; font-weight: normal;">من أصل {{ metrics.total_offices }}</span></div>
+        <div style="font-size: 0.8rem; color: #64748b; margin-top: 6px;">
+            مدفوع: <strong style="color: #3b82f6;">{{ metrics.paid_offices }}</strong> | تجريبي: <strong style="color: #f59e0b;">{{ metrics.trial_offices }}</strong>
+        </div>
+    </div>
+
+    <!-- Collected Revenue -->
+    <div class="card" style="padding: 20px; border-radius: 16px; border: 1px solid #e2e8f0; background: white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <span style="color: #64748b; font-size: 0.85rem; font-weight: 600;">المبالغ المعتمدة</span>
+            <div style="width: 36px; height: 36px; border-radius: 10px; background: #fdf4ff; color: #a855f7; display: flex; align-items: center; justify-content: center; font-size: 1rem;">
+                <i class="fas fa-wallet"></i>
+            </div>
+        </div>
+        <div style="font-size: 1.8rem; font-weight: 800; color: #0f172a;" dir="ltr">${{ metrics.total_revenue }}</div>
+        <div style="font-size: 0.8rem; color: #64748b; margin-top: 6px;">
+            طلبات قيد المراجعة: <strong style="color: {% if metrics.pending_payments > 0 %}#ef4444{% else %}#10b981{% endif %};">{{ metrics.pending_payments }}</strong>
+        </div>
+    </div>
+
+    <!-- Platform Data Size -->
+    <div class="card" style="padding: 20px; border-radius: 16px; border: 1px solid #e2e8f0; background: white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <span style="color: #64748b; font-size: 0.85rem; font-weight: 600;">النشاط الإجمالي</span>
+            <div style="width: 36px; height: 36px; border-radius: 10px; background: #fff7ed; color: #ea580c; display: flex; align-items: center; justify-content: center; font-size: 1rem;">
+                <i class="fas fa-folder-tree"></i>
+            </div>
+        </div>
+        <div style="font-size: 1.8rem; font-weight: 800; color: #0f172a;">{{ metrics.total_cases }} <span style="font-size: 0.9rem; color: #64748b; font-weight: normal;">قضية</span></div>
+        <div style="font-size: 0.8rem; color: #64748b; margin-top: 6px;">
+            إجمالي المستخدمين في المنصة: <strong style="color: #ea580c;">{{ metrics.total_users }}</strong>
         </div>
     </div>
 </div>
 
-<!-- Payment Requests -->
-<div class="card" style="margin-top: 2rem;">
-    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 1px solid #e2e8f0;">
-        <h3 style="margin: 0; font-size: 1.25rem; color: #1e293b;">طلبات الدفع (الاشتراكات)</h3>
+<!-- Section: Payment Requests -->
+<div class="card" style="border-radius: 16px; border: 1px solid #e2e8f0; background: white; margin-bottom: 30px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid #f1f5f9;">
+        <div>
+            <h3 style="margin: 0; font-size: 1.25rem; color: #0f172a; font-weight: 700;">
+                <i class="fas fa-file-invoice-dollar" style="color: #3b82f6;"></i> طلبات الدفع والتحويل البنكي
+            </h3>
+            <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.85rem;">مراجعة السندات المرفوعة من المكاتب واعتماد الترقية فوراً</p>
+        </div>
+        {% if metrics.pending_payments > 0 %}
+        <span style="background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: bold;">
+            {{ metrics.pending_payments }} طلب جديد بانتظار المراجعة
+        </span>
+        {% endif %}
     </div>
     <div class="table-container" style="overflow-x: auto;">
         <table class="data-table" style="width: 100%; text-align: right; border-collapse: collapse;">
             <thead>
                 <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
-                    <th style="padding: 15px; color: #475569;"># ID</th>
-                    <th style="padding: 15px; color: #475569;">المكتب</th>
-                    <th style="padding: 15px; color: #475569;">إيميل الصاحب</th>
-                    <th style="padding: 15px; color: #475569;">الخطة / المبلغ</th>
-                    <th style="padding: 15px; color: #475569;">تاريخ الطلب</th>
-                    <th style="padding: 15px; color: #475569;">الحالة</th>
-                    <th style="padding: 15px; color: #475569;">إجراء</th>
+                    <th style="padding: 14px 18px; color: #475569; font-size: 0.85rem;"># المعرف</th>
+                    <th style="padding: 14px 18px; color: #475569; font-size: 0.85rem;">المكتب</th>
+                    <th style="padding: 14px 18px; color: #475569; font-size: 0.85rem;">البريد الإلكتروني</th>
+                    <th style="padding: 14px 18px; color: #475569; font-size: 0.85rem;">الخطة والمبلغ</th>
+                    <th style="padding: 14px 18px; color: #475569; font-size: 0.85rem;">تاريخ الطلب</th>
+                    <th style="padding: 14px 18px; color: #475569; font-size: 0.85rem;">الحالة</th>
+                    <th style="padding: 14px 18px; color: #475569; font-size: 0.85rem; text-align: center;">إجراء</th>
                 </tr>
             </thead>
             <tbody>
+                {% if payment_requests|length == 0 %}
+                <tr>
+                    <td colspan="7" style="padding: 30px; text-align: center; color: #94a3b8;">لا توجد أي طلبات دفع حتى الآن</td>
+                </tr>
+                {% endif %}
                 {% for pr in payment_requests %}
                 <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
-                    <td style="padding: 15px; font-weight: bold; color: #64748b;">{{ pr.id }}</td>
-                    <td style="padding: 15px; font-weight: 700; color: #0f172a;">{{ pr.office_name }}</td>
-                    <td style="padding: 15px; font-size: 0.85rem; color: #64748b;">{{ pr.owner_email }}</td>
-                    <td style="padding: 15px;">
+                    <td style="padding: 14px 18px; font-weight: bold; color: #64748b;">#{{ pr.id }}</td>
+                    <td style="padding: 14px 18px; font-weight: 700; color: #0f172a;">{{ pr.office_name }}</td>
+                    <td style="padding: 14px 18px; font-size: 0.85rem; color: #64748b;">{{ pr.owner_email }}</td>
+                    <td style="padding: 14px 18px;">
                         <span style="font-weight: bold; color: #5c2d91;">{{ "شهري" if pr.plan == "monthly" else "سنوي" }}</span>
-                        <br>
-                        <span style="font-size: 0.85rem; color: #64748b;">${{ pr.amount }} (Ref: {{ pr.transfer_ref }})</span>
+                        <div style="font-size: 0.85rem; color: #059669; font-weight: 600;" dir="ltr">${{ pr.amount }}</div>
+                        <div style="font-size: 0.75rem; color: #94a3b8;">مرجع: {{ pr.transfer_ref or 'غير محدد' }}</div>
                     </td>
-                    <td style="padding: 15px; font-size: 0.9rem; color: #64748b;" dir="ltr">{{ pr.submitted_at[:10] }}</td>
-                    <td style="padding: 15px;">
+                    <td style="padding: 14px 18px; font-size: 0.85rem; color: #64748b;" dir="ltr">{{ pr.submitted_at[:10] if pr.submitted_at else '-' }}</td>
+                    <td style="padding: 14px 18px;">
                         {% if pr.status == 'pending' %}
-                            <span style="background: #fef3c7; color: #d97706; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600;"><i class="fa-solid fa-clock"></i> بانتظار المراجعة</span>
+                            <span style="background: #fef3c7; color: #d97706; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;">
+                                <i class="fa-solid fa-clock"></i> قيد المراجعة
+                            </span>
                         {% elif pr.status == 'approved' %}
-                            <span style="background: #dcfce7; color: #16a34a; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600;"><i class="fa-solid fa-check"></i> مفعل</span>
+                            <span style="background: #dcfce7; color: #16a34a; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;">
+                                <i class="fa-solid fa-check"></i> مفعل ومعتمد
+                            </span>
                         {% else %}
-                            <span style="background: #fee2e2; color: #dc2626; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600;"><i class="fa-solid fa-times"></i> مرفوض</span>
+                            <span style="background: #fee2e2; color: #dc2626; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;">
+                                <i class="fa-solid fa-times"></i> مرفوض
+                            </span>
                         {% endif %}
                     </td>
-                    <td style="padding: 15px;">
-                        <button onclick="openReceiptModal({{ pr.id }}, '{{ pr.receipt_base64 }}', '{{ pr.status }}')" style="background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; cursor: pointer;">
-                            <i class="fa-solid fa-eye"></i> عرض السند
+                    <td style="padding: 14px 18px; text-align: center;">
+                        <button onclick="openReceiptModal({{ pr.id }}, '{{ pr.receipt_base64 }}', '{{ pr.status }}')" style="background: #3b82f6; color: white; border: none; padding: 7px 14px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                            <i class="fa-solid fa-eye"></i> فحص السند
                         </button>
                     </td>
                 </tr>
@@ -73,68 +156,98 @@
     </div>
 </div>
 
-
-<div class="card" style="margin-top: 2rem;">
-    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 1px solid #e2e8f0;">
-        <h3 style="margin: 0; font-size: 1.25rem; color: #1e293b;">المكاتب المسجلة</h3>
-        <button onclick="fixSubscriptions()" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(245, 158, 11, 0.2);">
-            <i class="fas fa-magic"></i> اعتماد نظام الدفع للمكاتب القديمة
-        </button>
+<!-- Section: Registered Tenants / Offices -->
+<div class="card" style="border-radius: 16px; border: 1px solid #e2e8f0; background: white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid #f1f5f9; flex-wrap: wrap; gap: 15px;">
+        <div>
+            <h3 style="margin: 0; font-size: 1.25rem; color: #0f172a; font-weight: 700;">
+                <i class="fas fa-building" style="color: #6366f1;"></i> مكاتب المحاماة المسجلة في المنصة
+            </h3>
+            <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.85rem;">التحكم بالاشتراكات، الدخول بالنيابة للدعم الفني، وتجميد/تفعيل الحسابات</p>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <input type="text" id="office-search" onkeyup="filterOfficesTable()" placeholder="🔍 بحث عن مكتب أو مدير..." style="padding: 8px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.85rem; width: 220px;">
+        </div>
     </div>
     <div class="table-container" style="overflow-x: auto;">
-        <table class="data-table" style="width: 100%; text-align: right; border-collapse: collapse;">
+        <table class="data-table" id="offices-table" style="width: 100%; text-align: right; border-collapse: collapse;">
             <thead>
                 <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
-                    <th style="padding: 15px; color: #475569;"># ID</th>
-                    <th style="padding: 15px; color: #475569;">اسم المكتب</th>
-                    <th style="padding: 15px; color: #475569;">صاحب المكتب</th>
-                    <th style="padding: 15px; color: #475569;">معلومات التواصل</th>
-                    <th style="padding: 15px; color: #475569;">عدد الحسابات</th>
-                    <th style="padding: 15px; color: #475569;">الاشتراك / الدفع</th>
-                    <th style="padding: 15px; color: #475569;">تاريخ التسجيل</th>
-                    <th style="padding: 15px; color: #475569;">الحالة</th>
-                    <th style="padding: 15px; color: #475569;">إجراء</th>
+                    <th style="padding: 14px 18px; color: #475569; font-size: 0.85rem;">المكتب</th>
+                    <th style="padding: 14px 18px; color: #475569; font-size: 0.85rem;">مدير المكتب / التواصل</th>
+                    <th style="padding: 14px 18px; color: #475569; font-size: 0.85rem; text-align: center;">المستخدمون</th>
+                    <th style="padding: 14px 18px; color: #475569; font-size: 0.85rem; text-align: center;">القضايا</th>
+                    <th style="padding: 14px 18px; color: #475569; font-size: 0.85rem; text-align: center;">استهلاك التخزين</th>
+                    <th style="padding: 14px 18px; color: #475569; font-size: 0.85rem;">خطة الاشتراك</th>
+                    <th style="padding: 14px 18px; color: #475569; font-size: 0.85rem;">الحالة</th>
+                    <th style="padding: 14px 18px; color: #475569; font-size: 0.85rem; text-align: center;">إجراءات الإدارة والدعم</th>
                 </tr>
             </thead>
             <tbody>
                 {% for off in offices %}
                 <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
-                    <td style="padding: 15px; font-weight: bold; color: #64748b;">{{ off.id }}</td>
-                    <td style="padding: 15px; font-weight: 700; color: #0f172a;">{{ off.name }}</td>
-                    <td style="padding: 15px; color: #334155;">{{ off.owner_name }}</td>
-                    <td style="padding: 15px;">
-                        <div style="font-size: 0.85rem; color: #64748b;">📧 {{ off.owner_email }}</div>
-                        <div style="font-size: 0.85rem; color: #64748b;">📱 {{ off.owner_phone }}</div>
+                    <td style="padding: 14px 18px;">
+                        <div style="font-weight: 700; color: #0f172a; font-size: 0.95rem;">{{ off.name }}</div>
+                        <div style="font-size: 0.75rem; color: #94a3b8;" dir="ltr">ID: #{{ off.id }} | مسجل: {{ off.created_at[:10] if off.created_at else '-' }}</div>
                     </td>
-                    <td style="padding: 15px; text-align: center;">
-                        <span style="background: #eff6ff; color: #3b82f6; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 0.85rem;">{{ off.user_count }}</span>
+                    <td style="padding: 14px 18px;">
+                        <div style="color: #334155; font-weight: 600; font-size: 0.9rem;">{{ off.owner_name }}</div>
+                        <div style="font-size: 0.8rem; color: #64748b;">📧 {{ off.owner_email }}</div>
+                        <div style="font-size: 0.8rem; color: #64748b;">📱 {{ off.owner_phone }}</div>
                     </td>
-                    <td style="padding: 15px;">
-                        <div style="font-size: 0.85rem; font-weight: bold; color: #5c2d91; margin-bottom: 5px;">
-                            {{ "تجريبي" if off.subscription_plan == 'trial' else ("شهري" if off.subscription_plan == 'monthly' else "سنوي") }}
+                    <td style="padding: 14px 18px; text-align: center;">
+                        <span style="background: #eff6ff; color: #2563eb; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 0.85rem;">
+                            {{ off.user_count }}
+                        </span>
+                    </td>
+                    <td style="padding: 14px 18px; text-align: center;">
+                        <span style="background: #fdf2f8; color: #db2777; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 0.85rem;">
+                            {{ off.case_count }}
+                        </span>
+                    </td>
+                    <td style="padding: 14px 18px; text-align: center;">
+                        <div style="font-size: 0.85rem; font-weight: bold; color: #0f172a;" dir="ltr">{{ off.storage_mb }} MB</div>
+                        <div style="font-size: 0.7rem; color: #94a3b8;">{{ off.doc_count }} ملف</div>
+                    </td>
+                    <td style="padding: 14px 18px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 0.85rem; font-weight: bold; padding: 3px 10px; border-radius: 6px; 
+                                {% if off.subscription_plan == 'yearly' %}background: #dcfce7; color: #15803d;
+                                {% elif off.subscription_plan == 'monthly' %}background: #f3e8ff; color: #7e22ce;
+                                {% else %}background: #fef3c7; color: #b45309;{% endif %}">
+                                {{ "تجريبي (14 يوم)" if off.subscription_plan == 'trial' else ("شهري" if off.subscription_plan == 'monthly' else "سنوي") }}
+                            </span>
+                            <button onclick="openPlanModal({{ off.id }}, '{{ off.name }}', '{{ off.subscription_plan }}')" title="تعديل الخطة يدوياً" style="background: none; border: none; color: #64748b; cursor: pointer; padding: 2px 6px;">
+                                <i class="fas fa-pen-to-square"></i>
+                            </button>
                         </div>
-                        {% if off.receipt_status == 'pending' %}
-                            <button onclick="openReceiptModal({{ off.id }}, '{{ off.receipt_base64 }}')" style="background: #10b981; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; cursor: pointer;">عرض السند واعتماد</button>
-                        {% elif off.receipt_status == 'approved' %}
-                            <span style="color: #10b981; font-size: 0.8rem;"><i class="fa-solid fa-check-circle"></i> مدفوع</span>
-                        {% elif off.receipt_status == 'rejected' %}
-                            <span style="color: #ef4444; font-size: 0.8rem;"><i class="fa-solid fa-times-circle"></i> مرفوض</span>
-                        {% else %}
-                            <span style="color: #94a3b8; font-size: 0.8rem;">بانتظار الدفع</span>
-                        {% endif %}
+                        <div style="font-size: 0.75rem; color: #64748b; margin-top: 4px;">
+                            انتهاء: <span dir="ltr">{{ off.subscription_end[:10] if off.subscription_end else 'غير محدد' }}</span>
+                        </div>
                     </td>
-                    <td style="padding: 15px; font-size: 0.9rem; color: #64748b;" dir="ltr">{{ off.created_at[:10] }}</td>
-                    <td style="padding: 15px;" id="status-cell-{{ off.id }}">
+                    <td style="padding: 14px 18px;" id="status-cell-{{ off.id }}">
                         {% if off.is_active == 1 %}
-                            <span class="status-badge" style="background: #dcfce7; color: #16a34a; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 600;">نشط</span>
+                            <span style="background: #dcfce7; color: #16a34a; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;">
+                                <i class="fas fa-circle" style="font-size: 0.5rem;"></i> نشط
+                            </span>
                         {% else %}
-                            <span class="status-badge" style="background: #fee2e2; color: #ef4444; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 600;">موقوف</span>
+                            <span style="background: #fee2e2; color: #dc2626; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;">
+                                <i class="fas fa-circle" style="font-size: 0.5rem;"></i> مجمّد
+                            </span>
                         {% endif %}
                     </td>
-                    <td style="padding: 15px;">
-                        <button onclick="toggleOffice({{ off.id }})" id="btn-toggle-{{ off.id }}" class="btn-action" style="padding: 8px 16px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; {% if off.is_active == 1 %}background: #fee2e2; color: #dc2626;{% else %}background: #dcfce7; color: #16a34a;{% endif %}">
-                            {% if off.is_active == 1 %}إيقاف المكتب{% else %}تفعيل المكتب{% endif %}
-                        </button>
+                    <td style="padding: 14px 18px; text-align: center;">
+                        <div style="display: inline-flex; gap: 8px;">
+                            <!-- Impersonate Button -->
+                            <button onclick="impersonateOffice({{ off.id }}, '{{ off.name }}')" style="background: #4f46e5; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;" title="تسجيل الدخول كمدير مكتب لتقديم الدعم الفني">
+                                <i class="fas fa-right-to-bracket"></i> دخول كدعم فني
+                            </button>
+
+                            <!-- Toggle Office Active/Suspend -->
+                            <button onclick="toggleOffice({{ off.id }})" id="btn-toggle-{{ off.id }}" style="padding: 6px 12px; border: none; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: 0.2s; {% if off.is_active == 1 %}background: #fee2e2; color: #dc2626;{% else %}background: #dcfce7; color: #16a34a;{% endif %}">
+                                {% if off.is_active == 1 %}<i class="fas fa-ban"></i> تجميد{% else %}<i class="fas fa-check"></i> تفعيل{% endif %}
+                            </button>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
@@ -146,7 +259,7 @@
 <!-- Receipt Modal -->
 <div id="receiptModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; padding: 20px;">
     <div style="background: white; border-radius: 16px; width: 100%; max-width: 500px; padding: 24px; text-align: center; max-height: 90vh; overflow-y: auto;">
-        <h3 style="margin-top: 0; font-size: 1.3rem; margin-bottom: 15px;">مراجعة سند الدفع</h3>
+        <h3 style="margin-top: 0; font-size: 1.3rem; margin-bottom: 15px; color: #0f172a;">مراجعة سند الدفع</h3>
         <div style="width: 100%; max-height: 400px; overflow-y: auto; margin-bottom: 20px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 5px; background: #f8fafc;">
             <img id="receiptImage" src="" style="max-width: 100%; height: auto; border-radius: 4px;">
         </div>
@@ -157,7 +270,7 @@
         </div>
 
         <div id="modal-actions" style="display: flex; gap: 10px; justify-content: center;">
-            <button onclick="handleReceiptAction('approve')" style="background: #10b981; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; flex: 1;">تأكيد واعتماد</button>
+            <button onclick="handleReceiptAction('approve')" style="background: #10b981; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; flex: 1;">تأكيد واعتماد الترقية</button>
             <button onclick="showRejectionBox()" style="background: #ef4444; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; flex: 1;">رفض السند</button>
         </div>
         
@@ -170,37 +283,122 @@
     </div>
 </div>
 
+<!-- Plan Edit Modal -->
+<div id="planModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; padding: 20px;">
+    <div style="background: white; border-radius: 16px; width: 100%; max-width: 440px; padding: 24px; text-align: right;">
+        <h3 style="margin-top: 0; font-size: 1.25rem; color: #0f172a; margin-bottom: 8px;">تعديل باقة الاشتراك</h3>
+        <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 20px;" id="planModalOfficeName"></p>
+        
+        <div style="margin-bottom: 16px;">
+            <label style="display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 6px; color: #334155;">نوع الباقة:</label>
+            <select id="edit-plan-select" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-family: inherit;">
+                <option value="trial">تجريبي (Trial)</option>
+                <option value="monthly">شهري (Monthly) - $49.99</option>
+                <option value="yearly">سنوي (Yearly) - $499.99</option>
+                <option value="enterprise">مؤسسي (Enterprise / VIP)</option>
+            </select>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 6px; color: #334155;">مدة الصلاحية (بالأيام ابتداءً من اليوم):</label>
+            <input type="number" id="edit-plan-days" value="30" min="1" max="3650" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-family: inherit;">
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <button onclick="savePlanChanges()" style="flex: 1; background: #10b981; color: white; border: none; padding: 11px; border-radius: 8px; font-weight: bold; cursor: pointer;">حفظ وتطبيق</button>
+            <button onclick="closePlanModal()" style="flex: 1; background: #e2e8f0; color: #475569; border: none; padding: 11px; border-radius: 8px; font-weight: bold; cursor: pointer;">إلغاء</button>
+        </div>
+    </div>
+</div>
+
 <script>
-async function fixSubscriptions() {
-    if(!confirm("تحذير: سيتم تحويل جميع المكاتب القديمة (باستثناء مكتبك) إلى النسخة التجريبية (14 يوم) ابتداءً من اليوم. هل تريد الاستمرار؟")) return;
+let currentPaymentId = null;
+let currentEditOfficeId = null;
+
+function filterOfficesTable() {
+    const input = document.getElementById("office-search");
+    const filter = input.value.toLowerCase();
+    const table = document.getElementById("offices-table");
+    const tr = table.getElementsByTagName("tr");
+
+    for (let i = 1; i < tr.length; i++) {
+        const text = tr[i].innerText.toLowerCase();
+        if (text.indexOf(filter) > -1) {
+            tr[i].style.display = "";
+        } else {
+            tr[i].style.display = "none";
+        }
+    }
+}
+
+async function impersonateOffice(officeId, officeName) {
+    if (!confirm(`هل تريد تسجيل الدخول كمدير لمكتب "${officeName}" بالنيابة لتقديم الدعم الفني؟ ستنتقل فوراً إلى لوحة تحكم مكتبهم.`)) {
+        return;
+    }
     
     try {
         const csrfToken = document.cookie.split('; ').find(r => r.startsWith('csrf_token='))?.split('=')[1] || '';
-        const res = await fetch('/api/superadmin/fix-subscriptions', {
+        const res = await fetch('/api/superadmin/impersonate/' + officeId, {
             method: 'POST',
             headers: { 'X-CSRF-Token': csrfToken }
         });
         const data = await res.json();
         
-        alert(data.message || data.error);
-        if(data.success) {
-            window.location.reload();
+        if (data.success) {
+            window.location.href = data.redirect_url;
+        } else {
+            alert(data.error || "فشل الدخول بالنيابة");
         }
     } catch(e) {
-        alert("حدث خطأ في الاتصال");
+        alert("حدث خطأ في الاتصال بالخادم");
     }
 }
-let currentPaymentId = null;
+
+function openPlanModal(officeId, officeName, currentPlan) {
+    currentEditOfficeId = officeId;
+    document.getElementById('planModalOfficeName').innerText = `المكتب: ${officeName}`;
+    document.getElementById('edit-plan-select').value = currentPlan;
+    document.getElementById('edit-plan-days').value = currentPlan === 'yearly' ? 365 : 30;
+    document.getElementById('planModal').style.display = 'flex';
+}
+
+function closePlanModal() {
+    document.getElementById('planModal').style.display = 'none';
+    currentEditOfficeId = null;
+}
+
+async function savePlanChanges() {
+    if (!currentEditOfficeId) return;
+    const plan = document.getElementById('edit-plan-select').value;
+    const days = document.getElementById('edit-plan-days').value;
+    
+    try {
+        const csrfToken = document.cookie.split('; ').find(r => r.startsWith('csrf_token='))?.split('=')[1] || '';
+        const res = await fetch('/api/superadmin/update-plan/' + currentEditOfficeId, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+            body: JSON.stringify({ plan: plan, days: days })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            alert(data.message);
+            window.location.reload();
+        } else {
+            alert(data.error || "حدث خطأ");
+        }
+    } catch(e) {
+        alert("فشل الاتصال");
+    }
+}
 
 function openReceiptModal(paymentId, base64Str, status) {
     currentPaymentId = paymentId;
     document.getElementById('receiptImage').src = base64Str;
     document.getElementById('receiptModal').style.display = 'flex';
     
-    // Reset state
     hideRejectionBox();
     
-    // Hide action buttons if already processed
     if (status !== 'pending') {
         document.getElementById('modal-actions').style.display = 'none';
     } else {
@@ -259,8 +457,9 @@ async function handleReceiptAction(action) {
         alert('خطأ في الاتصال');
     }
 }
+
 async function toggleOffice(officeId) {
-    if(!confirm("هل أنت متأكد من تغيير حالة هذا المكتب؟ إيقاف المكتب سيمنع جميع منسوبيه من تسجيل الدخول.")) return;
+    if(!confirm("هل أنت متأكد من تغيير حالة هذا المكتب؟ تجميد المكتب سيمنع جميع منسوبيه من تسجيل الدخول لحين فك التجميد.")) return;
     
     const btn = document.getElementById('btn-toggle-' + officeId);
     const originalText = btn.innerText;
@@ -276,18 +475,17 @@ async function toggleOffice(officeId) {
         const data = await res.json();
         
         if (data.success) {
-            // Update UI dynamically
             const cell = document.getElementById('status-cell-' + officeId);
             if (data.is_active === 1) {
-                cell.innerHTML = '<span class="status-badge" style="background: #dcfce7; color: #16a34a; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 600;">نشط</span>';
+                cell.innerHTML = '<span style="background: #dcfce7; color: #16a34a; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;"><i class="fas fa-circle" style="font-size: 0.5rem;"></i> نشط</span>';
                 btn.style.background = '#fee2e2';
                 btn.style.color = '#dc2626';
-                btn.innerText = 'إيقاف المكتب';
+                btn.innerHTML = '<i class="fas fa-ban"></i> تجميد';
             } else {
-                cell.innerHTML = '<span class="status-badge" style="background: #fee2e2; color: #ef4444; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 600;">موقوف</span>';
+                cell.innerHTML = '<span style="background: #fee2e2; color: #dc2626; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;"><i class="fas fa-circle" style="font-size: 0.5rem;"></i> مجمّد</span>';
                 btn.style.background = '#dcfce7';
                 btn.style.color = '#16a34a';
-                btn.innerText = 'تفعيل المكتب';
+                btn.innerHTML = '<i class="fas fa-check"></i> تفعيل';
             }
         } else {
             alert(data.error || "حدث خطأ غير متوقع");
