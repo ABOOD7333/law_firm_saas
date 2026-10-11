@@ -159,11 +159,19 @@ class LawClients(Base):
     office_id: Mapped[Optional[int]] = mapped_column(ForeignKey('law_offices.id'), index=True)
     user_id: Mapped[Optional[int]] = mapped_column(ForeignKey('access_profiles.id', ondelete='SET NULL'), index=True)
     name: Mapped[str] = mapped_column(Text, nullable=False)
+    client_type: Mapped[Optional[str]] = mapped_column(Text, server_default=text("'individual'")) # individual (فرد) / company (شركة أو مؤسسة)
+    nationality: Mapped[Optional[str]] = mapped_column(Text)
+    national_id: Mapped[Optional[str]] = mapped_column(Text)
+    cr_number: Mapped[Optional[str]] = mapped_column(Text) # السجل التجاري للشركات
+    legal_rep_name: Mapped[Optional[str]] = mapped_column(Text) # ممثل الشركة / المفوض
     phone: Mapped[Optional[str]] = mapped_column(Text)
     alt_phone: Mapped[Optional[str]] = mapped_column(Text)
     email: Mapped[Optional[str]] = mapped_column(Text)
+    city: Mapped[Optional[str]] = mapped_column(Text)
+    address: Mapped[Optional[str]] = mapped_column(Text)
+    notes: Mapped[Optional[str]] = mapped_column(Text)
     username: Mapped[Optional[str]] = mapped_column(Text)
-    national_id: Mapped[Optional[str]] = mapped_column(Text)
+    portal_access: Mapped[int] = mapped_column(Integer, server_default=text('1')) # 1 = متاح له الدخول, 0 = معطل
     photo_path: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
     updated_at: Mapped[Optional[str]] = mapped_column(Text)

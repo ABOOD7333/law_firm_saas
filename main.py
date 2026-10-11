@@ -1288,220 +1288,235 @@ async def get_case_numbers(db: Session = Depends(get_db), user: AccessProfiles =
     return _JSONResponse(case_numbers)
 
 @app.get("/clients", response_class=HTMLResponse)
-
 async def clients_page(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
-
     if not user:
-
         return RedirectResponse(url="/", status_code=303)
-
     if not check_user_permission(user, 'clients', 'view'):
-
         raise HTTPException(status_code=403, detail="غير مصرح لك بدخول قسم الموكلين")
 
     try:
-
         office_id = user.office_id
+        clients = db.query(LawClients).filter(
+            LawClients.office_id == office_id,
+            LawClients.is_deleted == 0
+        ).order_by(LawClients.id.desc()).all()
 
-        clients = db.query(LawClients).filter(LawClients.office_id == office_id).order_by(LawClients.created_at.desc()).all()
+        # جلب قضايا المكتب لربطها في نافذة إضافة الموكل
+        cases = db.query(LawCases).filter(
+            LawCases.office_id == office_id,
+            LawCases.is_deleted == 0
+        ).order_by(LawCases.case_number.asc()).all()
+
+        # إحصائيات الموكلين
+        total_clients = len(clients)
+        companies_count = sum(1 for c in clients if getattr(c, 'client_type', 'individual') in ['company', 'شركة', 'مؤسسة'])
+        individuals_count = total_clients - companies_count
+        portal_active_count = sum(1 for c in clients if getattr(c, 'portal_access', 1) == 1 and c.user_id)
+
+        stats = {
+            "total": total_clients,
+            "companies": companies_count,
+            "individuals": individuals_count,
+            "portal_active": portal_active_count
+        }
 
         return templates.TemplateResponse(
-
             request=request,
-
             name="clients.html",
-
-            context={"user": user, "clients": clients, "active_page": "clients"}
-
+            context={
+                "user": user,
+                "clients": clients,
+                "cases": cases,
+                "stats": stats,
+                "active_page": "clients"
+            }
         )
-
     except Exception:
-
         import traceback
-
         return _safe_error(traceback.format_exc())
 
 @app.post("/clients/add")
-
 async def add_client(
-
     request: Request,
-
     name: str = Form(...),
-
-    username: str = Form(...),
-
-    password: str = Form(...),
-
-    case_number: str = Form(...),
-
+    client_type: str = Form("individual"),
+    username: str = Form(None),
+    password: str = Form(None),
+    case_id: Optional[int] = Form(None),
+    case_number: Optional[str] = Form(None),
     phone: str = Form(None),
-
+    alt_phone: str = Form(None),
     national_id: str = Form(None),
-
+    cr_number: str = Form(None),
+    legal_rep_name: str = Form(None),
     email: str = Form(None),
-
+    city: str = Form(None),
+    address: str = Form(None),
+    notes: str = Form(None),
+    portal_access: int = Form(1),
     db: Session = Depends(get_db),
-
     user: AccessProfiles = Depends(get_current_user)
-
 ):
-
     if not user:
-
         return RedirectResponse(url="/", status_code=303)
-
     if not check_user_permission(user, 'clients', 'add'):
-
         raise HTTPException(status_code=403, detail="غير مصرح لك بإضافة موكل")
 
-    if len(password) < 12 or not name.strip() or len(name) > 200:
-        return HTMLResponse(content="بيانات الموكل غير صالحة؛ كلمة المرور يجب أن تكون 12 حرفاً على الأقل.", status_code=400)
+    if not name.strip() or len(name) > 200:
+        return HTMLResponse(content="اسم الموكل غير صالح.", status_code=400)
     if not user.office_id:
         raise HTTPException(status_code=403, detail="الحساب غير مرتبط بمكتب")
     office_id = user.office_id
 
-    # التأكد من عدم تكرار اسم المستخدم
+    # معالجة القضية المرتبطة
+    final_case_number = case_number
+    if case_id:
+        target_case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
+        if target_case and not final_case_number:
+            final_case_number = target_case.case_number
+
+    # إنشاء اسم مستخدم تلقائي إذا لم يتم تحديده وكان مطلوباً الدخول للبوابة
+    if not username or not username.strip():
+        username = f"cli_{secrets.token_hex(4)}"
+    else:
+        username = username.strip()
 
     existing = db.query(AccessProfiles).filter(AccessProfiles.username == username).first()
-
     if existing:
-
-        # للتغاضي مؤقتاً لو كان موجود، الأفضل إرجاع رسالة لكن سنقوم بتغييره لتجنب الخطأ
-
         username = f"{username}_{secrets.token_hex(2)}"
 
     new_client = LawClients(
-
         office_id=office_id,
-
-        name=name,
-
+        name=name.strip(),
+        client_type=client_type,
+        case_id=case_id,
+        case_number=final_case_number,
+        phone=phone.strip() if phone else None,
+        alt_phone=alt_phone.strip() if alt_phone else None,
+        national_id=national_id.strip() if national_id else None,
+        cr_number=cr_number.strip() if cr_number else None,
+        legal_rep_name=legal_rep_name.strip() if legal_rep_name else None,
+        email=email.strip() if email else None,
+        city=city.strip() if city else None,
+        address=address.strip() if address else None,
+        notes=notes.strip() if notes else None,
         username=username,
-
-        case_number=case_number,
-
-        phone=phone,
-
-        national_id=national_id,
-
-        email=email
-
+        portal_access=portal_access
     )
-
     db.add(new_client)
 
-    # إنشاء حساب دخول للموكل
-
-    new_user = AccessProfiles(
-
-        name=name,
-
-        username=username,
-
-        email=email or f"{username}@client.local",
-
-        phone=phone or username,
-
-        case_number=case_number,
-
-        access_pin_hash=_hash_pin(password),
-
-        role='موكل',
-
-        office_id=office_id,
-
-        is_active=1,
-
-        email_verified=1,
-
-        state="active"
-
-    )
-
-    db.add(new_user)
-
-    db.flush()
-    new_client.user_id = new_user.id
+    # إنشاء حساب دخول للموكل إذا كان مطلوباً
+    if portal_access == 1:
+        client_pass = password.strip() if password and len(password.strip()) >= 8 else secrets.token_urlsafe(10)
+        new_user = AccessProfiles(
+            name=name.strip(),
+            username=username,
+            email=email or f"{username}@client.local",
+            phone=phone or username,
+            case_number=final_case_number or "",
+            access_pin_hash=_hash_pin(client_pass),
+            role='موكل',
+            office_id=office_id,
+            is_active=1,
+            email_verified=1,
+            state="active"
+        )
+        db.add(new_user)
+        db.flush()
+        new_client.user_id = new_user.id
 
     db.commit()
-
     return RedirectResponse(url="/clients", status_code=303)
 
 @app.post("/clients/edit")
-
 async def edit_client(
-
     request: Request,
-
     client_id: int = Form(...),
-
     name: str = Form(...),
-
-    username: str = Form(...),
-
+    client_type: str = Form("individual"),
+    username: str = Form(None),
     password: str = Form(""),
-
-    case_number: str = Form(""),
-
+    case_id: Optional[int] = Form(None),
+    case_number: Optional[str] = Form(None),
     phone: str = Form(None),
-
+    alt_phone: str = Form(None),
     national_id: str = Form(None),
-
+    cr_number: str = Form(None),
+    legal_rep_name: str = Form(None),
     email: str = Form(None),
-
+    city: str = Form(None),
+    address: str = Form(None),
+    notes: str = Form(None),
+    portal_access: int = Form(1),
     db: Session = Depends(get_db),
-
     user: AccessProfiles = Depends(get_current_user)
-
 ):
-
     if not user:
-
         return RedirectResponse(url="/", status_code=303)
-
     if not check_user_permission(user, 'clients', 'edit'):
-
         raise HTTPException(status_code=403, detail="غير مصرح لك بتعديل بيانات موكل")
 
-    if password and len(password) < 12:
-        return HTMLResponse(content="كلمة المرور يجب أن تكون 12 حرفاً على الأقل.", status_code=400)
     if not user.office_id:
         raise HTTPException(status_code=403, detail="الحساب غير مرتبط بمكتب")
     office_id = user.office_id
 
     client = db.query(LawClients).filter(LawClients.id == client_id, LawClients.office_id == office_id).first()
-
     if client:
+        client.name = name.strip()
+        client.client_type = client_type
+        if case_id:
+            client.case_id = case_id
+        if case_number:
+            client.case_number = case_number
+        client.phone = phone.strip() if phone else None
+        client.alt_phone = alt_phone.strip() if alt_phone else None
+        client.national_id = national_id.strip() if national_id else None
+        client.cr_number = cr_number.strip() if cr_number else None
+        client.legal_rep_name = legal_rep_name.strip() if legal_rep_name else None
+        client.email = email.strip() if email else None
+        client.city = city.strip() if city else None
+        client.address = address.strip() if address else None
+        client.notes = notes.strip() if notes else None
+        client.portal_access = portal_access
 
-        client.name = name
+        # تحديث حساب المستخدم المرتبط
+        if client.user_id:
+            client_user = db.query(AccessProfiles).filter(AccessProfiles.id == client.user_id, AccessProfiles.office_id == office_id).first()
+            if client_user:
+                client_user.name = name.strip()
+                if email:
+                    client_user.email = email.strip()
+                if phone:
+                    client_user.phone = phone.strip()
+                if password and len(password.strip()) >= 8:
+                    client_user.access_pin_hash = _hash_pin(password.strip())
+                client_user.is_active = portal_access
+        db.commit()
 
-        client.username = username
+    return RedirectResponse(url="/clients", status_code=303)
 
-        client.case_number = case_number
 
-        client.phone = phone
+@app.post("/clients/delete")
+async def delete_client(
+    request: Request,
+    client_id: int = Form(...),
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    """حذف موكل بأمان (Soft Delete)"""
+    if not user:
+        return RedirectResponse(url="/", status_code=303)
+    if not check_user_permission(user, 'clients', 'delete'):
+        raise HTTPException(status_code=403, detail="غير مصرح لك بحذف موكل")
+    office_id = user.office_id
 
-        client.national_id = national_id
-
-        client.email = email
-
-        # تحديث بيانات الدخول أيضاً إن وجدت
-
-        client_user = db.query(AccessProfiles).filter(AccessProfiles.username == client.username, AccessProfiles.office_id == office_id).first()
-
-        if client_user:
-
-            client_user.name = name
-
-            client_user.username = username
-
-            client_user.case_number = case_number
-
-            if password:
-
-                client_user.access_pin_hash = _hash_pin(password)
-
+    client = db.query(LawClients).filter(LawClients.id == client_id, LawClients.office_id == office_id).first()
+    if client:
+        client.is_deleted = 1
+        if client.user_id:
+            client_user = db.query(AccessProfiles).filter(AccessProfiles.id == client.user_id, AccessProfiles.office_id == office_id).first()
+            if client_user:
+                client_user.is_active = 0
         db.commit()
 
     return RedirectResponse(url="/clients", status_code=303)
