@@ -7,7 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css">
-    <link rel="stylesheet" href="/static/css/dashboard.css?v=2.7">
+    <link rel="stylesheet" href="/static/css/dashboard.css?v=3.0">
     <style>
         /* Core Mobile Menu Fix - Guaranteed to apply */
         @media (max-width: 992px) {
@@ -153,24 +153,76 @@
         }
     </style>
     <style>
-        /* Ensuring FontAwesome icons always render with correct width & margin */
-        .nav-item a i, .btn-action i, button i {
-            display: inline-block;
-            min-width: 1.25rem;
-            text-align: center;
-        }
-        /* Fix Table Action Buttons to wrap neatly without squishing */
-        .table-action-btns {
-            display: flex !important;
-            flex-wrap: wrap !important;
-            gap: 6px !important;
-            justify-content: center !important;
-            align-items: center !important;
-            min-width: 220px !important;
-        }
+        /* ========================================================
+           حماية عامة لجميع الأزرار والجداول في كامل النظام
+           تمنع تماماً قص الكلمات أو ضغط الأزرار إلى مربعات ضيقة
+           ======================================================== */
+        
+        /* 1. منع قص الكلمات وإلغاء العرض الثابت الضيق لأي زر في أي جدول أو شاشة */
+        table button,
+        .data-table button,
+        .saas-table button,
+        .table-container button,
+        td button,
+        button.btn-action,
+        .btn-action,
         .table-action-btns button {
+            width: auto !important;
+            min-width: fit-content !important;
+            height: auto !important;
+            min-height: 32px !important;
+            padding: 6px 14px !important;
             white-space: nowrap !important;
+            overflow: visible !important;
+            text-overflow: clip !important;
+            font-size: 0.85rem !important;
+            font-weight: 700 !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 6px !important;
+            box-sizing: border-box !important;
+        }
+
+        /* 2. ضمان ظهور أيقونة الزر بجانب النص بشكل واضح */
+        button i,
+        .btn-action i,
+        .nav-item a i {
+            display: inline-block !important;
+            font-size: 0.95rem !important;
             flex-shrink: 0 !important;
+        }
+
+        /* 3. حاوية أزرار الإجراءات في الجداول */
+        .table-action-btns,
+        td .table-action-btns,
+        td div[style*="inline-flex"],
+        td .actions-cell {
+            display: inline-flex !important;
+            flex-wrap: nowrap !important;
+            gap: 6px !important;
+            align-items: center !important;
+            justify-content: center !important;
+            white-space: nowrap !important;
+        }
+
+        /* 4. التأكد من أن خلايا الجداول التي تحوي أزراراً لا تضغطها */
+        table td:last-child,
+        .data-table td:last-child,
+        .saas-table td:last-child {
+            white-space: nowrap !important;
+            width: 1% !important;
+            min-width: max-content !important;
+        }
+
+        /* 5. ضبط القائمة الجانبية لتكون واضحة دائماً */
+        .nav-item a {
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 12px !important;
         }
     </style>
     {% block head %}{% endblock %}

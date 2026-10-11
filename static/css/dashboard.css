@@ -649,25 +649,40 @@ td[style*="display: flex"] {
     font-size: 0.85rem;
 }
 
-/* ── إصلاح شامل: جميع أزرار الإجراءات في أي جدول ── */
+/* ── إصلاح شامل: أزرار الجداول ── */
 .saas-table td button,
 .data-table td button,
+table td button,
 table td .action-btn,
 table td a.action-btn {
     display: inline-flex !important;
     align-items: center;
     justify-content: center;
-    width: 34px;
-    height: 34px;
-    border-radius: 10px;
+    width: auto !important;
+    min-width: 34px;
+    height: auto !important;
+    min-height: 34px;
+    padding: 6px 12px !important;
+    border-radius: 8px;
     border: 1px solid var(--border-color);
-    background: rgba(255,255,255,0.7);
-    color: var(--text-muted);
     cursor: pointer;
-    font-size: 0.95rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap !important;
     transition: all 0.2s ease;
     text-decoration: none;
-    margin: 0 2px;
+    margin: 2px;
+    box-sizing: border-box !important;
+}
+
+/* الأزرار المخصصة للأيقونات فقط (بدون نص) تبقى مربعة */
+.saas-table td button:empty,
+.data-table td button:empty,
+table td button.icon-only,
+table td .action-btn.icon-only {
+    width: 34px !important;
+    height: 34px !important;
+    padding: 0 !important;
 }
 
 /* التحقق من أن أزرار الإجراءات لا تظهر نقطة */
@@ -901,9 +916,12 @@ button, .btn {
 /* For icon-only buttons in tables, keep them square */
 .saas-table td .action-btn, 
 .data-table td .action-btn {
-    width: 34px !important;
-    height: 34px !important;
-    padding: 0 !important;
+    width: auto !important;
+    min-width: 34px;
+    height: auto !important;
+    min-height: 34px;
+    padding: 6px 12px !important;
+    white-space: nowrap !important;
 }
 
 /* ── أزرار حسب الوظيفة (via color style) ── */
