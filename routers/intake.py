@@ -71,21 +71,42 @@ async def intake_dashboard(
         IntakeSubmissions.office_id == user.office_id
     ).order_by(IntakeSubmissions.id.desc()).all()
 
-    # إحصائيات
+    # 3. جلب موكلي وقضايا المكتب لإنشاء عقود سريعة
+    clients = db.query(LawClients).filter(
+        LawClients.office_id == user.office_id,
+        LawClients.is_deleted == 0
+    ).order_by(LawClients.name.asc()).all()
+
+    cases = db.query(LawCases).filter(
+        LawCases.office_id == user.office_id,
+        LawCases.is_deleted == 0
+    ).order_by(LawCases.case_number.asc()).all()
+
+    # جلب جميع العقود المسجلة
+    agreements = db.query(RetainerAgreements).filter(
+        RetainerAgreements.office_id == user.office_id
+    ).order_by(RetainerAgreements.id.desc()).all()
+
+    # إحصائيات متقدمة
     total_submissions = len(submissions)
     pending_count = sum(1 for s in submissions if s.status == 'pending')
     signed_count = sum(1 for s in submissions if s.status in ['signed', 'converted'])
     conflict_count = sum(1 for s in submissions if s.conflict_status == 'conflict_detected')
+    total_fees_signed = sum(a.fee_amount or 0.0 for a in agreements if a.is_signed == 1)
 
     return templates.TemplateResponse("intake/intake_list.html", {
         "request": request,
         "user": user,
         "forms": forms,
         "submissions": submissions,
+        "clients": clients,
+        "cases": cases,
+        "agreements": agreements,
         "total_submissions": total_submissions,
         "pending_count": pending_count,
         "signed_count": signed_count,
         "conflict_count": conflict_count,
+        "total_fees_signed": total_fees_signed,
         "active_page": "intake"
     })
 
@@ -114,6 +135,74 @@ async def create_intake_form(
     )
     db.add(new_form)
     db.commit()
+    return RedirectResponse(url="/intake", status_code=303)
+
+@router.post("/intake/quick-contract")
+async def create_quick_contract(
+    client_name: str = Form(...),
+    client_phone: str = Form(...),
+    client_email: Optional[str] = Form(None),
+    client_national_id: Optional[str] = Form(None),
+    case_summary: str = Form(...),
+    fee_amount: float = Form(0.0),
+    retainer_text: Optional[str] = Form(None),
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_authorized_user)
+):
+    """إنشاء عقد توكيل سريع وإصدار رابط توقيع إلكتروني مباشر لمشاركته مع الموكل فوراً"""
+    if not check_user_permission(user, "cases", "add") or not user.office_id:
+        raise HTTPException(status_code=403, detail="غير مصرح")
+
+    # جلب أو إنشاء نموذج استقطاب افتراضي لربط السجل
+    default_form = db.query(ClientIntakeForms).filter(ClientIntakeForms.office_id == user.office_id).first()
+    if not default_form:
+        default_form = ClientIntakeForms(
+            office_id=user.office_id,
+            title="عقد تمثيل قانوني سريع",
+            form_token=uuid.uuid4().hex,
+            is_active=1,
+            require_signature=1,
+            created_by=user.id
+        )
+        db.add(default_form)
+        db.flush()
+
+    sub_token = str(uuid.uuid4())
+    sub = IntakeSubmissions(
+        form_id=default_form.id,
+        office_id=user.office_id,
+        submission_token=sub_token,
+        full_name=client_name.strip(),
+        phone=client_phone.strip(),
+        email=client_email.strip() if client_email else None,
+        national_id=client_national_id.strip() if client_national_id else None,
+        case_type="عقد تمثيل وتوكيل",
+        case_summary=case_summary.strip(),
+        conflict_status="safe",
+        status="pending"
+    )
+    db.add(sub)
+    db.flush()
+
+    # إنشاء سجل الاتفاقية برقم أتعاب محدد
+    agreement_num = f"AGR-{datetime.now().strftime('%Y%m')}-{uuid.uuid4().hex[:4].upper()}"
+    agreement_body = retainer_text.strip() if retainer_text and retainer_text.strip() else (
+        f"اتفاقية تمثيل وتوكيل قانوني — موضوع التمثيل: {case_summary.strip()}.\n"
+        f"قيمة الأتعاب المقررة: {fee_amount:,.2f} ريال."
+    )
+
+    new_agreement = RetainerAgreements(
+        submission_id=sub.id,
+        office_id=user.office_id,
+        agreement_number=agreement_num,
+        agreement_title="عقد تمثيل وتوكيل قانوني",
+        agreement_body=agreement_body,
+        fee_amount=fee_amount,
+        is_signed=0
+    )
+    db.add(new_agreement)
+    db.commit()
+
     return RedirectResponse(url="/intake", status_code=303)
 
 @router.post("/intake/submission/{sub_id}/convert")
@@ -364,8 +453,17 @@ async def process_e_signature(
             verification_hash=v_hash
         )
         db.add(agreement)
+    elif agreement.is_signed == 0:
+        # تحديث العقد المسبق الذي أُنشئ عبر العقد السريع
+        agreement.signature_base64 = signature_base64
+        agreement.signer_name = sub.full_name
+        agreement.signer_ip = client_ip
+        agreement.signer_user_agent = user_agent
+        agreement.is_signed = 1
+        agreement.signed_at = now_str
+        agreement.verification_hash = v_hash
     else:
-        return JSONResponse({"ok": False, "error": "تم اعتماد هذا العقد مسبقاً"}, status_code=409)
+        return JSONResponse({"ok": False, "error": "تم توقيع واعتماد هذا العقد مسبقاً"}, status_code=409)
 
     sub.status = "signed"
     sub.updated_at = now_str
