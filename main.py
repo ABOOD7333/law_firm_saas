@@ -1409,22 +1409,38 @@ async def add_client(
     # إنشاء حساب دخول للموكل إذا كان مطلوباً
     if portal_access == 1:
         client_pass = password.strip() if password and len(password.strip()) >= 8 else secrets.token_urlsafe(10)
-        new_user = AccessProfiles(
-            name=name.strip(),
-            username=username,
-            email=email or f"{username}@client.local",
-            phone=phone or username,
-            case_number=final_case_number or "",
-            access_pin_hash=_hash_pin(client_pass),
-            role='موكل',
-            office_id=office_id,
-            is_active=1,
-            email_verified=1,
-            state="active"
-        )
-        db.add(new_user)
-        db.flush()
-        new_client.user_id = new_user.id
+        target_email = email.strip() if email else f"{username}@client.local"
+        existing_profile = None
+        if target_email or phone:
+            conds = []
+            if target_email:
+                conds.append(AccessProfiles.email == target_email)
+            if phone and phone.strip():
+                conds.append(AccessProfiles.phone == phone.strip())
+            from sqlalchemy import or_
+            existing_profile = db.query(AccessProfiles).filter(or_(*conds)).first()
+
+        if existing_profile and existing_profile.role == 'موكل':
+            new_client.user_id = existing_profile.id
+        else:
+            if db.query(AccessProfiles).filter(AccessProfiles.email == target_email).first():
+                target_email = f"{username}_{secrets.token_hex(2)}@client.local"
+            new_user = AccessProfiles(
+                name=name.strip(),
+                username=username,
+                email=target_email,
+                phone=phone.strip() if phone else username,
+                case_number=final_case_number or "",
+                access_pin_hash=_hash_pin(client_pass),
+                role='موكل',
+                office_id=office_id,
+                is_active=1,
+                email_verified=1,
+                state="active"
+            )
+            db.add(new_user)
+            db.flush()
+            new_client.user_id = new_user.id
 
     db.commit()
     return RedirectResponse(url="/clients", status_code=303)

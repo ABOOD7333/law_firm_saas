@@ -253,7 +253,22 @@
                                     <i class="fa-solid fa-folder-open"></i>
                                 </a>
                                 {% if has_perm(user, 'clients', 'edit') %}
-                                <button type="button" class="btn btn-outline-warning" title="تعديل الموكل" onclick='openEditClientModal({{ client|tojson }})'>
+                                <button type="button" class="btn btn-outline-warning" title="تعديل الموكل"
+                                        data-client-id="{{ client.id }}"
+                                        data-client-name="{{ client.name or '' }}"
+                                        data-client-type="{{ client.client_type or 'individual' }}"
+                                        data-client-national-id="{{ client.national_id or '' }}"
+                                        data-client-cr-number="{{ client.cr_number or '' }}"
+                                        data-client-legal-rep="{{ client.legal_rep_name or '' }}"
+                                        data-client-phone="{{ client.phone or '' }}"
+                                        data-client-alt-phone="{{ client.alt_phone or '' }}"
+                                        data-client-email="{{ client.email or '' }}"
+                                        data-client-city="{{ client.city or '' }}"
+                                        data-client-address="{{ client.address or '' }}"
+                                        data-client-notes="{{ client.notes or '' }}"
+                                        data-client-case-number="{{ client.case_number or '' }}"
+                                        data-client-portal="{{ client.portal_access or 0 }}"
+                                        onclick="openEditClientFromBtn(this)">
                                     <i class="fa-solid fa-pen-to-square"></i>
                                 </button>
                                 {% endif %}
@@ -546,6 +561,26 @@ function onClientTypeChange(mode) {
 function togglePortalFields(mode) {
     const isChecked = document.getElementById('addPortalToggle').checked;
     document.querySelectorAll('.portal-add-field').forEach(el => el.style.opacity = isChecked ? '1' : '0.4');
+}
+
+function openEditClientFromBtn(btn) {
+    const d = btn.dataset;
+    openEditClientModal({
+        id: d.clientId,
+        name: d.clientName,
+        client_type: d.clientType,
+        national_id: d.clientNationalId,
+        cr_number: d.clientCrNumber,
+        legal_rep_name: d.clientLegalRep,
+        phone: d.clientPhone,
+        alt_phone: d.clientAltPhone,
+        email: d.clientEmail,
+        city: d.clientCity,
+        address: d.clientAddress,
+        notes: d.clientNotes,
+        case_number: d.clientCaseNumber,
+        portal_access: d.clientPortal
+    });
 }
 
 function openEditClientModal(client) {

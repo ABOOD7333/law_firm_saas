@@ -12,6 +12,22 @@ from core.security import hash_session_token
 
 templates = Jinja2Templates(directory="templates")
 
+# Universal backward-compatibility wrapper for Starlette 0.38+ TemplateResponse
+_orig_template_response = templates.TemplateResponse
+
+def _safe_template_response(*args, **kwargs):
+    if len(args) >= 1 and isinstance(args[0], str):
+        name = args[0]
+        context = args[1] if len(args) > 1 else kwargs.get("context", {})
+        request = kwargs.get("request")
+        if not request and isinstance(context, dict):
+            request = context.get("request")
+        clean_kwargs = {k: v for k, v in kwargs.items() if k not in ("request", "name", "context")}
+        return _orig_template_response(request=request, name=name, context=context, **clean_kwargs)
+    return _orig_template_response(*args, **kwargs)
+
+templates.TemplateResponse = _safe_template_response
+
 def check_user_permission(user, module: str, action: str = "view") -> bool:
     if not user:
         return False
