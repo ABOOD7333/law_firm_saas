@@ -40,6 +40,9 @@
                     <td>{{ client.created_at.split(' ')[0] if client.created_at else '-' }}</td>
                     <td>
                         <div style="display:flex;gap:5px;flex-wrap:wrap;">
+                            <a href="/documents?client_id={{ client.id }}" class="action-btn" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:6px;padding:6px 10px;text-decoration:none;" title="مستندات الموكل">
+                                <i class="fa-solid fa-folder-open"></i> المستندات
+                            </a>
                             <button class="action-btn view-btn" title="عرض التفاصيل">
                                 <i class="fa-solid fa-eye"></i> عرض
                             </button>

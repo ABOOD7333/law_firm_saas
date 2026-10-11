@@ -172,6 +172,29 @@ def init_db():
         except Exception:
             pass
 
+    # Add comprehensive DMS fields to law_documents if not exists
+    new_document_cols = [
+        ('doc_code', 'TEXT'),
+        ('client_id', 'INTEGER'),
+        ('received_date', 'TEXT'),
+        ('description', 'TEXT'),
+        ('keywords', 'TEXT'),
+        ('internal_notes', 'TEXT'),
+        ('file_size', 'INTEGER'),
+        ('file_type', 'TEXT'),
+        ('is_archived', 'INTEGER DEFAULT 0'),
+        ('archived_at', 'TEXT'),
+        ('created_by_user_id', 'INTEGER'),
+        ('updated_by_user_id', 'INTEGER')
+    ]
+    for col_name, col_type in new_document_cols:
+        try:
+            from sqlalchemy import text
+            with engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE law_documents ADD COLUMN {col_name} {col_type};"))
+        except Exception:
+            pass
+
 
         
     try:

@@ -257,14 +257,27 @@ class LawDocuments(Base):
     office_id: Mapped[int] = mapped_column(ForeignKey('law_offices.id'), index=True)
     name: Mapped[str] = mapped_column(Text, nullable=False)
     document_type_key: Mapped[str] = mapped_column(Text, nullable=False)
+    doc_code: Mapped[Optional[str]] = mapped_column(Text, index=True)
+    client_id: Mapped[Optional[int]] = mapped_column(ForeignKey('law_clients.id', ondelete='SET NULL'), index=True)
     doc_date: Mapped[Optional[str]] = mapped_column(Text)
+    received_date: Mapped[Optional[str]] = mapped_column(Text)
+    description: Mapped[Optional[str]] = mapped_column(Text)
+    keywords: Mapped[Optional[str]] = mapped_column(Text)
+    internal_notes: Mapped[Optional[str]] = mapped_column(Text)
     file_path: Mapped[Optional[str]] = mapped_column(Text)
+    file_size: Mapped[Optional[int]] = mapped_column(Integer)
+    file_type: Mapped[Optional[str]] = mapped_column(Text)
+    is_archived: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
+    archived_at: Mapped[Optional[str]] = mapped_column(Text)
+    created_by_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey('access_profiles.id', ondelete='SET NULL'))
+    updated_by_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey('access_profiles.id', ondelete='SET NULL'))
     notes: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
     updated_at: Mapped[Optional[str]] = mapped_column(Text)
     is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
 
     law_case: Mapped['LawCases'] = relationship('LawCases', back_populates='law_documents')
+    law_client: Mapped[Optional['LawClients']] = relationship('LawClients')
 
 class LawPleadings(Base):
     __tablename__ = 'law_pleadings'
