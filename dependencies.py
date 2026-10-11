@@ -67,6 +67,19 @@ def user_can_access_case(db: Session, user, case_id: int) -> bool:
 templates.env.globals['has_perm'] = check_user_permission
 
 
+def is_module_enabled(user, module_key: str) -> bool:
+    """Check if an office has access to a specific module (Feature Flagging)."""
+    if not user:
+        return False
+    if getattr(user, 'is_superadmin', 0) == 1:
+        return True
+    disabled_list = getattr(user, 'disabled_modules', []) or []
+    return module_key not in disabled_list
+
+
+templates.env.globals['is_module_enabled'] = is_module_enabled
+
+
 
 def get_current_user(request: Request, db: Session = Depends(get_db)):
     token = request.cookies.get("session_token")
@@ -133,6 +146,14 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
                     except:
                         pass
                 
+                # تحميل الموديولات المقفلة على هذا المكتب (Feature Flagging)
+                import json
+                raw_disabled = getattr(office, 'disabled_modules_json', '[]') or '[]'
+                try:
+                    user.disabled_modules = json.loads(raw_disabled)
+                except Exception:
+                    user.disabled_modules = []
+                
         # ── حماية أمنية وتوزيع الصلاحيات (RBAC) ──
         path = request.url.path
         
@@ -147,6 +168,35 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
                 raise HTTPException(status_code=403, detail="Subscription Expired")
             else:
                 raise HTTPException(status_code=status.HTTP_303_SEE_OTHER, headers={"Location": "/subscription"})
+
+        # ── التحقق من الواجهات المقفلة على هذا المكتب (Tenant Module Restriction) ──
+        # خريطة المسارات التابعة لكل موديول
+        _MODULE_PATH_MAP = {
+            "ai_assistant": ["/ai-assistant", "/api/ai"],
+            "contract_analyzer": ["/contract-analyzer", "/api/contract"],
+            "rag": ["/knowledge-admin", "/api/rag"],
+            "accounting": ["/accounting", "/api/accounting"],
+            "finance": ["/finance", "/api/finance"],
+            "expenses": ["/expenses", "/api/expenses"],
+            "timesheet": ["/timesheet", "/api/timesheets"],
+            "kanban": ["/kanban", "/api/kanban"],
+            "intake": ["/intake", "/api/intake"],
+            "automation": ["/automation", "/api/automation"],
+            "timeline": ["/timeline", "/api/timeline"],
+            "execution": ["/execution", "/api/execution"],
+            "power_of_attorney": ["/power_of_attorney", "/api/poa"],
+            "advanced_operations": ["/advanced_operations", "/api/advanced"],
+            "client_portal": ["/client-portal"]
+        }
+
+        disabled_mods = getattr(user, 'disabled_modules', []) or []
+        if disabled_mods and getattr(user, 'is_superadmin', 0) != 1:
+            for mod_key in disabled_mods:
+                prefixes = _MODULE_PATH_MAP.get(mod_key, [])
+                if any(path == p or path.startswith(p + '/') for p in prefixes):
+                    if is_api:
+                        raise HTTPException(status_code=403, detail="هذه الواجهة غير مفعلة لمكتبكم من قبل إدارة المنصة")
+                    raise HTTPException(status_code=status.HTTP_303_SEE_OTHER, headers={"Location": "/dashboard?msg=module_disabled"})
         
         # 1. الموكل (Client)
         if user.role == 'موكل':

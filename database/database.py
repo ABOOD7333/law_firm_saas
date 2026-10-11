@@ -110,6 +110,13 @@ def init_db():
             conn.execute(text("ALTER TABLE law_offices ADD COLUMN receipt_status TEXT;"))
     except Exception:
         pass
+
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE law_offices ADD COLUMN disabled_modules_json TEXT DEFAULT '[]';"))
+    except Exception:
+        pass
         
     try:
         from sqlalchemy import text

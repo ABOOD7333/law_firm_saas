@@ -238,6 +238,11 @@
                     </td>
                     <td style="padding: 14px 18px; text-align: center;">
                         <div style="display: inline-flex; gap: 8px;">
+                            <!-- Modules Control Button -->
+                            <button onclick='openModulesModal({{ off.id }}, {{ off.name|tojson }}, {{ off.disabled_modules|tojson }})' style="background: #0284c7; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;" title="التحكم بالواجهات والموديولات المفتوحة أو المقفلة لهذا المكتب">
+                                <i class="fas fa-toggle-on"></i> تخصيص الواجهات
+                            </button>
+
                             <!-- Impersonate Button -->
                             <button onclick="impersonateOffice({{ off.id }}, '{{ off.name }}')" style="background: #4f46e5; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;" title="تسجيل الدخول كمدير مكتب لتقديم الدعم الفني">
                                 <i class="fas fa-right-to-bracket"></i> دخول كدعم فني
@@ -283,6 +288,166 @@
     </div>
 </div>
 
+
+<!-- Modules Customization Modal -->
+<div id="modulesModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; padding: 20px;">
+    <div style="background: white; border-radius: 16px; width: 100%; max-width: 600px; padding: 24px; text-align: right; max-height: 90vh; display: flex; flex-direction: column;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;">
+            <div>
+                <h3 style="margin: 0; font-size: 1.3rem; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-layer-group" style="color: #0284c7;"></i> تخصيص واجهات وموديولات المكتب
+                </h3>
+                <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.85rem;" id="modulesModalOfficeName"></p>
+            </div>
+            <button onclick="closeModulesModal()" style="background: none; border: none; font-size: 1.4rem; color: #94a3b8; cursor: pointer;">&times;</button>
+        </div>
+
+        <p style="font-size: 0.85rem; color: #475569; margin-bottom: 15px; background: #f8fafc; padding: 10px; border-radius: 8px; border-right: 3px solid #0284c7;">
+            💡 حدد الواجهات التي ترغب في <strong>إتاحتها</strong> لهذا المكتب. الواجهة غير المحددة سيتم إخفاؤها من القائمة وحجب الوصول إليها تلقائياً.
+        </p>
+
+        <!-- Modules Checklist -->
+        <div style="overflow-y: auto; flex: 1; padding-right: 5px; margin-bottom: 20px;" id="modules-list-container">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <!-- AI Assistant -->
+                <label style="display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; transition: 0.2s;" class="module-item">
+                    <input type="checkbox" id="mod-ai_assistant" value="ai_assistant" style="width: 18px; height: 18px; accent-color: #0284c7;">
+                    <div>
+                        <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a;">المساعد الذكي ⚡</div>
+                        <div style="font-size: 0.72rem; color: #64748b;">ذكاء اصطناعي وصياغة قانونية</div>
+                    </div>
+                </label>
+
+                <!-- Contract Analyzer -->
+                <label style="display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; transition: 0.2s;" class="module-item">
+                    <input type="checkbox" id="mod-contract_analyzer" value="contract_analyzer" style="width: 18px; height: 18px; accent-color: #0284c7;">
+                    <div>
+                        <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a;">محلل العقود الذكي 🆕</div>
+                        <div style="font-size: 0.72rem; color: #64748b;">فحص الثغرات وتحليل البنود</div>
+                    </div>
+                </label>
+
+                <!-- RAG Knowledge Base -->
+                <label style="display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; transition: 0.2s;" class="module-item">
+                    <input type="checkbox" id="mod-rag" value="rag" style="width: 18px; height: 18px; accent-color: #0284c7;">
+                    <div>
+                        <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a;">إدارة المعرفة (RAG)</div>
+                        <div style="font-size: 0.72rem; color: #64748b;">أرشفة وبحث في المراجع بالـ AI</div>
+                    </div>
+                </label>
+
+                <!-- Intake & Signatures -->
+                <label style="display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; transition: 0.2s;" class="module-item">
+                    <input type="checkbox" id="mod-intake" value="intake" style="width: 18px; height: 18px; accent-color: #0284c7;">
+                    <div>
+                        <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a;">استقطاب وتوقيع العقود ✍️</div>
+                        <div style="font-size: 0.72rem; color: #64748b;">توقيع رقمي وروابط للعملاء</div>
+                    </div>
+                </label>
+
+                <!-- Accounting & Invoices -->
+                <label style="display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; transition: 0.2s;" class="module-item">
+                    <input type="checkbox" id="mod-accounting" value="accounting" style="width: 18px; height: 18px; accent-color: #0284c7;">
+                    <div>
+                        <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a;">الفوترة الإلكترونية 🧾</div>
+                        <div style="font-size: 0.72rem; color: #64748b;">فواتير ضريبية وسندات قبض</div>
+                    </div>
+                </label>
+
+                <!-- Finance -->
+                <label style="display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; transition: 0.2s;" class="module-item">
+                    <input type="checkbox" id="mod-finance" value="finance" style="width: 18px; height: 18px; accent-color: #0284c7;">
+                    <div>
+                        <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a;">الحسابات والمالية</div>
+                        <div style="font-size: 0.72rem; color: #64748b;">إيرادات وتقارير مالية</div>
+                    </div>
+                </label>
+
+                <!-- Expenses -->
+                <label style="display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; transition: 0.2s;" class="module-item">
+                    <input type="checkbox" id="mod-expenses" value="expenses" style="width: 18px; height: 18px; accent-color: #0284c7;">
+                    <div>
+                        <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a;">مصاريف القضية</div>
+                        <div style="font-size: 0.72rem; color: #64748b;">تتبع نفقات ورسوم الدعاوى</div>
+                    </div>
+                </label>
+
+                <!-- Timesheet -->
+                <label style="display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; transition: 0.2s;" class="module-item">
+                    <input type="checkbox" id="mod-timesheet" value="timesheet" style="width: 18px; height: 18px; accent-color: #0284c7;">
+                    <div>
+                        <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a;">سجل الساعات (Timesheet)</div>
+                        <div style="font-size: 0.72rem; color: #64748b;">احتساب ساعات عمل المحامين</div>
+                    </div>
+                </label>
+
+                <!-- Kanban Board -->
+                <label style="display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; transition: 0.2s;" class="module-item">
+                    <input type="checkbox" id="mod-kanban" value="kanban" style="width: 18px; height: 18px; accent-color: #0284c7;">
+                    <div>
+                        <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a;">لوحة الكانبان 🗂️</div>
+                        <div style="font-size: 0.72rem; color: #64748b;">إدارة المهام بالسحب والإفلات</div>
+                    </div>
+                </label>
+
+                <!-- Smart Automation -->
+                <label style="display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; transition: 0.2s;" class="module-item">
+                    <input type="checkbox" id="mod-automation" value="automation" style="width: 18px; height: 18px; accent-color: #0284c7;">
+                    <div>
+                        <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a;">الأتمتة الذكية</div>
+                        <div style="font-size: 0.72rem; color: #64748b;">سير العمل والإشعارات التلقائية</div>
+                    </div>
+                </label>
+
+                <!-- Timeline -->
+                <label style="display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; transition: 0.2s;" class="module-item">
+                    <input type="checkbox" id="mod-timeline" value="timeline" style="width: 18px; height: 18px; accent-color: #0284c7;">
+                    <div>
+                        <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a;">الخط الزمني (Timeline)</div>
+                        <div style="font-size: 0.72rem; color: #64748b;">التسلسل التاريخي لمجريات القضية</div>
+                    </div>
+                </label>
+
+                <!-- Executions -->
+                <label style="display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; transition: 0.2s;" class="module-item">
+                    <input type="checkbox" id="mod-execution" value="execution" style="width: 18px; height: 18px; accent-color: #0284c7;">
+                    <div>
+                        <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a;">إجراءات التنفيذ القضائي</div>
+                        <div style="font-size: 0.72rem; color: #64748b;">حجوزات، إفصاحات وأوامر قبض</div>
+                    </div>
+                </label>
+
+                <!-- Power of Attorney -->
+                <label style="display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; transition: 0.2s;" class="module-item">
+                    <input type="checkbox" id="mod-power_of_attorney" value="power_of_attorney" style="width: 18px; height: 18px; accent-color: #0284c7;">
+                    <div>
+                        <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a;">الوكالات الرسمية</div>
+                        <div style="font-size: 0.72rem; color: #64748b;">سجل الوكالات وتواريخ انتهائها</div>
+                    </div>
+                </label>
+
+                <!-- Advanced Operations -->
+                <label style="display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; transition: 0.2s;" class="module-item">
+                    <input type="checkbox" id="mod-advanced_operations" value="advanced_operations" style="width: 18px; height: 18px; accent-color: #0284c7;">
+                    <div>
+                        <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a;">العمليات المتقدمة</div>
+                        <div style="font-size: 0.72rem; color: #64748b;">استيراد مجمّع وسجلات تدقيق</div>
+                    </div>
+                </label>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <button onclick="saveModulesChanges()" style="flex: 1; background: #0284c7; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                <i class="fas fa-check"></i> حفظ إعدادات الواجهات
+            </button>
+            <button onclick="closeModulesModal()" style="background: #e2e8f0; color: #475569; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                إلغاء
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- Plan Edit Modal -->
 <div id="planModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; padding: 20px;">
     <div style="background: white; border-radius: 16px; width: 100%; max-width: 440px; padding: 24px; text-align: right;">
@@ -312,6 +477,69 @@
 </div>
 
 <script>
+
+let currentModulesOfficeId = null;
+const ALL_MODULE_KEYS = [
+    "ai_assistant", "contract_analyzer", "rag", "intake", 
+    "accounting", "finance", "expenses", "timesheet", 
+    "kanban", "automation", "timeline", "execution", 
+    "power_of_attorney", "advanced_operations"
+];
+
+function openModulesModal(officeId, officeName, disabledModules) {
+    currentModulesOfficeId = officeId;
+    document.getElementById('modulesModalOfficeName').innerText = `المكتب: ${officeName}`;
+    
+    const disabledSet = new Set(disabledModules || []);
+    
+    // Check all modules by default unless they are in disabledSet
+    ALL_MODULE_KEYS.forEach(key => {
+        const checkbox = document.getElementById('mod-' + key);
+        if (checkbox) {
+            checkbox.checked = !disabledSet.has(key);
+        }
+    });
+
+    document.getElementById('modulesModal').style.display = 'flex';
+}
+
+function closeModulesModal() {
+    document.getElementById('modulesModal').style.display = 'none';
+    currentModulesOfficeId = null;
+}
+
+async function saveModulesChanges() {
+    if (!currentModulesOfficeId) return;
+
+    // Disabled modules are those unchecked
+    const disabledModules = [];
+    ALL_MODULE_KEYS.forEach(key => {
+        const checkbox = document.getElementById('mod-' + key);
+        if (checkbox && !checkbox.checked) {
+            disabledModules.push(key);
+        }
+    });
+
+    try {
+        const csrfToken = document.cookie.split('; ').find(r => r.startsWith('csrf_token='))?.split('=')[1] || '';
+        const res = await fetch('/api/superadmin/update-modules/' + currentModulesOfficeId, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+            body: JSON.stringify({ disabled_modules: disabledModules })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            alert(data.message);
+            window.location.reload();
+        } else {
+            alert(data.error || "فشل حفظ إعدادات الواجهات");
+        }
+    } catch(e) {
+        alert("حدث خطأ أثناء الاتصال بالخادم");
+    }
+}
+
 let currentPaymentId = null;
 let currentEditOfficeId = null;
 

@@ -78,7 +78,8 @@ async def superadmin_page(request: Request, db: Session = Depends(get_db), user:
                 "subscription_plan": getattr(office, 'subscription_plan', 'trial'),
                 "subscription_end": getattr(office, 'subscription_end', None),
                 "receipt_status": getattr(office, 'receipt_status', None),
-                "receipt_base64": getattr(office, 'receipt_base64', None)
+                "receipt_base64": getattr(office, 'receipt_base64', None),
+                "disabled_modules": json.loads(getattr(office, 'disabled_modules_json', '[]') or '[]')
             })
             
         pr_data = []
@@ -323,3 +324,33 @@ async def approve_payment(payment_id: int, request: Request, db: Session = Depen
         db.rollback()
         app_logger.error(f"Superadmin payment approval error: {e}")
         return JSONResponse({"success": False, "error": "حدث خطأ داخلي"}, status_code=500)
+
+@router.post("/api/superadmin/update-modules/{office_id}")
+async def update_office_modules(office_id: int, request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
+    """تحديث الواجهات والموديولات المتاحة لمكتب محدد (Feature Flagging)"""
+    if not user or not is_superadmin(user):
+        return JSONResponse({"success": False, "error": "غير مصرح"}, status_code=403)
+        
+    try:
+        data = await request.json()
+        disabled_modules = data.get("disabled_modules", [])
+        if not isinstance(disabled_modules, list):
+            return JSONResponse({"success": False, "error": "بيانات غير صالحة"}, status_code=400)
+            
+        office = db.query(LawOffices).filter(LawOffices.id == office_id).first()
+        if not office:
+            return JSONResponse({"success": False, "error": "المكتب غير موجود"}, status_code=404)
+            
+        office.disabled_modules_json = json.dumps(disabled_modules)
+        db.commit()
+        
+        app_logger.info(f"SUPERADMIN_MODULES | Office {office.id} disabled modules updated to: {disabled_modules} by user {user.id}")
+        return JSONResponse({
+            "success": True, 
+            "message": f"تم حفظ إعدادات الواجهات لمكتب {office.name} بنجاح",
+            "disabled_modules": disabled_modules
+        })
+    except Exception as e:
+        db.rollback()
+        app_logger.error(f"Superadmin modules update error: {e}")
+        return JSONResponse({"success": False, "error": "فشل حفظ إعدادات الواجهات"}, status_code=500)

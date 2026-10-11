@@ -176,11 +176,11 @@
             {% set not_client = user and user.role != 'موكل' %}
 
             <li class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
-                <a href="/knowledge-admin"><i class="fa-solid fa-brain"></i> إدارة المعرفة (RAG)</a>
+                {% if is_module_enabled(user, "rag") %}<a href="/knowledge-admin"><i class="fa-solid fa-brain"></i> إدارة المعرفة (RAG)</a>{% endif %}
 
-                <a href="/ai-assistant"><i class="fa-solid fa-robot"></i> المساعد الذكي ⚡</a>
+                {% if is_module_enabled(user, "ai_assistant") %}<a href="/ai-assistant"><i class="fa-solid fa-robot"></i> المساعد الذكي ⚡</a>{% endif %}
 
-                <a href="/contract-analyzer"><i class="fa-solid fa-file-contract"></i> محلل العقود الذكي 🆕</a>
+                {% if is_module_enabled(user, "contract_analyzer") %}<a href="/contract-analyzer"><i class="fa-solid fa-file-contract"></i> محلل العقود الذكي 🆕</a>{% endif %}
 
                 <a href="/dashboard"><i class="fa-solid fa-chart-pie"></i> {% if user and user.role == 'موكل' %}بوابتي (الرئيسية){% else %}لوحة التحكم{% endif %}</a>
             </li>
@@ -213,9 +213,11 @@
                 <li class="nav-item {% if active_page == 'clients' %}active{% endif %}">
                     <a href="/clients"><i class="fa-solid fa-users"></i> الموكلون</a>
                 </li>
+                {% if is_module_enabled(user, "intake") %}
                 <li class="nav-item {% if active_page == 'intake' %}active{% endif %}" style="background: rgba(16,185,129,0.08); border-right: 3px solid #10b981;">
                     <a href="/intake" style="color: #059669; font-weight: bold;"><i class="fa-solid fa-file-signature"></i> استقطاب وتوقيع العقود ✍️</a>
                 </li>
+                {% endif %}
                 {% endif %}
                 
                 {% if is_admin or is_lawyer or is_sec %}
@@ -249,18 +251,22 @@
                         <a href="/correspondences"><i class="fa-solid fa-envelope"></i> المراسلات الرسمية</a>
                     </li>
                     {% endif %}
+                    {% if is_module_enabled(user, "automation") %}
                     <li class="nav-item {% if active_page == 'automation' %}active{% endif %}">
                         <a href="/automation"><i class="fa-solid fa-wand-magic-sparkles"></i> الأتمتة الذكية</a>
                     </li>
+                    {% endif %}
                     {% if has_perm(user, 'tasks', 'view') %}
                     <li class="nav-item {% if active_page == 'tasks' %}active{% endif %}">
                         <a href="/tasks"><i class="fa-solid fa-list-check"></i> المهام والمتابعة</a>
                     </li>
+                    {% if is_module_enabled(user, "kanban") %}
                     <li class="nav-item {% if active_page == 'kanban' %}active{% endif %}" style="background: rgba(79,70,229,0.05); border-right: 3px solid #4f46e5;">
                         <a href="/kanban" style="color: #4f46e5; font-weight: bold;"><i class="fa-solid fa-objects-column"></i> لوحة الكانبان 🗂️</a>
                     </li>
                     {% endif %}
-                    {% if has_perm(user, 'cases', 'view') %}
+                    {% endif %}
+                    {% if has_perm(user, 'cases', 'view') and is_module_enabled(user, "timeline") %}
                     <li class="nav-item {% if active_page == 'timeline' %}active{% endif %}">
                         <a href="/timeline"><i class="fa-solid fa-timeline"></i> الخط الزمني</a>
                     </li>
@@ -268,36 +274,36 @@
                 {% endif %}
                 
                 {% if is_admin or is_acc %}
-                    {% if has_perm(user, 'finance', 'view') %}
+                    {% if has_perm(user, 'finance', 'view') and is_module_enabled(user, "finance") %}
                     <li class="nav-item {% if active_page == 'finance' %}active{% endif %}">
                         <a href="/finance"><i class="fa-solid fa-file-invoice-dollar"></i> الحسابات والمالية</a>
                     </li>
                     {% endif %}
-                    {% if has_perm(user, 'expenses', 'view') %}
+                    {% if has_perm(user, 'expenses', 'view') and is_module_enabled(user, "expenses") %}
                     <li class="nav-item {% if active_page == 'expenses' %}active{% endif %}">
                         <a href="/expenses"><i class="fa-solid fa-money-bill-wave"></i> مصاريف القضية</a>
                     </li>
                     {% endif %}
-                    {% if has_perm(user, 'accounting', 'view') %}
+                    {% if has_perm(user, 'accounting', 'view') and is_module_enabled(user, "accounting") %}
                     <li class="nav-item {% if active_page == 'accounting' %}active{% endif %}">
                         <a href="/accounting/invoices"><i class="fa-solid fa-receipt"></i> الفوترة الإلكترونية 🧾</a>
                     </li>
                     {% endif %}
                 {% endif %}
                 
-                {% if (is_admin or is_acc or is_lawyer) and has_perm(user, 'timesheet', 'view') %}
+                {% if (is_admin or is_acc or is_lawyer) and has_perm(user, 'timesheet', 'view') and is_module_enabled(user, "timesheet") %}
                 <li class="nav-item {% if active_page == 'timesheet' %}active{% endif %}">
                     <a href="/timesheet"><i class="fa-solid fa-clock"></i> سجل الساعات</a>
                 </li>
                 {% endif %}
                 
                 {% if is_admin or is_lawyer or is_sec %}
-                    {% if has_perm(user, 'execution', 'view') %}
+                    {% if has_perm(user, 'execution', 'view') and is_module_enabled(user, "execution") %}
                     <li class="nav-item {% if active_page == 'execution' %}active{% endif %}">
                         <a href="/execution"><i class="fa-solid fa-gavel"></i> إجراءات التنفيذ</a>
                     </li>
                     {% endif %}
-                    {% if has_perm(user, 'power_of_attorney', 'view') %}
+                    {% if has_perm(user, 'power_of_attorney', 'view') and is_module_enabled(user, "power_of_attorney") %}
                     <li class="nav-item {% if active_page == 'power_of_attorney' %}active{% endif %}">
                         <a href="/power_of_attorney"><i class="fa-solid fa-file-signature"></i> الوكالات الرسمية</a>
                     </li>
@@ -315,7 +321,7 @@
                     <a href="/team"><i class="fa-solid fa-users-gear"></i> الفريق والصلاحيات</a>
                 </li>
                 {% endif %}
-                {% if has_perm(user, 'advanced_operations', 'view') %}
+                {% if has_perm(user, 'advanced_operations', 'view') and is_module_enabled(user, "advanced_operations") %}
                 <li class="nav-item {% if active_page == 'advanced_operations' %}active{% endif %}">
                     <a href="/advanced_operations"><i class="fa-solid fa-microchip"></i> العمليات المتقدمة</a>
                 </li>

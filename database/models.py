@@ -120,6 +120,7 @@ class LawCases(Base):
     created_by_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey('access_profiles.id'))
     is_active: Mapped[int] = mapped_column(Integer, CheckConstraint('is_active IN (0, 1)'), nullable=False, server_default=text('1'))
     is_deleted: Mapped[int] = mapped_column(Integer, CheckConstraint('is_deleted IN (0, 1)'), nullable=False, server_default=text('0'))
+    disabled_modules_json: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
     updated_at: Mapped[Optional[str]] = mapped_column(Text)
     deleted_at: Mapped[Optional[str]] = mapped_column(Text)
