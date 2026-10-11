@@ -1915,7 +1915,13 @@ async def edit_case(
 
 @app.get("/hearings", response_class=HTMLResponse)
 
-async def hearings_page(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
+async def hearings_page(
+    request: Request, 
+    case_id: int = None,
+    action: str = None,
+    db: Session = Depends(get_db), 
+    user: AccessProfiles = Depends(get_current_user)
+):
 
     if not user:
 
@@ -1947,13 +1953,38 @@ async def hearings_page(request: Request, db: Session = Depends(get_db), user: A
 
         cases = cases_query.all()
 
+        selected_case_id = case_id
+        open_new_modal = (action == "new")
+
+        # Serialized cases list for dynamic JS auto-fill
+        cases_json = [
+            {
+                "id": c.id,
+                "case_number": c.case_number,
+                "title": c.title,
+                "court_name": getattr(c, 'court_name', '') or '',
+                "court_case_number": getattr(c, 'court_case_number', '') or '',
+                "litigation_level_key": getattr(c, 'litigation_level_key', '') or '',
+                "client_name": c.law_clients[0].name if c.law_clients else ''
+            }
+            for c in cases
+        ]
+
         return templates.TemplateResponse(
 
             request=request,
 
             name="hearings.html",
 
-            context={"user": user, "hearings": hearings, "cases": cases, "active_page": "hearings"}
+            context={
+                "user": user, 
+                "hearings": hearings, 
+                "cases": cases, 
+                "cases_json": cases_json,
+                "selected_case_id": selected_case_id,
+                "open_new_modal": open_new_modal,
+                "active_page": "hearings"
+            }
 
         )
 
@@ -1988,6 +2019,61 @@ async def add_hearing(
     attachment: UploadFile = File(None),
 
     redirect_to_case: str = Form(None),
+
+    # New comprehensive hearing report fields
+    report_number: str = Form(None),
+
+    court_name: str = Form(None),
+
+    court_case_number: str = Form(None),
+
+    litigation_level: str = Form(None),
+
+    hearing_time: str = Form(None),
+
+    judge_name: str = Form(None),
+
+    hearing_type: str = Form(None),
+
+    attendees_json: str = Form(None),
+
+    hearing_summary: str = Form(None),
+
+    client_requests: str = Form(None),
+
+    opponent_requests: str = Form(None),
+
+    pleadings_submitted: str = Form(None),
+
+    evidence_submitted: str = Form(None),
+
+    internal_notes: str = Form(None),
+
+    has_court_decision: int = Form(0),
+
+    decision_type: str = Form(None),
+
+    decision_text: str = Form(None),
+
+    has_judgment: int = Form(0),
+
+    judgment_number: str = Form(None),
+
+    judgment_date: str = Form(None),
+
+    post_hearing_actions: str = Form(None),
+
+    has_next_hearing: int = Form(0),
+
+    postponement_reason: str = Form(None),
+
+    next_hearing_requirements: str = Form(None),
+
+    attachments_json: str = Form(None),
+
+    report_status: str = Form("approved"),
+
+    action_type: str = Form("save"), # 'save', 'draft', 'save_and_add_another'
 
     db: Session = Depends(get_db),
 
@@ -2033,6 +2119,13 @@ async def add_hearing(
         with open(attachment_path, "wb") as buffer:
             shutil.copyfileobj(attachment.file, buffer)
 
+    # Generate report_number if not provided
+    if not report_number:
+        import time
+        report_number = f"REP-{case_id}-{int(time.time())}"
+
+    effective_report_status = "draft" if action_type == "draft" else report_status
+
     new_hearing = LawHearings(
 
         case_id=case_id,
@@ -2053,7 +2146,59 @@ async def add_hearing(
 
         show_in_client_portal=1 if str(show_in_client_portal) in ("1", "true", "True") else 0,
 
-        attachment_path=attachment_path
+        attachment_path=attachment_path,
+
+        report_number=report_number,
+
+        court_name=court_name,
+
+        court_case_number=court_case_number,
+
+        litigation_level=litigation_level,
+
+        hearing_time=hearing_time,
+
+        judge_name=judge_name,
+
+        hearing_type=hearing_type,
+
+        attendees_json=attendees_json,
+
+        hearing_summary=hearing_summary,
+
+        client_requests=client_requests,
+
+        opponent_requests=opponent_requests,
+
+        pleadings_submitted=pleadings_submitted,
+
+        evidence_submitted=evidence_submitted,
+
+        internal_notes=internal_notes,
+
+        has_court_decision=has_court_decision,
+
+        decision_type=decision_type,
+
+        decision_text=decision_text,
+
+        has_judgment=has_judgment,
+
+        judgment_number=judgment_number,
+
+        judgment_date=judgment_date,
+
+        post_hearing_actions=post_hearing_actions,
+
+        has_next_hearing=has_next_hearing,
+
+        postponement_reason=postponement_reason,
+
+        next_hearing_requirements=next_hearing_requirements,
+
+        attachments_json=attachments_json,
+
+        report_status=effective_report_status
 
     )
 
@@ -2073,11 +2218,14 @@ async def add_hearing(
     except Exception as e:
         print(f"[Workflow Trigger Error] {e}")
 
+    if action_type == "save_and_add_another":
+        return RedirectResponse(url=f"/hearings?action=new&case_id={case_id}&msg=saved", status_code=303)
+
     if redirect_to_case == "true":
 
         return RedirectResponse(url=f"/cases/{case_id}", status_code=303)
 
-    return RedirectResponse(url="/hearings", status_code=303)
+    return RedirectResponse(url="/hearings?msg=saved", status_code=303)
 
 def get_arabic_font():
     candidates = [
@@ -2604,6 +2752,61 @@ async def edit_client(
         db.commit()
 
     return RedirectResponse(url="/clients", status_code=303)
+
+
+@app.get("/api/hearings/{hearing_id}")
+async def get_hearing_details(
+    hearing_id: int,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    if not user:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    office_id = user.office_id
+    hearing = db.query(LawHearings).filter(LawHearings.id == hearing_id, LawHearings.office_id == office_id).first()
+    if not hearing:
+        raise HTTPException(status_code=404, detail="المحضر غير موجود")
+    
+    # Hide internal notes from non-authorized users (only admin and lawyers)
+    can_view_internal = (user.role in ['صاحب المكتب', 'صاحب مكتب', 'مدير المكتب', 'مدير', 'محامي', 'محامٍ'])
+    
+    return {
+        "id": hearing.id,
+        "report_number": hearing.report_number or f"REP-{hearing.id}",
+        "case_id": hearing.case_id,
+        "case_number": hearing.law_case.case_number if hearing.law_case else "",
+        "case_title": hearing.law_case.title if hearing.law_case else "",
+        "title": hearing.title,
+        "hearing_at": hearing.hearing_at,
+        "hearing_time": hearing.hearing_time or "",
+        "court_name": hearing.court_name or "",
+        "court_case_number": hearing.court_case_number or "",
+        "litigation_level": hearing.litigation_level or "",
+        "judge_name": hearing.judge_name or "",
+        "hearing_type": hearing.hearing_type or "",
+        "status_key": hearing.status_key,
+        "report_status": hearing.report_status or "approved",
+        "attendees_json": hearing.attendees_json or "[]",
+        "hearing_summary": hearing.hearing_summary or "",
+        "client_requests": hearing.client_requests or "",
+        "opponent_requests": hearing.opponent_requests or "",
+        "pleadings_submitted": hearing.pleadings_submitted or "",
+        "evidence_submitted": hearing.evidence_submitted or "",
+        "internal_notes": (hearing.internal_notes or "") if can_view_internal else "",
+        "has_court_decision": hearing.has_court_decision or 0,
+        "decision_type": hearing.decision_type or "",
+        "decision_text": hearing.decision_text or "",
+        "has_judgment": hearing.has_judgment or 0,
+        "judgment_number": hearing.judgment_number or "",
+        "judgment_date": hearing.judgment_date or "",
+        "post_hearing_actions": hearing.post_hearing_actions or "",
+        "has_next_hearing": hearing.has_next_hearing or 0,
+        "next_hearing_date": hearing.next_hearing_date or "",
+        "postponement_reason": hearing.postponement_reason or "",
+        "next_hearing_requirements": hearing.next_hearing_requirements or "",
+        "attachments_json": hearing.attachments_json or "[]",
+        "attachment_path": hearing.attachment_path or ""
+    }
 
 @app.post("/hearings/edit")
 

@@ -135,6 +135,43 @@ def init_db():
                 conn.execute(text(f"ALTER TABLE law_cases ADD COLUMN {col_name} {col_type};"))
         except Exception:
             pass
+    # Add new comprehensive hearing report fields to law_hearings if not exists
+    new_hearing_cols = [
+        ('report_number', 'TEXT'),
+        ('court_name', 'TEXT'),
+        ('court_case_number', 'TEXT'),
+        ('litigation_level', 'TEXT'),
+        ('hearing_time', 'TEXT'),
+        ('judge_name', 'TEXT'),
+        ('hearing_type', 'TEXT'),
+        ('attendees_json', 'TEXT'),
+        ('hearing_summary', 'TEXT'),
+        ('client_requests', 'TEXT'),
+        ('opponent_requests', 'TEXT'),
+        ('pleadings_submitted', 'TEXT'),
+        ('evidence_submitted', 'TEXT'),
+        ('internal_notes', 'TEXT'),
+        ('has_court_decision', 'INTEGER DEFAULT 0'),
+        ('decision_type', 'TEXT'),
+        ('decision_text', 'TEXT'),
+        ('has_judgment', 'INTEGER DEFAULT 0'),
+        ('judgment_number', 'TEXT'),
+        ('judgment_date', 'TEXT'),
+        ('post_hearing_actions', 'TEXT'),
+        ('has_next_hearing', 'INTEGER DEFAULT 0'),
+        ('postponement_reason', 'TEXT'),
+        ('next_hearing_requirements', 'TEXT'),
+        ('attachments_json', 'TEXT'),
+        ('report_status', "TEXT DEFAULT 'approved'")
+    ]
+    for col_name, col_type in new_hearing_cols:
+        try:
+            from sqlalchemy import text
+            with engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE law_hearings ADD COLUMN {col_name} {col_type};"))
+        except Exception:
+            pass
+
 
         
     try:

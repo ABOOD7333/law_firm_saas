@@ -3,70 +3,107 @@
 {% block title %}الجلسات والمهام | LawSaaS{% endblock %}
 
 {% block content %}
-<div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
     <div>
-        <h1>سجل الجلسات</h1>
-        <p>متابعة وتحديث مواعيد الجلسات والمهام القضائية</p>
+        <h1 style="font-size: 1.6rem; color: #1e293b; margin: 0 0 5px 0; font-weight: 800;">سجل الجلسات القضائية ومحاضر الجلسات</h1>
+        <p style="color: #64748b; margin: 0; font-size: 0.95rem;">إدارة ومتابعة وقائع الجلسات، حضور الأطراف، القرارات والأحكام، ومواعيد التأجيل</p>
     </div>
-    <div style="display:flex; gap:10px;">
+    <div style="display:flex; gap:10px; flex-wrap: wrap; align-items: center;">
         {% if has_perm(user, 'hearings', 'add') %}
-        <button class="btn-primary" style="background-color: var(--secondary-color);" onclick="addCustomRefData('hearing_status', 'select[name=\'status_key\']', 'أدخل حالة الجلسة الجديدة (مثال: محجوزة للحكم):')">
-            <i class="fa-solid fa-plus"></i> إضافة حالة جلسة
+        <button class="btn" style="background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; padding: 10px 16px; border-radius: 8px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-family: 'Cairo', sans-serif;" onclick="addCustomRefData('hearing_status', 'select[name=\'status_key\']', 'أدخل حالة الجلسة الجديدة (مثال: محجوزة للحكم):')">
+            <i class="fa-solid fa-plus-circle"></i> إضافة حالة جلسة
         </button>
-        <button class="btn-primary" onclick="document.getElementById('addHearingModal').style.display='flex'">
-            <i class="fa-solid fa-plus"></i> إضافة جلسة جديدة
+        <button class="btn-primary" style="padding: 10px 20px; font-family: 'Cairo', sans-serif; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; border-radius: 8px; cursor: pointer;" onclick="openAddHearingModal()">
+            <i class="fa-solid fa-file-signature"></i> إضافة محضر جلسة جديدة
         </button>
         {% endif %}
     </div>
 </div>
 
-<div class="card" style="margin-top: 20px;">
+<div class="card" style="margin-top: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; background: #fff;">
     <div style="overflow-x: auto;">
-        <table class="data-table">
+        <table class="data-table" style="width: 100%; border-collapse: collapse;">
             <thead>
-                <tr>
-                    <th>موضوع الجلسة</th>
-                    <th>رقم القضية</th>
-                    <th>القضية المرتبطة</th>
-                    <th>تاريخ الجلسة</th>
-                    <th>تاريخ الجلسة القادمة</th>
-                    <th>حالة الجلسة</th>
-                    <th>إجراءات</th>
+                <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; text-align: right;">
+                    <th style="padding: 14px 16px;">رقم المحضر / الموضوع</th>
+                    <th style="padding: 14px 16px;">القضية المرتبطة</th>
+                    <th style="padding: 14px 16px;">المحكمة / الدرجة</th>
+                    <th style="padding: 14px 16px;">تاريخ ووقت الجلسة</th>
+                    <th style="padding: 14px 16px;">الجلسة القادمة</th>
+                    <th style="padding: 14px 16px;">حالة المحضر</th>
+                    <th style="padding: 14px 16px;">حالة الجلسة</th>
+                    <th style="padding: 14px 16px; text-align: center;">إجراءات</th>
                 </tr>
             </thead>
             <tbody>
                 {% for hearing in hearings %}
-                <tr>
-                    <td><strong>{{ hearing.title }}</strong></td>
-                    <td>{{ hearing.law_case.case_number if hearing.law_case else 'غير محدد' }}</td>
-                    <td>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 14px 16px;">
+                        {% if hearing.report_number %}
+                        <div style="font-size: 0.8rem; color: #64748b; font-family: monospace; font-weight: 700;">{{ hearing.report_number }}</div>
+                        {% endif %}
+                        <strong style="color: #1e293b; font-size: 0.95rem;">{{ hearing.title }}</strong>
+                        {% if hearing.hearing_type %}
+                        <span style="display: inline-block; background: #f1f5f9; color: #475569; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; margin-top: 4px;">{{ hearing.hearing_type }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 14px 16px;">
                         {% if hearing.law_case %}
-                        <a href="/cases/{{ hearing.case_id }}" style="color: var(--primary-color); text-decoration: none;">
+                        <a href="/cases/{{ hearing.case_id }}" style="color: #1e40af; font-weight: 600; text-decoration: none; display: block;">
                             {{ hearing.law_case.title }}
                         </a>
+                        <small style="color: #64748b;">رقم: {{ hearing.law_case.case_number }}</small>
                         {% else %}
-                        -
+                        <span style="color: #94a3b8;">-</span>
                         {% endif %}
                     </td>
-                    <td dir="ltr" style="text-align: right;">{{ hearing.hearing_at }}</td>
-                    <td dir="ltr" style="text-align: right;">{{ hearing.next_hearing_date or '-' }}</td>
-                    <td>
-                        {% if hearing.status_key == 'pending' %}
-                        <span style="background: #fef3c7; color: #d97706; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">قادمة</span>
-                        {% elif hearing.status_key == 'completed' %}
-                        <span style="background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">منعقدة</span>
-                        {% elif hearing.status_key == 'postponed' %}
-                        <span style="background: #fee2e2; color: #b91c1c; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">مؤجلة</span>
+                    <td style="padding: 14px 16px;">
+                        <div style="color: #334155; font-size: 0.9rem;">{{ hearing.court_name or (hearing.law_case.court_name if hearing.law_case else '-') }}</div>
+                        <small style="color: #64748b;">{{ hearing.litigation_level or '-' }}</small>
+                    </td>
+                    <td dir="ltr" style="padding: 14px 16px; text-align: right; color: #334155; font-weight: 500;">
+                        {{ hearing.hearing_at }}
+                    </td>
+                    <td dir="ltr" style="padding: 14px 16px; text-align: right;">
+                        {% if hearing.next_hearing_date %}
+                        <span style="color: #0f766e; font-weight: 600;">{{ hearing.next_hearing_date }}</span>
                         {% else %}
-                        <span style="background: #e2e8f0; color: #475569; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">{{ hearing.status_key }}</span>
+                        <span style="color: #94a3b8;">-</span>
                         {% endif %}
                     </td>
-                    <td>
-                        <div style="display:flex;gap:5px;">
-                            {% if hearing.attachment_path and has_perm(user, 'hearings', 'view') %}<a class="action-btn" href="/hearings/{{ hearing.id }}/attachment" title="تنزيل المرفق"><i class="fa-solid fa-download"></i> المرفق</a>{% endif %}
+                    <td style="padding: 14px 16px;">
+                        {% if hearing.report_status == 'draft' %}
+                        <span style="background: #fef3c7; color: #92400e; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700;"><i class="fa-regular fa-file-lines"></i> مسودة</span>
+                        {% elif hearing.report_status == 'under_review' %}
+                        <span style="background: #e0f2fe; color: #075985; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700;"><i class="fa-solid fa-hourglass-half"></i> قيد المراجعة</span>
+                        {% else %}
+                        <span style="background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700;"><i class="fa-solid fa-circle-check"></i> معتمد</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 14px 16px;">
+                        {% if hearing.status_key == 'pending' or hearing.status_key == 'قادمة' %}
+                        <span style="background: #eff6ff; color: #1d4ed8; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700;">قادمة</span>
+                        {% elif hearing.status_key == 'completed' or hearing.status_key == 'منعقدة' %}
+                        <span style="background: #ecfdf5; color: #047857; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700;">منعقدة</span>
+                        {% elif hearing.status_key == 'postponed' or hearing.status_key == 'مؤجلة' %}
+                        <span style="background: #fee2e2; color: #b91c1c; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700;">مؤجلة</span>
+                        {% else %}
+                        <span style="background: #f1f5f9; color: #475569; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700;">{{ hearing.status_key }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 14px 16px; text-align: center;">
+                        <div style="display:flex; gap:6px; justify-content: center;">
+                            <button class="action-btn" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 6px; padding: 6px 10px; cursor: pointer;" title="عرض تفاصيل المحضر" onclick="viewHearingDetails({{ hearing.id }})">
+                                <i class="fa-solid fa-eye"></i> عرض
+                            </button>
+                            {% if hearing.attachment_path and has_perm(user, 'hearings', 'view') %}
+                            <a class="action-btn" href="/hearings/{{ hearing.id }}/attachment" title="تنزيل المرفق" style="background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; text-decoration: none;">
+                                <i class="fa-solid fa-paperclip"></i>
+                            </a>
+                            {% endif %}
                             {% if has_perm(user, 'hearings', 'edit') %}
-                            <button class="action-btn" style="color:var(--primary-color);" title="تعديل" onclick="openEditHearingModal({{ hearing.id|tojson|forceescape }}, {{ hearing.title|tojson|forceescape }}, {{ hearing.hearing_at|tojson|forceescape }}, {{ (hearing.next_hearing_date or '')|tojson|forceescape }}, {{ hearing.status_key|tojson|forceescape }}, {{ (hearing.case_id or '')|tojson|forceescape }}, {{ (hearing.chamber_number or '')|tojson|forceescape }}, {{ (hearing.floor_number or '')|tojson|forceescape }}, {{ hearing.show_in_client_portal|tojson|forceescape }})">
-                                <i class="fa-solid fa-pen-to-square"></i> تعديل
+                            <button class="action-btn" style="background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; cursor: pointer;" title="تعديل سريع" onclick="openEditHearingModal({{ hearing.id|tojson|forceescape }}, {{ hearing.title|tojson|forceescape }}, {{ hearing.hearing_at|tojson|forceescape }}, {{ (hearing.next_hearing_date or '')|tojson|forceescape }}, {{ hearing.status_key|tojson|forceescape }}, {{ (hearing.case_id or '')|tojson|forceescape }}, {{ (hearing.chamber_number or '')|tojson|forceescape }}, {{ (hearing.floor_number or '')|tojson|forceescape }}, {{ hearing.show_in_client_portal|tojson|forceescape }})">
+                                <i class="fa-solid fa-pen-to-square"></i>
                             </button>
                             {% endif %}
                         </div>
@@ -74,9 +111,10 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-muted);">
-                        <i class="fa-solid fa-calendar-xmark" style="font-size: 3rem; margin-bottom: 10px; opacity: 0.5;"></i>
-                        <p>لا توجد جلسات مسجلة حتى الآن.</p>
+                    <td colspan="8" style="text-align: center; padding: 50px 20px; color: var(--text-muted);">
+                        <i class="fa-solid fa-calendar-xmark" style="font-size: 3.5rem; margin-bottom: 12px; opacity: 0.4; color: #94a3b8;"></i>
+                        <p style="font-size: 1.1rem; font-weight: 600; margin-bottom: 5px;">لا توجد محاضر أو جلسات مسجلة حتى الآن</p>
+                        <p style="color: #94a3b8; font-size: 0.9rem;">اضغط على زر «إضافة محضر جلسة جديدة» لتوثيق وقائع الجلسة القضائية الأولى</p>
                     </td>
                 </tr>
                 {% endfor %}
@@ -85,117 +123,397 @@
     </div>
 </div>
 
-<!-- Modal for Adding Hearing -->
-<div id="addHearingModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000;">
-    <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; width: 500px; max-width: 90%;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h2 style="margin: 0; font-size: 1.5rem; color: var(--secondary-color);">إضافة جلسة جديدة</h2>
-            <button onclick="document.getElementById('addHearingModal').style.display='none'" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted);">&times;</button>
-        </div>
+<!-- ========================================== -->
+<!-- MODAL: إضافة محضر جلسة جديدة (الشامل) -->
+<!-- ========================================== -->
+<div id="addHearingModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.65); align-items: center; justify-content: center; z-index: 1100; backdrop-filter: blur(4px);">
+    <div class="modal-content" style="background: white; border-radius: 16px; width: 950px; max-width: 95%; max-height: 92vh; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); overflow: hidden;">
         
-        <form action="/hearings/add" method="post" enctype="multipart/form-data">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">القضية المرتبطة <span style="color: red;">*</span></label>
-                <select name="case_id" required style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif;">
-                    <option value="">اختر القضية...</option>
-                    {% for case in cases %}
-                    <option value="{{ case.id }}">{{ case.case_number }} - {{ case.title }}</option>
-                    {% endfor %}
-                </select>
+        <!-- Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 44px; height: 44px; background: #eff6ff; color: #1d4ed8; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+                    <i class="fa-solid fa-file-signature"></i>
+                </div>
+                <div>
+                    <h2 style="margin: 0; font-size: 1.25rem; color: #0f172a; font-weight: 700;">إضافة محضر جلسة جديدة</h2>
+                    <p style="margin: 2px 0 0 0; font-size: 0.85rem; color: #64748b;">توثيق وقائع الجلسة، الحضور والغياب، القرارات والأحكام الصادرة</p>
+                </div>
             </div>
-            
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">موضوع الجلسة <span style="color: red;">*</span></label>
-                <input type="text" name="title" required placeholder="مثال: الجلسة الأولى للرد" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif;">
-            </div>
+            <button type="button" onclick="closeAddHearingModal()" style="background: none; border: none; font-size: 1.6rem; cursor: pointer; color: #94a3b8; line-height: 1; padding: 4px 8px; border-radius: 6px;">&times;</button>
+        </div>
 
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">تاريخ ووقت الجلسة <span style="color: red;">*</span></label>
-                <input type="datetime-local" name="hearing_at" required style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif;">
-            </div>
-            
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">تاريخ الجلسة القادمة (اختياري)</label>
-                <input type="date" name="next_hearing_date" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif;">
-            </div>
-            
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">حالة الجلسة</label>
-                <select name="status_key" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif;">
-                    <option value="قادمة">قادمة</option>
-                    <option value="منعقدة">منعقدة</option>
-                    <option value="مؤجلة">مؤجلة</option>
-                    <option value="جلسة استماع بشأن النزاعات الانتخابية">جلسة استماع بشأن النزاعات الانتخابية</option>
-                    <option value="الجلسة الأخيرة">الجلسة الأخيرة</option>
-                    <option value="الجلسة الأولى">الجلسة الأولى</option>
-                    <option value="جلسة إدارة القضية">جلسة إدارة القضية</option>
-                    <option value="جلسة استماع المنافسة العامة">جلسة استماع المنافسة العامة</option>
-                    <option value="جلسة استماع بشأن المسائل الإدارية">جلسة استماع بشأن المسائل الإدارية</option>
-                    <option value="جلسة استماع بشأن مسألة اللاجئين">جلسة استماع بشأن مسألة اللاجئين</option>
-                    <option value="جلسة استماع تفويض الاختصاص">جلسة استماع تفويض الاختصاص</option>
-                    <option value="جلسة استماع قاضي الأحداث">جلسة استماع قاضي الأحداث</option>
-                    <option value="جلسة استماع محكمة الجنايات">جلسة استماع محكمة الجنايات</option>
-                    <option value="جلسة استماع محكمة النقض">جلسة استماع محكمة النقض</option>
-                    <option value="جلسة الإستماع">جلسة الإستماع</option>
-                    <option value="جلسة الإلتماس">جلسة الإلتماس</option>
-                    <option value="جلسة الحكم">جلسة الحكم</option>
-                    <option value="جلسة الحكم المستعجل">جلسة الحكم المستعجل</option>
-                    <option value="جلسة الخبراء">جلسة الخبراء</option>
-                    <option value="جلسة الصلح">جلسة الصلح</option>
-                    <option value="جلسة المحاكمة">جلسة المحاكمة</option>
-                    <option value="جلسة المراجعة">جلسة المراجعة</option>
-                    <option value="جلسة الوصاية">جلسة الوصاية</option>
-                    <option value="جلسة تقصي الحقائق">جلسة تقصي الحقائق</option>
-                    <option value="جلسة تنفيذ الأحكام">جلسة تنفيذ الأحكام</option>
-                    <option value="جلسة هيئة المحكمة">جلسة هيئة المحكمة</option>
-                </select>
-            </div>
+        <!-- Scrollable Form Body -->
+        <div style="padding: 24px; overflow-y: auto; flex: 1;">
+            <form id="addHearingForm" action="/hearings/add" method="post" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+                <input type="hidden" name="action_type" id="add_action_type" value="save">
+                <input type="hidden" name="attendees_json" id="attendees_json_input" value="[]">
+                <input type="hidden" name="post_hearing_actions" id="post_hearing_actions_input" value="[]">
 
-            <!-- عرض تفاصيل الجلسة في بوابة العميل -->
-            <div style="margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border-color);">
-                <label for="add_show_in_client_portal" style="font-weight: 600; color: var(--secondary-color); cursor: pointer; margin: 0;">عرض تفاصيل الجلسة في بوابة العميل</label>
-                <input type="checkbox" name="show_in_client_portal" id="add_show_in_client_portal" value="1" checked style="width: 20px; height: 20px; cursor: pointer; accent-color: var(--primary-color);">
-            </div>
-
-            <!-- رفع الملفات -->
-            <div class="form-group" style="margin-bottom: 20px;">
-                <div style="border: 2px dashed #cbd5e1; border-radius: 12px; padding: 25px 15px; text-align: center; background: #f8fafc; cursor: pointer; transition: 0.2s;" onclick="document.getElementById('add_hearing_file').click();" ondragover="event.preventDefault(); this.style.borderColor='var(--primary-color)';" ondragleave="this.style.borderColor='#cbd5e1';" ondrop="event.preventDefault(); this.style.borderColor='#cbd5e1'; document.getElementById('add_hearing_file').files = event.dataTransfer.files; updateAddFileName(event.dataTransfer.files[0]?.name);">
-                    <div style="width: 50px; height: 50px; background: #1e3a8a; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: white; font-size: 1.4rem; margin-bottom: 10px;">
-                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                <!-- 1. بيانات الجلسة الأساسية -->
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px 20px; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                    <div style="font-weight: 700; color: #1e3a8a; margin-bottom: 16px; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-scale-balanced"></i> أولاً: بيانات الجلسة والمحكمة
                     </div>
-                    <p style="margin: 0; font-weight: 600; color: #1e3a8a; font-size: 0.95rem;">ضع الملفات هنا للتحميل أو <span style="text-decoration: underline;">تصفحها</span></p>
-                    <input type="file" name="attachment" id="add_hearing_file" style="display: none;" onchange="updateAddFileName(this.files[0]?.name)">
-                    <small id="add_file_name_display" style="display: block; margin-top: 8px; color: #64748b; font-size: 0.85rem;"></small>
-                </div>
-            </div>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 14px;">
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">رقم المحضر</label>
+                            <input type="text" name="report_number" id="add_report_number" readonly placeholder="يُنشأ تلقائياً" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; font-family: monospace; font-weight: 700; color: #475569;">
+                        </div>
 
-            <!-- رقم الغرفة ورقم الدور -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px;">
-                <div class="form-group">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">رقم الغرفة</label>
-                    <input type="text" name="chamber_number" placeholder="رقم الغرفة" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">القضية المرتبطة <span style="color: #ef4444;">*</span></label>
+                            <select name="case_id" id="add_case_id" required onchange="onCaseSelected(this.value)" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                                <option value="">-- اختر القضية المسجلة --</option>
+                                {% for case in cases %}
+                                <option value="{{ case.id }}" {% if selected_case_id and selected_case_id == case.id %}selected{% endif %}>
+                                    {{ case.case_number }} - {{ case.title }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">رقم القضية لدى المحكمة</label>
+                            <input type="text" name="court_case_number" id="add_court_case_number" placeholder="مثال: 142/ق/2026" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 14px;">
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">اسم المحكمة</label>
+                            <input type="text" name="court_name" id="add_court_name" placeholder="مثال: محكمة جنوب الأمانة الابتدائية" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        </div>
+
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">درجة التقاضي</label>
+                            <select name="litigation_level" id="add_litigation_level" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                                <option value="ابتدائي">ابتدائي</option>
+                                <option value="استئناف">استئناف</option>
+                                <option value="المحكمة العليا">المحكمة العليا</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">اسم القاضي / الدائرة القضائية</label>
+                            <input type="text" name="judge_name" placeholder="مثال: فضيلة القاضي أحمد علي / الدائرة التجارية الثالثة" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">تاريخ ووقت انعقاد الجلسة <span style="color: #ef4444;">*</span></label>
+                            <input type="datetime-local" name="hearing_at" id="add_hearing_at" required style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        </div>
+
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">نوع الجلسة</label>
+                            <select name="hearing_type" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                                <option value="جلسة مرافعة">جلسة مرافعة</option>
+                                <option value="جلسة استماع">جلسة استماع</option>
+                                <option value="جلسة نطق بالحكم">جلسة نطق بالحكم</option>
+                                <option value="جلسة تحقيق">جلسة تحقيق</option>
+                                <option value="جلسة خبرة / معاينة">جلسة خبرة / معاينة</option>
+                                <option value="جلسة صلح وتوفيق">جلسة صلح وتوفيق</option>
+                                <option value="أخرى">أخرى</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">موضوع / عنوان الجلسة <span style="color: #ef4444;">*</span></label>
+                            <input type="text" name="title" id="add_hearing_title" required placeholder="مثال: الجلسة الثانية - تقديم الرد ومذكرة الدفاع" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        </div>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">رقم الدور</label>
-                    <input type="text" name="floor_number" placeholder="رقم الدور" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif;">
+
+                <!-- 2. الحضور والغياب -->
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px 20px; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                        <div style="font-weight: 700; color: #1e3a8a; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
+                            <i class="fa-solid fa-users"></i> ثانياً: كشف الحضور والغياب
+                        </div>
+                        <button type="button" onclick="addAttendeeRow()" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-family: 'Cairo', sans-serif;">
+                            <i class="fa-solid fa-user-plus"></i> إضافة حاضر / غائب
+                        </button>
+                    </div>
+
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;" id="attendeesTable">
+                            <thead>
+                                <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; text-align: right; color: #475569;">
+                                    <th style="padding: 10px 12px;">الصفة / الطرف</th>
+                                    <th style="padding: 10px 12px;">الاسم الكامل</th>
+                                    <th style="padding: 10px 12px;">حالة الحضور</th>
+                                    <th style="padding: 10px 12px;">سبب الغياب (إن وُجد)</th>
+                                    <th style="padding: 10px 12px; width: 50px; text-align: center;">حذف</th>
+                                </tr>
+                            </thead>
+                            <tbody id="attendeesTableBody">
+                                <!-- Default rows added via JS -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
-            
-            <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                <button type="button" onclick="document.getElementById('addHearingModal').style.display='none'" style="padding: 12px 20px; background: #e2e8f0; color: #475569; border: none; border-radius: 8px; cursor: pointer; font-family: 'Cairo', sans-serif; font-weight: 600;">إلغاء</button>
-                <button type="submit" class="btn-primary" style="padding: 12px 20px; font-family: 'Cairo', sans-serif;">حفظ الجلسة</button>
-            </div>
-        </form>
+
+                <!-- 3. تفاصيل الجلسة والطلبات والدفوع -->
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px 20px; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                    <div style="font-weight: 700; color: #1e3a8a; margin-bottom: 16px; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-file-lines"></i> ثالثاً: وقائع الجلسة والطلبات والدفوع
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">ملخص ما جرى في الجلسة</label>
+                        <textarea name="hearing_summary" rows="3" placeholder="سرد تفصيلي لمجريات الجلسة وما دار بين الهيئة القضائية والأطراف..." style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; resize: vertical;"></textarea>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 14px;">
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">طلبات الموكل (طرفنا)</label>
+                            <textarea name="client_requests" rows="2" placeholder="الطلبات الأصلية والاحتياطية المقدمة من جانبنا..." style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; resize: vertical;"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">طلبات الطرف الآخر (الخصم)</label>
+                            <textarea name="opponent_requests" rows="2" placeholder="طلبات ودفاع الخصم أو محاميه..." style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; resize: vertical;"></textarea>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 14px;">
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">الدفوع والمذكرات المقدمة</label>
+                            <textarea name="pleadings_submitted" rows="2" placeholder="مذكرات الجواب، الدفوع الشكلية أو الموضوعية..." style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; resize: vertical;"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">المستندات والأدلة المقدمة</label>
+                            <textarea name="evidence_submitted" rows="2" placeholder="حوافظ المستندات، تقارير الخبراء، الوثائق المبرزة..." style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; resize: vertical;"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- ملاحظات المحامي الداخلية (سرية) -->
+                    <div class="form-group" style="background: #fffbeb; border: 1px dashed #f59e0b; padding: 14px; border-radius: 8px;">
+                        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+                            <i class="fa-solid fa-lock" style="color: #b45309; font-size: 0.9rem;"></i>
+                            <label style="font-weight: 700; color: #92400e; font-size: 0.9rem; margin: 0;">ملاحظات المحامي الداخلية (سرية لا تظهر للأطراف الخارجية)</label>
+                        </div>
+                        <textarea name="internal_notes" rows="2" placeholder="ملاحظات قانونية خاصة بالمكتب واستراتيجية الترافع..." style="width: 100%; padding: 10px 12px; border: 1px solid #fde68a; border-radius: 8px; font-family: 'Cairo', sans-serif; resize: vertical; background: #fff;"></textarea>
+                    </div>
+                </div>
+
+                <!-- 4. قرارات المحكمة والأحكام -->
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px 20px; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                    <div style="font-weight: 700; color: #1e3a8a; margin-bottom: 16px; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-gavel"></i> رابعاً: قرارات المحكمة والأحكام
+                    </div>
+
+                    <!-- هل صدر قرار؟ -->
+                    <div style="margin-bottom: 16px;">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 600; color: #334155;">
+                            <input type="checkbox" name="has_court_decision" id="has_court_decision" value="1" onchange="toggleCourtDecisionSection(this.checked)" style="width: 18px; height: 18px; accent-color: #1e40af;">
+                            <span>هل صدر قرار أو أمر قضائي خلال الجلسة؟</span>
+                        </label>
+                    </div>
+
+                    <div id="court_decision_fields" style="display: none; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+                        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 14px; margin-bottom: 10px;">
+                            <div>
+                                <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.85rem;">نوع القرار</label>
+                                <select name="decision_type" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Cairo', sans-serif;">
+                                    <option value="قرار تمهيدي">قرار تمهيدي</option>
+                                    <option value="ندب خبير">ندب خبير</option>
+                                    <option value="تكليف بالرد">تكليف بالرد أو تقديم بينة</option>
+                                    <option value="إلزام بتقديم مستندات">إلزام بتقديم مستندات</option>
+                                    <option value="أمر ولائي / وقتي">أمر ولائي / وقتي</option>
+                                    <option value="قرار حجز للحكم">قرار حجز للحكم</option>
+                                    <option value="أخرى">أخرى</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.85rem;">نص القرار أو ملخصه</label>
+                                <input type="text" name="decision_text" placeholder="نص منطوق القرار الصادر في محضر الجلسة..." style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Cairo', sans-serif;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- هل صدر حكم؟ -->
+                    <div style="margin-bottom: 16px;">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 600; color: #334155;">
+                            <input type="checkbox" name="has_judgment" id="has_judgment" value="1" onchange="toggleJudgmentSection(this.checked)" style="width: 18px; height: 18px; accent-color: #1e40af;">
+                            <span>هل صدر حكم قضائي فاصل أو قطعي في الدعوى؟</span>
+                        </label>
+                    </div>
+
+                    <div id="judgment_fields" style="display: none; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                            <div>
+                                <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.85rem;">رقم الحكم</label>
+                                <input type="text" name="judgment_number" placeholder="رقم صك / مسودة الحكم" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Cairo', sans-serif;">
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.85rem;">تاريخ صدور الحكم</label>
+                                <input type="date" name="judgment_date" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Cairo', sans-serif;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- الإجراءات المطلوب اتخاذها بعد الجلسة -->
+                    <div style="border-top: 1px solid #e2e8f0; padding-top: 14px; margin-top: 14px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <label style="font-weight: 700; color: #334155; font-size: 0.9rem;">الإجراءات والمهام المطلوب اتخاذها بعد الجلسة</label>
+                            <button type="button" onclick="addActionRow()" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer;">
+                                <i class="fa-solid fa-plus"></i> إضافة مهمة
+                            </button>
+                        </div>
+                        <div id="actionsContainer">
+                            <!-- Action rows added via JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. الجلسة القادمة (مواعيد التأجيل) -->
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px 20px; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                    <div style="font-weight: 700; color: #1e3a8a; margin-bottom: 16px; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-calendar-day"></i> خامساً: الجلسة القادمة والتأجيل
+                    </div>
+
+                    <div style="margin-bottom: 14px;">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 600; color: #334155;">
+                            <input type="checkbox" name="has_next_hearing" id="has_next_hearing" value="1" checked onchange="toggleNextHearingSection(this.checked)" style="width: 18px; height: 18px; accent-color: #1e40af;">
+                            <span>تم تحديد موعد لجلسة قادمة</span>
+                        </label>
+                    </div>
+
+                    <div id="next_hearing_fields">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 14px;">
+                            <div class="form-group">
+                                <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">تاريخ الجلسة القادمة</label>
+                                <input type="date" name="next_hearing_date" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                            </div>
+                            <div class="form-group">
+                                <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">سبب التأجيل</label>
+                                <input type="text" name="postponement_reason" placeholder="مثال: لرد المدعى عليه / لورود تقرير الخبير" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">المطلوب تقديمه أو تجهيزه للجلسة القادمة</label>
+                            <input type="text" name="next_hearing_requirements" placeholder="المذكرات أو المستندات أو الشهود المطلوب إحضارهم..." style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6. المرفقات وحالة المحضر وبوابة العميل -->
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px 20px; margin-bottom: 24px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                    <div style="font-weight: 700; color: #1e3a8a; margin-bottom: 16px; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-paperclip"></i> سادساً: المرفقات وحالة المحضر
+                    </div>
+
+                    <!-- رفع الملفات -->
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <div style="border: 2px dashed #cbd5e1; border-radius: 12px; padding: 20px 15px; text-align: center; background: #f8fafc; cursor: pointer; transition: 0.2s;" onclick="document.getElementById('add_hearing_file').click();" ondragover="event.preventDefault(); this.style.borderColor='#1d4ed8';" ondragleave="this.style.borderColor='#cbd5e1';" ondrop="event.preventDefault(); this.style.borderColor='#cbd5e1'; document.getElementById('add_hearing_file').files = event.dataTransfer.files; updateAddFileName(event.dataTransfer.files[0]?.name);">
+                            <div style="width: 44px; height: 44px; background: #eff6ff; color: #1d4ed8; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 1.25rem; margin-bottom: 8px;">
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                            </div>
+                            <p style="margin: 0; font-weight: 600; color: #1e3a8a; font-size: 0.95rem;">انقر لاختيار ملف محضر الجلسة أو المذكرات المرفقة أو اسحبها هنا</p>
+                            <input type="file" name="attachment" id="add_hearing_file" style="display: none;" onchange="updateAddFileName(this.files[0]?.name)">
+                            <small id="add_file_name_display" style="display: block; margin-top: 8px; color: #047857; font-weight: 700; font-size: 0.85rem;"></small>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 16px;">
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">حالة المحضر (سير الاعتماد)</label>
+                            <select name="report_status" id="add_report_status" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; font-weight: 600;">
+                                <option value="approved">معتمد (نهائي)</option>
+                                <option value="under_review">قيد المراجعة والتدقيق</option>
+                                <option value="draft">مسودة أولية</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">حالة انعقاد الجلسة</label>
+                            <select name="status_key" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                                <option value="منعقدة">منعقدة</option>
+                                <option value="مؤجلة">مؤجلة</option>
+                                <option value="قادمة">قادمة</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- عرض في بوابة العميل -->
+                    <div style="display: flex; align-items: center; justify-content: space-between; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <div>
+                            <label for="add_show_in_client_portal" style="font-weight: 700; color: #334155; cursor: pointer; margin: 0; display: block;">إتاحة الاطلاع على خلاصة المحضر في بوابة العميل</label>
+                            <small style="color: #64748b;">(لن تظهر الملاحظات السرية أو المعطيات الخاصة بالمكتب للموكل)</small>
+                        </div>
+                        <input type="checkbox" name="show_in_client_portal" id="add_show_in_client_portal" value="1" checked style="width: 20px; height: 20px; cursor: pointer; accent-color: #1e40af;">
+                    </div>
+                </div>
+
+                <!-- Footer Buttons (Fixed at bottom) -->
+                <div style="display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; padding-top: 10px; border-top: 1px solid #e2e8f0;">
+                    <button type="button" onclick="closeAddHearingModal()" style="padding: 10px 20px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer; font-family: 'Cairo', sans-serif; font-weight: 700;">
+                        إلغاء
+                    </button>
+                    
+                    <button type="button" onclick="submitHearingForm('draft')" style="padding: 10px 20px; background: #fef3c7; color: #92400e; border: 1px solid #fde68a; border-radius: 8px; cursor: pointer; font-family: 'Cairo', sans-serif; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+                        <i class="fa-regular fa-file-lines"></i> حفظ كمسودة
+                    </button>
+
+                    <button type="button" onclick="submitHearingForm('save_and_add_another')" style="padding: 10px 20px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 8px; cursor: pointer; font-family: 'Cairo', sans-serif; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+                        <i class="fa-solid fa-plus-circle"></i> حفظ وإضافة محضر آخر
+                    </button>
+
+                    <button type="button" onclick="submitHearingForm('save')" class="btn-primary" style="padding: 10px 24px; font-family: 'Cairo', sans-serif; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; border-radius: 8px;">
+                        <i class="fa-solid fa-check"></i> حفظ المحضر
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
-<!-- Modal for Editing Hearing -->
+<!-- ========================================== -->
+<!-- MODAL: عرض تفاصيل المحضر الشامل (View) -->
+<!-- ========================================== -->
+<div id="viewHearingModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.65); align-items: center; justify-content: center; z-index: 1200; backdrop-filter: blur(4px);">
+    <div class="modal-content" style="background: white; border-radius: 16px; width: 850px; max-width: 95%; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); overflow: hidden;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 40px; height: 40px; background: #eff6ff; color: #1d4ed8; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                    <i class="fa-solid fa-eye"></i>
+                </div>
+                <div>
+                    <h3 style="margin: 0; font-size: 1.2rem; color: #0f172a; font-weight: 700;" id="view_modal_title">تفاصيل محضر الجلسة</h3>
+                    <p style="margin: 2px 0 0 0; font-size: 0.85rem; color: #64748b;" id="view_modal_subtitle">محضر جلسة قضائية</p>
+                </div>
+            </div>
+            <button type="button" onclick="document.getElementById('viewHearingModal').style.display='none'" style="background: none; border: none; font-size: 1.6rem; cursor: pointer; color: #94a3b8; line-height: 1;">&times;</button>
+        </div>
+        
+        <div style="padding: 24px; overflow-y: auto; flex: 1;" id="viewHearingDetailsContent">
+            <div style="text-align: center; padding: 40px; color: #64748b;">
+                <i class="fa-solid fa-spinner fa-spin" style="font-size: 2rem;"></i>
+                <p style="margin-top: 10px;">جاري تحميل بيانات المحضر...</p>
+            </div>
+        </div>
+
+        <div style="padding: 14px 24px; border-top: 1px solid #e2e8f0; background: #f8fafc; display: flex; justify-content: flex-end; gap: 10px;">
+            <button type="button" onclick="document.getElementById('viewHearingModal').style.display='none'" style="padding: 8px 18px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 8px; font-weight: 700; cursor: pointer; font-family: 'Cairo', sans-serif;">
+                إغلاق
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- MODAL: التعديل السريع (Legacy Edit Compatible) -->
+<!-- ========================================== -->
 <div id="editHearingModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000;">
     <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; width: 550px; max-width: 90%; max-height: 90vh; overflow-y: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h2 style="margin: 0; font-size: 1.5rem; color: var(--secondary-color);">تعديل بيانات الجلسة</h2>
-            <button onclick="document.getElementById('editHearingModal').style.display='none'" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted);">&times;</button>
+            <h2 style="margin: 0; font-size: 1.3rem; color: #1e3a8a; font-weight: 700;">تعديل موعد الجلسة</h2>
+            <button onclick="document.getElementById('editHearingModal').style.display='none'" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #94a3b8;">&times;</button>
         </div>
         
         <form action="/hearings/edit" method="post" enctype="multipart/form-data">
@@ -204,85 +522,48 @@
             <input type="hidden" name="case_id" id="edit_hearing_case_id">
             
             <div class="form-group" style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">موضوع الجلسة <span style="color: red;">*</span></label>
-                <input type="text" name="title" id="edit_hearing_title" required style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #334155;">موضوع الجلسة <span style="color: red;">*</span></label>
+                <input type="text" name="title" id="edit_hearing_title" required style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
             </div>
 
             <div class="form-group" style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">تاريخ ووقت الجلسة <span style="color: red;">*</span></label>
-                <input type="text" name="hearing_at" id="edit_hearing_at" required placeholder="YYYY-MM-DD HH:MM" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif;" dir="ltr">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #334155;">تاريخ ووقت الجلسة <span style="color: red;">*</span></label>
+                <input type="text" name="hearing_at" id="edit_hearing_at" required placeholder="YYYY-MM-DD HH:MM" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;" dir="ltr">
             </div>
             
             <div class="form-group" style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">تاريخ الجلسة القادمة</label>
-                <input type="date" name="next_hearing_date" id="edit_hearing_next" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #334155;">تاريخ الجلسة القادمة</label>
+                <input type="date" name="next_hearing_date" id="edit_hearing_next" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
             </div>
             
             <div class="form-group" style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">حالة الجلسة</label>
-                <select name="status_key" id="edit_hearing_status" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #334155;">حالة الجلسة</label>
+                <select name="status_key" id="edit_hearing_status" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
                     <option value="pending">قادمة</option>
                     <option value="completed">منعقدة</option>
                     <option value="postponed">مؤجلة</option>
-                    <option value="جلسة استماع بشأن النزاعات الانتخابية">جلسة استماع بشأن النزاعات الانتخابية</option>
-                    <option value="الجلسة الأخيرة">الجلسة الأخيرة</option>
-                    <option value="الجلسة الأولى">الجلسة الأولى</option>
-                    <option value="جلسة إدارة القضية">جلسة إدارة القضية</option>
-                    <option value="جلسة استماع المنافسة العامة">جلسة استماع المنافسة العامة</option>
-                    <option value="جلسة استماع بشأن المسائل الإدارية">جلسة استماع بشأن المسائل الإدارية</option>
-                    <option value="جلسة استماع بشأن مسألة اللاجئين">جلسة استماع بشأن مسألة اللاجئين</option>
-                    <option value="جلسة استماع تفويض الاختصاص">جلسة استماع تفويض الاختصاص</option>
-                    <option value="جلسة استماع قاضي الأحداث">جلسة استماع قاضي الأحداث</option>
-                    <option value="جلسة استماع محكمة الجنايات">جلسة استماع محكمة الجنايات</option>
-                    <option value="جلسة استماع محكمة النقض">جلسة استماع محكمة النقض</option>
-                    <option value="جلسة الإستماع">جلسة الإستماع</option>
-                    <option value="جلسة الإلتماس">جلسة الإلتماس</option>
-                    <option value="جلسة الحكم">جلسة الحكم</option>
-                    <option value="جلسة الحكم المستعجل">جلسة الحكم المستعجل</option>
-                    <option value="جلسة الخبراء">جلسة الخبراء</option>
-                    <option value="جلسة الصلح">جلسة الصلح</option>
-                    <option value="جلسة المحاكمة">جلسة المحاكمة</option>
-                    <option value="جلسة المراجعة">جلسة المراجعة</option>
-                    <option value="جلسة الوصاية">جلسة الوصاية</option>
-                    <option value="جلسة تقصي الحقائق">جلسة تقصي الحقائق</option>
-                    <option value="جلسة تنفيذ الأحكام">جلسة تنفيذ الأحكام</option>
-                    <option value="جلسة هيئة المحكمة">جلسة هيئة المحكمة</option>
                 </select>
             </div>
 
-            <!-- عرض تفاصيل الجلسة في بوابة العميل -->
-            <div style="margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border-color);">
-                <label for="edit_show_in_client_portal" style="font-weight: 600; color: var(--secondary-color); cursor: pointer; margin: 0;">عرض تفاصيل الجلسة في بوابة العميل</label>
-                <input type="checkbox" name="show_in_client_portal" id="edit_show_in_client_portal" value="1" style="width: 20px; height: 20px; cursor: pointer; accent-color: var(--primary-color);">
+            <div style="margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #cbd5e1;">
+                <label for="edit_show_in_client_portal" style="font-weight: 600; color: #334155; cursor: pointer; margin: 0;">عرض تفاصيل الجلسة في بوابة العميل</label>
+                <input type="checkbox" name="show_in_client_portal" id="edit_show_in_client_portal" value="1" style="width: 20px; height: 20px; cursor: pointer; accent-color: #1e40af;">
             </div>
 
-            <!-- رفع الملفات -->
-            <div class="form-group" style="margin-bottom: 20px;">
-                <div style="border: 2px dashed #cbd5e1; border-radius: 12px; padding: 25px 15px; text-align: center; background: #f8fafc; cursor: pointer; transition: 0.2s;" onclick="document.getElementById('edit_hearing_file').click();" ondragover="event.preventDefault(); this.style.borderColor='var(--primary-color)';" ondragleave="this.style.borderColor='#cbd5e1';" ondrop="event.preventDefault(); this.style.borderColor='#cbd5e1'; document.getElementById('edit_hearing_file').files = event.dataTransfer.files; updateEditFileName(event.dataTransfer.files[0]?.name);">
-                    <div style="width: 50px; height: 50px; background: #1e3a8a; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: white; font-size: 1.4rem; margin-bottom: 10px;">
-                        <i class="fa-solid fa-cloud-arrow-up"></i>
-                    </div>
-                    <p style="margin: 0; font-weight: 600; color: #1e3a8a; font-size: 0.95rem;">ضع الملفات هنا للتحميل أو <span style="text-decoration: underline;">تصفحها</span></p>
-                    <input type="file" name="attachment" id="edit_hearing_file" style="display: none;" onchange="updateEditFileName(this.files[0]?.name)">
-                    <small id="edit_file_name_display" style="display: block; margin-top: 8px; color: #64748b; font-size: 0.85rem;"></small>
-                </div>
-            </div>
-
-            <!-- رقم الغرفة ورقم الدور -->
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px;">
                 <div class="form-group">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">رقم الغرفة</label>
-                    <input type="text" name="chamber_number" id="edit_hearing_chamber" placeholder="رقم الغرفة" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #334155;">رقم الغرفة</label>
+                    <input type="text" name="chamber_number" id="edit_hearing_chamber" placeholder="رقم الغرفة" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
                 </div>
                 <div class="form-group">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">رقم الدور</label>
-                    <input type="text" name="floor_number" id="edit_hearing_floor" placeholder="رقم الدور" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #334155;">رقم الدور</label>
+                    <input type="text" name="floor_number" id="edit_hearing_floor" placeholder="رقم الدور" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
                 </div>
             </div>
             
             <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                <button type="button" onclick="document.getElementById('editHearingModal').style.display='none'" style="padding: 12px 20px; background: #e2e8f0; color: #475569; border: none; border-radius: 8px; cursor: pointer; font-family: 'Cairo', sans-serif; font-weight: 600;">إلغاء</button>
-                <button type="submit" class="btn-primary" style="padding: 12px 20px; font-family: 'Cairo', sans-serif;">حفظ التعديلات</button>
+                <button type="button" onclick="document.getElementById('editHearingModal').style.display='none'" style="padding: 10px 20px; background: #e2e8f0; color: #475569; border: none; border-radius: 8px; cursor: pointer; font-family: 'Cairo', sans-serif; font-weight: 600;">إلغاء</button>
+                <button type="submit" class="btn-primary" style="padding: 10px 20px; font-family: 'Cairo', sans-serif;">حفظ التعديلات</button>
             </div>
         </form>
     </div>
@@ -291,14 +572,320 @@
 
 {% block scripts %}
 <script>
+    const registeredCases = {{ (cases_json or [])|tojson }};
+    let attendeesList = [];
+    let actionItemsList = [];
+
     function updateAddFileName(name) {
         const display = document.getElementById('add_file_name_display');
         if (display) display.textContent = name ? 'الملف المختار: ' + name : '';
     }
 
-    function updateEditFileName(name) {
-        const display = document.getElementById('edit_file_name_display');
-        if (display) display.textContent = name ? 'الملف المختار: ' + name : '';
+    function openAddHearingModal() {
+        const modal = document.getElementById('addHearingModal');
+        modal.style.display = 'flex';
+        
+        // Auto-generate report number if empty
+        const repField = document.getElementById('add_report_number');
+        if (!repField.value) {
+            const timestamp = Date.now().toString().slice(-6);
+            repField.value = 'REP-' + (new Date().getFullYear()) + '-' + timestamp;
+        }
+
+        // Set default datetime if empty
+        const atField = document.getElementById('add_hearing_at');
+        if (!atField.value) {
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            atField.value = now.toISOString().slice(0, 16);
+        }
+
+        // Initialize default attendees if empty
+        if (attendeesList.length === 0) {
+            attendeesList = [
+                { role: 'الموكل / ممثل الموكل', name: '', status: 'حاضر', reason: '' },
+                { role: 'الطرف الآخر (الخصم)', name: '', status: 'حاضر', reason: '' },
+                { role: 'محامي المكتب الحاضر', name: '', status: 'حاضر', reason: '' }
+            ];
+            renderAttendeesTable();
+        }
+
+        // If case pre-selected from query param
+        const currentCaseId = document.getElementById('add_case_id').value;
+        if (currentCaseId) {
+            onCaseSelected(currentCaseId);
+        }
+    }
+
+    function closeAddHearingModal() {
+        document.getElementById('addHearingModal').style.display = 'none';
+    }
+
+    function onCaseSelected(caseId) {
+        if (!caseId) return;
+        const selected = registeredCases.find(c => String(c.id) === String(caseId));
+        if (selected) {
+            if (selected.court_name) document.getElementById('add_court_name').value = selected.court_name;
+            if (selected.court_case_number) document.getElementById('add_court_case_number').value = selected.court_case_number;
+            if (selected.litigation_level_key) {
+                const levelSelect = document.getElementById('add_litigation_level');
+                for (let i = 0; i < levelSelect.options.length; i++) {
+                    if (levelSelect.options[i].value === selected.litigation_level_key) {
+                        levelSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+            // Auto fill client name in attendees
+            if (selected.client_name && attendeesList.length > 0) {
+                attendeesList[0].name = selected.client_name;
+                renderAttendeesTable();
+            }
+        }
+    }
+
+    function renderAttendeesTable() {
+        const tbody = document.getElementById('attendeesTableBody');
+        tbody.innerHTML = '';
+        attendeesList.forEach((att, index) => {
+            const tr = document.createElement('tr');
+            tr.style.borderBottom = '1px solid #f1f5f9';
+            tr.innerHTML = `
+                <td style="padding: 8px 10px;">
+                    <select onchange="updateAttendee(${index}, 'role', this.value)" style="width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Cairo', sans-serif; font-size: 0.85rem;">
+                        <option value="الموكل / ممثل الموكل" ${att.role === 'الموكل / ممثل الموكل' ? 'selected' : ''}>الموكل / ممثل الموكل</option>
+                        <option value="الطرف الآخر (الخصم)" ${att.role === 'الطرف الآخر (الخصم)' ? 'selected' : ''}>الطرف الآخر (الخصم)</option>
+                        <option value="محامي المكتب الحاضر" ${att.role === 'محامي المكتب الحاضر' ? 'selected' : ''}>محامي المكتب الحاضر</option>
+                        <option value="محامي الخصم" ${att.role === 'محامي الخصم' ? 'selected' : ''}>محامي الخصم</option>
+                        <option value="شاهد" ${att.role === 'شاهد' ? 'selected' : ''}>شاهد</option>
+                        <option value="خبير قضائي" ${att.role === 'خبير قضائي' ? 'selected' : ''}>خبير قضائي</option>
+                        <option value="حاضر آخر" ${att.role === 'حاضر آخر' ? 'selected' : ''}>حاضر آخر</option>
+                    </select>
+                </td>
+                <td style="padding: 8px 10px;">
+                    <input type="text" value="${escapeHtml(att.name)}" oninput="updateAttendee(${index}, 'name', this.value)" placeholder="الاسم الكامل" style="width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Cairo', sans-serif; font-size: 0.85rem;">
+                </td>
+                <td style="padding: 8px 10px;">
+                    <select onchange="updateAttendee(${index}, 'status', this.value)" style="width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Cairo', sans-serif; font-size: 0.85rem;">
+                        <option value="حاضر" ${att.status === 'حاضر' ? 'selected' : ''}>حاضر</option>
+                        <option value="غائب" ${att.status === 'غائب' ? 'selected' : ''}>غائب</option>
+                        <option value="حاضر بوكالة" ${att.status === 'حاضر بوكالة' ? 'selected' : ''}>حاضر بوكالة</option>
+                    </select>
+                </td>
+                <td style="padding: 8px 10px;">
+                    <input type="text" value="${escapeHtml(att.reason)}" oninput="updateAttendee(${index}, 'reason', this.value)" placeholder="سبب الغياب إن وُجد" style="width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Cairo', sans-serif; font-size: 0.85rem;">
+                </td>
+                <td style="padding: 8px 10px; text-align: center;">
+                    <button type="button" onclick="removeAttendeeRow(${index})" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 1rem;">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function addAttendeeRow() {
+        attendeesList.push({ role: 'حاضر آخر', name: '', status: 'حاضر', reason: '' });
+        renderAttendeesTable();
+    }
+
+    function removeAttendeeRow(index) {
+        attendeesList.splice(index, 1);
+        renderAttendeesTable();
+    }
+
+    function updateAttendee(index, field, value) {
+        if (attendeesList[index]) {
+            attendeesList[index][field] = value;
+        }
+    }
+
+    function addActionRow() {
+        actionItemsList.push({ action: '', assignee: '', deadline: '' });
+        renderActionsContainer();
+    }
+
+    function removeActionRow(index) {
+        actionItemsList.splice(index, 1);
+        renderActionsContainer();
+    }
+
+    function updateAction(index, field, value) {
+        if (actionItemsList[index]) {
+            actionItemsList[index][field] = value;
+        }
+    }
+
+    function renderActionsContainer() {
+        const container = document.getElementById('actionsContainer');
+        container.innerHTML = '';
+        if (actionItemsList.length === 0) {
+            container.innerHTML = '<div style="color: #94a3b8; font-size: 0.85rem; padding: 6px 0;">لا توجد مهام إجرائية مضافة حالياً.</div>';
+            return;
+        }
+        actionItemsList.forEach((act, index) => {
+            const div = document.createElement('div');
+            div.style.cssText = 'display: grid; grid-template-columns: 2fr 1fr 1fr 40px; gap: 10px; margin-bottom: 8px; align-items: center;';
+            div.innerHTML = `
+                <input type="text" value="${escapeHtml(act.action)}" oninput="updateAction(${index}, 'action', this.value)" placeholder="وصف الإجراء المطلوب اتخاذه..." style="padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Cairo', sans-serif; font-size: 0.85rem;">
+                <input type="text" value="${escapeHtml(act.assignee)}" oninput="updateAction(${index}, 'assignee', this.value)" placeholder="الشخص المسؤول" style="padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Cairo', sans-serif; font-size: 0.85rem;">
+                <input type="date" value="${escapeHtml(act.deadline)}" onchange="updateAction(${index}, 'deadline', this.value)" style="padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Cairo', sans-serif; font-size: 0.85rem;">
+                <button type="button" onclick="removeActionRow(${index})" style="background: none; border: none; color: #ef4444; cursor: pointer; text-align: center;">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function toggleCourtDecisionSection(checked) {
+        document.getElementById('court_decision_fields').style.display = checked ? 'block' : 'none';
+    }
+
+    function toggleJudgmentSection(checked) {
+        document.getElementById('judgment_fields').style.display = checked ? 'block' : 'none';
+    }
+
+    function toggleNextHearingSection(checked) {
+        document.getElementById('next_hearing_fields').style.display = checked ? 'block' : 'none';
+    }
+
+    function submitHearingForm(actionType) {
+        document.getElementById('add_action_type').value = actionType;
+        if (actionType === 'draft') {
+            document.getElementById('add_report_status').value = 'draft';
+        }
+        document.getElementById('attendees_json_input').value = JSON.stringify(attendeesList);
+        document.getElementById('post_hearing_actions_input').value = JSON.stringify(actionItemsList);
+
+        const form = document.getElementById('addHearingForm');
+        if (form.checkValidity()) {
+            form.submit();
+        } else {
+            form.reportValidity();
+        }
+    }
+
+    function viewHearingDetails(hearingId) {
+        const modal = document.getElementById('viewHearingModal');
+        const content = document.getElementById('viewHearingDetailsContent');
+        modal.style.display = 'flex';
+        content.innerHTML = '<div style="text-align: center; padding: 40px; color: #64748b;"><i class="fa-solid fa-spinner fa-spin" style="font-size: 2rem;"></i><p style="margin-top: 10px;">جاري تحميل بيانات المحضر...</p></div>';
+
+        fetch('/api/hearings/' + hearingId)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('view_modal_title').textContent = data.title || 'تفاصيل المحضر';
+                document.getElementById('view_modal_subtitle').textContent = (data.report_number || '') + ' - ' + (data.court_name || '');
+                
+                let attendees = [];
+                try { attendees = JSON.parse(data.attendees_json || '[]'); } catch(e){}
+                let actions = [];
+                try { actions = JSON.parse(data.post_hearing_actions || '[]'); } catch(e){}
+
+                let attendeesHtml = '';
+                if (attendees.length > 0) {
+                    attendeesHtml = `
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 0.85rem;">
+                            <thead>
+                                <tr style="background: #f1f5f9; text-align: right;">
+                                    <th style="padding: 6px 10px;">الصفة</th>
+                                    <th style="padding: 6px 10px;">الاسم</th>
+                                    <th style="padding: 6px 10px;">الحالة</th>
+                                    <th style="padding: 6px 10px;">السبب</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${attendees.map(a => `
+                                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                                        <td style="padding: 6px 10px; font-weight: 600;">${escapeHtml(a.role)}</td>
+                                        <td style="padding: 6px 10px;">${escapeHtml(a.name || '-')}</td>
+                                        <td style="padding: 6px 10px;"><span style="color: ${a.status === 'حاضر' ? '#059669' : '#dc2626'}; font-weight: 700;">${escapeHtml(a.status)}</span></td>
+                                        <td style="padding: 6px 10px; color: #64748b;">${escapeHtml(a.reason || '-')}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                } else {
+                    attendeesHtml = '<p style="color: #94a3b8; font-size: 0.85rem; margin: 4px 0;">لم يتم تسجيل حضور محدد.</p>';
+                }
+
+                let actionsHtml = '';
+                if (actions.length > 0) {
+                    actionsHtml = `
+                        <div style="margin-top: 8px;">
+                            ${actions.map(act => `
+                                <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 8px 12px; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 6px; font-size: 0.85rem;">
+                                    <div><strong>${escapeHtml(act.action)}</strong> <span style="color: #64748b;">(المسؤول: ${escapeHtml(act.assignee || 'غير محدد')})</span></div>
+                                    <div style="color: #d97706; font-weight: 600;">${escapeHtml(act.deadline || '')}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+
+                content.innerHTML = `
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; background: #f8fafc; padding: 16px; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 18px;">
+                        <div><strong style="color: #64748b; font-size: 0.8rem; display: block;">رقم المحضر:</strong> <span style="font-family: monospace; font-weight: 700;">${escapeHtml(data.report_number)}</span></div>
+                        <div><strong style="color: #64748b; font-size: 0.8rem; display: block;">رقم قضية المحكمة:</strong> ${escapeHtml(data.court_case_number || '-')}</div>
+                        <div><strong style="color: #64748b; font-size: 0.8rem; display: block;">المحكمة:</strong> ${escapeHtml(data.court_name || '-')}</div>
+                        <div><strong style="color: #64748b; font-size: 0.8rem; display: block;">درجة التقاضي:</strong> ${escapeHtml(data.litigation_level || '-')}</div>
+                        <div><strong style="color: #64748b; font-size: 0.8rem; display: block;">تاريخ ووقت الجلسة:</strong> ${escapeHtml(data.hearing_at || '-')}</div>
+                        <div><strong style="color: #64748b; font-size: 0.8rem; display: block;">القاضي / الدائرة:</strong> ${escapeHtml(data.judge_name || '-')}</div>
+                        <div><strong style="color: #64748b; font-size: 0.8rem; display: block;">نوع الجلسة:</strong> ${escapeHtml(data.hearing_type || '-')}</div>
+                        <div><strong style="color: #64748b; font-size: 0.8rem; display: block;">حالة المحضر:</strong> <span style="font-weight: 700; color: #1e40af;">${escapeHtml(data.report_status)}</span></div>
+                    </div>
+
+                    <div style="margin-bottom: 16px;">
+                        <h4 style="margin: 0 0 6px 0; color: #1e3a8a; font-size: 0.95rem;"><i class="fa-solid fa-users"></i> كشف الحضور والغياب</h4>
+                        ${attendeesHtml}
+                    </div>
+
+                    ${data.hearing_summary ? `
+                    <div style="margin-bottom: 16px;">
+                        <h4 style="margin: 0 0 6px 0; color: #1e3a8a; font-size: 0.95rem;"><i class="fa-solid fa-file-lines"></i> ملخص ما جرى في الجلسة</h4>
+                        <div style="background: #fff; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; font-size: 0.9rem; line-height: 1.6; color: #1e293b;">${escapeHtml(data.hearing_summary)}</div>
+                    </div>` : ''}
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+                        ${data.client_requests ? `<div><h5 style="margin: 0 0 4px 0; color: #334155; font-size: 0.85rem;">طلبات الموكل:</h5><div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; border-radius: 6px; font-size: 0.85rem;">${escapeHtml(data.client_requests)}</div></div>` : ''}
+                        ${data.opponent_requests ? `<div><h5 style="margin: 0 0 4px 0; color: #334155; font-size: 0.85rem;">طلبات الخصم:</h5><div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; border-radius: 6px; font-size: 0.85rem;">${escapeHtml(data.opponent_requests)}</div></div>` : ''}
+                        ${data.pleadings_submitted ? `<div><h5 style="margin: 0 0 4px 0; color: #334155; font-size: 0.85rem;">الدفوع المقدمة:</h5><div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; border-radius: 6px; font-size: 0.85rem;">${escapeHtml(data.pleadings_submitted)}</div></div>` : ''}
+                        ${data.evidence_submitted ? `<div><h5 style="margin: 0 0 4px 0; color: #334155; font-size: 0.85rem;">المستندات والأدلة:</h5><div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; border-radius: 6px; font-size: 0.85rem;">${escapeHtml(data.evidence_submitted)}</div></div>` : ''}
+                    </div>
+
+                    ${data.internal_notes ? `
+                    <div style="margin-bottom: 16px; background: #fffbeb; border: 1px dashed #f59e0b; padding: 12px; border-radius: 8px;">
+                        <h4 style="margin: 0 0 6px 0; color: #92400e; font-size: 0.9rem;"><i class="fa-solid fa-lock"></i> ملاحظات المحامي الداخلية (سرية):</h4>
+                        <div style="font-size: 0.85rem; color: #78350f; line-height: 1.5;">${escapeHtml(data.internal_notes)}</div>
+                    </div>` : ''}
+
+                    ${(data.has_court_decision || data.has_judgment) ? `
+                    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+                        <h4 style="margin: 0 0 8px 0; color: #166534; font-size: 0.95rem;"><i class="fa-solid fa-gavel"></i> القرارات والأحكام</h4>
+                        ${data.has_court_decision ? `<div><strong>قرار قضائي (${escapeHtml(data.decision_type || 'تمهيدي')}):</strong> ${escapeHtml(data.decision_text || '-')}</div>` : ''}
+                        ${data.has_judgment ? `<div style="margin-top: 6px;"><strong>حكم قضائي صادر:</strong> صك رقم ${escapeHtml(data.judgment_number || '-')} بتاريخ ${escapeHtml(data.judgment_date || '-')}</div>` : ''}
+                    </div>` : ''}
+
+                    ${actionsHtml ? `
+                    <div style="margin-bottom: 16px;">
+                        <h4 style="margin: 0 0 6px 0; color: #1e3a8a; font-size: 0.95rem;"><i class="fa-solid fa-list-check"></i> المهام والإجراءات المطلوبة</h4>
+                        ${actionsHtml}
+                    </div>` : ''}
+
+                    ${data.next_hearing_date ? `
+                    <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 12px; border-radius: 8px;">
+                        <div style="color: #1e40af; font-weight: 700;"><i class="fa-solid fa-calendar-day"></i> موعد الجلسة القادمة: ${escapeHtml(data.next_hearing_date)}</div>
+                        ${data.postponement_reason ? `<div style="font-size: 0.85rem; color: #1e3a8a; margin-top: 4px;">سبب التأجيل: ${escapeHtml(data.postponement_reason)}</div>` : ''}
+                        ${data.next_hearing_requirements ? `<div style="font-size: 0.85rem; color: #1e3a8a; margin-top: 4px;">المطلوب: ${escapeHtml(data.next_hearing_requirements)}</div>` : ''}
+                    </div>` : ''}
+                `;
+            })
+            .catch(err => {
+                content.innerHTML = '<div style="color: #dc2626; padding: 20px; text-align: center;">تعذر جلب تفاصيل المحضر. يرجى إعادة المحاولة.</div>';
+            });
     }
 
     function openEditHearingModal(id, title, hearingAt, nextHearing, statusKey, caseId, chamber, floor, showInPortal) {
@@ -311,13 +898,20 @@
         document.getElementById('edit_hearing_chamber').value = chamber || '';
         document.getElementById('edit_hearing_floor').value = floor || '';
         document.getElementById('edit_show_in_client_portal').checked = (showInPortal !== '0' && showInPortal !== 0 && showInPortal !== false);
-        document.getElementById('edit_file_name_display').textContent = '';
         document.getElementById('editHearingModal').style.display = 'flex';
     }
-    
-    // Load dynamic hearing statuses on page load
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+        return String(text).replace(/[&<>"']/g, m => map[m]);
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
         loadRefDataDropdown('hearing_status', 'select[name="status_key"]');
+        {% if open_new_modal %}
+        openAddHearingModal();
+        {% endif %}
     });
 </script>
 {% endblock %}
