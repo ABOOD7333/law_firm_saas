@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}LawSaaS{% endblock %}</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css">
     <link rel="stylesheet" href="/static/css/dashboard.css?v=2.7">
     <style>
         /* Core Mobile Menu Fix - Guaranteed to apply */
@@ -151,6 +152,27 @@
             }
         }
     </style>
+    <style>
+        /* Ensuring FontAwesome icons always render with correct width & margin */
+        .nav-item a i, .btn-action i, button i {
+            display: inline-block;
+            min-width: 1.25rem;
+            text-align: center;
+        }
+        /* Fix Table Action Buttons to wrap neatly without squishing */
+        .table-action-btns {
+            display: flex !important;
+            flex-wrap: wrap !important;
+            gap: 6px !important;
+            justify-content: center !important;
+            align-items: center !important;
+            min-width: 220px !important;
+        }
+        .table-action-btns button {
+            white-space: nowrap !important;
+            flex-shrink: 0 !important;
+        }
+    </style>
     {% block head %}{% endblock %}
 </head>
 <body>
@@ -176,14 +198,26 @@
             {% set not_client = user and user.role != 'موكل' %}
 
             <li class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
-                {% if is_module_enabled(user, "rag") %}<a href="/knowledge-admin"><i class="fa-solid fa-brain"></i> إدارة المعرفة (RAG)</a>{% endif %}
-
-                {% if is_module_enabled(user, "ai_assistant") %}<a href="/ai-assistant"><i class="fa-solid fa-robot"></i> المساعد الذكي ⚡</a>{% endif %}
-
-                {% if is_module_enabled(user, "contract_analyzer") %}<a href="/contract-analyzer"><i class="fa-solid fa-file-contract"></i> محلل العقود الذكي 🆕</a>{% endif %}
-
                 <a href="/dashboard"><i class="fa-solid fa-chart-pie"></i> {% if user and user.role == 'موكل' %}بوابتي (الرئيسية){% else %}لوحة التحكم{% endif %}</a>
             </li>
+
+            {% if is_module_enabled(user, "ai_assistant") %}
+            <li class="nav-item {% if active_page == 'ai-assistant' %}active{% endif %}">
+                <a href="/ai-assistant"><i class="fa-solid fa-robot"></i> المساعد الذكي ⚡</a>
+            </li>
+            {% endif %}
+
+            {% if is_module_enabled(user, "contract_analyzer") %}
+            <li class="nav-item {% if active_page == 'contract-analyzer' %}active{% endif %}">
+                <a href="/contract-analyzer"><i class="fa-solid fa-file-contract"></i> محلل العقود الذكي 🆕</a>
+            </li>
+            {% endif %}
+
+            {% if is_module_enabled(user, "rag") %}
+            <li class="nav-item {% if active_page == 'knowledge-admin' %}active{% endif %}">
+                <a href="/knowledge-admin"><i class="fa-solid fa-brain"></i> إدارة المعرفة (RAG)</a>
+            </li>
+            {% endif %}
             
             {% if not_client %}
                 {% if (is_admin or is_lawyer or is_sec) and (has_perm(user, 'cases', 'view') or has_perm(user, 'hearings', 'view')) %}

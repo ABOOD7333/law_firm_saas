@@ -236,8 +236,8 @@
                             </span>
                         {% endif %}
                     </td>
-                    <td style="padding: 14px 18px; text-align: center;">
-                        <div style="display: inline-flex; gap: 8px;">
+                    <td style="padding: 14px 18px; text-align: center; white-space: nowrap;">
+                        <div class="table-action-btns">
                             <!-- Modules Control Button -->
                             <button onclick='openModulesModal({{ off.id }}, {{ off.name|tojson }}, {{ off.disabled_modules|tojson }})' style="background: #0284c7; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;" title="التحكم بالواجهات والموديولات المفتوحة أو المقفلة لهذا المكتب">
                                 <i class="fas fa-toggle-on"></i> تخصيص الواجهات
