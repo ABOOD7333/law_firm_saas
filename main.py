@@ -12,6 +12,7 @@ from core.security import hash_session_token, login_lockout_active, record_login
 
 import hashlib
 import uuid
+from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta, timezone
 from fastapi import FastAPI, Request, Form, Depends, Cookie, UploadFile, File, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, PlainTextResponse
