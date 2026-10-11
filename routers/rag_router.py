@@ -160,33 +160,185 @@ async def upload_knowledge_document(
     }
 
 
-@router.get("/documents")
-async def get_knowledge_documents(
+@router.post("/add-text")
+async def add_knowledge_text(
+    background_tasks: BackgroundTasks,
+    title: str = Form(...),
+    category: str = Form(...),
+    content: str = Form(...),
+    keywords: Optional[str] = Form(None),
+    source_reference: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     current_user: AccessProfiles = Depends(get_current_user)
 ):
-    """عرض المستندات المرفوعة وحالتها"""
+    """إضافة سابقة قضائية أو مادة أو استشارة كنص مباشر إلى قاعدة المعرفة"""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    if not current_user.office_id or not check_user_permission(current_user, "knowledge", "add"):
+        raise HTTPException(status_code=403, detail="غير مصرح بإضافة نصوص لقاعدة المعرفة")
+
+    if not title or not title.strip() or not content or not content.strip():
+        raise HTTPException(status_code=400, detail="العنوان والمحتوى مطلوبان")
+
+    from rag_engine.config import LEGAL_CATEGORIES
+    if category not in LEGAL_CATEGORIES:
+        raise HTTPException(status_code=400, detail="قسم المعرفة غير صالح")
+
+    # حفظ النص كملف txt في مجلد القسم
+    category_dir = Path(KNOWLEDGE_DATA_DIR) / category
+    os.makedirs(category_dir, exist_ok=True)
+    unique_filename = f"text_{uuid.uuid4().hex}.txt"
+    file_path = category_dir / unique_filename
+
+    full_payload = f"العنوان: {title.strip()}\n"
+    if source_reference:
+        full_payload += f"المرجع/السند: {source_reference.strip()}\n"
+    if keywords:
+        full_payload += f"الكلمات الدلالية: {keywords.strip()}\n"
+    full_payload += f"\nالمحتوى القانوني:\n{content.strip()}"
+
+    with open(file_path, "w", encoding="utf-8") as f:
+        f.write(full_payload)
+
+    new_doc = KnowledgeDocument(
+        office_id=current_user.office_id,
+        file_name=title.strip()[:200],
+        file_path=str(file_path),
+        file_type="txt",
+        category=category,
+        status="pending",
+        document_hash=unique_filename,
+        uploaded_by=current_user.id
+    )
+    db.add(new_doc)
+    db.commit()
+    db.refresh(new_doc)
+
+    background_tasks.add_task(process_document_bg, new_doc.id, str(file_path))
+
+    return {
+        "success": True,
+        "message": "تم حفظ النص القانوني وجاري فهرسته في قاعدة المعرفة.",
+        "document_id": new_doc.id
+    }
+
+
+@router.get("/documents")
+async def get_knowledge_documents(
+    category: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: AccessProfiles = Depends(get_current_user)
+):
+    """عرض المستندات المرفوعة وحالتها مع إحصائيات المعرفة"""
     if not current_user:
         raise HTTPException(status_code=401)
     if not current_user.office_id or not check_user_permission(current_user, "knowledge", "view"):
         raise HTTPException(status_code=403, detail="غير مصرح بعرض مستندات المعرفة")
-        
-    docs = db.query(KnowledgeDocument).filter(
+
+    query = db.query(KnowledgeDocument).filter(
         KnowledgeDocument.office_id == current_user.office_id,
         KnowledgeDocument.is_deleted == 0
-    ).order_by(KnowledgeDocument.created_at.desc()).all()
-    
+    )
+    if category and category.strip():
+        query = query.filter(KnowledgeDocument.category == category.strip())
+
+    docs = query.order_by(KnowledgeDocument.created_at.desc()).all()
+
+    # حساب الإحصائيات
+    total_docs = len(docs)
+    indexed_docs = sum(1 for d in docs if d.status == "indexed")
+    total_chunks = sum(d.chunk_count or 0 for d in docs)
+    failed_docs = sum(1 for d in docs if d.status == "failed")
+
     return {
         "success": True,
+        "stats": {
+            "total_docs": total_docs,
+            "indexed_docs": indexed_docs,
+            "total_chunks": total_chunks,
+            "failed_docs": failed_docs
+        },
         "data": [{
             "id": d.id,
             "file_name": d.file_name,
+            "file_type": d.file_type,
             "category": d.category,
             "status": d.status,
             "chunk_count": d.chunk_count,
             "created_at": d.created_at
         } for d in docs]
     }
+
+
+@router.delete("/documents/{doc_id}")
+async def delete_knowledge_document(
+    doc_id: int,
+    db: Session = Depends(get_db),
+    current_user: AccessProfiles = Depends(get_current_user)
+):
+    """حذف مستند من قاعدة المعرفة ومن محرك المتجهات بأمان"""
+    if not current_user:
+        raise HTTPException(status_code=401)
+    if not current_user.office_id or not check_user_permission(current_user, "knowledge", "delete"):
+        raise HTTPException(status_code=403, detail="غير مصرح بحذف مستندات المعرفة")
+
+    doc = db.query(KnowledgeDocument).filter(
+        KnowledgeDocument.id == doc_id,
+        KnowledgeDocument.office_id == current_user.office_id,
+        KnowledgeDocument.is_deleted == 0
+    ).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="المستند غير موجود")
+
+    # حذف من Vector DB
+    try:
+        vector_store.delete_document(doc_id)
+    except Exception as e:
+        print(f"Vector delete warning for {doc_id}: {e}")
+
+    # حذف الملف الفعلي إن وجد
+    try:
+        if os.path.exists(doc.file_path):
+            os.remove(doc.file_path)
+    except Exception as e:
+        print(f"File remove warning for {doc_id}: {e}")
+
+    # وسم المستند كمحذوف
+    doc.is_deleted = 1
+    db.commit()
+
+    return {"success": True, "message": "تم حذف المستند بنجاح من قاعدة المعرفة ومحرك البحث"}
+
+
+@router.post("/documents/{doc_id}/reindex")
+async def reindex_knowledge_document(
+    doc_id: int,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: AccessProfiles = Depends(get_current_user)
+):
+    """إعادة فهرسة مستند في الخلفية"""
+    if not current_user:
+        raise HTTPException(status_code=401)
+    if not current_user.office_id or not check_user_permission(current_user, "knowledge", "edit"):
+        raise HTTPException(status_code=403, detail="غير مصرح بإعادة فهرسة المستندات")
+
+    doc = db.query(KnowledgeDocument).filter(
+        KnowledgeDocument.id == doc_id,
+        KnowledgeDocument.office_id == current_user.office_id,
+        KnowledgeDocument.is_deleted == 0
+    ).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="المستند غير موجود")
+
+    if not os.path.exists(doc.file_path):
+        raise HTTPException(status_code=400, detail="الملف الفعلي غير متوفر على القرص لإعادة الفهرسة")
+
+    doc.status = "pending"
+    db.commit()
+
+    background_tasks.add_task(process_document_bg, doc.id, doc.file_path)
+    return {"success": True, "message": "بدأت إعادة الفهرسة في الخلفية"}
 
 
 @router.post("/search")
