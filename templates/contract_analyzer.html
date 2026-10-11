@@ -307,6 +307,28 @@
     <!-- ══════════════════════════════════════════ -->
     <div class="ca-panel active" id="panel-analyze">
         <!-- Upload -->
+        <!-- Input Mode Selector -->
+        <div style="display:flex; gap:12px; margin-bottom:16px;">
+            <button type="button" class="ca-tab active" id="btnModeFile" onclick="setAnalyzeMode('file')" style="flex:unset; padding:8px 16px; font-size:14px;">
+                📁 رفع ملف عقد (PDF / Word)
+            </button>
+            <button type="button" class="ca-tab" id="btnModeText" onclick="setAnalyzeMode('text')" style="flex:unset; padding:8px 16px; font-size:14px;">
+                📝 كتابة / لصق نص العقد
+            </button>
+            {% if contracts %}
+            <div style="margin-right:auto; display:flex; align-items:center; gap:8px;">
+                <label style="color:#94a3b8; font-size:13px; font-weight:600;">أو اختر من عقود المكتب:</label>
+                <select id="quickContractSelect" class="form-select" onchange="onOfficeContractSelect(this)" style="background:#1e293b; color:#f1f5f9; border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:6px 12px; font-size:13px; font-family:'Tajawal';">
+                    <option value="">-- اختر مستند عقد محفوظ --</option>
+                    {% for doc in contracts %}
+                    <option value="{{ doc.id }}" data-notes="{{ doc.notes or '' }}">{{ doc.name }} ({{ doc.doc_code or 'بلا كود' }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Upload File Zone -->
         <div class="upload-zone" id="analyzeZone" ondragover="handleDrag(event,'analyzeZone')" ondragleave="handleDragLeave('analyzeZone')" ondrop="handleDrop(event,'analyzeFile','analyzeZone')">
             <input type="file" id="analyzeFile" accept=".pdf,.docx,.txt" onchange="fileSelected(this,'analyzeBadge','analyzeFileName')">
             <div class="upload-icon">📋</div>
@@ -315,6 +337,23 @@
             <div id="analyzeBadge" class="file-badge" style="display:none">
                 📎 <span id="analyzeFileName"></span>
             </div>
+        </div>
+
+        <!-- Direct Text Input Zone -->
+        <div id="analyzeTextZone" style="display:none; margin-bottom:16px;">
+            <textarea id="analyzeRawText" rows="9" placeholder="الصق بنود العقد أو المسودة القانونية هنا مباشرة للتحليل..." style="width:100%; background:rgba(255,255,255,0.03); border:2px dashed rgba(99,102,241,0.4); border-radius:14px; padding:16px; color:#f1f5f9; font-size:14px; font-family:'Tajawal', sans-serif; resize:vertical; outline:none;" oninput="onRawTextInput()"></textarea>
+        </div>
+
+        <!-- Link to Case Selection Ribbon -->
+        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:12px 18px; margin-top:16px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+            <span style="color:#94a3b8; font-size:13px; font-weight:700;">⚖️ ربط العقد بقضية (اختياري):</span>
+            <select id="analysisCaseId" style="background:#0f172a; color:#f1f5f9; border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:7px 14px; font-size:13px; font-family:'Tajawal'; min-width:240px;">
+                <option value="">-- بدون ربط بقضية محددة --</option>
+                {% for c in cases %}
+                <option value="{{ c.id }}" {% if selected_case_id and selected_case_id == c.id %}selected{% endif %}>{{ c.case_number }} - {{ c.title[:40] }}</option>
+                {% endfor %}
+            </select>
+            <span style="color:#64748b; font-size:12px;">يسمح لك بحفظ تقرير الفحص والتوصيات مباشرة في ملف القضية</span>
         </div>
 
         <button class="btn-analyze" id="btnAnalyze" onclick="runAnalysis()" disabled>
@@ -330,8 +369,19 @@
 
         <!-- Results -->
         <div class="results-container" id="analyzeResults" style="display:none">
-            <!-- Contract type + summary -->
-            <div id="contractTypeBadge"></div>
+            <!-- Action Toolbar for Results -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:10px;">
+                <div id="contractTypeBadge"></div>
+                <div style="display:flex; gap:10px;">
+                    <button type="button" onclick="window.print()" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#e2e8f0; border-radius:10px; padding:8px 16px; font-family:'Tajawal'; font-size:13px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px;">
+                        🖨️ طباعة / تصدير التقرير
+                    </button>
+                    <button type="button" id="btnSaveToCase" onclick="saveReportToCase()" style="background:linear-gradient(135deg, #10b981, #059669); border:none; color:#fff; border-radius:10px; padding:8px 18px; font-family:'Tajawal'; font-size:13px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(16,185,129,0.3);">
+                        💾 حفظ التقرير في ملف القضية والأرشيف
+                    </button>
+                </div>
+            </div>
+
             <div class="summary-box" id="summaryBox" style="display:none">
                 <h3>ملخص العقد</h3>
                 <p id="summaryText"></p>
@@ -388,8 +438,8 @@
         <!-- Empty state -->
         <div class="empty-state" id="analyzeEmpty">
             <div class="empty-state-icon">📄</div>
-            <h3>ارفع عقداً للبدء</h3>
-            <p>سيقوم Gemini AI باستخراج جميع الكيانات القانونية من العقد</p>
+            <h3>ارفع عقداً أو الصق نصه للبدء</h3>
+            <p>سيقوم Gemini AI باستخراج جميع الكيانات القانونية، الأطراف، والشروط الجزائية فوراً</p>
         </div>
     </div>
 
@@ -397,14 +447,28 @@
     <!-- Panel 2: كشف المخاطر                      -->
     <!-- ══════════════════════════════════════════ -->
     <div class="ca-panel" id="panel-risks">
+        <!-- Input Mode Selector for Risks -->
+        <div style="display:flex; gap:12px; margin-bottom:16px;">
+            <button type="button" class="ca-tab active" id="btnRiskModeFile" onclick="setRiskMode('file')" style="flex:unset; padding:8px 16px; font-size:14px;">
+                📁 فحص ملف عقد
+            </button>
+            <button type="button" class="ca-tab" id="btnRiskModeText" onclick="setRiskMode('text')" style="flex:unset; padding:8px 16px; font-size:14px;">
+                📝 فحص بنود مكتوبة مباشرة
+            </button>
+        </div>
+
         <div class="upload-zone" id="risksZone" ondragover="handleDrag(event,'risksZone')" ondragleave="handleDragLeave('risksZone')" ondrop="handleDrop(event,'risksFile','risksZone')">
             <input type="file" id="risksFile" accept=".pdf,.docx,.txt" onchange="fileSelected(this,'risksBadge','risksFileName')">
             <div class="upload-icon">⚠️</div>
             <h3>ارفع العقد للفحص القانوني</h3>
-            <p>سيتم مقارنة بنوده بالقانون المدني اليمني</p>
+            <p>سيتم مقارنة بنوده بالقانون المدني وقوانين المعاملات</p>
             <div id="risksBadge" class="file-badge" style="display:none">
                 📎 <span id="risksFileName"></span>
             </div>
+        </div>
+
+        <div id="risksTextZone" style="display:none; margin-bottom:16px;">
+            <textarea id="risksRawText" rows="9" placeholder="الصق بنود العقد هنا للتحقق من سلامتها وخلوها من المخاطر والثغرات القانونية..." style="width:100%; background:rgba(255,255,255,0.03); border:2px dashed rgba(245,158,11,0.4); border-radius:14px; padding:16px; color:#f1f5f9; font-size:14px; font-family:'Tajawal', sans-serif; resize:vertical; outline:none;" oninput="onRawRiskTextInput()"></textarea>
         </div>
 
         <button class="btn-analyze" id="btnRisks" onclick="runRiskDetection()" disabled>
@@ -413,14 +477,14 @@
 
         <div class="loading-overlay" id="risksLoading">
             <div class="loading-spinner"></div>
-            <div class="loading-text">يتم تحليل بنود العقد...</div>
+            <div class="loading-text">يتم تحليل بنود العقد واكتشاف الثغرات...</div>
         </div>
 
         <div id="risksResults" style="display:none; margin-top:28px">
             <div id="overallRiskBanner"></div>
             <div id="risksList"></div>
             <div class="ai-insight-box" id="risksRecommendation" style="display:none">
-                <h4>🤖 توصية المستشار الذكي</h4>
+                <h4>🤖 توصية المستشار الذكي والبنود البديلة المقترحة</h4>
                 <p id="recommendationText"></p>
             </div>
         </div>
@@ -428,7 +492,7 @@
         <div class="empty-state" id="risksEmpty">
             <div class="empty-state-icon">🛡️</div>
             <h3>افحص عقدك قبل التوقيع</h3>
-            <p>سيكشف النظام عن البنود المخالفة للقانون اليمني أو عالية المخاطر</p>
+            <p>سيكشف النظام عن البنود الإذعانية والمخالفة للنظام العام أو عالية المخاطر</p>
         </div>
     </div>
 
@@ -440,24 +504,24 @@
             <div class="compare-upload-zone v1-zone" id="cmp1Zone" ondragover="handleDrag(event,'cmp1Zone')" ondragleave="handleDragLeave('cmp1Zone')" ondrop="handleDrop(event,'cmpFile1','cmp1Zone')">
                 <input type="file" id="cmpFile1" accept=".pdf,.docx,.txt" onchange="cmpFileSelected(this, 1)">
                 <div class="upload-icon">🔵</div>
-                <h4 id="cmp1Label">النسخة الأولى</h4>
+                <h4 id="cmp1Label">النسخة الأولى (الأصلية)</h4>
                 <p id="cmp1Name">اسحب الملف أو اضغط للاختيار</p>
             </div>
             <div class="compare-upload-zone v2-zone" id="cmp2Zone" ondragover="handleDrag(event,'cmp2Zone')" ondragleave="handleDragLeave('cmp2Zone')" ondrop="handleDrop(event,'cmpFile2','cmp2Zone')">
                 <input type="file" id="cmpFile2" accept=".pdf,.docx,.txt" onchange="cmpFileSelected(this, 2)">
                 <div class="upload-icon">🟣</div>
-                <h4 id="cmp2Label">النسخة الثانية</h4>
+                <h4 id="cmp2Label">النسخة الثانية (المعدلة)</h4>
                 <p id="cmp2Name">اسحب الملف أو اضغط للاختيار</p>
             </div>
         </div>
 
         <button class="btn-analyze" id="btnCompare" onclick="runComparison()" disabled>
-            🔀 مقارنة النسختين
+            🔀 مقارنة النسختين واكتشاف التعديلات
         </button>
 
         <div class="loading-overlay" id="compareLoading">
             <div class="loading-spinner"></div>
-            <div class="loading-text">يتم مقارنة العقدين...</div>
+            <div class="loading-text">يتم مقارنة العقدين سطر بسطر...</div>
         </div>
 
         <div id="compareResults" style="display:none; margin-top:28px">
@@ -465,18 +529,18 @@
             <div class="diff-stats" id="diffStats"></div>
             <!-- AI Insight -->
             <div class="ai-insight-box" id="diffInsight" style="display:none">
-                <h4>🤖 تحليل Gemini للفروق الجوهرية</h4>
+                <h4>🤖 تحليل Gemini للفروق الجوهرية والتبعات القانونية</h4>
                 <p id="diffInsightText"></p>
             </div>
             <!-- Diff Viewer -->
-            <div class="section-title" style="margin-top:20px">عرض الفروق التفصيلية</div>
+            <div class="section-title" style="margin-top:20px">عرض الفروق التفصيلية (Redlining)</div>
             <div class="diff-viewer" id="diffViewer"></div>
         </div>
 
         <div class="empty-state" id="compareEmpty">
             <div class="empty-state-icon">🔀</div>
             <h3>قارن بين نسختين من العقد</h3>
-            <p>ارفع النسخة الأصلية والمعدَّلة لرؤية جميع التغييرات بدقة</p>
+            <p>ارفع النسخة الأصلية والمعدَّلة لرؤية جميع التغييرات بدقة وتلوين المحذوف والمضاف</p>
         </div>
     </div>
 </div>
@@ -530,25 +594,112 @@ function cmpFileSelected(input, num) {
     document.getElementById('btnCompare').disabled = !(f1 && f2);
 }
 
+// ── Input Mode state ───────────────────────────────────────────────────────
+let currentAnalyzeMode = 'file';
+let currentRiskMode = 'file';
+let lastAnalysisData = null;
+let lastRiskData = null;
+
+function setAnalyzeMode(mode) {
+    currentAnalyzeMode = mode;
+    const btnFile = document.getElementById('btnModeFile');
+    const btnText = document.getElementById('btnModeText');
+    const zoneFile = document.getElementById('analyzeZone');
+    const zoneText = document.getElementById('analyzeTextZone');
+    const btnAnalyze = document.getElementById('btnAnalyze');
+
+    if (mode === 'file') {
+        btnFile.classList.add('active');
+        btnText.classList.remove('active');
+        zoneFile.style.display = 'block';
+        zoneText.style.display = 'none';
+        btnAnalyze.disabled = !document.getElementById('analyzeFile').files.length;
+    } else {
+        btnText.classList.add('active');
+        btnFile.classList.remove('active');
+        zoneFile.style.display = 'none';
+        zoneText.style.display = 'block';
+        const txt = document.getElementById('analyzeRawText').value.trim();
+        btnAnalyze.disabled = txt.length < 15;
+    }
+}
+
+function onRawTextInput() {
+    if (currentAnalyzeMode === 'text') {
+        const txt = document.getElementById('analyzeRawText').value.trim();
+        document.getElementById('btnAnalyze').disabled = txt.length < 15;
+    }
+}
+
+function setRiskMode(mode) {
+    currentRiskMode = mode;
+    const btnFile = document.getElementById('btnRiskModeFile');
+    const btnText = document.getElementById('btnRiskModeText');
+    const zoneFile = document.getElementById('risksZone');
+    const zoneText = document.getElementById('risksTextZone');
+    const btnRisks = document.getElementById('btnRisks');
+
+    if (mode === 'file') {
+        btnFile.classList.add('active');
+        btnText.classList.remove('active');
+        zoneFile.style.display = 'block';
+        zoneText.style.display = 'none';
+        btnRisks.disabled = !document.getElementById('risksFile').files.length;
+    } else {
+        btnText.classList.add('active');
+        btnFile.classList.remove('active');
+        zoneFile.style.display = 'none';
+        zoneText.style.display = 'block';
+        const txt = document.getElementById('risksRawText').value.trim();
+        btnRisks.disabled = txt.length < 15;
+    }
+}
+
+function onRawRiskTextInput() {
+    if (currentRiskMode === 'text') {
+        const txt = document.getElementById('risksRawText').value.trim();
+        document.getElementById('btnRisks').disabled = txt.length < 15;
+    }
+}
+
+function onOfficeContractSelect(select) {
+    const opt = select.options[select.selectedIndex];
+    if (!opt || !opt.value) return;
+    const notes = opt.getAttribute('data-notes');
+    if (notes && notes.trim()) {
+        setAnalyzeMode('text');
+        document.getElementById('analyzeRawText').value = notes;
+        onRawTextInput();
+    } else {
+        alert('ملاحظات/نص هذا المستند فارغ. يرجى لصق النص يدوياً أو رفع ملف العقد.');
+    }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // 1. تحليل العقد
 // ═══════════════════════════════════════════════════════════════════════════
 async function runAnalysis() {
-    const file = document.getElementById('analyzeFile').files[0];
-    if (!file) return;
+    const formData = new FormData();
+    if (currentAnalyzeMode === 'file') {
+        const file = document.getElementById('analyzeFile').files[0];
+        if (!file) return;
+        formData.append('file', file);
+    } else {
+        const rawText = document.getElementById('analyzeRawText').value.trim();
+        if (!rawText) return;
+        formData.append('raw_text', rawText);
+    }
 
     document.getElementById('analyzeEmpty').style.display = 'none';
     document.getElementById('analyzeResults').style.display = 'none';
     document.getElementById('analyzeLoading').style.display = 'block';
     document.getElementById('btnAnalyze').disabled = true;
 
-    const formData = new FormData();
-    formData.append('file', file);
-
     try {
         const res = await fetch('/api/rag/analyze-contract', { method: 'POST', body: formData });
         const data = await res.json();
         if (!data.success) throw new Error(data.error || 'خطأ غير معروف');
+        lastAnalysisData = data.analysis;
         renderAnalysisResults(data.analysis);
     } catch (err) {
         alert('حدث خطأ: ' + err.message);
@@ -621,25 +772,73 @@ function renderAnalysisResults(a) {
     document.getElementById('analyzeResults').style.display = 'block';
 }
 
+// ── Save report to case documents ──────────────────────────────────────────
+async function saveReportToCase() {
+    const caseSelect = document.getElementById('analysisCaseId');
+    const caseId = caseSelect ? caseSelect.value : null;
+    if (!caseId) {
+        alert('يرجى اختيار القضية المراد ربط التقرير بها أولاً من القائمة العلوية.');
+        if (caseSelect) caseSelect.focus();
+        return;
+    }
+
+    if (!lastAnalysisData) {
+        alert('لا توجد بيانات تحليل حالية للحفظ.');
+        return;
+    }
+
+    const btn = document.getElementById('btnSaveToCase');
+    const origText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '⏳ جارٍ الحفظ في ملف القضية...';
+
+    const title = lastAnalysisData.contract_type || 'عقد قانوني';
+    const reportText = JSON.stringify(lastAnalysisData, null, 2);
+
+    const fd = new FormData();
+    fd.append('case_id', caseId);
+    fd.append('contract_title', title);
+    fd.append('report_content', reportText);
+    fd.append('risk_level', 'آمن');
+
+    try {
+        const res = await fetch('/api/contract-analyzer/save-report', { method: 'POST', body: fd });
+        const resData = await res.json();
+        if (!res.ok || !resData.success) throw new Error(resData.detail || resData.message || 'فشل الحفظ');
+        alert('✅ ' + (resData.message || 'تم حفظ التقرير بنجاح في مستندات القضية والأرشيف!'));
+    } catch (e) {
+        alert('❌ حدث خطأ أثناء الحفظ: ' + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = origText;
+    }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // 2. كشف المخاطر
 // ═══════════════════════════════════════════════════════════════════════════
 async function runRiskDetection() {
-    const file = document.getElementById('risksFile').files[0];
-    if (!file) return;
+    const formData = new FormData();
+    if (currentRiskMode === 'file') {
+        const file = document.getElementById('risksFile').files[0];
+        if (!file) return;
+        formData.append('file', file);
+    } else {
+        const rawText = document.getElementById('risksRawText').value.trim();
+        if (!rawText) return;
+        formData.append('raw_text', rawText);
+    }
 
     document.getElementById('risksEmpty').style.display = 'none';
     document.getElementById('risksResults').style.display = 'none';
     document.getElementById('risksLoading').style.display = 'block';
     document.getElementById('btnRisks').disabled = true;
 
-    const formData = new FormData();
-    formData.append('file', file);
-
     try {
         const res = await fetch('/api/rag/detect-risks', { method: 'POST', body: formData });
         const data = await res.json();
         if (!data.success) throw new Error(data.error || 'خطأ');
+        lastRiskData = data.risks;
         renderRisks(data.risks);
     } catch (err) {
         alert('حدث خطأ: ' + err.message);

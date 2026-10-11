@@ -237,45 +237,63 @@ async def semantic_search(
 
 @router.post("/analyze-contract")
 async def analyze_contract(
-    file: UploadFile = File(...),
+    file: UploadFile = File(None),
+    raw_text: str = Form(None),
     db: Session = Depends(get_db),
     current_user: AccessProfiles = Depends(get_current_user)
 ):
-    """تحليل عقد كامل باستخدام Gemini AI — استخراج الأطراف والالتزامات والشروط الجزائية"""
+    """تحليل عقد كامل باستخدام Gemini AI — دعم رفع ملف أو لصق نص مباشر"""
     if not current_user:
         raise HTTPException(status_code=401)
 
-    temp_path = await _save_validated_upload(file, "contract")
+    text = ""
+    temp_path = None
     try:
-        text = document_loader.load_file(temp_path)
+        if file and file.filename:
+            temp_path = await _save_validated_upload(file, "contract")
+            text = document_loader.load_file(temp_path)
+        elif raw_text and raw_text.strip():
+            text = raw_text.strip()
+        else:
+            return {"success": False, "error": "يرجى رفع ملف العقد أو إدخال النص لتحليله"}
+
         if not text or text.startswith("Error"):
             return {"success": False, "error": f"تعذر استخراج النص: {text}"}
         analysis = analyzer_service.analyze_contract_ai(text)
         return {"success": True, "analysis": analysis, "text_length": len(text)}
     finally:
-        if os.path.exists(temp_path):
+        if temp_path and os.path.exists(temp_path):
             os.remove(temp_path)
 
 
 @router.post("/detect-risks")
 async def detect_contract_risks(
-    file: UploadFile = File(...),
+    file: UploadFile = File(None),
+    raw_text: str = Form(None),
     db: Session = Depends(get_db),
     current_user: AccessProfiles = Depends(get_current_user)
 ):
-    """كشف البنود عالية المخاطر في العقد ومقارنتها بالقانون المدني اليمني"""
+    """كشف البنود عالية المخاطر في العقد — دعم رفع ملف أو لصق نص مباشر"""
     if not current_user:
         raise HTTPException(status_code=401)
 
-    temp_path = await _save_validated_upload(file, "risk")
+    text = ""
+    temp_path = None
     try:
-        text = document_loader.load_file(temp_path)
+        if file and file.filename:
+            temp_path = await _save_validated_upload(file, "risk")
+            text = document_loader.load_file(temp_path)
+        elif raw_text and raw_text.strip():
+            text = raw_text.strip()
+        else:
+            return {"success": False, "error": "يرجى رفع ملف العقد أو إدخال النص لفحص المخاطر"}
+
         if not text or text.startswith("Error"):
             return {"success": False, "error": f"تعذر استخراج النص: {text}"}
         risks = analyzer_service.detect_risks(text)
         return {"success": True, "risks": risks, "text_length": len(text)}
     finally:
-        if os.path.exists(temp_path):
+        if temp_path and os.path.exists(temp_path):
             os.remove(temp_path)
 
 
