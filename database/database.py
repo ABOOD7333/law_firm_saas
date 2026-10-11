@@ -222,6 +222,25 @@ def init_db():
         except Exception:
             pass
 
+    # Add enterprise client fields to law_clients if not exists
+    new_client_cols = [
+        ('client_type', "TEXT DEFAULT 'individual'"),
+        ('nationality', 'TEXT'),
+        ('cr_number', 'TEXT'),
+        ('legal_rep_name', 'TEXT'),
+        ('city', 'TEXT'),
+        ('address', 'TEXT'),
+        ('notes', 'TEXT'),
+        ('portal_access', 'INTEGER DEFAULT 1')
+    ]
+    for col_name, col_type in new_client_cols:
+        try:
+            from sqlalchemy import text
+            with engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE law_clients ADD COLUMN {col_name} {col_type};"))
+        except Exception:
+            pass
+
 
 
         
