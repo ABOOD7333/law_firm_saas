@@ -553,7 +553,29 @@ def init_db():
     except Exception:
         pass
 
+    # Dynamic Column Synchronization (Ensures PostgreSQL on Railway has all model columns)
+    try:
+        import sqlalchemy as sa
+        insp = sa.inspect(engine)
+        existing_tables = set(insp.get_table_names())
+        with engine.begin() as conn:
+            for t_name, t_obj in Base.metadata.tables.items():
+                if t_name in existing_tables:
+                    existing_cols = {c['name'] for c in insp.get_columns(t_name)}
+                    for col in t_obj.columns:
+                        if col.name not in existing_cols:
+                            try:
+                                col_type_str = col.type.compile(engine.dialect)
+                                sql_str = f'ALTER TABLE "{t_name}" ADD COLUMN "{col.name}" {col_type_str}'
+                                conn.execute(text(sql_str))
+                                print(f"[Migration] Auto-added column {col.name} ({col_type_str}) to table {t_name}")
+                            except Exception:
+                                pass
+    except Exception as sync_exc:
+        print(f"[Migration Notice] Auto-sync column check: {sync_exc}")
+
     # Never log DATABASE_URL: it may contain a username and password.
     print(f"[Database] Connected using dialect: {engine.dialect.name}")
     print(f"[Database] Tables initialized successfully.")
+
 
