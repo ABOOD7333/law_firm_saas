@@ -5,245 +5,514 @@
 {% block head %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-    .reports-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; animation: fadeIn 0.5s ease-out; }
-    .reports-header h1 { font-size: 1.8rem; font-weight: 800; color: var(--text-color); margin: 0; }
-    .reports-header p { color: var(--text-muted); margin-top: 5px; }
-    
-    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 30px; }
-    .kpi-card { background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); display: flex; align-items: center; gap: 20px; transition: transform 0.3s ease, box-shadow 0.3s ease; border: 1px solid rgba(0,0,0,0.02); animation: slideUp 0.5s ease-out backwards; }
-    .kpi-card:nth-child(1) { animation-delay: 0.1s; }
-    .kpi-card:nth-child(2) { animation-delay: 0.2s; }
-    .kpi-card:nth-child(3) { animation-delay: 0.3s; }
-    .kpi-card:nth-child(4) { animation-delay: 0.4s; }
-    .kpi-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.08); }
-    
-    .kpi-icon { width: 60px; height: 60px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; flex-shrink: 0; }
-    .kpi-icon.finance { background: rgba(16, 185, 129, 0.1); color: #10b981; }
-    .kpi-icon.cases { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
-    .kpi-icon.clients { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
-    .kpi-icon.tasks { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
-    
+    .reports-container {
+        animation: fadeIn 0.4s ease-out;
+    }
+    .reports-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--border-color, #e2e8f0);
+    }
+    .reports-header h1 {
+        font-size: 1.8rem;
+        font-weight: 800;
+        color: var(--text-color, #1e293b);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .reports-header p {
+        color: var(--text-muted, #64748b);
+        margin: 6px 0 0;
+        font-size: 0.95rem;
+    }
+
+    /* شريط أدوات التصفية والفترات */
+    .filter-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    .period-pills {
+        display: flex;
+        background: #f1f5f9;
+        padding: 4px;
+        border-radius: 12px;
+        gap: 4px;
+    }
+    .period-pill {
+        padding: 7px 16px;
+        border-radius: 8px;
+        font-size: 0.88rem;
+        font-weight: 700;
+        color: #475569;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+    .period-pill:hover {
+        background: rgba(255, 255, 255, 0.7);
+        color: var(--primary-color, #1e3a8a);
+    }
+    .period-pill.active {
+        background: #ffffff;
+        color: var(--primary-color, #1e3a8a);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+
+    .btn-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 18px;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+        text-decoration: none;
+    }
+    .btn-print {
+        background: var(--primary-color, #1e3a8a);
+        color: #ffffff;
+    }
+    .btn-print:hover {
+        background: #0f172a;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(30, 58, 138, 0.25);
+    }
+
+    /* شبكة بطاقات المؤشرات الرئيسية */
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 20px;
+        margin-bottom: 24px;
+    }
+    .kpi-card {
+        background: #ffffff;
+        padding: 22px;
+        border-radius: 16px;
+        border: 1px solid var(--border-color, #e2e8f0);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .kpi-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.07);
+    }
+    .kpi-icon {
+        width: 58px;
+        height: 58px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.6rem;
+        flex-shrink: 0;
+    }
+    .kpi-icon.finance { background: rgba(16, 185, 129, 0.12); color: #10b981; }
+    .kpi-icon.cases { background: rgba(59, 130, 246, 0.12); color: #3b82f6; }
+    .kpi-icon.judgments { background: rgba(139, 92, 246, 0.12); color: #8b5cf6; }
+    .kpi-icon.tasks { background: rgba(245, 158, 11, 0.12); color: #f59e0b; }
+
     .kpi-details { flex-grow: 1; }
-    .kpi-details h3 { font-size: 0.95rem; color: var(--text-muted); margin: 0 0 5px 0; font-weight: 600; }
-    .kpi-details .value { font-size: 1.8rem; font-weight: 800; color: var(--text-color); margin: 0; line-height: 1.2; }
-    .kpi-details .sub-text { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; display: flex; align-items: center; gap: 5px; }
-    .sub-text.positive { color: #10b981; }
-    .sub-text.negative { color: #ef4444; }
+    .kpi-details h3 {
+        font-size: 0.88rem;
+        color: var(--text-muted, #64748b);
+        margin: 0 0 6px 0;
+        font-weight: 700;
+    }
+    .kpi-details .value {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: var(--text-color, #0f172a);
+        margin: 0;
+        line-height: 1.2;
+    }
+    .kpi-details .sub-text {
+        font-size: 0.8rem;
+        color: var(--text-muted, #64748b);
+        margin-top: 6px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
 
-    .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; margin-bottom: 30px; }
-    .chart-card { background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); border: 1px solid rgba(0,0,0,0.02); animation: fadeIn 0.6s ease-out backwards; }
-    .chart-card:nth-child(1) { animation-delay: 0.3s; }
-    .chart-card:nth-child(2) { animation-delay: 0.4s; }
-    .chart-card:nth-child(3) { animation-delay: 0.5s; }
-    .chart-card:nth-child(4) { animation-delay: 0.6s; }
+    /* شريط معدلات الأداء الذكي */
+    .rates-ribbon {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-bottom: 28px;
+    }
+    .rate-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        padding: 16px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .rate-card-title {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #475569;
+    }
+    .rate-card-value {
+        font-size: 1.35rem;
+        font-weight: 800;
+    }
 
-    .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; }
-    .chart-header h3 { font-size: 1.2rem; font-weight: 700; color: var(--text-color); margin: 0; display: flex; align-items: center; gap: 10px; }
-    .chart-container { position: relative; height: 300px; width: 100%; }
+    /* الرسوم البيانية */
+    .charts-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+        gap: 24px;
+        margin-bottom: 30px;
+    }
+    .chart-card {
+        background: #ffffff;
+        padding: 24px;
+        border-radius: 16px;
+        border: 1px solid var(--border-color, #e2e8f0);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    }
+    .chart-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 18px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .chart-header h3 {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: var(--text-color, #0f172a);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .chart-container {
+        position: relative;
+        height: 290px;
+        width: 100%;
+    }
 
-    .table-card { background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); border: 1px solid rgba(0,0,0,0.02); overflow: hidden; animation: slideUp 0.6s ease-out backwards; animation-delay: 0.5s; }
-    .table-card table { width: 100%; border-collapse: separate; border-spacing: 0; }
-    .table-card th { background: #f8fafc; color: #475569; font-weight: 700; padding: 16px; text-align: right; font-size: 0.95rem; border-bottom: 2px solid #e2e8f0; }
-    .table-card td { padding: 16px; border-bottom: 1px solid #f1f5f9; color: var(--text-color); font-size: 0.95rem; vertical-align: middle; }
+    /* جدول أداء فريق العمل */
+    .table-card {
+        background: #ffffff;
+        padding: 24px;
+        border-radius: 16px;
+        border: 1px solid var(--border-color, #e2e8f0);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+        margin-bottom: 30px;
+    }
+    .table-card table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    .table-card th {
+        background: #f8fafc;
+        color: #475569;
+        font-weight: 700;
+        padding: 14px 16px;
+        text-align: right;
+        font-size: 0.9rem;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    .table-card td {
+        padding: 15px 16px;
+        border-bottom: 1px solid #f1f5f9;
+        color: var(--text-color, #1e293b);
+        font-size: 0.92rem;
+        vertical-align: middle;
+    }
     .table-card tr:last-child td { border-bottom: none; }
     .table-card tr:hover td { background-color: #f8fafc; }
-    
-    .progress-wrapper { width: 100%; display: flex; align-items: center; gap: 10px; }
-    .progress-bar { flex-grow: 1; height: 8px; background: #e2e8f0; border-radius: 10px; overflow: hidden; }
-    .progress-fill { height: 100%; border-radius: 10px; transition: width 1s ease-in-out; }
+
+    .progress-wrapper {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .progress-bar {
+        flex-grow: 1;
+        height: 8px;
+        background: #e2e8f0;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    .progress-fill {
+        height: 100%;
+        border-radius: 10px;
+        transition: width 1s ease-in-out;
+    }
     .progress-fill.good { background: linear-gradient(90deg, #10b981, #34d399); }
     .progress-fill.warning { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
     .progress-fill.danger { background: linear-gradient(90deg, #ef4444, #f87171); }
-    .progress-text { font-size: 0.85rem; font-weight: 700; color: #475569; min-width: 35px; }
+    .progress-text {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #475569;
+        min-width: 38px;
+    }
 
     .text-emerald { color: #10b981 !important; }
     .text-red { color: #ef4444 !important; }
+    .text-blue { color: #3b82f6 !important; }
+    .text-purple { color: #8b5cf6 !important; }
 
-    .print-btn { background: var(--primary-color); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-    .print-btn:hover { background: var(--secondary-color); transform: translateY(-1px); }
-
-    @keyframes slideUp {
-        from { opacity: 0; transform: translateY(20px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
     @media print {
-        .sidebar, .topbar, .print-btn, .mobile-menu-btn { display: none !important; }
-        .main-content { margin: 0 !important; padding: 0 !important; width: 100% !important; background: white !important; }
-        .chart-card, .kpi-card, .table-card { page-break-inside: avoid; box-shadow: none !important; border: 1px solid #e2e8f0 !important; }
-        body { background: white !important; }
+        .sidebar, .topbar, .filter-toolbar, .btn-action, .mobile-menu-btn { display: none !important; }
+        .main-content { margin: 0 !important; padding: 0 !important; width: 100% !important; background: #ffffff !important; }
+        .chart-card, .kpi-card, .table-card { page-break-inside: avoid; box-shadow: none !important; border: 1px solid #cbd5e1 !important; }
+        body { background: #ffffff !important; }
         .kpi-grid, .charts-grid { gap: 10px; }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="reports-header">
-    <div>
-        <h1>التقارير والإحصائيات الشاملة</h1>
-        <p>نظرة تحليلية متكاملة لأداء المكتب المالي والقانوني</p>
-    </div>
-    <button class="print-btn" onclick="window.print()">
-        <i class="fa-solid fa-print"></i> طباعة التقرير
-    </button>
-</div>
-
-<!-- KPIs -->
-<div class="kpi-grid">
-    <div class="kpi-card">
-        <div class="kpi-icon finance">
-            <i class="fa-solid fa-vault"></i>
+<div class="reports-container">
+    <!-- Header with Filters -->
+    <div class="reports-header">
+        <div>
+            <h1><i class="fa-solid fa-chart-pie" style="color: var(--primary-color, #1e3a8a);"></i> التقارير والإحصائيات الشاملة</h1>
+            <p>لوحة القيادة التحليلية لأداء المكتب القانوني، القضايا، الجلسات، والأداء المالي</p>
         </div>
-        <div class="kpi-details">
-            <h3>الخزينة (صافي الأرباح)</h3>
-            <p class="value {% if net_profit >= 0 %}text-emerald{% else %}text-red{% endif %}">
-                <span dir="ltr">{{ "{:,.2f}".format(net_profit) }}</span> <span style="font-size:1rem; color:var(--text-color);">ر.س</span>
-            </p>
-            <div class="sub-text positive"><i class="fa-solid fa-arrow-up-right-dots"></i> إجمالي الإيرادات: <span dir="ltr">{{ "{:,.2f}".format(total_income) }}</span></div>
-        </div>
-    </div>
-    <div class="kpi-card">
-        <div class="kpi-icon cases">
-            <i class="fa-solid fa-scale-balanced"></i>
-        </div>
-        <div class="kpi-details">
-            <h3>إجمالي القضايا</h3>
-            <p class="value">{{ total_cases }}</p>
-            <div class="sub-text"><span class="positive"><i class="fa-solid fa-circle-check"></i> {{ open_cases }} نشطة</span> &nbsp;|&nbsp; <span class="negative"><i class="fa-solid fa-lock"></i> {{ closed_cases }} مغلقة</span></div>
-        </div>
-    </div>
-    <div class="kpi-card">
-        <div class="kpi-icon clients">
-            <i class="fa-solid fa-users"></i>
-        </div>
-        <div class="kpi-details">
-            <h3>الموكلون والأطراف</h3>
-            <p class="value">{{ total_clients }}</p>
-            <div class="sub-text"><i class="fa-solid fa-people-arrows"></i> إجمالي الأطراف المسجلة: {{ total_parties }}</div>
-        </div>
-    </div>
-    <div class="kpi-card">
-        <div class="kpi-icon tasks">
-            <i class="fa-solid fa-gavel"></i>
-        </div>
-        <div class="kpi-details">
-            <h3>الأحكام والجلسات</h3>
-            <p class="value">{{ total_judgments }} <span style="font-size:1rem;">حكم</span></p>
-            <div class="sub-text"><i class="fa-solid fa-calendar-check"></i> الجلسات المنتهية: {{ done_hearings }} / {{ total_hearings }}</div>
-        </div>
-    </div>
-</div>
-
-<!-- Charts -->
-<div class="charts-grid">
-    <!-- Income Line Chart -->
-    <div class="chart-card">
-        <div class="chart-header">
-            <h3><i class="fa-solid fa-chart-line" style="color: #10b981;"></i> الإيرادات (آخر 6 أشهر)</h3>
-        </div>
-        <div class="chart-container">
-            <canvas id="incomeChart"></canvas>
+        <div class="filter-toolbar">
+            <div class="period-pills">
+                <a href="/reports?period=all" class="period-pill {% if period == 'all' or not period %}active{% endif %}">الكل</a>
+                <a href="/reports?period=month" class="period-pill {% if period == 'month' %}active{% endif %}">هذا الشهر</a>
+                <a href="/reports?period=quarter" class="period-pill {% if period == 'quarter' %}active{% endif %}">الربع الحالي</a>
+                <a href="/reports?period=year" class="period-pill {% if period == 'year' %}active{% endif %}">هذا العام</a>
+            </div>
+            <button class="btn-action btn-print" onclick="window.print()">
+                <i class="fa-solid fa-print"></i> طباعة التقرير
+            </button>
         </div>
     </div>
 
-    <!-- Cases by Type Doughnut -->
-    <div class="chart-card">
-        <div class="chart-header">
-            <h3><i class="fa-solid fa-chart-pie" style="color: #3b82f6;"></i> تصنيف القضايا (الأنواع)</h3>
+    <!-- KPIs Row 1 -->
+    <div class="kpi-grid">
+        <!-- الخزينة وصافي الأرباح -->
+        <div class="kpi-card">
+            <div class="kpi-icon finance">
+                <i class="fa-solid fa-vault"></i>
+            </div>
+            <div class="kpi-details">
+                <h3>صافي الأرباح (الخزينة)</h3>
+                <p class="value {% if net_profit >= 0 %}text-emerald{% else %}text-red{% endif %}">
+                    <span dir="ltr">{{ "{:,.2f}".format(net_profit) }}</span> <span style="font-size:0.95rem; color:#64748b;">ر.س</span>
+                </p>
+                <div class="sub-text text-emerald">
+                    <i class="fa-solid fa-arrow-up-right-dots"></i> إجمالي الدخل: <span dir="ltr">{{ "{:,.2f}".format(total_income) }}</span> ر.س
+                </div>
+            </div>
         </div>
-        <div class="chart-container">
-            <canvas id="typeChart"></canvas>
+
+        <!-- إجمالي القضايا -->
+        <div class="kpi-card">
+            <div class="kpi-icon cases">
+                <i class="fa-solid fa-scale-balanced"></i>
+            </div>
+            <div class="kpi-details">
+                <h3>إجمالي القضايا المسجلة</h3>
+                <p class="value text-blue">{{ total_cases }}</p>
+                <div class="sub-text">
+                    <span style="color:#10b981;"><i class="fa-solid fa-circle-check"></i> {{ open_cases }} نشطة</span> &nbsp;|&nbsp; 
+                    <span style="color:#64748b;"><i class="fa-solid fa-folder-closed"></i> {{ closed_cases }} منتهية</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- الأحكام القضائية -->
+        <div class="kpi-card">
+            <div class="kpi-icon judgments">
+                <i class="fa-solid fa-gavel"></i>
+            </div>
+            <div class="kpi-details">
+                <h3>الأحكام والقرارات</h3>
+                <p class="value text-purple">{{ total_judgments }} <span style="font-size:0.9rem; font-weight:600;">حكم</span></p>
+                <div class="sub-text">
+                    <span style="color:#10b981;"><i class="fa-solid fa-trophy"></i> {{ won_judgments }} لصالحنا</span> &nbsp;|&nbsp; 
+                    <span style="color:#ef4444;"><i class="fa-solid fa-circle-xmark"></i> {{ lost_judgments }} ضدنا</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- الجلسات والمهام -->
+        <div class="kpi-card">
+            <div class="kpi-icon tasks">
+                <i class="fa-solid fa-calendar-check"></i>
+            </div>
+            <div class="kpi-details">
+                <h3>الجلسات والمهام</h3>
+                <p class="value" style="color:#f59e0b;">{{ total_tasks }} <span style="font-size:0.9rem; font-weight:600;">مهمة</span></p>
+                <div class="sub-text">
+                    <i class="fa-regular fa-clock"></i> الجلسات المكتملة: {{ done_hearings }} / {{ total_hearings }}
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Judgments Doughnut -->
-    <div class="chart-card">
-        <div class="chart-header">
-            <h3><i class="fa-solid fa-scale-unbalanced" style="color: #8b5cf6;"></i> نسبة نجاح الأحكام</h3>
+    <!-- شريط مؤشرات الأداء الحيوية (Performance Rates Ribbon) -->
+    <div class="rates-ribbon">
+        <div class="rate-card">
+            <span class="rate-card-title"><i class="fa-solid fa-trophy text-purple"></i> نسبة كسب القضايا</span>
+            <span class="rate-card-value text-purple">{{ win_rate }}%</span>
         </div>
-        <div class="chart-container">
-            {% if total_judgments > 0 %}
-            <canvas id="judgmentsChart"></canvas>
-            {% else %}
-            <div style="height:100%; display:flex; align-items:center; justify-content:center; color:#94a3b8;">لا توجد أحكام مسجلة حتى الآن</div>
-            {% endif %}
+        <div class="rate-card">
+            <span class="rate-card-title"><i class="fa-solid fa-receipt text-emerald"></i> نسبة تحصيل الفواتير</span>
+            <span class="rate-card-value text-emerald">{{ collection_rate }}%</span>
         </div>
-    </div>
-    
-    <!-- Tasks Completion Status Bar -->
-    <div class="chart-card">
-        <div class="chart-header">
-            <h3><i class="fa-solid fa-list-check" style="color: #f59e0b;"></i> حالة المهام الإجمالية</h3>
+        <div class="rate-card">
+            <span class="rate-card-title"><i class="fa-solid fa-list-check" style="color:#f59e0b;"></i> نسبة إنجاز المهام</span>
+            <span class="rate-card-value" style="color:#f59e0b;">{{ task_completion_rate }}%</span>
         </div>
-        <div class="chart-container">
-            {% if total_tasks > 0 %}
-            <canvas id="tasksChart"></canvas>
-            {% else %}
-            <div style="height:100%; display:flex; align-items:center; justify-content:center; color:#94a3b8;">لا توجد مهام مسجلة حتى الآن</div>
-            {% endif %}
+        <div class="rate-card">
+            <span class="rate-card-title"><i class="fa-solid fa-percent text-blue"></i> هامش الربحية</span>
+            <span class="rate-card-value text-blue">{{ profit_margin }}%</span>
         </div>
     </div>
-</div>
 
-<!-- Lawyer Performance Table -->
-<div class="table-card">
-    <div class="chart-header" style="margin-bottom:0; padding-bottom:20px; border-bottom:none;">
-        <h3><i class="fa-solid fa-user-tie" style="color: #475569;"></i> أداء المحامين والمستشارين</h3>
-    </div>
-    <div style="overflow-x: auto;">
-        <table>
-            <thead>
-                <tr>
-                    <th>المحامي / المستشار</th>
-                    <th>الدور</th>
-                    <th style="text-align: center;">إجمالي القضايا (كمسؤول أساسي)</th>
-                    <th style="text-align: center;">المهام المنجزة / الكلية</th>
-                    <th>مؤشر الإنجاز</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for lawyer in lawyer_stats %}
-                <tr>
-                    <td>
-                        <div style="display:flex; align-items:center; gap:12px;">
-                            <div style="width:36px; height:36px; background:#f1f5f9; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; color:var(--primary-color);">
-                                {{ lawyer.name[0] }}
-                            </div>
-                            <strong>{{ lawyer.name }}</strong>
-                        </div>
-                    </td>
-                    <td><span style="background:#f1f5f9; padding:4px 10px; border-radius:6px; font-size:0.8rem; font-weight:600; color:#475569;">{{ lawyer.role }}</span></td>
-                    <td style="text-align: center; font-weight: 700; font-size: 1.1rem; color: #3b82f6;">{{ lawyer.cases }}</td>
-                    <td style="text-align: center; font-weight: 600; direction: ltr;">
-                        <span style="color:#10b981;">{{ lawyer.done_tasks }}</span> / <span style="color:#64748b;">{{ lawyer.tasks }}</span>
-                    </td>
-                    <td>
-                        <div class="progress-wrapper">
-                            <div class="progress-bar">
-                                <div class="progress-fill {% if lawyer.pct >= 75 %}good{% elif lawyer.pct >= 40 %}warning{% else %}danger{% endif %}" style="width: 0%;" data-width="{{ lawyer.pct }}%"></div>
-                            </div>
-                            <span class="progress-text">{{ lawyer.pct }}%</span>
-                        </div>
-                    </td>
-                </tr>
+    <!-- الرسوم البيانية الإحصائية (Charts Grid) -->
+    <div class="charts-grid">
+        <!-- 1. تطور الإيرادات -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3><i class="fa-solid fa-chart-line text-emerald"></i> حركة الإيرادات الشهرية (ر.س)</h3>
+            </div>
+            <div class="chart-container">
+                <canvas id="incomeChart"></canvas>
+            </div>
+        </div>
+
+        <!-- 2. توزيع القضايا حسب النوع -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3><i class="fa-solid fa-chart-pie text-blue"></i> تصنيف القضايا حسب النوع</h3>
+            </div>
+            <div class="chart-container">
+                <canvas id="typeChart"></canvas>
+            </div>
+        </div>
+
+        <!-- 3. كفاءة الأحكام القضائية -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3><i class="fa-solid fa-scale-unbalanced text-purple"></i> نسبة نجاح الأحكام القضائية</h3>
+            </div>
+            <div class="chart-container">
+                {% if total_judgments > 0 %}
+                <canvas id="judgmentsChart"></canvas>
                 {% else %}
-                <tr>
-                    <td colspan="5" style="text-align:center; padding:30px; color:#94a3b8;">لا توجد بيانات متاحة للمحامين أو المستشارين</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                <div style="height:100%; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-weight:600;">
+                    <i class="fa-solid fa-info-circle" style="margin-left:8px;"></i> لا توجد أحكام مسجلة خلال الفترة المحددة
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- 4. حالة إنجاز المهام -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3><i class="fa-solid fa-bars-progress" style="color:#f59e0b;"></i> حالة إنجاز المهام المكتبية</h3>
+            </div>
+            <div class="chart-container">
+                {% if total_tasks > 0 %}
+                <canvas id="tasksChart"></canvas>
+                {% else %}
+                <div style="height:100%; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-weight:600;">
+                    <i class="fa-solid fa-info-circle" style="margin-left:8px;"></i> لا توجد مهام مسجلة خلال الفترة المحددة
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- جدول أداء المحامين والمستشارين -->
+    <div class="table-card">
+        <div class="chart-header" style="margin-bottom:0; padding-bottom:16px; border-bottom:none;">
+            <h3><i class="fa-solid fa-user-tie text-blue"></i> لوحة أداء المحامين والمستشارين</h3>
+        </div>
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>المحامي / المستشار</th>
+                        <th>الدور الوظيفي</th>
+                        <th style="text-align: center;">القضايا المسندة</th>
+                        <th style="text-align: center;">المهام (المنجزة / الإجمالية)</th>
+                        <th>مؤشر الإنجاز</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lawyer in lawyer_stats %}
+                    <tr>
+                        <td>
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <div style="width:38px; height:38px; background:rgba(30, 58, 138, 0.08); border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; color:var(--primary-color, #1e3a8a);">
+                                    {{ lawyer.name[0] }}
+                                </div>
+                                <div>
+                                    <strong style="color:var(--text-color, #0f172a);">{{ lawyer.name }}</strong>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span style="background:#f1f5f9; padding:4px 12px; border-radius:8px; font-size:0.82rem; font-weight:700; color:#475569;">
+                                {{ lawyer.role }}
+                            </span>
+                        </td>
+                        <td style="text-align: center; font-weight: 800; font-size: 1.1rem; color: #3b82f6;">{{ lawyer.cases }}</td>
+                        <td style="text-align: center; font-weight: 700; direction: ltr;">
+                            <span style="color:#10b981;">{{ lawyer.done_tasks }}</span> / <span style="color:#64748b;">{{ lawyer.tasks }}</span>
+                        </td>
+                        <td>
+                            <div class="progress-wrapper">
+                                <div class="progress-bar">
+                                    <div class="progress-fill {% if lawyer.pct >= 75 %}good{% elif lawyer.pct >= 40 %}warning{% else %}danger{% endif %}" style="width: 0%;" data-width="{{ lawyer.pct }}%"></div>
+                                </div>
+                                <span class="progress-text">{{ lawyer.pct }}%</span>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" style="text-align:center; padding:35px; color:#94a3b8; font-weight:600;">
+                            <i class="fa-solid fa-users-slash" style="font-size:1.8rem; margin-bottom:8px; display:block;"></i>
+                            لا توجد بيانات متاحة للمحامين أو المستشارين حالياً
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
-
 {% endblock %}
 
 {% block scripts %}
-<!-- Hidden data blocks for JavaScript (prevents IDE syntax errors) -->
+<!-- بيانات JavaScript الآمنة لتفادي أخطاء محرر القوالب -->
 <div style="display:none;" id="incomeData" data-income="{{ income_data | tojson | forceescape }}"></div>
 <div style="display:none;" id="typeData" data-type="{{ cases_by_type | tojson | forceescape }}"></div>
 <div style="display:none;" id="wonJudgments">{{ won_judgments }}</div>
@@ -253,59 +522,62 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Animate progress bars
+    // حركة شريط التقدم التفاعلية
     setTimeout(() => {
         document.querySelectorAll('.progress-fill').forEach(bar => {
             bar.style.width = bar.getAttribute('data-width');
         });
-    }, 500);
+    }, 300);
 
-    // Shared Chart configuration
-    Chart.defaults.font.family = "'Cairo', sans-serif";
+    // إعدادات خط Chart.js العامة
+    Chart.defaults.font.family = "'Tajawal', 'Cairo', sans-serif";
     Chart.defaults.color = "#64748b";
 
-    // Data safely loaded from HTML text to avoid IDE syntax errors
+    // 1. رسم منحنى الإيرادات
     const incomeRaw = JSON.parse(document.getElementById('incomeData').getAttribute('data-income') || '[]');
     const incomeLabels = incomeRaw.map(d => Array.isArray(d) ? d[0] : (d.month || ''));
     const incomeData = incomeRaw.map(d => Array.isArray(d) ? d[1] : (d.total || 0));
     
-    // 1. Income Line Chart
     if (document.getElementById('incomeChart')) {
         new Chart(document.getElementById('incomeChart').getContext('2d'), {
             type: 'line',
             data: {
-                labels: incomeLabels.length ? incomeLabels : ['لا توجد إيرادات'],
+                labels: incomeLabels.length ? incomeLabels : ['لا توجد إيرادات مسجلة'],
                 datasets: [{
                     label: 'الإيرادات (ر.س)',
                     data: incomeData.length ? incomeData : [0],
                     borderColor: '#10b981',
-                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    backgroundColor: 'rgba(16, 185, 129, 0.12)',
                     borderWidth: 3,
-                    tension: 0.4,
+                    tension: 0.35,
                     fill: true,
-                    pointBackgroundColor: '#fff',
+                    pointBackgroundColor: '#ffffff',
                     pointBorderColor: '#10b981',
                     pointBorderWidth: 2,
-                    pointRadius: 4
+                    pointRadius: 5,
+                    pointHoverRadius: 7
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { rtl: true, padding: 12 }
+                },
                 scales: {
-                    y: { beginAtZero: true, grid: { borderDash: [5, 5], color: '#f1f5f9' } },
+                    y: { beginAtZero: true, grid: { borderDash: [4, 4], color: '#f1f5f9' } },
                     x: { grid: { display: false } }
                 }
             }
         });
     }
 
-    // 2. Cases by Type
+    // 2. رسم تصنيف القضايا (Doughnut)
     const typeRaw = JSON.parse(document.getElementById('typeData').getAttribute('data-type') || '[]');
-    const typeLabels = typeRaw.map(d => Array.isArray(d) ? (d[0] || 'غير محدد') : (d.case_type_key || d.status_key || 'غير محدد'));
+    const typeLabels = typeRaw.map(d => Array.isArray(d) ? (d[0] || 'عام') : (d.case_type_key || 'عام'));
     const typeData = typeRaw.map(d => Array.isArray(d) ? d[1] : (d.cnt || 0));
-    const colors = ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#ec4899', '#06b6d4', '#64748b'];
+    const colors = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#64748b'];
     
     if (document.getElementById('typeChart')) {
         new Chart(document.getElementById('typeChart').getContext('2d'), {
@@ -315,22 +587,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 datasets: [{
                     data: typeData.length ? typeData : [1],
                     backgroundColor: typeData.length ? colors : ['#e2e8f0'],
-                    borderWidth: 0,
+                    borderWidth: 2,
+                    borderColor: '#ffffff',
                     hoverOffset: 6
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                cutout: '70%',
+                cutout: '68%',
                 plugins: {
-                    legend: { position: 'right', rtl: true, labels: { font: { family: 'Cairo' }, usePointStyle: true, padding: 20 } }
+                    legend: {
+                        position: 'right',
+                        rtl: true,
+                        labels: { usePointStyle: true, padding: 15, font: { size: 12, weight: '600' } }
+                    },
+                    tooltip: { rtl: true }
                 }
             }
         });
     }
 
-    // 3. Judgments Success Rate
+    // 3. رسم نسبة نجاح الأحكام القضائية
     const won = Number(document.getElementById('wonJudgments').textContent || '0');
     const lost = Number(document.getElementById('lostJudgments').textContent || '0');
     
@@ -342,35 +620,38 @@ document.addEventListener('DOMContentLoaded', function() {
                 datasets: [{
                     data: [won, lost],
                     backgroundColor: ['#10b981', '#ef4444'],
-                    borderWidth: 0,
+                    borderWidth: 2,
+                    borderColor: '#ffffff',
                     hoverOffset: 6
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                cutout: '70%',
+                cutout: '68%',
                 plugins: {
-                    legend: { position: 'bottom', labels: { font: { family: 'Cairo' }, usePointStyle: true, padding: 20 } }
+                    legend: { position: 'bottom', labels: { usePointStyle: true, padding: 15 } },
+                    tooltip: { rtl: true }
                 }
             }
         });
     }
 
-    // 4. Tasks Status
+    // 4. رسم حالة إنجاز المهام
     const tasksDone = Number(document.getElementById('doneTasks').textContent || '0');
     const tasksTotal = Number(document.getElementById('totalTasks').textContent || '0');
-    const tasksPending = tasksTotal - tasksDone;
+    const tasksPending = Math.max(0, tasksTotal - tasksDone);
     
     if (document.getElementById('tasksChart')) {
         new Chart(document.getElementById('tasksChart').getContext('2d'), {
             type: 'pie',
             data: {
-                labels: ['مهام مكتملة', 'مهام قيد التنفيذ أو متأخرة'],
+                labels: ['مهام منجزة', 'مهام قيد التنفيذ'],
                 datasets: [{
                     data: [tasksDone, tasksPending],
                     backgroundColor: ['#10b981', '#f59e0b'],
-                    borderWidth: 0,
+                    borderWidth: 2,
+                    borderColor: '#ffffff',
                     hoverOffset: 6
                 }]
             },
@@ -378,7 +659,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { position: 'bottom', labels: { font: { family: 'Cairo' }, usePointStyle: true, padding: 20 } }
+                    legend: { position: 'bottom', labels: { usePointStyle: true, padding: 15 } },
+                    tooltip: { rtl: true }
                 }
             }
         });

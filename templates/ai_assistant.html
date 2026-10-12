@@ -1106,17 +1106,27 @@
         container.scrollTop = container.scrollHeight;
     }
 
-    function clearChat() {
-        if (!confirm('هل تريد مسح المحادثة الحالية؟')) return;
+    async function clearChat() {
+        if (!confirm('هل تريد مسح المحادثة الحالية وحذف سجلها؟')) return;
+        try {
+            const csrfToken = document.cookie.split('; ').find(c => c.startsWith('csrf_token='))?.split('=')[1] || '';
+            await fetch('/api/ai/clear-history', {
+                method: 'POST',
+                headers: { 'X-CSRF-Token': csrfToken }
+            });
+        } catch (e) {
+            console.error('Clear history error:', e);
+        }
         const container = document.getElementById('chatMessages');
         container.innerHTML = `
         <div id="welcomeScreen" class="ai-welcome">
             <div class="ai-welcome-logo">⚖️</div>
             <h2>مساعدك القانوني المتقدم</h2>
-            <p>مدعوم بذكاء اصطناعي متقدم • يفهم القوانين اليمنية • يحلل بيانات مكتبك بذكاء</p>
+            <p>مدعوم بذكاء اصطناعي متقدم • يفهم القوانين والأنظمة • يحلل بيانات مكتبك بذكاء</p>
             <div class="suggestions-grid" id="suggestionsGrid"></div>
         </div>
     `;
+        loadSuggestions();
     }
 
     function copyDocument() {

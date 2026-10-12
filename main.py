@@ -4021,6 +4021,10 @@ app.include_router(accounting_router.router)
 from routers import intake as intake_router
 app.include_router(intake_router.router)
 
+# بوابة الموكلين الذكية (Client Portal)
+from routers import client_portal as client_portal_router
+app.include_router(client_portal_router.router)
+
 # ----------------------------------------------------------------------------
 
 # SaaS Subscription Routes

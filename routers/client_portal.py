@@ -3,97 +3,135 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from database.database import get_db
-from database.models import AccessProfiles, LawCases, LawDocuments, LawClients, Invoices
+from database.models import AccessProfiles, LawCases, LawDocuments, LawClients, Invoices, LawHearings
 from dependencies import templates, get_current_user
 from core.security import client_records_for_user
 
 router = APIRouter(prefix="/client-portal", tags=["Client Portal"])
 
-def get_client_user(user: AccessProfiles = Depends(get_current_user)):
+def get_portal_user(user: AccessProfiles = Depends(get_current_user)):
     if not user:
         raise HTTPException(status_code=303, headers={"Location": "/"})
-    if user.role != "موكل":
-        # Redirect non-clients to main dashboard
-        raise HTTPException(status_code=303, headers={"Location": "/dashboard"})
     return user
 
 
 def _client_records(db: Session, user: AccessProfiles):
-    return client_records_for_user(db, user)
+    if user.role == "موكل":
+        return client_records_for_user(db, user)
+    # If lawyer/admin viewing the portal, fetch first client or office clients for preview
+    return db.query(LawClients).filter(
+        LawClients.office_id == user.office_id,
+        LawClients.is_deleted == 0
+    ).limit(5).all()
 
 
 def _client_case_query(db: Session, user: AccessProfiles):
-    client_ids = [record.id for record in _client_records(db, user)]
-    case_ids = db.query(LawClients.case_id).filter(
-        LawClients.id.in_(client_ids),
-        LawClients.office_id == user.office_id,
-        LawClients.case_id.isnot(None),
-        LawClients.is_deleted == 0,
-    ) if client_ids else None
-    query = db.query(LawCases).filter(
-        LawCases.office_id == user.office_id,
-        LawCases.is_deleted == 0,
-    )
-    # No matching client record means no accessible cases; never fall back to all cases.
-    return query.filter(LawCases.id.in_(case_ids)) if case_ids is not None else query.filter(False)
+    if user.role == "موكل":
+        client_ids = [record.id for record in _client_records(db, user)]
+        case_ids = db.query(LawClients.case_id).filter(
+            LawClients.id.in_(client_ids),
+            LawClients.office_id == user.office_id,
+            LawClients.case_id.isnot(None),
+            LawClients.is_deleted == 0,
+        ) if client_ids else None
 
+        query = db.query(LawCases).filter(
+            LawCases.office_id == user.office_id,
+            LawCases.is_deleted == 0,
+        )
+        return query.filter(LawCases.id.in_(case_ids)) if case_ids is not None else query.filter(False)
+    else:
+        # Lawyer / Admin Preview Mode: show office cases
+        return db.query(LawCases).filter(
+            LawCases.office_id == user.office_id,
+            LawCases.is_deleted == 0
+        )
+
+
+@router.get("", response_class=HTMLResponse)
 @router.get("/", response_class=HTMLResponse)
-async def client_dashboard(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_client_user)):
-    
-    # محاولة العثور على سجل الموكل (LawClients) المرتبط بهذا المستخدم لمعرفة قضاياه الدقيقة
-    # إذا لم يكن هناك حقل ربط صريح، نعتمد على رقم الهاتف أو الاسم
+async def client_dashboard(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_portal_user)):
     client_records = _client_records(db, user)
     client_ids = [record.id for record in client_records]
     cases_query = _client_case_query(db, user)
     total_cases = cases_query.count()
-    
-    pending_payments = db.query(func.count(Invoices.id)).filter(
+
+    # Pending invoices count
+    inv_filter = [
         Invoices.office_id == user.office_id,
-        Invoices.client_id.in_(client_ids) if client_ids else False,
-        Invoices.status.in_(["Unpaid", "Partial"]),
-    ).scalar()
-    
-    recent_cases = cases_query.order_by(LawCases.id.desc()).limit(3).all()
+        Invoices.is_deleted == 0,
+        Invoices.status.in_(["Unpaid", "Partial"])
+    ]
+    if user.role == "موكل":
+        inv_filter.append(Invoices.client_id.in_(client_ids) if client_ids else False)
+
+    pending_payments = db.query(func.count(Invoices.id)).filter(*inv_filter).scalar() or 0
+    recent_cases = cases_query.order_by(LawCases.id.desc()).limit(4).all()
+
+    # Total documents count
+    case_ids = [c.id for c in cases_query.with_entities(LawCases.id).all()]
+    total_docs = db.query(func.count(LawDocuments.id)).filter(
+        LawDocuments.office_id == user.office_id,
+        LawDocuments.is_deleted == 0,
+        LawDocuments.case_id.in_(case_ids) if case_ids else False
+    ).scalar() or 0
+
+    # Upcoming hearings
+    upcoming_hearings = db.query(LawHearings).filter(
+        LawHearings.office_id == user.office_id,
+        LawHearings.is_deleted == 0,
+        LawHearings.show_in_client_portal == 1,
+        LawHearings.case_id.in_(case_ids) if case_ids else False
+    ).order_by(LawHearings.hearing_at.asc()).limit(3).all()
 
     return templates.TemplateResponse("client_portal/dashboard.html", {
         "request": request,
         "user": user,
         "total_cases": total_cases,
+        "total_docs": total_docs,
         "pending_payments": pending_payments,
         "recent_cases": recent_cases,
+        "upcoming_hearings": upcoming_hearings,
+        "is_preview": (user.role != "موكل"),
         "active_page": "dashboard"
     })
 
+
 @router.get("/cases", response_class=HTMLResponse)
-async def client_cases(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_client_user)):
+async def client_cases(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_portal_user)):
     cases = _client_case_query(db, user).order_by(LawCases.id.desc()).all()
 
     return templates.TemplateResponse("client_portal/cases.html", {
         "request": request,
         "user": user,
         "cases": cases,
+        "is_preview": (user.role != "موكل"),
         "active_page": "cases"
     })
 
-@router.get("/finance", response_class=HTMLResponse)
-async def client_finance(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_client_user)):
-    # جلب المطالبات المالية المتعلقة بالموكل
-    # سنفترض أن المطالبات تكون باسم الموكل أو مرتبطة بـ client_id أو قضية تابعة له
-    client_ids = [record.id for record in _client_records(db, user)]
-    
-    payments = []
-    total_paid = 0
-    total_due = 0
 
-    if client_ids:
-        payments = db.query(Invoices).filter(
-            Invoices.office_id == user.office_id,
-            Invoices.client_id.in_(client_ids),
-        ).order_by(Invoices.id.desc()).all()
+@router.get("/finance", response_class=HTMLResponse)
+async def client_finance(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_portal_user)):
+    client_ids = [record.id for record in _client_records(db, user)]
+
+    payments = []
+    total_paid = 0.0
+    total_due = 0.0
+
+    inv_filter = [
+        Invoices.office_id == user.office_id,
+        Invoices.is_deleted == 0
+    ]
+    if user.role == "موكل":
+        inv_filter.append(Invoices.client_id.in_(client_ids) if client_ids else False)
+
+    payments = db.query(Invoices).filter(*inv_filter).order_by(Invoices.id.desc()).all()
 
     for p in payments:
-        total_paid += float(p.amount_paid or 0)
-        total_due += max(0.0, float(p.grand_total or 0) - float(p.amount_paid or 0))
+        paid_val = float(p.amount_paid or 0)
+        grand_val = float(p.grand_total or 0)
+        total_paid += paid_val
+        total_due += max(0.0, grand_val - paid_val)
 
     return templates.TemplateResponse("client_portal/finance.html", {
         "request": request,
@@ -101,28 +139,55 @@ async def client_finance(request: Request, db: Session = Depends(get_db), user: 
         "payments": payments,
         "total_paid": total_paid,
         "total_due": total_due,
+        "is_preview": (user.role != "موكل"),
         "active_page": "finance"
     })
 
+
 @router.get("/documents", response_class=HTMLResponse)
-async def client_documents(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_client_user)):
-    # جلب المستندات المرتبطة بقضايا الموكل
-    client_ids = [record.id for record in _client_records(db, user)]
-    
+async def client_documents(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_portal_user)):
+    case_ids = [case.id for case in _client_case_query(db, user).with_entities(LawCases.id).all()]
     documents = []
-    if client_ids:
-        # جلب القضايا الخاصة بالموكل أولاً
-        case_ids = [case.id for case in _client_case_query(db, user).with_entities(LawCases.id).all()]
-        
+
+    if case_ids or user.role != "موكل":
+        doc_filter = [
+            LawDocuments.office_id == user.office_id,
+            LawDocuments.is_deleted == 0
+        ]
         if case_ids:
-            documents = db.query(LawDocuments).filter(
-                LawDocuments.office_id == user.office_id,
-                LawDocuments.case_id.in_(case_ids)
-            ).order_by(LawDocuments.id.desc()).all()
-    
+            doc_filter.append(LawDocuments.case_id.in_(case_ids))
+
+        documents = db.query(LawDocuments).filter(*doc_filter).order_by(LawDocuments.id.desc()).all()
+
     return templates.TemplateResponse("client_portal/documents.html", {
         "request": request,
         "user": user,
         "documents": documents,
+        "is_preview": (user.role != "موكل"),
         "active_page": "documents"
+    })
+
+
+@router.get("/hearings", response_class=HTMLResponse)
+async def client_hearings(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_portal_user)):
+    case_ids = [case.id for case in _client_case_query(db, user).with_entities(LawCases.id).all()]
+    hearings = []
+
+    if case_ids or user.role != "موكل":
+        h_filter = [
+            LawHearings.office_id == user.office_id,
+            LawHearings.is_deleted == 0,
+            LawHearings.show_in_client_portal == 1
+        ]
+        if case_ids:
+            h_filter.append(LawHearings.case_id.in_(case_ids))
+
+        hearings = db.query(LawHearings).filter(*h_filter).order_by(LawHearings.hearing_at.asc()).all()
+
+    return templates.TemplateResponse("client_portal/hearings.html", {
+        "request": request,
+        "user": user,
+        "hearings": hearings,
+        "is_preview": (user.role != "موكل"),
+        "active_page": "hearings"
     })

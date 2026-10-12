@@ -202,15 +202,20 @@
             <li class="nav-item {% if active_page == 'cases' %}active{% endif %}">
                 <a href="/client-portal/cases"><i class="fa-solid fa-briefcase"></i> قضاياي</a>
             </li>
+            <li class="nav-item {% if active_page == 'hearings' %}active{% endif %}">
+                <a href="/client-portal/hearings"><i class="fa-solid fa-calendar-check"></i> الجلسات القضائية</a>
+            </li>
             <li class="nav-item {% if active_page == 'finance' %}active{% endif %}">
                 <a href="/client-portal/finance"><i class="fa-solid fa-file-invoice-dollar"></i> المركز المالي</a>
             </li>
             <li class="nav-item {% if active_page == 'documents' %}active{% endif %}">
                 <a href="/client-portal/documents"><i class="fa-solid fa-folder-open"></i> مستنداتي</a>
             </li>
-            <li class="nav-item {% if active_page == 'requests' %}active{% endif %}">
-                <a href="/client-portal/requests"><i class="fa-solid fa-headset"></i> طلب خدمة</a>
+            {% if is_preview %}
+            <li class="nav-item" style="margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
+                <a href="/dashboard" style="color: #93c5fd;"><i class="fa-solid fa-arrow-right-from-bracket"></i> العودة للوحة الإدارة</a>
             </li>
+            {% endif %}
         </ul>
         <div style="padding: 24px; margin-top: auto;">
             <form action="/logout" method="POST">

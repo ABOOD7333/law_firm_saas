@@ -446,6 +446,30 @@ async def get_chat_history(request: Request, db: Session = Depends(get_db), curr
         return JSONResponse({"success": False, "error": "حدث خطأ داخلي. يرجى المحاولة مرة أخرى."}, status_code=500)
 
 
+@router.post("/clear-history")
+@router.delete("/history")
+async def clear_chat_history(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: AccessProfiles = Depends(get_current_user)
+):
+    """حذف سجل المحادثات للمستخدم الحالي بأمان مع عزل المكتب"""
+    try:
+        if not current_user:
+            return JSONResponse({"success": False, "error": "غير مسجل الدخول"}, status_code=401)
+
+        db.query(AIChatHistory).filter(
+            AIChatHistory.office_id == current_user.office_id,
+            AIChatHistory.user_id == current_user.id
+        ).update({"is_deleted": 1})
+        db.commit()
+
+        return JSONResponse({"success": True, "message": "تم مسح سجل المحادثة بنجاح"})
+    except Exception as e:
+        db.rollback()
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+
 @router.get("/suggestions")
 async def get_suggestions(request: Request):
     """اقتراحات أسئلة للمستخدم"""
@@ -574,7 +598,7 @@ def _get_user_quota_info(db: Session, office_id: int, user_id: int, current_user
 
     if not quota:
         quota = AIUserQuota(
-            office_id=office_id if office_id else 1,
+            office_id=office_id or (getattr(current_user, 'office_id', None)),
             user_id=user_id,
             usage_date=today_str,
             gemini_used=0,
