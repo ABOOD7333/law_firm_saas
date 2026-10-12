@@ -130,6 +130,11 @@ async def test_invoices_full_suite():
         try:
             del_inv = db.query(Invoices).filter(Invoices.uuid == inv_uuid).first()
             assert del_inv.is_deleted == 1
+            # Hard delete test invoice data so no fake test rows remain in DB
+            db.execute(text("DELETE FROM client_payments WHERE invoice_id IN (SELECT id FROM invoices WHERE uuid = :u)"), {"u": inv_uuid})
+            db.execute(text("DELETE FROM invoice_items WHERE invoice_id IN (SELECT id FROM invoices WHERE uuid = :u)"), {"u": inv_uuid})
+            db.execute(text("DELETE FROM invoices WHERE uuid = :u"), {"u": inv_uuid})
+            db.commit()
         finally:
             db.close()
 

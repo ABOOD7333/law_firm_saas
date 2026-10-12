@@ -46,7 +46,7 @@
         <div class="card" style="padding: 16px; border-radius: 12px; border-right: 4px solid #10b981; display: flex; align-items: center; justify-content: space-between;">
             <div>
                 <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">المبالغ المحصلة</span>
-                <h3 style="margin: 5px 0 0; font-size: 1.5rem; color: #059669;">{{ "{:,.0f}".format(kpis.collected) }} <small style="font-size: 0.8rem;">ر.س</small></h3>
+                <h3 style="margin: 5px 0 0; font-size: 1.5rem; color: #059669;">{{ "{:,.0f}".format(kpis.collected) }} <small style="font-size: 0.8rem;">ر.ي</small></h3>
                 <small style="color: #64748b; font-size: 0.75rem;">نسبة التحصيل: {{ kpis.rate }}%</small>
             </div>
             <div style="width: 44px; height: 44px; border-radius: 10px; background: #ecfdf5; color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
@@ -57,7 +57,7 @@
         <div class="card" style="padding: 16px; border-radius: 12px; border-right: 4px solid #f59e0b; display: flex; align-items: center; justify-content: space-between;">
             <div>
                 <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">المبالغ المطالب بها</span>
-                <h3 style="margin: 5px 0 0; font-size: 1.5rem; color: #d97706;">{{ "{:,.0f}".format(kpis.claimed) }} <small style="font-size: 0.8rem;">ر.س</small></h3>
+                <h3 style="margin: 5px 0 0; font-size: 1.5rem; color: #d97706;">{{ "{:,.0f}".format(kpis.claimed) }} <small style="font-size: 0.8rem;">ر.ي</small></h3>
             </div>
             <div style="width: 44px; height: 44px; border-radius: 10px; background: #fffbeb; color: #f59e0b; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
                 <i class="fa-solid fa-coins"></i>
@@ -141,16 +141,16 @@
 
                 <div class="form-group" style="margin-bottom: 12px;">
                     <label style="display: block; margin-bottom: 5px; font-weight: 700; font-size: 0.85rem; color: #334155;">الجهة / محكمة التنفيذ</label>
-                    <input type="text" id="fAuth" placeholder="مثال: محكمة التنفيذ بالرياض - الدائرة الخامسة" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
+                    <input type="text" id="fAuth" placeholder="مثال: محكمة جنوب صنعاء الابتدائية - دائرة التنفيذ" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
                     <div>
-                        <label style="display: block; margin-bottom: 5px; font-weight: 700; font-size: 0.85rem; color: #334155;">المبلغ المطالب به (ر.س)</label>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 700; font-size: 0.85rem; color: #334155;">المبلغ المطالب به (ر.ي)</label>
                         <input type="number" step="0.01" id="fClaimed" placeholder="0.00" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
                     </div>
                     <div>
-                        <label style="display: block; margin-bottom: 5px; font-weight: 700; font-size: 0.85rem; color: #334155;">المبلغ المحصل فعلياً (ر.س)</label>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 700; font-size: 0.85rem; color: #334155;">المبلغ المحصل فعلياً (ر.ي)</label>
                         <input type="number" step="0.01" id="fCollected" placeholder="0.00" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
                     </div>
                 </div>
@@ -262,11 +262,11 @@
                             <!-- Financial Claim & Collected -->
                             <td style="padding: 14px 16px;">
                                 <div style="font-size: 0.9rem; font-weight: 700; color: #1e293b;">
-                                    {{ "{:,.0f}".format(r.claimed_amount or 0) }} <small style="font-size: 0.75rem; color: #64748b;">ر.س</small>
+                                    {{ "{:,.0f}".format(r.claimed_amount or 0) }} <small style="font-size: 0.75rem; color: #64748b;">ر.ي</small>
                                 </div>
                                 {% if r.collected_amount and r.collected_amount > 0 %}
                                 <div style="font-size: 0.8rem; font-weight: 700; color: #059669; margin-top: 2px;">
-                                    محصل: {{ "{:,.0f}".format(r.collected_amount) }} ر.س
+                                    محصل: {{ "{:,.0f}".format(r.collected_amount) }} ر.ي
                                 </div>
                                 {% endif %}
                             </td>

@@ -2334,7 +2334,7 @@ def get_arabic_font():
 @app.get("/finance", response_class=HTMLResponse)
 async def finance_page(
     request: Request,
-    currency: str = "SAR",
+    currency: str = "YER",
     db: Session = Depends(get_db),
     user: AccessProfiles = Depends(get_current_user)
 ):
@@ -2364,16 +2364,18 @@ async def finance_page(
         for t in transactions:
             t.client_name = clients_map.get(t.client_id, None) if t.client_id else None
 
-        target_currency = currency.upper() if currency.upper() in ["SAR", "YER", "USD"] else "SAR"
+        target_currency = currency.upper() if currency.upper() in ["YER", "SAR", "USD"] else "YER"
         
-        sar_to_target = 1.0
-        if target_currency == "YER":
-            sar_to_target = 141.0
+        yer_to_target = 1.0
+        if target_currency == "SAR":
+            yer_to_target = 1.0 / 141.0
         elif target_currency == "USD":
-            sar_to_target = 1.0 / 3.75
+            yer_to_target = 1.0 / 535.0
 
-        total_income = sum((t.amount * (t.exchange_rate or 1.0)) for t in transactions) * sar_to_target
-        total_expenses = sum((e.amount * (e.exchange_rate or 1.0)) for e in expenses) * sar_to_target
+        total_income_yer = sum((t.amount * (t.exchange_rate or 1.0)) for t in transactions)
+        total_expenses_yer = sum((e.amount * (e.exchange_rate or 1.0)) for e in expenses)
+        total_income = total_income_yer * yer_to_target
+        total_expenses = total_expenses_yer * yer_to_target
         net_profit = total_income - total_expenses
         profit_margin = round((net_profit / total_income * 100), 1) if total_income > 0 else 0.0
 
@@ -2521,7 +2523,7 @@ async def export_invoice_pdf(
     c.setFont(font_name, 11)
     c.drawRightString(W - 50, y + 7, ar("البيان"))
     c.drawCentredString(W / 2, y + 7, ar("المبلغ المدفوع"))
-    c.drawString(50, y + 7, ar("المعادل بالريال السعودي"))
+    c.drawString(50, y + 7, ar("المعادل بالريال اليمني"))
 
     y = y - 30
     c.setFillColorRGB(0.98, 0.98, 0.98)
@@ -2532,7 +2534,7 @@ async def export_invoice_pdf(
     c.drawCentredString(W / 2, y, ar(f"{trans.amount:,.2f} {trans.currency}"))
     
     eq_val = trans.amount * (trans.exchange_rate or 1.0)
-    c.drawString(50, y, ar(f"{eq_val:,.2f} ر.س"))
+    c.drawString(50, y, ar(f"{eq_val:,.2f} ر.ي"))
 
     y = y - 25
     c.setStrokeColorRGB(0.05, 0.1, 0.2)
@@ -2582,7 +2584,7 @@ async def add_transaction(
     title: str = Form(...),
     amount: float = Form(...),
     transaction_at: str = Form(...),
-    currency: str = Form("SAR"),
+    currency: str = Form("YER"),
     exchange_rate: float = Form(1.0),
     case_id: Optional[int] = Form(None),
     client_id: Optional[int] = Form(None),
@@ -2612,13 +2614,12 @@ async def add_transaction(
     else:
         client_id = None
 
-    # Calculate stored exchange rate relative to SAR base
+    # Calculate stored exchange rate relative to YER base (الريال اليمني)
     stored_rate = 1.0
     if currency == 'USD':
-        stored_rate = float(exchange_rate or 3.75)
-    elif currency == 'YER':
-        val = float(exchange_rate or 141.0)
-        stored_rate = 1.0 / val if val > 0 else 0.007092
+        stored_rate = float(exchange_rate or 535.0)
+    elif currency == 'SAR':
+        stored_rate = float(exchange_rate or 141.0)
     else:
         stored_rate = 1.0
 
@@ -2647,7 +2648,7 @@ async def add_expense(
     title: str = Form(...),
     amount: float = Form(...),
     expense_at: str = Form(...),
-    currency: str = Form("SAR"),
+    currency: str = Form("YER"),
     exchange_rate: float = Form(1.0),
     case_id: Optional[int] = Form(None),
     expense_category: Optional[str] = Form("رسوم قضائية"),
@@ -2671,13 +2672,12 @@ async def add_expense(
     else:
         case_id = None
 
-    # Calculate stored exchange rate relative to SAR base
+    # Calculate stored exchange rate relative to YER base (الريال اليمني)
     stored_rate = 1.0
     if currency == 'USD':
-        stored_rate = float(exchange_rate or 3.75)
-    elif currency == 'YER':
-        val = float(exchange_rate or 141.0)
-        stored_rate = 1.0 / val if val > 0 else 0.007092
+        stored_rate = float(exchange_rate or 535.0)
+    elif currency == 'SAR':
+        stored_rate = float(exchange_rate or 141.0)
     else:
         stored_rate = 1.0
 

@@ -27,7 +27,7 @@
             <div>
                 <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">إجمالي المصروفات</span>
                 <h3 style="margin: 5px 0 0; font-size: 1.5rem; color: #dc2626;">
-                    {{ "{:,.2f}".format(stats.total_expenses) }} <small style="font-size: 0.8rem;">ر.س</small>
+                    {{ "{:,.2f}".format(stats.total_expenses) }} <small style="font-size: 0.8rem;">ر.ي</small>
                 </h3>
             </div>
             <div style="width: 44px; height: 44px; border-radius: 10px; background: #fee2e2; color: #ef4444; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
@@ -39,7 +39,7 @@
             <div>
                 <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">قابلة للتحصيل من الموكل</span>
                 <h3 style="margin: 5px 0 0; font-size: 1.5rem; color: #059669;">
-                    {{ "{:,.2f}".format(stats.billable_expenses) }} <small style="font-size: 0.8rem;">ر.س</small>
+                    {{ "{:,.2f}".format(stats.billable_expenses) }} <small style="font-size: 0.8rem;">ر.ي</small>
                 </h3>
             </div>
             <div style="width: 44px; height: 44px; border-radius: 10px; background: #ecfdf5; color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
@@ -51,7 +51,7 @@
             <div>
                 <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">مصاريف المكتب العامة</span>
                 <h3 style="margin: 5px 0 0; font-size: 1.5rem; color: #d97706;">
-                    {{ "{:,.2f}".format(stats.non_billable_expenses) }} <small style="font-size: 0.8rem;">ر.س</small>
+                    {{ "{:,.2f}".format(stats.non_billable_expenses) }} <small style="font-size: 0.8rem;">ر.ي</small>
                 </h3>
             </div>
             <div style="width: 44px; height: 44px; border-radius: 10px; background: #fef3c7; color: #f59e0b; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
@@ -63,7 +63,7 @@
             <div>
                 <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">مصروفات هذا الشهر</span>
                 <h3 style="margin: 5px 0 0; font-size: 1.5rem; color: #1d4ed8;">
-                    {{ "{:,.2f}".format(stats.this_month_expenses) }} <small style="font-size: 0.8rem;">ر.س</small>
+                    {{ "{:,.2f}".format(stats.this_month_expenses) }} <small style="font-size: 0.8rem;">ر.ي</small>
                 </h3>
             </div>
             <div style="width: 44px; height: 44px; border-radius: 10px; background: #eff6ff; color: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
@@ -164,9 +164,9 @@
                     <div>
                         <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">العملة</label>
                         <select id="fCurrency" style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.88rem;">
-                            <option value="SAR">SAR (ر.س)</option>
-                            <option value="USD">USD ($)</option>
-                            <option value="YER">YER (ر.ي)</option>
+                            <option value="YER" selected>YER (ر.ي - ريال يمني)</option>
+                            <option value="USD">USD ($ - دولار أمريكي)</option>
+                            <option value="SAR">SAR (ر.س - ريال سعودي)</option>
                         </select>
                     </div>
                 </div>
@@ -256,7 +256,7 @@
                                 <strong style="color: #dc2626; font-size: 0.95rem;">
                                     {{ "{:,.2f}".format(r.amount) }}
                                 </strong>
-                                <small style="color: #64748b;">{{ r.currency or 'SAR' }}</small>
+                                <small style="color: #64748b;">{{ r.currency or 'YER' }}</small>
                             </td>
 
                             <!-- Payment Method -->
@@ -392,7 +392,7 @@ function selectExpense(id) {
     document.getElementById('fCategory').value = rec.expense_category || 'رسوم قضائية';
     document.getElementById('fPaymentMethod').value = rec.payment_method || 'تحويل بنكي';
     document.getElementById('fAmount').value = rec.amount || '';
-    document.getElementById('fCurrency').value = rec.currency || 'SAR';
+    document.getElementById('fCurrency').value = rec.currency || 'YER';
     document.getElementById('fExpenseAt').value = rec.expense_at || '';
     document.getElementById('fIsBillable').checked = (rec.is_billable === 1);
     document.getElementById('fNotes').value = rec.notes || '';

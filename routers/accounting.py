@@ -319,7 +319,7 @@ async def record_invoice_payment(uuid: str, request: Request, db: Session = Depe
             
         remaining = max(0.0, (invoice.grand_total or 0.0) - (invoice.amount_paid or 0.0))
         if amount > remaining + 0.01:
-            return JSONResponse({"ok": False, "message": f"المبلغ المدخل ({amount:,.2f}) يتجاوز المتبقي المستحق ({remaining:,.2f} ر.س)"}, status_code=400)
+            return JSONResponse({"ok": False, "message": f"المبلغ المدخل ({amount:,.2f}) يتجاوز المتبقي المستحق ({remaining:,.2f} ر.ي)"}, status_code=400)
             
         payment_method = data.get("payment_method") or "Bank Transfer"
         reference_number = data.get("reference_number") or None

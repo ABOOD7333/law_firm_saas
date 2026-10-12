@@ -47,7 +47,7 @@ async def expenses_page(request: Request, db: Session = Depends(get_db), user: A
             "case_title": r.law_case.title if r.law_case else "",
             "title": r.title,
             "amount": r.amount,
-            "currency": r.currency or "SAR",
+            "currency": r.currency or "YER",
             "expense_at": r.expense_at or "",
             "expense_category": getattr(r, 'expense_category', 'رسوم قضائية') or 'رسوم قضائية',
             "is_billable": getattr(r, 'is_billable', 1) or 1,
@@ -87,7 +87,7 @@ async def expenses_get(rec_id: int, db: Session = Depends(get_db), user: AccessP
             "case_number": r.law_case.case_number if r.law_case else "",
             "title": r.title,
             "amount": r.amount,
-            "currency": r.currency or "SAR",
+            "currency": r.currency or "YER",
             "expense_at": r.expense_at or "",
             "expense_category": getattr(r, 'expense_category', 'رسوم قضائية') or 'رسوم قضائية',
             "is_billable": getattr(r, 'is_billable', 1) or 1,
@@ -135,7 +135,7 @@ async def expenses_save(request: Request, db: Session = Depends(get_db), user: A
             return JSONResponse({"ok": False, "message": "يجب أن يكون مبلغ المصروف أكبر من الصفر"})
 
         expense_at = data.get("expense_at") or datetime.now().strftime("%Y-%m-%d")
-        currency = data.get("currency") or "SAR"
+        currency = data.get("currency") or "YER"
         expense_category = data.get("expense_category") or "رسوم قضائية"
         is_billable = 1 if data.get("is_billable") in [1, True, "1", "true"] else 0
         payment_method = data.get("payment_method") or "تحويل بنكي"

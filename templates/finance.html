@@ -21,9 +21,9 @@
                 <i class="fa-solid fa-coins" style="color: #f59e0b; font-size: 0.9rem;"></i>
                 <label style="font-weight: 700; color: var(--text-muted); font-size: 0.85rem;">العملة:</label>
                 <select onchange="window.location.href='/finance?currency=' + this.value" style="border: none; background: transparent; font-family: inherit; font-size: 0.88rem; font-weight: 800; color: var(--secondary-color); cursor: pointer; outline: none;">
-                    <option value="SAR" {% if target_currency == 'SAR' %}selected{% endif %}>ريال سعودي (SAR)</option>
-                    <option value="USD" {% if target_currency == 'USD' %}selected{% endif %}>دولار أمريكي (USD)</option>
                     <option value="YER" {% if target_currency == 'YER' %}selected{% endif %}>ريال يمني (YER)</option>
+                    <option value="USD" {% if target_currency == 'USD' %}selected{% endif %}>دولار أمريكي (USD)</option>
+                    <option value="SAR" {% if target_currency == 'SAR' %}selected{% endif %}>ريال سعودي (SAR)</option>
                 </select>
             </div>
 
@@ -354,9 +354,9 @@
                 <div>
                     <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 4px;">العملة</label>
                     <select name="currency" style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.85rem;">
-                        <option value="SAR">SAR</option>
-                        <option value="USD">USD</option>
-                        <option value="YER">YER</option>
+                        <option value="YER" selected>YER (ريال يمني)</option>
+                        <option value="USD">USD (دولار أمريكي)</option>
+                        <option value="SAR">SAR (ريال سعودي)</option>
                     </select>
                 </div>
             </div>
@@ -365,9 +365,9 @@
                 <div>
                     <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 4px;">طريقة الدفع</label>
                     <select name="payment_method" style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.85rem;">
-                        <option value="تحويل بنكي">تحويل بنكي</option>
+                        <option value="تحويل بنكي / صرافة">تحويل بنكي / صرافة</option>
                         <option value="نقدي">نقدي</option>
-                        <option value="بطاقة مدى / ائتمان">بطاقة مدى / ائتمان</option>
+                        <option value="محفظة إلكترونية">محفظة إلكترونية</option>
                         <option value="شيك">شيك</option>
                     </select>
                 </div>
@@ -441,9 +441,9 @@
                 <div>
                     <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 4px;">العملة</label>
                     <select name="currency" style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.85rem;">
-                        <option value="SAR">SAR</option>
-                        <option value="USD">USD</option>
-                        <option value="YER">YER</option>
+                        <option value="YER" selected>YER (ريال يمني)</option>
+                        <option value="USD">USD (دولار أمريكي)</option>
+                        <option value="SAR">SAR (ريال سعودي)</option>
                     </select>
                 </div>
             </div>

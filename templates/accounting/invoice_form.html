@@ -192,7 +192,7 @@
     <div class="form-header">
         <div>
             <h2><i class="fa-solid fa-file-invoice" style="margin-left:10px;"></i> إصدار فاتورة إلكترونية</h2>
-            <p style="margin:6px 0 0;opacity:0.8;font-size:0.88rem;">متوافقة مع متطلبات ZATCA — المرحلة الأولى</p>
+            <p style="margin:6px 0 0;opacity:0.8;font-size:0.88rem;">متوافقة مع متطلبات الفوترة القانونية والضريبية — الجمهورية اليمنية</p>
         </div>
         <div class="invoice-num-badge">{{ draft_number }}</div>
     </div>
@@ -258,15 +258,15 @@
         <div class="totals-box">
             <div class="totals-row">
                 <span class="label">المجموع الجزئي:</span>
-                <span class="value" id="total-subtotal">0.00 ر.س</span>
+                <span class="value" id="total-subtotal">0.00 ر.ي</span>
             </div>
             <div class="totals-row">
                 <span class="label">ضريبة القيمة المضافة (15%):</span>
-                <span class="value" id="total-tax">0.00 ر.س</span>
+                <span class="value" id="total-tax">0.00 ر.ي</span>
             </div>
             <div class="totals-row grand">
                 <span>الإجمالي الكلي:</span>
-                <span class="value" id="total-grand">0.00 ر.س</span>
+                <span class="value" id="total-grand">0.00 ر.ي</span>
             </div>
         </div>
 
@@ -334,9 +334,9 @@ function recalc() {
         if (ltEl) ltEl.textContent = lineTotal.toFixed(2);
     });
     const grand = subtotal + taxTotal;
-    document.getElementById('total-subtotal').textContent = subtotal.toFixed(2) + ' ر.س';
-    document.getElementById('total-tax').textContent = taxTotal.toFixed(2) + ' ر.س';
-    document.getElementById('total-grand').textContent = grand.toFixed(2) + ' ر.س';
+    document.getElementById('total-subtotal').textContent = subtotal.toFixed(2) + ' ر.ي';
+    document.getElementById('total-tax').textContent = taxTotal.toFixed(2) + ' ر.ي';
+    document.getElementById('total-grand').textContent = grand.toFixed(2) + ' ر.ي';
 }
 
 function updateCount() {

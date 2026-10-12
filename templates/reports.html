@@ -321,10 +321,10 @@
             <div class="kpi-details">
                 <h3>صافي الأرباح (الخزينة)</h3>
                 <p class="value {% if net_profit >= 0 %}text-emerald{% else %}text-red{% endif %}">
-                    <span dir="ltr">{{ "{:,.2f}".format(net_profit) }}</span> <span style="font-size:0.95rem; color:#64748b;">ر.س</span>
+                    <span dir="ltr">{{ "{:,.2f}".format(net_profit) }}</span> <span style="font-size:0.95rem; color:#64748b;">ر.ي</span>
                 </p>
                 <div class="sub-text text-emerald">
-                    <i class="fa-solid fa-arrow-up-right-dots"></i> إجمالي الدخل: <span dir="ltr">{{ "{:,.2f}".format(total_income) }}</span> ر.س
+                    <i class="fa-solid fa-arrow-up-right-dots"></i> إجمالي الدخل: <span dir="ltr">{{ "{:,.2f}".format(total_income) }}</span> ر.ي
                 </div>
             </div>
         </div>
@@ -399,7 +399,7 @@
         <!-- 1. تطور الإيرادات -->
         <div class="chart-card">
             <div class="chart-header">
-                <h3><i class="fa-solid fa-chart-line text-emerald"></i> حركة الإيرادات الشهرية (ر.س)</h3>
+                <h3><i class="fa-solid fa-chart-line text-emerald"></i> حركة الإيرادات الشهرية (ر.ي)</h3>
             </div>
             <div class="chart-container">
                 <canvas id="incomeChart"></canvas>
@@ -544,7 +544,7 @@ document.addEventListener('DOMContentLoaded', function() {
             data: {
                 labels: incomeLabels.length ? incomeLabels : ['لا توجد إيرادات مسجلة'],
                 datasets: [{
-                    label: 'الإيرادات (ر.س)',
+                    label: 'الإيرادات (ر.ي)',
                     data: incomeData.length ? incomeData : [0],
                     borderColor: '#10b981',
                     backgroundColor: 'rgba(16, 185, 129, 0.12)',

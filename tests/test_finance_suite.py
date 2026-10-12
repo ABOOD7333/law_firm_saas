@@ -178,6 +178,11 @@ async def test_finance_full_suite():
 
             exp_final = db.query(LawExpenses).filter(LawExpenses.id == exp_id).first()
             assert exp_final.is_deleted == 1, "Expense was not soft-deleted"
+
+            # Hard delete test transaction and expense so DB remains clean
+            db.execute(text("DELETE FROM law_transactions WHERE id = :id"), {"id": tx_id})
+            db.execute(text("DELETE FROM law_expenses WHERE id = :id"), {"id": exp_id})
+            db.commit()
         finally:
             db.close()
 

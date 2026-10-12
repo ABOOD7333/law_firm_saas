@@ -39,7 +39,7 @@
             <div>
                 <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">القيمة المالية التقديرية</span>
                 <h3 style="margin: 5px 0 0; font-size: 1.5rem; color: #059669;">
-                    {{ "{:,.2f}".format(stats.total_value) }} <small style="font-size: 0.8rem;">ر.س</small>
+                    {{ "{:,.2f}".format(stats.total_value) }} <small style="font-size: 0.8rem;">ر.ي</small>
                 </h3>
             </div>
             <div style="width: 44px; height: 44px; border-radius: 10px; background: #ecfdf5; color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
@@ -53,7 +53,7 @@
                 <h3 style="margin: 5px 0 0; font-size: 1.5rem; color: #d97706;">
                     {{ stats.unbilled_hours }} <small style="font-size: 0.8rem; color: #64748b;">ساعة</small>
                 </h3>
-                <small style="color: #d97706; font-weight: 700; font-size: 0.75rem;">بقيمة: {{ "{:,.0f}".format(stats.unbilled_value) }} ر.س</small>
+                <small style="color: #d97706; font-weight: 700; font-size: 0.75rem;">بقيمة: {{ "{:,.0f}".format(stats.unbilled_value) }} ر.ي</small>
             </div>
             <div style="width: 44px; height: 44px; border-radius: 10px; background: #fef3c7; color: #f59e0b; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
                 <i class="fa-solid fa-file-invoice"></i>
@@ -168,7 +168,7 @@
                                style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.95rem; font-weight: 700;">
                     </div>
                     <div>
-                        <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">معدل الأجر (ر.س/ساعة)</label>
+                        <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">معدل الأجر (ر.ي/ساعة)</label>
                         <input type="number" id="fRate" step="10" min="0" placeholder="مثال: 500"
                                style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.95rem;">
                     </div>
@@ -257,13 +257,13 @@
                             <!-- Hours & Rate -->
                             <td style="padding: 12px 14px;">
                                 <strong style="color: #0f172a; font-size: 0.95rem;">{{ r.duration_hours }} س</strong>
-                                <small style="color: #64748b; display: block;">@ {{ "{:,.0f}".format(r.billable_rate or 0) }} ر.س/س</small>
+                                <small style="color: #64748b; display: block;">@ {{ "{:,.0f}".format(r.billable_rate or 0) }} ر.ي/س</small>
                             </td>
 
                             <!-- Value -->
                             <td style="padding: 12px 14px;">
                                 <strong style="color: #059669; font-size: 0.95rem;">{{ "{:,.2f}".format(total_line) }}</strong>
-                                <small style="color: #64748b;">ر.س</small>
+                                <small style="color: #64748b;">ر.ي</small>
                             </td>
 
                             <!-- Billing Status Toggle -->

@@ -42,7 +42,7 @@
         <div>
             <div style="display:flex; align-items:baseline; gap:8px;">
                 <span style="font-size:1.6rem; font-weight:800; color:#059669; line-height:1.2;">{{ won_judgments }}</span>
-                <span style="font-size:0.8rem; color:#059669; font-weight:700;">({{ "{:,.0f}".format(total_awarded_amount) }} ر.س)</span>
+                <span style="font-size:0.8rem; color:#059669; font-weight:700;">({{ "{:,.0f}".format(total_awarded_amount) }} ر.ي)</span>
             </div>
             <span style="color:#64748b; font-size:0.85rem; font-weight:600;">لصالح موكلينا (المبالغ المحكوم بها)</span>
         </div>
@@ -197,7 +197,7 @@
                     </td>
                     <td style="padding:14px 16px; font-weight:800; font-size:0.95rem; color:#0f172a; font-family:monospace;">
                         {% if j.awarded_amount and j.awarded_amount > 0 %}
-                        {{ "{:,.0f}".format(j.awarded_amount) }} <span style="font-size:0.75rem; color:#64748b; font-family:'Cairo';">ر.س</span>
+                        {{ "{:,.0f}".format(j.awarded_amount) }} <span style="font-size:0.75rem; color:#64748b; font-family:'Cairo';">ر.ي</span>
                         {% else %}
                         <span style="color:#94a3b8; font-weight:400;">-</span>
                         {% endif %}
@@ -334,7 +334,7 @@
             <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:16px; margin-bottom:16px;">
                 <div>
                     <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">المحكمة</label>
-                    <input type="text" name="court_name" id="addCourtName" placeholder="مثال: المحكمة التجارية بالرياض" 
+                    <input type="text" name="court_name" id="addCourtName" placeholder="مثال: محكمة جنوب صنعاء الابتدائية" 
                            style="width:100%; padding:11px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
                 </div>
                 <div>
@@ -417,12 +417,12 @@
                     </select>
                 </div>
                 <div>
-                    <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">المبلغ المحكوم به (ر.س)</label>
+                    <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">المبلغ المحكوم به (ر.ي)</label>
                     <input type="number" step="0.01" name="awarded_amount" value="0.0" 
                            style="width:100%; padding:11px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
                 </div>
                 <div>
-                    <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">أتعاب المحاماة المحكوم بها (ر.س)</label>
+                    <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">أتعاب المحاماة المحكوم بها (ر.ي)</label>
                     <input type="number" step="0.01" name="legal_fees_awarded" value="0.0" 
                            style="width:100%; padding:11px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
                 </div>
@@ -559,12 +559,12 @@
                     </select>
                 </div>
                 <div>
-                    <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">المبلغ المحكوم به (ر.س)</label>
+                    <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">المبلغ المحكوم به (ر.ي)</label>
                     <input type="number" step="0.01" name="awarded_amount" id="edit_awarded_amount" 
                            style="width:100%; padding:11px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
                 </div>
                 <div>
-                    <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">أتعاب المحاماة (ر.س)</label>
+                    <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">أتعاب المحاماة (ر.ي)</label>
                     <input type="number" step="0.01" name="legal_fees_awarded" id="edit_legal_fees_awarded" 
                            style="width:100%; padding:11px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
                 </div>
@@ -684,7 +684,7 @@ function openViewJudgmentModal(btn) {
     document.getElementById('viewDate').textContent = d.date || '-';
     document.getElementById('viewNotifDate').textContent = d.notifDate || 'غير مسجل';
     document.getElementById('viewDeadlineDate').textContent = d.deadlineDate || 'غير محدد';
-    document.getElementById('viewAmount').textContent = Number(d.amount) > 0 ? `${Number(d.amount).toLocaleString()} ر.س` : 'لا يوجد مبلغ محكوم به';
+    document.getElementById('viewAmount').textContent = Number(d.amount) > 0 ? `${Number(d.amount).toLocaleString()} ر.ي` : 'لا يوجد مبلغ محكوم به';
     document.getElementById('viewJudgmentText').textContent = d.text || 'لا يوجد نص مسجل للحكم.';
 
     const statusBadge = document.getElementById('viewStatusBadge');

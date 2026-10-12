@@ -48,14 +48,14 @@ async def test_expenses_full_suite():
         # 3. Create an Expense
         payload = {
             "case_id": case_id,
-            "title": "رسوم قيد دعوى لدى المحكمة العامة بالرياض",
+            "title": "رسوم قيد دعوى لدى المحكمة الابتدائية بصنعاء",
             "expense_category": "رسوم قضائية",
-            "payment_method": "سداد حكومي",
-            "amount": 1250.0,
-            "currency": "SAR",
+            "payment_method": "تحويل بنكي / صرافة",
+            "amount": 125000.0,
+            "currency": "YER",
             "expense_at": "2026-10-12",
             "is_billable": 1,
-            "notes": "سداد عبر منصة ناجز"
+            "notes": "سداد رسوم المحكمة"
         }
         create_res = await client.post("/api/expenses/save", json=payload, cookies=cookies, headers=headers)
         assert create_res.status_code == 200
@@ -68,13 +68,13 @@ async def test_expenses_full_suite():
         assert get_res.status_code == 200
         get_data = get_res.json()
         assert get_data["ok"] is True
-        assert get_data["data"]["title"] == "رسوم قيد دعوى لدى المحكمة العامة بالرياض"
-        assert get_data["data"]["amount"] == 1250.0
+        assert get_data["data"]["title"] == "رسوم قيد دعوى لدى المحكمة الابتدائية بصنعاء"
+        assert get_data["data"]["amount"] == 125000.0
         assert get_data["data"]["is_billable"] == 1
 
         # 5. Edit Expense
         payload["id"] = exp_id
-        payload["amount"] = 1500.0
+        payload["amount"] = 150000.0
         edit_res = await client.post("/api/expenses/save", json=payload, cookies=cookies, headers=headers)
         assert edit_res.status_code == 200
         assert edit_res.json()["ok"] is True
@@ -98,6 +98,9 @@ async def test_expenses_full_suite():
         try:
             del_exp = db.query(LawExpenses).filter(LawExpenses.id == exp_id).first()
             assert del_exp.is_deleted == 1
+            # Hard delete test expense so no fake rows remain in DB
+            db.execute(text("DELETE FROM law_expenses WHERE id = :id"), {"id": exp_id})
+            db.commit()
         finally:
             db.close()
 

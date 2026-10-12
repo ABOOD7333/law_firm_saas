@@ -217,7 +217,7 @@ async def timeline_page(
                 'date': d_str,
                 'case_id': ex.case_id,
                 'case_title': c.title if c else '',
-                'sub': f"مطالبة: {getattr(ex, 'claimed_amount', 0) or 0} ر.س | ضد: {getattr(ex, 'debtor_name', '-') or '-'}",
+                'sub': f"مطالبة: {getattr(ex, 'claimed_amount', 0) or 0} ر.ي | ضد: {getattr(ex, 'debtor_name', '-') or '-'}",
                 'status': ex.status_key or 'جاري',
                 'timing': _timing(d_str),
                 'month_label': _month_label(d_str[:7] if d_str else '')

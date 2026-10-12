@@ -104,6 +104,9 @@ async def test_timesheets_full_suite():
         try:
             del_ts = db.query(LawTimesheets).filter(LawTimesheets.id == ts_id).first()
             assert del_ts.is_deleted == 1
+            # Hard delete test timesheet so DB remains clean
+            db.execute(text("DELETE FROM law_timesheets WHERE id = :id"), {"id": ts_id})
+            db.commit()
         finally:
             db.close()
 
