@@ -428,12 +428,24 @@ class LawNotes(Base):
     office_id: Mapped[int] = mapped_column(ForeignKey('law_offices.id'), index=True)
     title: Mapped[str] = mapped_column(Text, nullable=False)
     note_type_key: Mapped[Optional[str]] = mapped_column(Text)
+    communication_channel: Mapped[Optional[str]] = mapped_column(Text, server_default=text("'internal_note'"))
+    direction: Mapped[Optional[str]] = mapped_column(Text, server_default=text("'outbound'"))
+    contact_person: Mapped[Optional[str]] = mapped_column(Text)
+    call_duration_minutes: Mapped[int] = mapped_column(Integer, server_default=text('0'))
+    is_billable: Mapped[int] = mapped_column(Integer, server_default=text('0'))
+    hourly_rate: Mapped[float] = mapped_column(Float, server_default=text('0.0'))
+    is_pinned: Mapped[int] = mapped_column(Integer, server_default=text('0'))
+    is_client_visible: Mapped[int] = mapped_column(Integer, server_default=text('0'))
+    priority_level: Mapped[Optional[str]] = mapped_column(Text, server_default=text("'عادي'"))
+    author_id: Mapped[Optional[int]] = mapped_column(ForeignKey('access_profiles.id'))
+    attachment_path: Mapped[Optional[str]] = mapped_column(Text)
     content: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
     updated_at: Mapped[Optional[str]] = mapped_column(Text)
     is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
 
     law_case: Mapped['LawCases'] = relationship('LawCases', back_populates='law_notes')
+    author: Mapped[Optional['AccessProfiles']] = relationship('AccessProfiles', foreign_keys=[author_id])
 
 class LawLegalReferences(Base):
     __tablename__ = 'law_legal_references'

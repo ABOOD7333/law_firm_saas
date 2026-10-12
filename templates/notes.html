@@ -1,198 +1,826 @@
 {% extends "base.html" %}
-{% block title %}الملاحظات | LawSaaS{% endblock %}
+{% block title %}الملاحظات والاتصالات | LawSaaS{% endblock %}
+
 {% block content %}
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;">
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 25px;">
     <div>
-        <h1><i class="fa-solid fa-note-sticky" style="color:var(--primary-color);"></i> الملاحظات والاتصالات</h1>
-        <p style="color:var(--text-muted);">تسجيل الملاحظات المرتبطة بالقضايا من تعليقات، تنبيهات، ومتابعات.</p>
+        <h1 style="font-size: 1.6rem; color: #1e293b; margin: 0 0 6px 0; font-weight: 800;">
+            <i class="fa-solid fa-headset text-primary me-2"></i> سجل الملاحظات والاتصالات
+        </h1>
+        <p style="color: #64748b; margin: 0; font-size: 0.95rem;">
+            توثيق الاتصالات الهاتفية، محاضر الاجتماعات، المراسلات الفورية، والملاحظات الداخلية مع احتساب مدد المكالمات والفوترة.
+        </p>
     </div>
-    <button class="btn-primary" onclick="document.getElementById('addModal').style.display='flex'">
-        <i class="fa-solid fa-plus"></i> إضافة ملاحظة
-    </button>
+    <div style="display:flex; gap:10px; flex-wrap: wrap; align-items: center;">
+        <button class="btn" style="background:#f1f5f9; color:#334155; border:1px solid #cbd5e1; padding:10px 18px; border-radius:8px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:8px;" onclick="exportNotesTable()">
+            <i class="fa-solid fa-download"></i> تصدير الكشف
+        </button>
+        <button class="btn-primary" style="padding: 10px 20px; font-family: 'Cairo', sans-serif; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; border-radius: 8px; cursor: pointer;" onclick="openAddNoteModal()">
+            <i class="fa-solid fa-plus-circle"></i> تسجيل اتصال / ملاحظة
+        </button>
+    </div>
 </div>
 
-<!-- Filter bar -->
-<div class="card" style="padding:14px 18px;margin-bottom:18px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
-    <input type="text" id="searchInput" placeholder="🔍 ابحث في العنوان أو المحتوى..." oninput="filterNotes()"
-        style="flex:1;padding:9px 14px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;min-width:200px;">
-    <select id="typeFilter" onchange="filterNotes()" style="padding:9px 14px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
-        <option value="">جميع الأنواع</option>
-        <option value="عام">عام</option>
-        <option value="تنبيه">تنبيه</option>
-        <option value="متابعة">متابعة</option>
-        <option value="قانوني">قانوني</option>
-        <option value="مالي">مالي</option>
-    </select>
-</div>
+<!-- Stats Ribbon -->
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:15px; margin-bottom:25px;">
+    <div class="card" style="padding:18px; border-radius:12px; border:1px solid #e2e8f0; background:white; display:flex; align-items:center; gap:16px;">
+        <div style="width:52px; height:52px; border-radius:12px; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:1.5rem;">
+            <i class="fa-solid fa-note-sticky"></i>
+        </div>
+        <div>
+            <span style="display:block; font-size:1.6rem; font-weight:800; color:#1e293b; line-height:1.2;">{{ kpis.total_notes }}</span>
+            <span style="color:#64748b; font-size:0.85rem; font-weight:600;">إجمالي السجلات المسجلة</span>
+        </div>
+    </div>
+    
+    <div class="card" style="padding:18px; border-radius:12px; border:1px solid #e2e8f0; background:white; display:flex; align-items:center; gap:16px;">
+        <div style="width:52px; height:52px; border-radius:12px; background:#ecfdf5; color:#059669; display:flex; align-items:center; justify-content:center; font-size:1.5rem;">
+            <i class="fa-solid fa-phone-volume"></i>
+        </div>
+        <div>
+            <span style="display:block; font-size:1.6rem; font-weight:800; color:#059669; line-height:1.2;">{{ kpis.phone_calls }}</span>
+            <span style="color:#64748b; font-size:0.85rem; font-weight:600;">المكالمات الهاتفية</span>
+        </div>
+    </div>
 
-<!-- Notes Grid -->
-<div id="notesGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;">
-    {% for note in notes %}
-    <div class="note-card" data-type="{{ note.note_type_key or '' }}" data-title="{{ note.title }}" data-content="{{ note.content or '' }}"
-         style="background:white;border-radius:12px;border:1px solid var(--border-color);padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.04);position:relative;overflow:hidden;transition:box-shadow .2s;"
-         onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow='0 2px 8px rgba(0,0,0,.04)'">
-        <!-- Color strip top -->
-        <div style="position:absolute;top:0;right:0;left:0;height:4px;background:
-            {% if note.note_type_key == 'تنبيه' %}#ef4444
-            {% elif note.note_type_key == 'متابعة' %}#f59e0b
-            {% elif note.note_type_key == 'مالي' %}#10b981
-            {% elif note.note_type_key == 'قانوني' %}#6366f1
-            {% else %}#3b82f6{% endif %};"></div>
+    <div class="card" style="padding:18px; border-radius:12px; border:1px solid #e2e8f0; background:white; display:flex; align-items:center; gap:16px;">
+        <div style="width:52px; height:52px; border-radius:12px; background:#f5f3ff; color:#7c3aed; display:flex; align-items:center; justify-content:center; font-size:1.5rem;">
+            <i class="fa-solid fa-users"></i>
+        </div>
+        <div>
+            <span style="display:block; font-size:1.6rem; font-weight:800; color:#7c3aed; line-height:1.2;">{{ kpis.meetings }}</span>
+            <span style="color:#64748b; font-size:0.85rem; font-weight:600;">الاجتماعات مع الموكلين</span>
+        </div>
+    </div>
 
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
-            <div>
-                {% if note.note_type_key %}
-                <span style="font-size:.75rem;font-weight:700;padding:3px 10px;border-radius:12px;margin-bottom:6px;display:inline-block;
-                    {% if note.note_type_key == 'تنبيه' %}background:#fee2e2;color:#b91c1c;
-                    {% elif note.note_type_key == 'متابعة' %}background:#fef3c7;color:#d97706;
-                    {% elif note.note_type_key == 'مالي' %}background:#dcfce7;color:#166534;
-                    {% elif note.note_type_key == 'قانوني' %}background:#e0e7ff;color:#3730a3;
-                    {% else %}background:#dbeafe;color:#1d4ed8;{% endif %}">
-                    {{ note.note_type_key }}
-                </span>
-                {% endif %}
-                <h3 style="font-size:1rem;font-weight:800;color:var(--secondary-color);margin:0;">{{ note.title }}</h3>
+    <div class="card" style="padding:18px; border-radius:12px; border:1px solid #e2e8f0; background:white; display:flex; align-items:center; gap:16px;">
+        <div style="width:52px; height:52px; border-radius:12px; background:#fffbeb; color:#d97706; display:flex; align-items:center; justify-content:center; font-size:1.5rem;">
+            <i class="fa-solid fa-clock"></i>
+        </div>
+        <div>
+            <div style="display:flex; align-items:baseline; gap:6px;">
+                <span style="font-size:1.6rem; font-weight:800; color:#b45309; line-height:1.2;">{{ kpis.total_minutes }}</span>
+                <span style="font-size:0.8rem; color:#b45309; font-weight:700;">دقيقة</span>
             </div>
-            <div style="display:flex;gap:6px;flex-shrink:0;">
-                <button class="action-btn" style="color:var(--primary-color);" title="تعديل"
-                    onclick="openEdit({{ note.id|tojson|forceescape }},{{ note.title|tojson|forceescape }},{{ (note.note_type_key or '')|tojson|forceescape }},{{ (note.content or '')|tojson|forceescape }})">
-                    <i class="fa-solid fa-pen-to-square"></i> تعديل
-                </button>
-                <form action="/notes/delete" method="post" style="display:inline;" onsubmit="return confirm('حذف الملاحظة؟')">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
-                    <input type="hidden" name="note_id" value="{{ note.id }}">
-                    <button type="submit" class="action-btn" style="color:#ef4444;" title="حذف">
-                        <i class="fa-solid fa-trash-can"></i> حذف
-                    </button>
-                </form>
+            <span style="color:#64748b; font-size:0.85rem; font-weight:600;">إجمالي المدة المستغرقة</span>
+        </div>
+    </div>
+
+    <div class="card" style="padding:18px; border-radius:12px; border:1px solid #e2e8f0; background:white; display:flex; align-items:center; gap:16px;">
+        <div style="width:52px; height:52px; border-radius:12px; background:#fef2f2; color:#dc2626; display:flex; align-items:center; justify-content:center; font-size:1.5rem;">
+            <i class="fa-solid fa-thumbtack"></i>
+        </div>
+        <div>
+            <span style="display:block; font-size:1.6rem; font-weight:800; color:#dc2626; line-height:1.2;">{{ kpis.pinned_count }}</span>
+            <span style="color:#64748b; font-size:0.85rem; font-weight:600;">سجلات وملاحظات مثبتة</span>
+        </div>
+    </div>
+</div>
+
+<!-- Search & Filtering Toolbar -->
+<div class="card" style="padding:16px; border-radius:12px; border:1px solid #e2e8f0; background:white; margin-bottom:20px;">
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; align-items:center;">
+        <div>
+            <div style="position:relative;">
+                <i class="fa-solid fa-magnifying-glass" style="position:absolute; right:12px; top:12px; color:#94a3b8;"></i>
+                <input type="text" id="noteSearchInput" placeholder="بحث بالعنوان، المحتوى، جهة الاتصال..." 
+                       style="width:100%; padding:9px 36px 9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;"
+                       onkeyup="filterNotesGrid()">
             </div>
         </div>
 
-        {% if note.content %}
-        <p style="color:var(--text-muted);font-size:.88rem;line-height:1.7;margin:0 0 12px;white-space:pre-wrap;">{{ note.content[:150] }}{% if note.content|length > 150 %}...{% endif %}</p>
-        {% endif %}
+        <div>
+            <select id="channelFilterSelect" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;" onchange="filterNotesGrid()">
+                <option value="">جميع قنوات الاتصال</option>
+                <option value="internal_note">📝 ملاحظة داخلية</option>
+                <option value="phone_call_in">📥 مكالمة هاتفية (واردة)</option>
+                <option value="phone_call_out">📤 مكالمة هاتفية (صادرة)</option>
+                <option value="client_meeting">👥 اجتماع موكل</option>
+                <option value="whatsapp">💬 مراسلة واتساب</option>
+                <option value="email">✉️ بريد إلكتروني</option>
+            </select>
+        </div>
 
-        <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border-color);padding-top:10px;margin-top:8px;">
+        <div>
+            <select id="caseFilterSelect" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;" onchange="filterNotesGrid()">
+                <option value="">جميع القضايا</option>
+                {% for c in cases %}
+                <option value="{{ c.id }}">{{ c.case_number }} - {{ c.title }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <select id="priorityFilterSelect" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;" onchange="filterNotesGrid()">
+                <option value="">جميع مستويات الأهمية</option>
+                <option value="عاجل">🔴 عاجل جداً</option>
+                <option value="هام">🟠 هام</option>
+                <option value="عادي">🔵 عادي</option>
+                <option value="منخفض">⚪ منخفض</option>
+            </select>
+        </div>
+
+        <div>
+            <select id="pinnedFilterSelect" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;" onchange="filterNotesGrid()">
+                <option value="">كل السجلات (مثبتة وغير مثبتة)</option>
+                <option value="pinned">📌 المثبتة فقط في المقدمة</option>
+                <option value="billable">💰 القابلة للفوترة فقط</option>
+                <option value="client_portal">👁️ المتاحة للموكل فقط</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- Notes Feed & Cards Grid -->
+<div id="notesContainer" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap:18px;">
+    {% for note in notes %}
+    <div class="note-item-card" 
+         id="note-card-{{ note.id }}"
+         data-id="{{ note.id }}"
+         data-case-id="{{ note.case_id }}"
+         data-case-title="{{ note.law_case.title if note.law_case else '' }}"
+         data-case-num="{{ note.law_case.case_number if note.law_case else '' }}"
+         data-title="{{ note.title }}"
+         data-channel="{{ note.communication_channel or 'internal_note' }}"
+         data-direction="{{ note.direction or 'outbound' }}"
+         data-type="{{ note.note_type_key or 'عام' }}"
+         data-priority="{{ note.priority_level or 'عادي' }}"
+         data-contact="{{ note.contact_person or '' }}"
+         data-duration="{{ note.call_duration_minutes or 0 }}"
+         data-billable="{{ note.is_billable or 0 }}"
+         data-rate="{{ note.hourly_rate or 0.0 }}"
+         data-pinned="{{ note.is_pinned or 0 }}"
+         data-client-visible="{{ note.is_client_visible or 0 }}"
+         data-content="{{ note.content or '' }}"
+         data-created="{{ note.created_at or '' }}"
+         data-author="{{ (note.author.name or note.author.username) if note.author else 'النظام' }}"
+         data-attachment="{{ note.attachment_path or '' }}"
+         style="background:white; border-radius:14px; border:1px solid {% if note.is_pinned %}#f59e0b{% else %}#e2e8f0{% endif %}; box-shadow:{% if note.is_pinned %}0 4px 16px rgba(245, 158, 11, 0.15){% else %}0 2px 8px rgba(0,0,0,0.04){% endif %}; position:relative; overflow:hidden; display:flex; flex-direction:column; justify-content:space-between; transition:all 0.2s ease;">
+        
+        <!-- Top color accent strip -->
+        <div style="height:5px; width:100%; background:
+            {% if note.is_pinned %}#f59e0b
+            {% elif note.priority_level == 'عاجل' %}#ef4444
+            {% elif note.priority_level == 'هام' %}#f97316
+            {% elif note.communication_channel in ['phone_call_in', 'phone_call_out', 'phone_call'] %}#2563eb
+            {% elif note.communication_channel == 'client_meeting' %}#10b981
+            {% elif note.communication_channel == 'whatsapp' %}#0d9488
+            {% elif note.communication_channel == 'email' %}#8b5cf6
+            {% else %}#64748b{% endif %};">
+        </div>
+
+        <div style="padding:18px 20px;">
+            <!-- Header Badges Row -->
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; gap:8px;">
+                <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
+                    <!-- Channel Badge -->
+                    {% if note.communication_channel == 'phone_call_in' %}
+                    <span style="font-size:0.75rem; font-weight:700; padding:3px 9px; border-radius:20px; background:#dbeafe; color:#1d4ed8; display:inline-flex; align-items:center; gap:5px;">
+                        <i class="fa-solid fa-phone-arrow-down-left"></i> مكالمة واردة
+                    </span>
+                    {% elif note.communication_channel == 'phone_call_out' %}
+                    <span style="font-size:0.75rem; font-weight:700; padding:3px 9px; border-radius:20px; background:#e0e7ff; color:#3730a3; display:inline-flex; align-items:center; gap:5px;">
+                        <i class="fa-solid fa-phone-arrow-up-right"></i> مكالمة صادرة
+                    </span>
+                    {% elif note.communication_channel in ['phone_call', 'مكالمة هاتفية'] %}
+                    <span style="font-size:0.75rem; font-weight:700; padding:3px 9px; border-radius:20px; background:#dbeafe; color:#1d4ed8; display:inline-flex; align-items:center; gap:5px;">
+                        <i class="fa-solid fa-phone"></i> مكالمة هاتفية
+                    </span>
+                    {% elif note.communication_channel in ['client_meeting', 'اجتماع'] %}
+                    <span style="font-size:0.75rem; font-weight:700; padding:3px 9px; border-radius:20px; background:#d1fae5; color:#065f46; display:inline-flex; align-items:center; gap:5px;">
+                        <i class="fa-solid fa-users"></i> اجتماع موكل
+                    </span>
+                    {% elif note.communication_channel == 'whatsapp' %}
+                    <span style="font-size:0.75rem; font-weight:700; padding:3px 9px; border-radius:20px; background:#ccfbf1; color:#115e59; display:inline-flex; align-items:center; gap:5px;">
+                        <i class="fa-brands fa-whatsapp"></i> واتساب
+                    </span>
+                    {% elif note.communication_channel == 'email' %}
+                    <span style="font-size:0.75rem; font-weight:700; padding:3px 9px; border-radius:20px; background:#ede9fe; color:#5b21b6; display:inline-flex; align-items:center; gap:5px;">
+                        <i class="fa-solid fa-envelope"></i> بريد إلكتروني
+                    </span>
+                    {% else %}
+                    <span style="font-size:0.75rem; font-weight:700; padding:3px 9px; border-radius:20px; background:#f1f5f9; color:#475569; display:inline-flex; align-items:center; gap:5px;">
+                        <i class="fa-solid fa-note-sticky"></i> ملاحظة داخلية
+                    </span>
+                    {% endif %}
+
+                    <!-- Priority Badge -->
+                    {% if note.priority_level == 'عاجل' %}
+                    <span style="font-size:0.72rem; font-weight:700; padding:3px 8px; border-radius:20px; background:#fee2e2; color:#b91c1c;">
+                        <i class="fa-solid fa-triangle-exclamation"></i> عاجل
+                    </span>
+                    {% elif note.priority_level == 'هام' %}
+                    <span style="font-size:0.72rem; font-weight:700; padding:3px 8px; border-radius:20px; background:#ffedd5; color:#c2410c;">
+                        <i class="fa-solid fa-star"></i> هام
+                    </span>
+                    {% endif %}
+
+                    <!-- Pinned Indicator -->
+                    {% if note.is_pinned %}
+                    <span style="font-size:0.72rem; font-weight:700; padding:3px 8px; border-radius:20px; background:#fef3c7; color:#b45309;">
+                        <i class="fa-solid fa-thumbtack"></i> مثبت
+                    </span>
+                    {% endif %}
+
+                    <!-- Duration Badge -->
+                    {% if note.call_duration_minutes and note.call_duration_minutes > 0 %}
+                    <span style="font-size:0.72rem; font-weight:700; padding:3px 8px; border-radius:20px; background:#f8fafc; color:#475569; border:1px solid #e2e8f0;">
+                        <i class="fa-solid fa-stopwatch"></i> {{ note.call_duration_minutes }} دقيقة
+                    </span>
+                    {% endif %}
+                </div>
+
+                <!-- Quick Action Buttons -->
+                <div style="display:flex; gap:4px; align-items:center;">
+                    <button class="pin-toggle-btn" 
+                            title="{% if note.is_pinned %}إلغاء التثبيت{% else %}تثبيت في المقدمة{% endif %}"
+                            onclick="togglePin({{ note.id }})" 
+                            style="background:none; border:none; color:{% if note.is_pinned %}#f59e0b{% else %}#cbd5e1{% endif %}; cursor:pointer; font-size:1rem; padding:4px;">
+                        <i class="fa-solid fa-thumbtack"></i>
+                    </button>
+                    <button class="edit-note-btn" 
+                            title="تعديل"
+                            onclick="openEditNoteModal({{ note.id }})" 
+                            style="background:none; border:none; color:#2563eb; cursor:pointer; font-size:1rem; padding:4px;">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </button>
+                    <button class="delete-note-btn" 
+                            title="حذف"
+                            onclick="confirmDeleteNote({{ note.id }})" 
+                            style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:1rem; padding:4px;">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Title -->
+            <h3 style="font-size:1.05rem; font-weight:800; color:#1e293b; margin:0 0 8px 0; line-height:1.4;">
+                {{ note.title }}
+            </h3>
+
+            <!-- Contact Person & Details if available -->
+            {% if note.contact_person %}
+            <div style="font-size:0.83rem; color:#475569; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                <i class="fa-solid fa-user-tie" style="color:#64748b;"></i>
+                <span>جهة الاتصال: <strong>{{ note.contact_person }}</strong></span>
+            </div>
+            {% endif %}
+
+            <!-- Note Content Body -->
+            {% if note.content %}
+            <div style="font-size:0.88rem; color:#475569; line-height:1.7; margin-bottom:12px; background:#f8fafc; padding:10px 12px; border-radius:8px; border-right:3px solid #cbd5e1; white-space:pre-wrap; max-height:130px; overflow-y:auto;">
+                {{ note.content }}
+            </div>
+            {% endif %}
+
+            <!-- Metadata indicators (Billable, Portal, Attachment) -->
+            <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; font-size:0.75rem;">
+                {% if note.is_billable %}
+                <span style="color:#047857; background:#d1fae5; padding:2px 7px; border-radius:6px; font-weight:700;">
+                    <i class="fa-solid fa-file-invoice-dollar"></i> مفوترة ({{ "{:,.0f}".format(note.hourly_rate) }} ر.س/س)
+                </span>
+                {% endif %}
+
+                {% if note.is_client_visible %}
+                <span style="color:#0369a1; background:#e0f2fe; padding:2px 7px; border-radius:6px; font-weight:700;">
+                    <i class="fa-solid fa-eye"></i> متاح في بوابة الموكل
+                </span>
+                {% endif %}
+
+                {% if note.attachment_path %}
+                <a href="{{ note.attachment_path }}" target="_blank" style="color:#7c3aed; background:#ede9fe; padding:2px 7px; border-radius:6px; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">
+                    <i class="fa-solid fa-paperclip"></i> مرفق مستند
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Footer Case Info & Author -->
+        <div style="padding:10px 20px; background:#f8fafc; border-top:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center; font-size:0.78rem; color:#64748b;">
             {% if note.law_case %}
-            <a href="/cases/{{ note.case_id }}" style="font-size:.8rem;color:var(--primary-color);text-decoration:none;font-weight:600;">
-                <i class="fa-solid fa-gavel"></i> {{ note.law_case.case_number }}
+            <a href="/cases/{{ note.case_id }}" style="color:#2563eb; text-decoration:none; font-weight:700; display:inline-flex; align-items:center; gap:5px; max-width:65%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                <i class="fa-solid fa-gavel"></i> {{ note.law_case.case_number }} - {{ note.law_case.title }}
             </a>
             {% else %}
-            <span style="font-size:.8rem;color:var(--text-muted);">بدون قضية</span>
+            <span>بدون قضية</span>
             {% endif %}
-            <span style="font-size:.75rem;color:var(--text-muted);" dir="ltr">{{ note.created_at[:10] if note.created_at else '' }}</span>
+
+            <div style="display:flex; align-items:center; gap:6px;">
+                <span title="سجل بواسطة"><i class="fa-solid fa-user-pen"></i> {{ (note.author.name or note.author.username) if note.author else 'النظام' }}</span>
+                <span>•</span>
+                <span dir="ltr">{{ note.created_at[:10] if note.created_at else '' }}</span>
+            </div>
         </div>
     </div>
     {% else %}
-    <div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text-muted);">
-        <i class="fa-solid fa-note-sticky" style="font-size:4rem;opacity:.25;display:block;margin-bottom:15px;"></i>
-        <h3>لا توجد ملاحظات بعد</h3>
-        <p>ابدأ بإضافة أول ملاحظة على قضية.</p>
+    <div style="grid-column:1/-1; text-align:center; padding:70px 20px; background:white; border-radius:14px; border:2px dashed #cbd5e1; color:#64748b;">
+        <div style="width:70px; height:70px; border-radius:50%; background:#f1f5f9; color:#94a3b8; display:flex; align-items:center; justify-content:center; font-size:2rem; margin:0 auto 16px auto;">
+            <i class="fa-solid fa-phone-slash"></i>
+        </div>
+        <h3 style="font-size:1.2rem; font-weight:800; color:#334155; margin-bottom:8px;">لا توجد ملاحظات أو اتصالات مسجلة بعد</h3>
+        <p style="font-size:0.9rem; color:#94a3b8; max-width:450px; margin:0 auto 20px auto;">
+            ابدأ بتوثيق أول مكالمة أو اجتماع مع موكل أو إضافة ملاحظة قانونية مهمة على أي قضية.
+        </p>
+        <button class="btn-primary" style="padding:10px 22px; font-weight:700; border-radius:8px;" onclick="openAddNoteModal()">
+            <i class="fa-solid fa-plus-circle me-1"></i> تسجيل اتصال / ملاحظة الآن
+        </button>
     </div>
     {% endfor %}
 </div>
 
-<!-- Add Modal -->
-<div id="addModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:1000;">
-    <div style="background:white;padding:28px;border-radius:14px;width:560px;max-width:95%;max-height:90vh;overflow-y:auto;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-            <h2 style="margin:0;color:var(--secondary-color);">إضافة ملاحظة جديدة</h2>
-            <button onclick="document.getElementById('addModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
-        </div>
-        <form action="/notes/add" method="post">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
-                <div>
-                    <label style="display:block;margin-bottom:6px;font-weight:600;">عنوان الملاحظة <span style="color:red">*</span></label>
-                    <input type="text" name="title" required style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+<!-- ========================================== -->
+<!-- ADD NOTE / COMMUNICATION MODAL              -->
+<!-- ========================================== -->
+<div id="addNoteModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15, 23, 42, 0.6); align-items:center; justify-content:center; z-index:1050; padding:15px; backdrop-filter:blur(3px);">
+    <div style="background:white; border-radius:16px; width:740px; max-width:98%; max-height:92vh; overflow-y:auto; box-shadow:0 20px 40px rgba(0,0,0,0.2);">
+        <div style="padding:20px 25px; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div style="width:40px; height:40px; border-radius:10px; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:1.2rem;">
+                    <i class="fa-solid fa-headset"></i>
                 </div>
                 <div>
-                    <label style="display:block;margin-bottom:6px;font-weight:600;">نوع الملاحظة</label>
-                    <select name="note_type_key" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
-                        <option value="عام">عام</option>
-                        <option value="تنبيه">تنبيه</option>
-                        <option value="متابعة">متابعة</option>
-                        <option value="قانوني">قانوني</option>
-                        <option value="مالي">مالي</option>
+                    <h2 style="font-size:1.15rem; font-weight:800; color:#1e293b; margin:0;">تسجيل ملاحظة / اتصال جديد</h2>
+                    <span style="font-size:0.8rem; color:#64748b;">توثيق التفاعل مع القضية أو الموكل واحتساب المدة والفوترة</span>
+                </div>
+            </div>
+            <button onclick="closeAddNoteModal()" style="background:none; border:none; color:#94a3b8; font-size:1.4rem; cursor:pointer; padding:5px;">&times;</button>
+        </div>
+
+        <form action="/notes/add" method="post" enctype="multipart/form-data" style="padding:22px 25px;">
+            <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+
+            <!-- Row 1: Case & Channel -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+                <div>
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">القضية المرتبطة <span style="color:#ef4444;">*</span></label>
+                    <select name="case_id" required style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                        <option value="">-- اختر القضية --</option>
+                        {% for case in cases %}
+                        <option value="{{ case.id }}" {% if selected_case_id == case.id %}selected{% endif %}>{{ case.case_number }} - {{ case.title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">قناة التواصل <span style="color:#ef4444;">*</span></label>
+                    <select name="communication_channel" id="addChannelSelect" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                        <option value="internal_note">📝 ملاحظة داخلية</option>
+                        <option value="phone_call_in">📥 مكالمة هاتفية (واردة)</option>
+                        <option value="phone_call_out">📤 مكالمة هاتفية (صادرة)</option>
+                        <option value="client_meeting">👥 اجتماع مع الموكل</option>
+                        <option value="whatsapp">💬 محادثة واتساب</option>
+                        <option value="email">✉️ بريد إلكتروني</option>
                     </select>
                 </div>
             </div>
-            <div style="margin-bottom:14px;">
-                <label style="display:block;margin-bottom:6px;font-weight:600;">القضية المرتبطة <span style="color:red">*</span></label>
-                <select name="case_id" required style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
-                    <option value="">-- اختر القضية --</option>
-                    {% for case in cases %}
-                    <option value="{{ case.id }}">{{ case.case_number }} - {{ case.title }}</option>
-                    {% endfor %}
-                </select>
+
+            <!-- Row 2: Title & Contact Person -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+                <div>
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">عنوان الملاحظة / ملخص الاتصال <span style="color:#ef4444;">*</span></label>
+                    <input type="text" name="title" required placeholder="مثال: مكالمة مع الموكل لمناقشة مذكرة الدفاع" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">جهة الاتصال / اسم المتحدث</label>
+                    <input type="text" name="contact_person" placeholder="اسم الموكل، الخبير، المحامي الآخر..." style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                </div>
             </div>
+
+            <!-- Row 3: Duration, Type, Priority -->
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:16px;">
+                <div>
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">المدة المستغرقة (بالدقائق)</label>
+                    <input type="number" name="call_duration_minutes" min="0" value="0" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">تصنيف الموضوع</label>
+                    <select name="note_type_key" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                        <option value="عام">عام</option>
+                        <option value="قانوني">قانوني</option>
+                        <option value="مالي">مالي</option>
+                        <option value="استشارة">استشارة</option>
+                        <option value="متابعة جلسة">متابعة جلسة</option>
+                        <option value="تسوية ودية">تسوية ودية</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">مستوى الأهمية</label>
+                    <select name="priority_level" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                        <option value="عادي">🔵 عادي</option>
+                        <option value="هام">🟠 هام</option>
+                        <option value="عاجل">🔴 عاجل جداً</option>
+                        <option value="منخفض">⚪ منخفض</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div style="margin-bottom:16px;">
+                <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">محتوى وتفاصيل الملاحظة / محضر المكالمة</label>
+                <textarea name="content" rows="4" placeholder="دون ما دار في المكالمة أو الاجتماع، التوجيهات، الملاحظات الجوهرية..." style="width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem; line-height:1.7; resize:vertical;"></textarea>
+            </div>
+
+            <!-- Billing & Client Portal Row -->
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px; margin-bottom:16px; display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:14px; align-items:center;">
+                <div>
+                    <label style="display:flex; align-items:center; gap:8px; font-size:0.85rem; font-weight:700; color:#334155; cursor:pointer;">
+                        <input type="checkbox" name="is_billable" value="1" id="addBillableCheck" onchange="toggleBillableRate(this, 'addRateContainer')">
+                        <span>💰 قابلة للفوترة (ساعات عمل)</span>
+                    </label>
+                    <div id="addRateContainer" style="display:none; margin-top:8px;">
+                        <input type="number" step="0.01" name="hourly_rate" placeholder="سعر الساعة (ر.س)" style="width:100%; padding:7px 10px; border:1px solid #cbd5e1; border-radius:6px; font-family:'Cairo',sans-serif; font-size:0.85rem;">
+                    </div>
+                </div>
+
+                <div>
+                    <label style="display:flex; align-items:center; gap:8px; font-size:0.85rem; font-weight:700; color:#334155; cursor:pointer;">
+                        <input type="checkbox" name="is_client_visible" value="1">
+                        <span>👁️ إتاحة في بوابة الموكل</span>
+                    </label>
+                    <span style="font-size:0.75rem; color:#64748b; display:block; margin-right:24px;">تمكين الموكل من الاطلاع على الملخص</span>
+                </div>
+
+                <div>
+                    <label style="display:flex; align-items:center; gap:8px; font-size:0.85rem; font-weight:700; color:#334155; cursor:pointer;">
+                        <input type="checkbox" name="is_pinned" value="1">
+                        <span>📌 تثبيت في أعلى السجل</span>
+                    </label>
+                    <span style="font-size:0.75rem; color:#64748b; display:block; margin-right:24px;">تظهر دائماً في بداية القضية</span>
+                </div>
+            </div>
+
+            <!-- Automated Follow-up Task Option -->
+            <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:10px; padding:14px; margin-bottom:16px;">
+                <label style="display:flex; align-items:center; gap:8px; font-size:0.85rem; font-weight:700; color:#92400e; cursor:pointer;">
+                    <input type="checkbox" name="create_followup" value="1" id="addFollowupCheck" onchange="toggleFollowupFields(this, 'addFollowupFields')">
+                    <span>⚡ إنشاء مهمة متابعة تلقائية في النظام</span>
+                </label>
+                <div id="addFollowupFields" style="display:none; margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                    <div>
+                        <label style="display:block; font-size:0.78rem; font-weight:700; color:#92400e; margin-bottom:4px;">تاريخ استحقاق المتابعة</label>
+                        <input type="date" name="followup_due_date" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-family:'Cairo',sans-serif; font-size:0.85rem;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:0.78rem; font-weight:700; color:#92400e; margin-bottom:4px;">عنوان مهمة المتابعة (اختياري)</label>
+                        <input type="text" name="followup_title" placeholder="افتراضي: متابعة بخصوص..." style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-family:'Cairo',sans-serif; font-size:0.85rem;">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attachment upload -->
             <div style="margin-bottom:20px;">
-                <label style="display:block;margin-bottom:6px;font-weight:600;">محتوى الملاحظة</label>
-                <textarea name="content" rows="5" placeholder="اكتب الملاحظة هنا..." style="width:100%;padding:12px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;resize:vertical;line-height:1.8;"></textarea>
+                <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">مرفق ملف أو تسجيل صوتي (اختياري)</label>
+                <input type="file" name="attachment" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.85rem;">
             </div>
-            <div style="display:flex;gap:10px;justify-content:flex-end;">
-                <button type="button" onclick="document.getElementById('addModal').style.display='none'" style="padding:11px 20px;background:#e2e8f0;color:#475569;border:none;border-radius:8px;cursor:pointer;font-family:'Cairo',sans-serif;font-weight:600;">إلغاء</button>
-                <button type="submit" class="btn-primary" style="padding:11px 20px;">حفظ الملاحظة</button>
+
+            <!-- Modal Footer -->
+            <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid #e2e8f0; padding-top:16px;">
+                <button type="button" onclick="closeAddNoteModal()" style="padding:10px 20px; background:#f1f5f9; color:#475569; border:none; border-radius:8px; font-weight:700; cursor:pointer;">إلغاء</button>
+                <button type="submit" class="btn-primary" style="padding:10px 24px; font-weight:700; border-radius:8px;">حفظ الملاحظة والاتصال</button>
             </div>
         </form>
     </div>
 </div>
 
-<!-- Edit Modal -->
-<div id="editModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:1000;">
-    <div style="background:white;padding:28px;border-radius:14px;width:560px;max-width:95%;max-height:90vh;overflow-y:auto;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-            <h2 style="margin:0;color:var(--secondary-color);">تعديل الملاحظة</h2>
-            <button onclick="document.getElementById('editModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
-        </div>
-        <form action="/notes/edit" method="post">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
-            <input type="hidden" name="note_id" id="en_id">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
-                <div>
-                    <label style="display:block;margin-bottom:6px;font-weight:600;">العنوان</label>
-                    <input type="text" name="title" id="en_title" required style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+<!-- ========================================== -->
+<!-- EDIT NOTE MODAL                             -->
+<!-- ========================================== -->
+<div id="editNoteModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15, 23, 42, 0.6); align-items:center; justify-content:center; z-index:1050; padding:15px; backdrop-filter:blur(3px);">
+    <div style="background:white; border-radius:16px; width:740px; max-width:98%; max-height:92vh; overflow-y:auto; box-shadow:0 20px 40px rgba(0,0,0,0.2);">
+        <div style="padding:20px 25px; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div style="width:40px; height:40px; border-radius:10px; background:#ecfdf5; color:#059669; display:flex; align-items:center; justify-content:center; font-size:1.2rem;">
+                    <i class="fa-solid fa-pen-to-square"></i>
                 </div>
                 <div>
-                    <label style="display:block;margin-bottom:6px;font-weight:600;">النوع</label>
-                    <select name="note_type_key" id="en_type" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
-                        <option value="عام">عام</option>
-                        <option value="تنبيه">تنبيه</option>
-                        <option value="متابعة">متابعة</option>
-                        <option value="قانوني">قانوني</option>
-                        <option value="مالي">مالي</option>
+                    <h2 style="font-size:1.15rem; font-weight:800; color:#1e293b; margin:0;">تعديل سجل الملاحظة والاتصال</h2>
+                    <span style="font-size:0.8rem; color:#64748b;" id="editModalSubTitle">تحديث بيانات السجل</span>
+                </div>
+            </div>
+            <button onclick="closeEditNoteModal()" style="background:none; border:none; color:#94a3b8; font-size:1.4rem; cursor:pointer; padding:5px;">&times;</button>
+        </div>
+
+        <form action="/notes/edit" method="post" enctype="multipart/form-data" style="padding:22px 25px;">
+            <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+            <input type="hidden" name="note_id" id="edit_note_id">
+
+            <!-- Row 1: Channel & Priority -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+                <div>
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">قناة التواصل <span style="color:#ef4444;">*</span></label>
+                    <select name="communication_channel" id="edit_channel" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                        <option value="internal_note">📝 ملاحظة داخلية</option>
+                        <option value="phone_call_in">📥 مكالمة هاتفية (واردة)</option>
+                        <option value="phone_call_out">📤 مكالمة هاتفية (صادرة)</option>
+                        <option value="client_meeting">👥 اجتماع مع الموكل</option>
+                        <option value="whatsapp">💬 محادثة واتساب</option>
+                        <option value="email">✉️ بريد إلكتروني</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">مستوى الأهمية</label>
+                    <select name="priority_level" id="edit_priority" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                        <option value="عادي">🔵 عادي</option>
+                        <option value="هام">🟠 هام</option>
+                        <option value="عاجل">🔴 عاجل جداً</option>
+                        <option value="منخفض">⚪ منخفض</option>
                     </select>
                 </div>
             </div>
-            <div style="margin-bottom:20px;">
-                <label style="display:block;margin-bottom:6px;font-weight:600;">المحتوى</label>
-                <textarea name="content" id="en_content" rows="5" style="width:100%;padding:12px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;resize:vertical;line-height:1.8;"></textarea>
+
+            <!-- Row 2: Title & Contact Person -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+                <div>
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">العنوان / الملخص <span style="color:#ef4444;">*</span></label>
+                    <input type="text" name="title" id="edit_title" required style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">جهة الاتصال / المتحدث</label>
+                    <input type="text" name="contact_person" id="edit_contact" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                </div>
             </div>
-            <div style="display:flex;gap:10px;justify-content:flex-end;">
-                <button type="button" onclick="document.getElementById('editModal').style.display='none'" style="padding:11px 20px;background:#e2e8f0;color:#475569;border:none;border-radius:8px;cursor:pointer;font-family:'Cairo',sans-serif;font-weight:600;">إلغاء</button>
-                <button type="submit" class="btn-primary" style="padding:11px 20px;">حفظ التعديلات</button>
+
+            <!-- Row 3: Duration & Classification -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+                <div>
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">المدة المستغرقة (بالدقائق)</label>
+                    <input type="number" name="call_duration_minutes" id="edit_duration" min="0" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">تصنيف الموضوع</label>
+                    <select name="note_type_key" id="edit_type" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                        <option value="عام">عام</option>
+                        <option value="قانوني">قانوني</option>
+                        <option value="مالي">مالي</option>
+                        <option value="استشارة">استشارة</option>
+                        <option value="متابعة جلسة">متابعة جلسة</option>
+                        <option value="تسوية ودية">تسوية ودية</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div style="margin-bottom:16px;">
+                <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">المحتوى والتفاصيل</label>
+                <textarea name="content" id="edit_content" rows="4" style="width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem; line-height:1.7; resize:vertical;"></textarea>
+            </div>
+
+            <!-- Billing & Portal Checks -->
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px; margin-bottom:16px; display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:14px; align-items:center;">
+                <div>
+                    <label style="display:flex; align-items:center; gap:8px; font-size:0.85rem; font-weight:700; color:#334155; cursor:pointer;">
+                        <input type="checkbox" name="is_billable" value="1" id="edit_billable" onchange="toggleBillableRate(this, 'editRateContainer')">
+                        <span>💰 قابلة للفوترة</span>
+                    </label>
+                    <div id="editRateContainer" style="display:none; margin-top:8px;">
+                        <input type="number" step="0.01" name="hourly_rate" id="edit_rate" placeholder="سعر الساعة (ر.س)" style="width:100%; padding:7px 10px; border:1px solid #cbd5e1; border-radius:6px; font-family:'Cairo',sans-serif; font-size:0.85rem;">
+                    </div>
+                </div>
+
+                <div>
+                    <label style="display:flex; align-items:center; gap:8px; font-size:0.85rem; font-weight:700; color:#334155; cursor:pointer;">
+                        <input type="checkbox" name="is_client_visible" value="1" id="edit_client_visible">
+                        <span>👁️ إتاحة في بوابة الموكل</span>
+                    </label>
+                </div>
+
+                <div>
+                    <label style="display:flex; align-items:center; gap:8px; font-size:0.85rem; font-weight:700; color:#334155; cursor:pointer;">
+                        <input type="checkbox" name="is_pinned" value="1" id="edit_pinned">
+                        <span>📌 مثبت في المقدمة</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Attachment replacement -->
+            <div style="margin-bottom:20px;">
+                <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">تحديث المرفق (اختياري)</label>
+                <input type="file" name="attachment" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.85rem;">
+                <div id="edit_current_attachment" style="margin-top:6px; font-size:0.8rem; color:#64748b;"></div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid #e2e8f0; padding-top:16px;">
+                <button type="button" onclick="closeEditNoteModal()" style="padding:10px 20px; background:#f1f5f9; color:#475569; border:none; border-radius:8px; font-weight:700; cursor:pointer;">إلغاء</button>
+                <button type="submit" class="btn-primary" style="padding:10px 24px; font-weight:700; border-radius:8px;">حفظ التعديلات</button>
             </div>
         </form>
     </div>
 </div>
+
+<!-- Hidden Delete Form -->
+<form id="deleteNoteForm" action="/notes/delete" method="post" style="display:none;">
+    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+    <input type="hidden" name="note_id" id="delete_note_id">
+</form>
+
 {% endblock %}
+
 {% block scripts %}
 <script>
-function openEdit(id, title, type, content) {
-    document.getElementById('en_id').value = id;
-    document.getElementById('en_title').value = title;
-    document.getElementById('en_type').value = type;
-    document.getElementById('en_content').value = content;
-    document.getElementById('editModal').style.display = 'flex';
+// Open Add Modal
+function openAddNoteModal() {
+    document.getElementById('addNoteModal').style.display = 'flex';
 }
-function filterNotes() {
-    const search = document.getElementById('searchInput').value.toLowerCase();
-    const type   = document.getElementById('typeFilter').value;
-    document.querySelectorAll('.note-card').forEach(card => {
-        const matchSearch = !search || card.dataset.title.toLowerCase().includes(search) || card.dataset.content.toLowerCase().includes(search);
-        const matchType   = !type || card.dataset.type === type;
-        card.style.display = matchSearch && matchType ? '' : 'none';
+
+function closeAddNoteModal() {
+    document.getElementById('addNoteModal').style.display = 'none';
+}
+
+// Toggle Billable Rate Container
+function toggleBillableRate(checkbox, containerId) {
+    const el = document.getElementById(containerId);
+    if (el) {
+        el.style.display = checkbox.checked ? 'block' : 'none';
+    }
+}
+
+// Toggle Follow-up Task Fields
+function toggleFollowupFields(checkbox, containerId) {
+    const el = document.getElementById(containerId);
+    if (el) {
+        el.style.display = checkbox.checked ? 'grid' : 'none';
+    }
+}
+
+// Open Edit Modal by Note ID
+function openEditNoteModal(noteId) {
+    const card = document.getElementById('note-card-' + noteId);
+    if (!card) return;
+
+    document.getElementById('edit_note_id').value = noteId;
+    document.getElementById('edit_title').value = card.dataset.title || '';
+    document.getElementById('edit_channel').value = card.dataset.channel || 'internal_note';
+    document.getElementById('edit_priority').value = card.dataset.priority || 'عادي';
+    document.getElementById('edit_contact').value = card.dataset.contact || '';
+    document.getElementById('edit_duration').value = card.dataset.duration || 0;
+    document.getElementById('edit_type').value = card.dataset.type || 'عام';
+    document.getElementById('edit_content').value = card.dataset.content || '';
+    
+    // Checkboxes
+    const billableCheck = document.getElementById('edit_billable');
+    billableCheck.checked = (card.dataset.billable === '1');
+    toggleBillableRate(billableCheck, 'editRateContainer');
+    document.getElementById('edit_rate').value = card.dataset.rate || 0.0;
+
+    document.getElementById('edit_client_visible').checked = (card.dataset.clientVisible === '1');
+    document.getElementById('edit_pinned').checked = (card.dataset.pinned === '1');
+
+    // Attachment label
+    const attDiv = document.getElementById('edit_current_attachment');
+    if (card.dataset.attachment) {
+        attDiv.innerHTML = '<i class="fa-solid fa-paperclip"></i> يوجد مرفق حالي: <a href="' + card.dataset.attachment + '" target="_blank">معاينة الملف</a>';
+    } else {
+        attDiv.innerHTML = 'لا يوجد مرفق حالي';
+    }
+
+    document.getElementById('editNoteModal').style.display = 'flex';
+}
+
+function closeEditNoteModal() {
+    document.getElementById('editNoteModal').style.display = 'none';
+}
+
+// Confirm Delete
+function confirmDeleteNote(noteId) {
+    if (confirm('هل أنت متأكد من حذف هذا السجل؟ لن يظهر في قائمة الملاحظات.')) {
+        document.getElementById('delete_note_id').value = noteId;
+        document.getElementById('deleteNoteForm').submit();
+    }
+}
+
+// Quick AJAX Pin Toggle
+async function togglePin(noteId) {
+    const csrfToken = "{{ request.cookies.get('csrf_token', '') }}";
+    const formData = new FormData();
+    formData.append('note_id', noteId);
+    formData.append('csrf_token', csrfToken);
+
+    try {
+        const response = await fetch('/notes/toggle-pin', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        });
+
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            // Fallback reload
+            window.location.reload();
+        }
+    } catch (e) {
+        window.location.reload();
+    }
+}
+
+// Filter Grid
+function filterNotesGrid() {
+    const searchVal   = document.getElementById('noteSearchInput').value.toLowerCase().trim();
+    const channelVal  = document.getElementById('channelFilterSelect').value;
+    const caseVal     = document.getElementById('caseFilterSelect').value;
+    const priorityVal = document.getElementById('priorityFilterSelect').value;
+    const pinnedVal   = document.getElementById('pinnedFilterSelect').value;
+
+    const cards = document.querySelectorAll('.note-item-card');
+    cards.forEach(card => {
+        let match = true;
+
+        // Search text (title, contact, content, case number, case title)
+        if (searchVal) {
+            const cardText = (
+                (card.dataset.title || '') + ' ' +
+                (card.dataset.contact || '') + ' ' +
+                (card.dataset.content || '') + ' ' +
+                (card.dataset.caseNum || '') + ' ' +
+                (card.dataset.caseTitle || '')
+            ).toLowerCase();
+            if (!cardText.includes(searchVal)) {
+                match = false;
+            }
+        }
+
+        // Channel
+        if (match && channelVal) {
+            if (card.dataset.channel !== channelVal) {
+                match = false;
+            }
+        }
+
+        // Case
+        if (match && caseVal) {
+            if (card.dataset.caseId !== caseVal) {
+                match = false;
+            }
+        }
+
+        // Priority
+        if (match && priorityVal) {
+            if (card.dataset.priority !== priorityVal) {
+                match = false;
+            }
+        }
+
+        // Special filter (pinned, billable, client portal)
+        if (match && pinnedVal) {
+            if (pinnedVal === 'pinned' && card.dataset.pinned !== '1') {
+                match = false;
+            } else if (pinnedVal === 'billable' && card.dataset.billable !== '1') {
+                match = false;
+            } else if (pinnedVal === 'client_portal' && card.dataset.clientVisible !== '1') {
+                match = false;
+            }
+        }
+
+        card.style.display = match ? 'flex' : 'none';
     });
 }
+
+// Export Notes to CSV
+function exportNotesTable() {
+    const cards = document.querySelectorAll('.note-item-card');
+    if (cards.length === 0) {
+        alert('لا توجد سجلات لتصديرها.');
+        return;
+    }
+
+    let csvContent = "\uFEFF"; // UTF-8 BOM
+    csvContent += "المعرف,العنوان,القضية,القناة,جهة الاتصال,المدة (بالدقائق),الأهمية,مفوترة,التاريخ\n";
+
+    cards.forEach(c => {
+        const row = [
+            c.dataset.id || '',
+            '"' + (c.dataset.title || '').replace(/"/g, '""') + '"',
+            '"' + (c.dataset.caseNum || '') + ' - ' + (c.dataset.caseTitle || '').replace(/"/g, '""') + '"',
+            '"' + (c.dataset.channel || '') + '"',
+            '"' + (c.dataset.contact || '').replace(/"/g, '""') + '"',
+            c.dataset.duration || '0',
+            '"' + (c.dataset.priority || '') + '"',
+            c.dataset.billable === '1' ? 'نعم' : 'لا',
+            '"' + (c.dataset.created || '') + '"'
+        ];
+        csvContent += row.join(",") + "\n";
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `notes_communications_${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+// Close modals on escape key or clicking outside
+window.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeAddNoteModal();
+        closeEditNoteModal();
+    }
+});
 </script>
 {% endblock %}

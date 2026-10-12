@@ -356,6 +356,28 @@ def init_db():
         except Exception:
             pass
 
+    # Migrations for LawNotes (Communications & Notes)
+    note_cols = [
+        ("communication_channel", "TEXT DEFAULT 'internal_note'"),
+        ("direction", "TEXT DEFAULT 'outbound'"),
+        ("contact_person", "TEXT"),
+        ("call_duration_minutes", "INTEGER DEFAULT 0"),
+        ("is_billable", "INTEGER DEFAULT 0"),
+        ("hourly_rate", "REAL DEFAULT 0.0"),
+        ("is_pinned", "INTEGER DEFAULT 0"),
+        ("is_client_visible", "INTEGER DEFAULT 0"),
+        ("priority_level", "TEXT DEFAULT 'عادي'"),
+        ("author_id", "INTEGER"),
+        ("attachment_path", "TEXT")
+    ]
+    for col_name, col_type in note_cols:
+        try:
+            from sqlalchemy import text
+            with engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE law_notes ADD COLUMN {col_name} {col_type};"))
+        except Exception:
+            pass
+
     # Never log DATABASE_URL: it may contain a username and password.
     print(f"[Database] Connected using dialect: {engine.dialect.name}")
     print(f"[Database] Tables initialized successfully.")
