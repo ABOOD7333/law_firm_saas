@@ -1218,11 +1218,11 @@ async def dashboard_page(request: Request, db: Session = Depends(get_db), user: 
         total_clients = db.query(LawClients).filter(LawClients.office_id == office_id).count()
         total_docs = db.query(LawDocuments).filter(LawDocuments.office_id == office_id, LawDocuments.is_deleted == 0).count()
 
-        # 6. سجل آخر الأنشطة في المكتب (Recent Activity Stream)
-        from database.models import LawAuditLog
-        recent_activities = db.query(LawAuditLog).filter(
-            LawAuditLog.office_id == office_id
-        ).order_by(LawAuditLog.created_at.desc()).limit(5).all()
+        # 6. آخر المستندات والوثائق المودعة بالمكتب (Office-Isolated Recent Documents)
+        recent_docs_list = db.query(LawDocuments).filter(
+            LawDocuments.office_id == office_id,
+            LawDocuments.is_deleted == 0
+        ).order_by(LawDocuments.id.desc()).limit(5).all()
 
         return templates.TemplateResponse(
             request=request,
@@ -1240,7 +1240,7 @@ async def dashboard_page(request: Request, db: Session = Depends(get_db), user: 
                 "my_tasks": my_tasks,
                 "upcoming_hearings": upcoming_hearings,
                 "urgent_limitations": urgent_limitations,
-                "recent_activities": recent_activities
+                "recent_docs_list": recent_docs_list
             }
         )
     except Exception as e:

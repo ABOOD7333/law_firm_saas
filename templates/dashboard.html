@@ -284,35 +284,38 @@
             </div>
         </div>
 
-        <!-- ودجت 5: آخر العمليات والأنشطة في المكتب (Audit Activity Stream) -->
+        <!-- ودجت 5: آخر المستندات والوثائق المودعة بالمكتب (Office-Isolated Documents) -->
         <div class="card" style="padding: 18px 20px; border-radius: 12px; border: 1px solid #e2e8f0; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px;">
                 <h4 style="margin: 0; font-size: 1rem; color: #0f172a; font-weight: 800; display: flex; align-items: center; gap: 8px;">
-                    <i class="fa-solid fa-bolt" style="color: #f59e0b;"></i> آخر أنشطة المكتب
+                    <i class="fa-solid fa-folder-open" style="color: #1e40af;"></i> آخر المستندات المودعة بالمكتب
                 </h4>
-                {% if user.role in ['مدير المكتب', 'صاحب المكتب', 'مدير', 'مدير النظام', 'admin', 'owner'] %}
-                <a href="/activity" style="color: #1e40af; text-decoration: none; font-size: 0.8rem; font-weight: 700;">السجل الكامل ←</a>
-                {% endif %}
+                <a href="/documents" style="color: #1e40af; text-decoration: none; font-size: 0.8rem; font-weight: 700;">الأرشيف الكامل ←</a>
             </div>
 
-            {% if recent_activities %}
+            {% if recent_docs_list %}
             <div style="display: flex; flex-direction: column; gap: 10px;">
-                {% for act in recent_activities %}
-                <div style="border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; font-size: 0.82rem;">
-                    <div style="display: flex; justify-content: space-between; color: #64748b; margin-bottom: 2px;">
-                        <span style="font-weight: 700; color: #334155;">{{ act.actor_name }}</span>
-                        <span dir="ltr">{{ act.created_at.split(' ')[0] if act.created_at else '' }}</span>
+                {% for doc in recent_docs_list %}
+                <div style="border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; font-size: 0.82rem; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                    <div style="flex: 1; min-width: 0;">
+                        <a href="/documents?q={{ doc.doc_code or doc.name }}" style="font-weight: 700; color: #1e3a8a; text-decoration: none; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            {{ doc.name }}
+                        </a>
+                        <div style="display: flex; gap: 8px; color: #64748b; font-size: 0.75rem; margin-top: 2px;">
+                            <span style="background: #f1f5f9; padding: 1px 6px; border-radius: 4px; color: #475569;">{{ doc.document_type_key }}</span>
+                            <span dir="ltr">{{ doc.doc_code or '' }}</span>
+                        </div>
                     </div>
-                    <div style="color: #0f172a; font-weight: 600;">{{ act.action_name }}</div>
-                    {% if act.details %}
-                    <small style="color: #64748b; font-size: 0.75rem;">{{ act.details[:40] }}</small>
-                    {% endif %}
+                    <a href="/documents?q={{ doc.doc_code or doc.name }}" style="background: #eff6ff; color: #1d4ed8; padding: 4px 8px; border-radius: 6px; text-decoration: none; font-size: 0.78rem; font-weight: 700; flex-shrink: 0;">
+                        عرض
+                    </a>
                 </div>
                 {% endfor %}
             </div>
             {% else %}
-            <div style="color: #94a3b8; font-size: 0.85rem; text-align: center; padding: 10px 0;">
-                لا توجد سجلات نشاط حديثة.
+            <div style="color: #94a3b8; font-size: 0.85rem; text-align: center; padding: 14px 0;">
+                <i class="fa-solid fa-folder-plus" style="display: block; font-size: 1.5rem; margin-bottom: 6px; opacity: 0.5;"></i>
+                لا توجد مستندات مسجلة حديثاً في المكتب.
             </div>
             {% endif %}
         </div>
