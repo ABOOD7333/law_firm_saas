@@ -407,9 +407,20 @@ class LawCorrespondences(Base):
     case_id: Mapped[int] = mapped_column(ForeignKey('law_cases.id', ondelete='CASCADE'), index=True)
     office_id: Mapped[int] = mapped_column(ForeignKey('law_offices.id'), index=True)
     direction_key: Mapped[str] = mapped_column(Text, nullable=False)
+    registry_number: Mapped[Optional[str]] = mapped_column(Text)
     letter_number: Mapped[Optional[str]] = mapped_column(Text)
     letter_date: Mapped[Optional[str]] = mapped_column(Text)
     subject: Mapped[Optional[str]] = mapped_column(Text)
+    entity_name: Mapped[Optional[str]] = mapped_column(Text)
+    recipient_name: Mapped[Optional[str]] = mapped_column(Text)
+    delivery_method: Mapped[Optional[str]] = mapped_column(Text)
+    tracking_number: Mapped[Optional[str]] = mapped_column(Text)
+    urgency_level: Mapped[Optional[str]] = mapped_column(Text, server_default=text("'عادي'"))
+    confidentiality_level: Mapped[Optional[str]] = mapped_column(Text, server_default=text("'عادي'"))
+    in_reply_to_id: Mapped[Optional[int]] = mapped_column(ForeignKey('law_correspondences.id', ondelete='SET NULL'))
+    attachment_path: Mapped[Optional[str]] = mapped_column(Text)
+    proof_of_delivery_path: Mapped[Optional[str]] = mapped_column(Text)
+    created_by_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey('access_profiles.id'))
     auto_number: Mapped[Optional[str]] = mapped_column(Text)
     direction_seq: Mapped[Optional[int]] = mapped_column(Integer)
     response_status: Mapped[Optional[str]] = mapped_column(Text)
@@ -420,6 +431,8 @@ class LawCorrespondences(Base):
     is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
 
     law_case: Mapped['LawCases'] = relationship('LawCases', back_populates='law_correspondences')
+    created_by: Mapped[Optional['AccessProfiles']] = relationship('AccessProfiles', foreign_keys=[created_by_user_id])
+    in_reply_to: Mapped[Optional['LawCorrespondences']] = relationship('LawCorrespondences', remote_side=[id])
 
 class LawNotes(Base):
     __tablename__ = 'law_notes'

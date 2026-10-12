@@ -1,408 +1,823 @@
 {% extends "base.html" %}
-{% block title %}المراسلات الرسمية | LawSaaS{% endblock %}
+{% block title %}المراسلات الرسمية والصادر والوارد | LawSaaS{% endblock %}
+
 {% block content %}
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;">
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 25px;">
     <div>
-        <h1><i class="fa-solid fa-envelope" style="color:var(--primary-color);"></i> المراسلات الرسمية</h1>
-        <p style="color:var(--text-muted);">سجل الخطابات الصادرة والواردة مع تتبع طريقة الإرسال وحالة الرد.</p>
+        <h1 style="font-size: 1.6rem; color: #1e293b; margin: 0 0 6px 0; font-weight: 800;">
+            <i class="fa-solid fa-envelopes-bulk text-primary me-2"></i> سجل المراسلات الرسمية والصادر والوارد
+        </h1>
+        <p style="color: #64748b; margin: 0; font-size: 0.95rem;">
+            توثيق الخطابات الصادرة والواردة، الترقيم التسلسلي، تتبع طرق الإرسال وإثباتات التبليغ، ومتابعة مهل الرد.
+        </p>
     </div>
-    <button class="btn-primary" onclick="document.getElementById('addModal').style.display='flex'">
-        <i class="fa-solid fa-plus"></i> إضافة مراسلة
-    </button>
-</div>
-
-<!-- Stats -->
-<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;">
-    {% set outgoing = corrs|selectattr('direction_key','equalto','صادر')|list|length %}
-    {% set incoming = corrs|selectattr('direction_key','equalto','وارد')|list|length %}
-    {% set pending  = corrs|selectattr('response_status','equalto','بانتظار الرد')|list|length %}
-    <div class="card" style="padding:16px;text-align:center;">
-        <i class="fa-solid fa-envelope" style="font-size:1.6rem;color:var(--primary-color);margin-bottom:6px;"></i>
-        <p style="font-size:1.6rem;font-weight:900;margin:0;">{{ corrs|length }}</p>
-        <p style="color:var(--text-muted);font-size:.82rem;margin:0;">إجمالي المراسلات</p>
-    </div>
-    <div class="card" style="padding:16px;text-align:center;">
-        <i class="fa-solid fa-paper-plane" style="font-size:1.6rem;color:#6366f1;margin-bottom:6px;"></i>
-        <p style="font-size:1.6rem;font-weight:900;margin:0;color:#6366f1;">{{ outgoing }}</p>
-        <p style="color:var(--text-muted);font-size:.82rem;margin:0;">صادر</p>
-    </div>
-    <div class="card" style="padding:16px;text-align:center;">
-        <i class="fa-solid fa-inbox" style="font-size:1.6rem;color:#10b981;margin-bottom:6px;"></i>
-        <p style="font-size:1.6rem;font-weight:900;margin:0;color:#10b981;">{{ incoming }}</p>
-        <p style="color:var(--text-muted);font-size:.82rem;margin:0;">وارد</p>
-    </div>
-    <div class="card" style="padding:16px;text-align:center;">
-        <i class="fa-solid fa-clock" style="font-size:1.6rem;color:#f59e0b;margin-bottom:6px;"></i>
-        <p style="font-size:1.6rem;font-weight:900;margin:0;color:#f59e0b;">{{ pending }}</p>
-        <p style="color:var(--text-muted);font-size:.82rem;margin:0;">بانتظار الرد</p>
+    <div style="display:flex; gap:10px; flex-wrap: wrap; align-items: center;">
+        <button class="btn" style="background:#f1f5f9; color:#334155; border:1px solid #cbd5e1; padding:10px 18px; border-radius:8px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:8px;" onclick="exportCorrespondencesTable()">
+            <i class="fa-solid fa-download"></i> تصدير الكشف
+        </button>
+        <button class="btn-primary" style="padding: 10px 20px; font-family: 'Cairo', sans-serif; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; border-radius: 8px; cursor: pointer;" onclick="openAddCorrModal()">
+            <i class="fa-solid fa-plus-circle"></i> إضافة مراسلة جديدة
+        </button>
     </div>
 </div>
 
-<div class="card">
+<!-- Stats Ribbon -->
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:15px; margin-bottom:25px;">
+    <div class="card" style="padding:18px; border-radius:12px; border:1px solid #e2e8f0; background:white; display:flex; align-items:center; gap:16px;">
+        <div style="width:52px; height:52px; border-radius:12px; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:1.5rem;">
+            <i class="fa-solid fa-folder-open"></i>
+        </div>
+        <div>
+            <span style="display:block; font-size:1.6rem; font-weight:800; color:#1e293b; line-height:1.2;">{{ kpis.total }}</span>
+            <span style="color:#64748b; font-size:0.85rem; font-weight:600;">إجمالي القيود</span>
+        </div>
+    </div>
+    
+    <div class="card" style="padding:18px; border-radius:12px; border:1px solid #e2e8f0; background:white; display:flex; align-items:center; gap:16px;">
+        <div style="width:52px; height:52px; border-radius:12px; background:#e0e7ff; color:#3730a3; display:flex; align-items:center; justify-content:center; font-size:1.5rem;">
+            <i class="fa-solid fa-paper-plane"></i>
+        </div>
+        <div>
+            <span style="display:block; font-size:1.6rem; font-weight:800; color:#3730a3; line-height:1.2;">{{ kpis.outgoing }}</span>
+            <span style="color:#64748b; font-size:0.85rem; font-weight:600;">الخطابات الصادرة (ص)</span>
+        </div>
+    </div>
+
+    <div class="card" style="padding:18px; border-radius:12px; border:1px solid #e2e8f0; background:white; display:flex; align-items:center; gap:16px;">
+        <div style="width:52px; height:52px; border-radius:12px; background:#dcfce7; color:#166534; display:flex; align-items:center; justify-content:center; font-size:1.5rem;">
+            <i class="fa-solid fa-inbox"></i>
+        </div>
+        <div>
+            <span style="display:block; font-size:1.6rem; font-weight:800; color:#166534; line-height:1.2;">{{ kpis.incoming }}</span>
+            <span style="color:#64748b; font-size:0.85rem; font-weight:600;">الخطابات الواردة (و)</span>
+        </div>
+    </div>
+
+    <div class="card" style="padding:18px; border-radius:12px; border:1px solid #e2e8f0; background:white; display:flex; align-items:center; gap:16px;">
+        <div style="width:52px; height:52px; border-radius:12px; background:#fef3c7; color:#d97706; display:flex; align-items:center; justify-content:center; font-size:1.5rem;">
+            <i class="fa-solid fa-hourglass-half"></i>
+        </div>
+        <div>
+            <span style="display:block; font-size:1.6rem; font-weight:800; color:#b45309; line-height:1.2;">{{ kpis.pending_reply }}</span>
+            <span style="color:#64748b; font-size:0.85rem; font-weight:600;">بانتظار الرد</span>
+        </div>
+    </div>
+
+    <div class="card" style="padding:18px; border-radius:12px; border:1px solid {% if kpis.overdue > 0 %}#fca5a5{% else %}#e2e8f0{% endif %}; background:{% if kpis.overdue > 0 %}#fff1f2{% else %}white{% endif %}; display:flex; align-items:center; gap:16px;">
+        <div style="width:52px; height:52px; border-radius:12px; background:#fee2e2; color:#dc2626; display:flex; align-items:center; justify-content:center; font-size:1.5rem;">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <div>
+            <span style="display:block; font-size:1.6rem; font-weight:800; color:#dc2626; line-height:1.2;">{{ kpis.overdue }}</span>
+            <span style="color:#991b1b; font-size:0.85rem; font-weight:700;">متأخرة عن مهلة الرد</span>
+        </div>
+    </div>
+</div>
+
+<!-- Search & Filtering Toolbar -->
+<div class="card" style="padding:16px; border-radius:12px; border:1px solid #e2e8f0; background:white; margin-bottom:20px;">
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; align-items:center;">
+        <div>
+            <div style="position:relative;">
+                <i class="fa-solid fa-magnifying-glass" style="position:absolute; right:12px; top:12px; color:#94a3b8;"></i>
+                <input type="text" id="corrSearchInput" placeholder="بحث بالقيد، الرقم، الموضوع، الجهة..." 
+                       style="width:100%; padding:9px 36px 9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;"
+                       onkeyup="filterCorrespondencesTable()">
+            </div>
+        </div>
+
+        <div>
+            <select id="directionFilterSelect" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;" onchange="filterCorrespondencesTable()">
+                <option value="">جميع الاتجاهات</option>
+                <option value="صادر">📤 صادر فقط</option>
+                <option value="وارد">📥 وارد فقط</option>
+            </select>
+        </div>
+
+        <div>
+            <select id="statusFilterSelect" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;" onchange="filterCorrespondencesTable()">
+                <option value="">جميع حالات الرد</option>
+                <option value="بانتظار الرد">⏳ بانتظار الرد</option>
+                <option value="تم الرد">✔ تم الرد</option>
+                <option value="لا يتطلب رد">⚪ لا يتطلب رد</option>
+                <option value="overdue">🔴 متأخرة عن المهلة</option>
+            </select>
+        </div>
+
+        <div>
+            <select id="caseFilterSelect" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;" onchange="filterCorrespondencesTable()">
+                <option value="">جميع القضايا</option>
+                {% for c in cases %}
+                <option value="{{ c.id }}">{{ c.case_number }} - {{ c.title }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <select id="urgencyFilterSelect" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;" onchange="filterCorrespondencesTable()">
+                <option value="">جميع مستويات الأسبقية</option>
+                <option value="عادي">عادي</option>
+                <option value="عاجل">عاجل</option>
+                <option value="فوري">فوري</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- Correspondences Table Card -->
+<div class="card" style="padding:0; border-radius:14px; border:1px solid #e2e8f0; background:white; overflow:hidden;">
     <div style="overflow-x:auto;">
-        <table class="data-table">
+        <table class="data-table" id="correspondencesTable" style="width:100%; border-collapse:collapse; text-align:right;">
             <thead>
-                <tr>
-                    <th>#</th>
-                    <th>الاتجاه</th>
-                    <th>رقم الخطاب</th>
-                    <th>المُرسَل إليه</th>
-                    <th>طريقة الإرسال</th>
-                    <th>الموضوع</th>
-                    <th>القضية</th>
-                    <th>تاريخ الخطاب</th>
-                    <th>حالة الرد</th>
-                    <th>إجراءات</th>
+                <tr style="background:#f8fafc; border-bottom:1px solid #e2e8f0; color:#475569; font-size:0.85rem;">
+                    <th style="padding:14px 16px;">#</th>
+                    <th style="padding:14px 16px;">الاتجاه والقيد</th>
+                    <th style="padding:14px 16px;">رقم الخطاب وتاريخه</th>
+                    <th style="padding:14px 16px;">الموضوع والجهة</th>
+                    <th style="padding:14px 16px;">القضية المرتبطة</th>
+                    <th style="padding:14px 16px;">طريقة الإرسال والتتبع</th>
+                    <th style="padding:14px 16px;">الأسبقية والسرية</th>
+                    <th style="padding:14px 16px;">حالة ومهلة الرد</th>
+                    <th style="padding:14px 16px;">المرفقات</th>
+                    <th style="padding:14px 16px; text-align:center;">إجراءات</th>
                 </tr>
             </thead>
             <tbody>
                 {% for c in corrs %}
-                <tr>
-                    <td>{{ loop.index }}</td>
-                    <td>
+                {% set is_overdue = (c.needs_reply == 'نعم' and c.response_status != 'تم الرد' and c.reply_due_date and c.reply_due_date < today_str) %}
+                <tr class="corr-row"
+                    id="corr-row-{{ c.id }}"
+                    data-id="{{ c.id }}"
+                    data-case-id="{{ c.case_id }}"
+                    data-case-num="{{ c.law_case.case_number if c.law_case else '' }}"
+                    data-case-title="{{ c.law_case.title if c.law_case else '' }}"
+                    data-direction="{{ c.direction_key }}"
+                    data-registry="{{ c.registry_number or '' }}"
+                    data-letter-num="{{ c.letter_number or '' }}"
+                    data-letter-date="{{ c.letter_date or '' }}"
+                    data-subject="{{ c.subject or '' }}"
+                    data-entity="{{ c.entity_name or '' }}"
+                    data-recipient="{{ c.recipient_name or '' }}"
+                    data-delivery="{{ c.delivery_method or '' }}"
+                    data-tracking="{{ c.tracking_number or '' }}"
+                    data-urgency="{{ c.urgency_level or 'عادي' }}"
+                    data-confidentiality="{{ c.confidentiality_level or 'عادي' }}"
+                    data-needs-reply="{{ c.needs_reply or 'لا' }}"
+                    data-reply-due="{{ c.reply_due_date or '' }}"
+                    data-status="{{ c.response_status or '' }}"
+                    data-is-overdue="{{ '1' if is_overdue else '0' }}"
+                    data-attachment="{{ c.attachment_path or '' }}"
+                    data-proof="{{ c.proof_of_delivery_path or '' }}"
+                    style="border-bottom:1px solid #f1f5f9; transition:background 0.15s; {% if is_overdue %}background:#fff5f5;{% endif %}">
+                    
+                    <td style="padding:14px 16px; font-size:0.85rem; color:#64748b;">{{ loop.index }}</td>
+
+                    <!-- Direction & Registry Number -->
+                    <td style="padding:14px 16px;">
                         {% if c.direction_key == 'صادر' %}
-                        <span style="background:#e0e7ff;color:#3730a3;padding:4px 10px;border-radius:20px;font-size:.8rem;font-weight:700;">📤 صادر</span>
+                        <span style="background:#e0e7ff; color:#3730a3; padding:3px 9px; border-radius:20px; font-size:0.75rem; font-weight:800; display:inline-flex; align-items:center; gap:5px; margin-bottom:4px;">
+                            <i class="fa-solid fa-paper-plane"></i> صادر
+                        </span>
                         {% else %}
-                        <span style="background:#dcfce7;color:#166534;padding:4px 10px;border-radius:20px;font-size:.8rem;font-weight:700;">📥 وارد</span>
+                        <span style="background:#dcfce7; color:#166534; padding:3px 9px; border-radius:20px; font-size:0.75rem; font-weight:800; display:inline-flex; align-items:center; gap:5px; margin-bottom:4px;">
+                            <i class="fa-solid fa-inbox"></i> وارد
+                        </span>
+                        {% endif %}
+                        <span style="display:block; font-family:monospace; font-weight:800; color:#1e293b; font-size:0.85rem;">
+                            {{ c.registry_number or '-' }}
+                        </span>
+                    </td>
+
+                    <!-- External Letter Number & Date -->
+                    <td style="padding:14px 16px;">
+                        <span style="font-weight:700; color:#334155; font-size:0.88rem; display:block;" dir="ltr">
+                            {{ c.letter_number or 'غير محدد' }}
+                        </span>
+                        <span style="color:#64748b; font-size:0.78rem;" dir="ltr">
+                            <i class="fa-regular fa-calendar me-1"></i> {{ c.letter_date or '-' }}
+                        </span>
+                    </td>
+
+                    <!-- Subject & Entity -->
+                    <td style="padding:14px 16px; max-width:260px;">
+                        <span style="font-weight:800; color:#1e293b; font-size:0.9rem; display:block; line-height:1.4;">
+                            {{ c.subject or 'بدون موضوع' }}
+                        </span>
+                        {% if c.entity_name %}
+                        <span style="color:#475569; font-size:0.8rem; display:inline-flex; align-items:center; gap:4px; margin-top:2px;">
+                            <i class="fa-solid fa-building text-secondary"></i> {{ c.entity_name }}
+                            {% if c.recipient_name %}({{ c.recipient_name }}){% endif %}
+                        </span>
                         {% endif %}
                     </td>
-                    <td dir="ltr" style="font-weight:700;">{{ c.letter_number or '-' }}</td>
-                    <td style="font-weight:600;">{{ c.entity_name or '-' }}</td>
-                    <td>
-                        {% if c.auto_number == 'البريد الإلكتروني' %}
-                        <span style="font-size:.8rem;color:#3b82f6;">📧 {{ c.auto_number }}</span>
-                        {% elif c.auto_number == 'رقم الثابت' %}
-                        <span style="font-size:.8rem;color:#10b981;">📞 {{ c.auto_number }}</span>
-                        {% elif c.auto_number %}
-                        <span style="font-size:.8rem;color:#6366f1;">🖥️ {{ c.auto_number }}</span>
-                        {% else %}-{% endif %}
-                    </td>
-                    <td><strong>{{ c.subject or '-' }}</strong></td>
-                    <td>
+
+                    <!-- Related Case -->
+                    <td style="padding:14px 16px;">
                         {% if c.law_case %}
-                        <a href="/cases/{{ c.case_id }}" style="color:var(--primary-color);text-decoration:none;font-size:.85rem;">{{ c.law_case.case_number }}</a>
-                        {% else %}-{% endif %}
-                    </td>
-                    <td dir="ltr" style="font-size:.88rem;">{{ c.letter_date or '-' }}</td>
-                    <td>
-                        {% if c.response_status == 'بانتظار الرد' %}
-                        <span style="background:#fef3c7;color:#d97706;padding:3px 10px;border-radius:12px;font-size:.8rem;font-weight:700;">⏳ بانتظار الرد</span>
-                        {% elif c.response_status == 'تم الرد' %}
-                        <span style="background:#dcfce7;color:#166534;padding:3px 10px;border-radius:12px;font-size:.8rem;font-weight:700;">✔ تم الرد</span>
+                        <a href="/cases/{{ c.case_id }}" style="color:#2563eb; text-decoration:none; font-weight:700; font-size:0.82rem; display:inline-flex; align-items:center; gap:5px;">
+                            <i class="fa-solid fa-gavel"></i> {{ c.law_case.case_number }}
+                        </a>
+                        <span style="display:block; font-size:0.75rem; color:#64748b; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                            {{ c.law_case.title }}
+                        </span>
                         {% else %}
-                        <span style="background:#f1f5f9;color:#64748b;padding:3px 10px;border-radius:12px;font-size:.8rem;">{{ c.response_status or '-' }}</span>
+                        <span style="color:#94a3b8; font-size:0.8rem;">-</span>
                         {% endif %}
                     </td>
-                    <td>
-                        <button class="action-btn" style="color:var(--primary-color);" title="تعديل"
-                            onclick="openEdit({{ c.id|tojson|forceescape }},{{ c.direction_key|tojson|forceescape }},{{ (c.letter_number or '')|tojson|forceescape }},{{ (c.subject or '')|tojson|forceescape }},{{ (c.needs_reply or '')|tojson|forceescape }},{{ (c.reply_due_date or '')|tojson|forceescape }},{{ (c.response_status or '')|tojson|forceescape }},{{ (c.letter_date or '')|tojson|forceescape }})">
-                            <i class="fa-solid fa-pen"></i>
-                        </button>
-                        <form action="/correspondences/delete" method="post" style="display:inline;" onsubmit="return confirm('حذف المراسلة؟')">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
-                            <input type="hidden" name="corr_id" value="{{ c.id }}">
-                            <button type="submit" class="action-btn" style="color:#ef4444;"><i class="fa-solid fa-trash"></i></button>
-                        </form>
+
+                    <!-- Delivery Method & Tracking -->
+                    <td style="padding:14px 16px; font-size:0.82rem;">
+                        <span style="color:#334155; font-weight:700; display:block;">
+                            {% if 'بريد' in (c.delivery_method or '') %}
+                            <i class="fa-solid fa-envelope text-primary"></i>
+                            {% elif 'يد' in (c.delivery_method or '') %}
+                            <i class="fa-solid fa-handshake text-success"></i>
+                            {% elif 'ناجز' in (c.delivery_method or '') %}
+                            <i class="fa-solid fa-landmark text-warning"></i>
+                            {% else %}
+                            <i class="fa-solid fa-desktop text-secondary"></i>
+                            {% endif %}
+                            {{ c.delivery_method or 'عبر النظام' }}
+                        </span>
+                        {% if c.tracking_number %}
+                        <span style="font-size:0.75rem; color:#64748b; font-family:monospace; display:block;" dir="ltr">
+                            بوليصة: {{ c.tracking_number }}
+                        </span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Urgency & Confidentiality -->
+                    <td style="padding:14px 16px; font-size:0.78rem;">
+                        {% if c.urgency_level == 'فوري' %}
+                        <span style="background:#fee2e2; color:#b91c1c; padding:2px 7px; border-radius:6px; font-weight:800; display:inline-block; margin-bottom:2px;">
+                            ⚡ فوري
+                        </span>
+                        {% elif c.urgency_level == 'عاجل' %}
+                        <span style="background:#ffedd5; color:#c2410c; padding:2px 7px; border-radius:6px; font-weight:700; display:inline-block; margin-bottom:2px;">
+                            🔥 عاجل
+                        </span>
+                        {% else %}
+                        <span style="background:#f1f5f9; color:#475569; padding:2px 7px; border-radius:6px; font-weight:600; display:inline-block; margin-bottom:2px;">
+                            عادي
+                        </span>
+                        {% endif %}
+
+                        {% if c.confidentiality_level == 'سري' %}
+                        <span style="background:#fef3c7; color:#b45309; padding:2px 6px; border-radius:6px; font-weight:700; display:block;">
+                            <i class="fa-solid fa-lock"></i> سري
+                        </span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Response Status & Due Date -->
+                    <td style="padding:14px 16px;">
+                        {% if is_overdue %}
+                        <span style="background:#fee2e2; color:#b91c1c; padding:3px 9px; border-radius:12px; font-size:0.78rem; font-weight:800; display:inline-flex; align-items:center; gap:4px;">
+                            <i class="fa-solid fa-circle-exclamation"></i> متأخر ({{ c.reply_due_date }})
+                        </span>
+                        {% elif c.response_status == 'بانتظار الرد' %}
+                        <span style="background:#fef3c7; color:#d97706; padding:3px 9px; border-radius:12px; font-size:0.78rem; font-weight:700; display:inline-flex; align-items:center; gap:4px;">
+                            <i class="fa-solid fa-hourglass-half"></i> بانتظار الرد ({{ c.reply_due_date }})
+                        </span>
+                        {% elif c.response_status == 'تم الرد' %}
+                        <span style="background:#dcfce7; color:#166534; padding:3px 9px; border-radius:12px; font-size:0.78rem; font-weight:700; display:inline-flex; align-items:center; gap:4px;">
+                            <i class="fa-solid fa-check"></i> تم الرد
+                        </span>
+                        {% else %}
+                        <span style="background:#f1f5f9; color:#64748b; padding:3px 9px; border-radius:12px; font-size:0.78rem;">
+                            {{ c.response_status or 'لا يتطلب رد' }}
+                        </span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Attachments -->
+                    <td style="padding:14px 16px;">
+                        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                            {% if c.attachment_path %}
+                            <a href="{{ c.attachment_path }}" target="_blank" title="أصل الخطاب" style="width:30px; height:30px; border-radius:6px; background:#eff6ff; color:#2563eb; display:inline-flex; align-items:center; justify-content:center; text-decoration:none;">
+                                <i class="fa-solid fa-file-pdf"></i>
+                            </a>
+                            {% endif %}
+                            {% if c.proof_of_delivery_path %}
+                            <a href="{{ c.proof_of_delivery_path }}" target="_blank" title="إثبات التسليم / كعب الاستلام" style="width:30px; height:30px; border-radius:6px; background:#ecfdf5; color:#059669; display:inline-flex; align-items:center; justify-content:center; text-decoration:none;">
+                                <i class="fa-solid fa-signature"></i>
+                            </a>
+                            {% endif %}
+                            {% if not c.attachment_path and not c.proof_of_delivery_path %}
+                            <span style="color:#cbd5e1; font-size:0.8rem;">-</span>
+                            {% endif %}
+                        </div>
+                    </td>
+
+                    <!-- Actions -->
+                    <td style="padding:14px 16px; text-align:center;">
+                        <div style="display:flex; justify-content:center; gap:6px;">
+                            <button class="action-btn" style="color:#2563eb; background:none; border:none; cursor:pointer; font-size:0.95rem; padding:4px;" title="تعديل" onclick="openEditCorrModal({{ c.id }})">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <button class="action-btn" style="color:#ef4444; background:none; border:none; cursor:pointer; font-size:0.95rem; padding:4px;" title="حذف" onclick="confirmDeleteCorr({{ c.id }})">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
                     </td>
                 </tr>
                 {% else %}
-                <tr><td colspan="10" style="text-align:center;padding:50px;color:var(--text-muted);">
-                    <i class="fa-solid fa-envelope" style="font-size:3rem;opacity:.3;display:block;margin-bottom:10px;"></i>
-                    <p>لا توجد مراسلات مسجلة بعد.</p>
-                </td></tr>
+                <tr>
+                    <td colspan="10" style="text-align:center; padding:60px 20px; color:#64748b;">
+                        <div style="width:65px; height:65px; border-radius:50%; background:#f1f5f9; color:#94a3b8; display:flex; align-items:center; justify-content:center; font-size:1.8rem; margin:0 auto 14px auto;">
+                            <i class="fa-solid fa-envelope-open-text"></i>
+                        </div>
+                        <h3 style="font-size:1.15rem; font-weight:800; color:#334155; margin-bottom:6px;">لا توجد مراسلات مسجلة في النظام</h3>
+                        <p style="font-size:0.88rem; color:#94a3b8; margin:0 0 16px 0;">ابدأ بتوثيق أول خطاب صادر أو وارد مع الترقيم التسلسلي الآلي.</p>
+                        <button class="btn-primary" style="padding:9px 20px; font-weight:700; border-radius:8px;" onclick="openAddCorrModal()">
+                            <i class="fa-solid fa-plus-circle me-1"></i> إضافة مراسلة الآن
+                        </button>
+                    </td>
+                </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
 
-<!-- ===================== ADD MODAL ===================== -->
-<div id="addModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:1000;">
-    <div style="background:white;padding:28px;border-radius:14px;width:660px;max-width:95%;max-height:92vh;overflow-y:auto;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-            <h2 style="margin:0;color:var(--secondary-color);">إضافة مراسلة رسمية</h2>
-            <button onclick="document.getElementById('addModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+<!-- ========================================== -->
+<!-- ADD CORRESPONDENCE MODAL                    -->
+<!-- ========================================== -->
+<div id="addCorrModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15, 23, 42, 0.6); align-items:center; justify-content:center; z-index:1050; padding:15px; backdrop-filter:blur(3px);">
+    <div style="background:white; border-radius:16px; width:760px; max-width:98%; max-height:92vh; overflow-y:auto; box-shadow:0 20px 40px rgba(0,0,0,0.2);">
+        <div style="padding:20px 25px; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div style="width:40px; height:40px; border-radius:10px; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:1.2rem;">
+                    <i class="fa-solid fa-paper-plane"></i>
+                </div>
+                <div>
+                    <h2 style="font-size:1.15rem; font-weight:800; color:#1e293b; margin:0;">تسجيل مراسلة رسمية جديدة</h2>
+                    <span style="font-size:0.8rem; color:#64748b;">توليد رقم القيد التسلسلي الآلي وأرشفة المستندات</span>
+                </div>
+            </div>
+            <button onclick="closeAddCorrModal()" style="background:none; border:none; color:#94a3b8; font-size:1.4rem; cursor:pointer; padding:5px;">&times;</button>
         </div>
-        <form action="/correspondences/add" method="post" onsubmit="return validateForm()">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
-            <!-- اتجاه + رقم خطاب -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+
+        <form action="/correspondences/add" method="post" enctype="multipart/form-data" style="padding:22px 25px;">
+            <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+
+            <!-- Row 1: Direction & Case -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
                 <div>
-                    <label style="display:block;margin-bottom:6px;font-weight:600;">اتجاه المراسلة <span style="color:red">*</span></label>
-                    <select name="direction_key" required style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
-                        <option value="صادر">📤 صادر — نرسله نحن</option>
-                        <option value="وارد">📥 وارد — نستقبله</option>
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">اتجاه المراسلة <span style="color:#ef4444;">*</span></label>
+                    <select name="direction_key" id="add_direction_key" required style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                        <option value="صادر">📤 صادر — نرسله نحن للغير</option>
+                        <option value="وارد">📥 وارد — نستقبله من الغير</option>
                     </select>
                 </div>
                 <div>
-                    <label style="display:block;margin-bottom:6px;font-weight:600;">رقم الخطاب</label>
-                    <input type="text" name="letter_number" dir="ltr" placeholder="مثال: 1234/2026"
-                        style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">القضية المرتبطة <span style="color:#ef4444;">*</span></label>
+                    <select name="case_id" id="add_case_id" required onchange="loadCaseParties(this.value)" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                        <option value="">-- اختر القضية أولاً --</option>
+                        {% for case in cases %}
+                        <option value="{{ case.id }}" {% if selected_case_id == case.id %}selected{% endif %}>{{ case.case_number }} - {{ case.title }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
             </div>
 
-            <!-- القضية -->
-            <div style="margin-bottom:14px;">
-                <label style="display:block;margin-bottom:6px;font-weight:600;">القضية المرتبطة <span style="color:red">*</span></label>
-                <select name="case_id" id="add_case_id" required onchange="loadRecipients(this.value)"
-                    style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
-                    <option value="">-- اختر القضية أولاً --</option>
-                    {% for case in cases %}
-                    <option value="{{ case.id }}">{{ case.case_number }} — {{ case.title }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <!-- المُرسَل إليه (dynamic) -->
-            <div style="margin-bottom:14px;">
-                <label style="display:block;margin-bottom:6px;font-weight:600;">المُرسَل إليه / المُرسِل</label>
-                <select name="entity_name" id="add_recipient" onchange="onRecipientChange()"
-                    style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
-                    <option value="">— اختر القضية أولاً —</option>
-                </select>
-                <!-- بيانات الشخص المختار -->
-                <div id="recipientInfo" style="display:none;margin-top:8px;padding:10px 14px;background:#f8fafc;border-radius:8px;border:1px solid var(--border-color);font-size:.88rem;gap:20px;">
-                    <span id="recipientPhone"><i class="fa-solid fa-phone" style="color:#10b981;"></i> <span id="phoneVal"></span></span>
-                    <span id="recipientEmail" style="margin-right:20px;"><i class="fa-solid fa-envelope" style="color:#3b82f6;"></i> <span id="emailVal"></span></span>
-                </div>
-            </div>
-
-            <!-- طريقة الإرسال (dynamic validation) -->
-            <div style="margin-bottom:14px;">
-                <label style="display:block;margin-bottom:6px;font-weight:600;">طريقة الإرسال</label>
-                <select name="auto_number" id="add_send_method" onchange="onMethodChange()"
-                    style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
-                    <option value="">— اختر طريقة الإرسال —</option>
-                    <option value="عبر النظام">🖥️ عبر النظام</option>
-                    <option value="رقم الثابت">📞 رقم الثابت / الهاتف</option>
-                    <option value="البريد الإلكتروني">📧 البريد الإلكتروني</option>
-                </select>
-                <!-- تحذير -->
-                <div id="methodWarning" style="display:none;margin-top:8px;padding:10px 14px;background:#fef3c7;border-radius:8px;border:1px solid #fde68a;font-size:.85rem;color:#d97706;font-weight:600;">
-                    <i class="fa-solid fa-triangle-exclamation"></i> <span id="methodWarnMsg"></span>
-                </div>
-                <!-- تأكيد -->
-                <div id="methodOk" style="display:none;margin-top:8px;padding:10px 14px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;font-size:.85rem;color:#166534;font-weight:600;">
-                    <i class="fa-solid fa-check-circle"></i> <span id="methodOkMsg"></span>
-                </div>
-            </div>
-
-            <!-- موضوع الخطاب -->
-            <div style="margin-bottom:14px;">
-                <label style="display:block;margin-bottom:6px;font-weight:600;">موضوع الخطاب</label>
-                <input type="text" name="subject" placeholder="أدخل موضوع المراسلة..."
-                    style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
-            </div>
-
-            <!-- تاريخ + يتطلب رد + موعد الرد -->
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:20px;">
+            <!-- Row 2: External Letter Number & Date -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
                 <div>
-                    <label style="display:block;margin-bottom:6px;font-weight:600;">تاريخ الخطاب</label>
-                    <input type="date" name="letter_date" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;">
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">رقم الخطاب الخارجي (إن وجد)</label>
+                    <input type="text" name="letter_number" dir="ltr" placeholder="مثال: 1446/7892/ق" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                    <span style="font-size:0.75rem; color:#64748b;">ملاحظة: سيتم توليد رقم القيد الداخلي (ص-2026-X) آلياً</span>
                 </div>
                 <div>
-                    <label style="display:block;margin-bottom:6px;font-weight:600;">يتطلب رداً؟</label>
-                    <select name="needs_reply" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
-                        <option value="لا">لا</option>
-                        <option value="نعم">نعم</option>
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">تاريخ الخطاب</label>
+                    <input type="date" name="letter_date" value="{{ today_str }}" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                </div>
+            </div>
+
+            <!-- Row 3: Entity Name & Recipient Person -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+                <div>
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">اسم الجهة / المحكمة / الشركة</label>
+                    <input type="text" name="entity_name" id="add_entity_name" placeholder="مثال: المحكمة التجارية بالرياض، بنك الراجحي..." style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                    <div id="partiesQuickPick" style="display:none; margin-top:6px; font-size:0.8rem; color:#64748b;">
+                        <span>أطراف القضية: </span><span id="partiesBadges"></span>
+                    </div>
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">اسم الشخص المستلم / المُرسل (اختياري)</label>
+                    <input type="text" name="recipient_name" id="add_recipient_name" placeholder="عناية الأستاذ / ..." style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                </div>
+            </div>
+
+            <!-- Row 4: Subject -->
+            <div style="margin-bottom:16px;">
+                <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">موضوع الخطاب / المراسلة <span style="color:#ef4444;">*</span></label>
+                <input type="text" name="subject" required placeholder="مثال: إشعار بفسخ العقد والمطالبة بالتعويض المالي" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+            </div>
+
+            <!-- Row 5: Delivery Method & Tracking Number -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+                <div>
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">طريقة الإرسال / التسليم</label>
+                    <select name="delivery_method" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                        <option value="تسليم يدوي بكعب استلام">✋ تسليم يدوي (مع توقيع كعب استلام)</option>
+                        <option value="البريد السعودي SPL">📮 البريد السعودي الممتاز (SPL)</option>
+                        <option value="البريد الإلكتروني">📧 البريد الإلكتروني الرسمي</option>
+                        <option value="منصة ناجز">🏛️ منصة ناجز القضائية</option>
+                        <option value="منصة بلدي / اعتماد">🏢 منصة حكومية أخرى</option>
+                        <option value="عبر النظام">🖥️ قيد إلكتروني داخلي</option>
                     </select>
                 </div>
                 <div>
-                    <label style="display:block;margin-bottom:6px;font-weight:600;">موعد الرد</label>
-                    <input type="date" name="reply_due_date" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;">
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">رقم البوليصة / التتبع (SPL / Tracking)</label>
+                    <input type="text" name="tracking_number" dir="ltr" placeholder="مثال: SPL-992019283" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
                 </div>
             </div>
 
-            <div style="display:flex;gap:10px;justify-content:flex-end;">
-                <button type="button" onclick="document.getElementById('addModal').style.display='none'"
-                    style="padding:11px 20px;background:#e2e8f0;color:#475569;border:none;border-radius:8px;cursor:pointer;font-family:'Cairo',sans-serif;font-weight:600;">إلغاء</button>
-                <button type="submit" class="btn-primary" style="padding:11px 20px;">حفظ المراسلة</button>
+            <!-- Row 6: Urgency & Confidentiality -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+                <div>
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">درجة الأسبقية والاستعجال</label>
+                    <select name="urgency_level" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                        <option value="عادي">⚪ عادي</option>
+                        <option value="عاجل">🟠 عاجل</option>
+                        <option value="فوري">🔴 فوري جداً</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">درجة السرية</label>
+                    <select name="confidentiality_level" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                        <option value="عادي">عادي</option>
+                        <option value="سري">🔒 سري</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Reply Requirements & SLA Task -->
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px; margin-bottom:16px;">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; align-items:center;">
+                    <div>
+                        <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">هل يتطلب رداً؟</label>
+                        <select name="needs_reply" id="add_needs_reply" onchange="toggleReplyDueDate(this.value, 'addReplyContainer')" style="width:100%; padding:9px; border:1px solid #cbd5e1; border-radius:6px; font-family:'Cairo',sans-serif; font-size:0.85rem;">
+                            <option value="لا">لا يتطلب رداً</option>
+                            <option value="نعم">نعم، يتطلب رداً</option>
+                        </select>
+                    </div>
+                    <div id="addReplyContainer" style="display:none;">
+                        <label style="display:block; font-size:0.85rem; font-weight:700; color:#b45309; margin-bottom:6px;">موعد استحقاق الرد (SLA)</label>
+                        <input type="date" name="reply_due_date" style="width:100%; padding:9px; border:1px solid #cbd5e1; border-radius:6px; font-family:'Cairo',sans-serif; font-size:0.85rem;">
+                        <span style="font-size:0.75rem; color:#b45309; display:block; margin-top:4px;">⚡ سيتم إنشاء مهمة متابعة تلقائية في النظام</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attachments Row -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;">
+                <div>
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">أصل الخطاب (PDF أو صورة)</label>
+                    <input type="file" name="attachment" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.85rem;">
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">إثبات التسليم / كعب الاستلام (اختياري)</label>
+                    <input type="file" name="proof_of_delivery" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.85rem;">
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid #e2e8f0; padding-top:16px;">
+                <button type="button" onclick="closeAddCorrModal()" style="padding:10px 20px; background:#f1f5f9; color:#475569; border:none; border-radius:8px; font-weight:700; cursor:pointer;">إلغاء</button>
+                <button type="submit" class="btn-primary" style="padding:10px 24px; font-weight:700; border-radius:8px;">حفظ وتوليد رقم القيد</button>
             </div>
         </form>
     </div>
 </div>
 
-<!-- ===================== EDIT MODAL ===================== -->
-<div id="editModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:1000;">
-    <div style="background:white;padding:28px;border-radius:14px;width:560px;max-width:95%;max-height:90vh;overflow-y:auto;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-            <h2 style="margin:0;color:var(--secondary-color);">تعديل المراسلة</h2>
-            <button onclick="document.getElementById('editModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
-        </div>
-        <form action="/correspondences/edit" method="post">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
-            <input type="hidden" name="corr_id" id="ec_id">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+<!-- ========================================== -->
+<!-- EDIT CORRESPONDENCE MODAL                   -->
+<!-- ========================================== -->
+<div id="editCorrModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15, 23, 42, 0.6); align-items:center; justify-content:center; z-index:1050; padding:15px; backdrop-filter:blur(3px);">
+    <div style="background:white; border-radius:16px; width:760px; max-width:98%; max-height:92vh; overflow-y:auto; box-shadow:0 20px 40px rgba(0,0,0,0.2);">
+        <div style="padding:20px 25px; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div style="width:40px; height:40px; border-radius:10px; background:#ecfdf5; color:#059669; display:flex; align-items:center; justify-content:center; font-size:1.2rem;">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                </div>
                 <div>
-                    <label style="display:block;margin-bottom:6px;font-weight:600;">الاتجاه</label>
-                    <select name="direction_key" id="ec_dir" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
-                        <option value="صادر">صادر</option>
-                        <option value="وارد">وارد</option>
+                    <h2 style="font-size:1.15rem; font-weight:800; color:#1e293b; margin:0;">تعديل المراسلة الرسمية</h2>
+                    <span style="font-size:0.8rem; color:#64748b;" id="editModalSub">تحديث البيانات وحالة الرد والمرفقات</span>
+                </div>
+            </div>
+            <button onclick="closeEditCorrModal()" style="background:none; border:none; color:#94a3b8; font-size:1.4rem; cursor:pointer; padding:5px;">&times;</button>
+        </div>
+
+        <form action="/correspondences/edit" method="post" enctype="multipart/form-data" style="padding:22px 25px;">
+            <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+            <input type="hidden" name="corr_id" id="edit_corr_id">
+
+            <!-- Row 1: Direction & Status -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+                <div>
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">الاتجاه</label>
+                    <select name="direction_key" id="edit_direction" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                        <option value="صادر">📤 صادر</option>
+                        <option value="وارد">📥 وارد</option>
                     </select>
                 </div>
                 <div>
-                    <label style="display:block;margin-bottom:6px;font-weight:600;">رقم الخطاب</label>
-                    <input type="text" name="letter_number" id="ec_num" dir="ltr" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">حالة الرد الحالية</label>
+                    <select name="response_status" id="edit_status" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                        <option value="بانتظار الرد">⏳ بانتظار الرد</option>
+                        <option value="تم الرد">✔ تم الرد</option>
+                        <option value="لا يتطلب رد">⚪ لا يتطلب رد</option>
+                    </select>
                 </div>
             </div>
-            <div style="margin-bottom:14px;">
-                <label style="display:block;margin-bottom:6px;font-weight:600;">الموضوع</label>
-                <input type="text" name="subject" id="ec_subj" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;">
+
+            <!-- Row 2: Letter Number & Date -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
                 <div>
-                    <label style="display:block;margin-bottom:6px;font-weight:600;">تاريخ الخطاب</label>
-                    <input type="date" name="letter_date" id="ec_date" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;">
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">رقم الخطاب الخارجي</label>
+                    <input type="text" name="letter_number" id="edit_letter_num" dir="ltr" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
                 </div>
                 <div>
-                    <label style="display:block;margin-bottom:6px;font-weight:600;">يتطلب رداً؟</label>
-                    <select name="needs_reply" id="ec_needs" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">تاريخ الخطاب</label>
+                    <input type="date" name="letter_date" id="edit_letter_date" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                </div>
+            </div>
+
+            <!-- Row 3: Entity Name & Recipient -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+                <div>
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">الجهة</label>
+                    <input type="text" name="entity_name" id="edit_entity_name" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">المستلم / المُرسل</label>
+                    <input type="text" name="recipient_name" id="edit_recipient_name" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                </div>
+            </div>
+
+            <!-- Row 4: Subject -->
+            <div style="margin-bottom:16px;">
+                <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">الموضوع</label>
+                <input type="text" name="subject" id="edit_subject" required style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+            </div>
+
+            <!-- Row 5: Method & Tracking -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+                <div>
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">طريقة الإرسال</label>
+                    <select name="delivery_method" id="edit_delivery" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                        <option value="تسليم يدوي بكعب استلام">✋ تسليم يدوي (مع توقيع كعب استلام)</option>
+                        <option value="البريد السعودي SPL">📮 البريد السعودي الممتاز (SPL)</option>
+                        <option value="البريد الإلكتروني">📧 البريد الإلكتروني الرسمي</option>
+                        <option value="منصة ناجز">🏛️ منصة ناجز القضائية</option>
+                        <option value="منصة بلدي / اعتماد">🏢 منصة حكومية أخرى</option>
+                        <option value="عبر النظام">🖥️ قيد إلكتروني داخلي</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">رقم البوليصة / التتبع</label>
+                    <input type="text" name="tracking_number" id="edit_tracking" dir="ltr" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                </div>
+            </div>
+
+            <!-- Row 6: Reply Due Date -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+                <div>
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">هل يتطلب رداً؟</label>
+                    <select name="needs_reply" id="edit_needs_reply" onchange="toggleReplyDueDate(this.value, 'editReplyContainer')" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
                         <option value="لا">لا</option>
                         <option value="نعم">نعم</option>
                     </select>
                 </div>
-                <div>
-                    <label style="display:block;margin-bottom:6px;font-weight:600;">موعد الرد</label>
-                    <input type="date" name="reply_due_date" id="ec_reply_date" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;">
+                <div id="editReplyContainer">
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">موعد الرد المحدد</label>
+                    <input type="date" name="reply_due_date" id="edit_reply_due" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
                 </div>
             </div>
-            <div style="margin-bottom:20px;">
-                <label style="display:block;margin-bottom:6px;font-weight:600;">حالة الرد</label>
-                <select name="response_status" id="ec_status" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
-                    <option value="بانتظار الرد">بانتظار الرد</option>
-                    <option value="تم الرد">تم الرد</option>
-                    <option value="لا يتطلب رد">لا يتطلب رد</option>
-                </select>
+
+            <!-- Row 7: Attachments -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;">
+                <div>
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">تحديث أصل الخطاب</label>
+                    <input type="file" name="attachment" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.85rem;">
+                    <div id="edit_att_info" style="margin-top:4px; font-size:0.78rem; color:#64748b;"></div>
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px;">تحديث كعب الاستلام / إثبات التسليم</label>
+                    <input type="file" name="proof_of_delivery" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.85rem;">
+                    <div id="edit_proof_info" style="margin-top:4px; font-size:0.78rem; color:#64748b;"></div>
+                </div>
             </div>
-            <div style="display:flex;gap:10px;justify-content:flex-end;">
-                <button type="button" onclick="document.getElementById('editModal').style.display='none'" style="padding:11px 20px;background:#e2e8f0;color:#475569;border:none;border-radius:8px;cursor:pointer;font-family:'Cairo',sans-serif;font-weight:600;">إلغاء</button>
-                <button type="submit" class="btn-primary" style="padding:11px 20px;">حفظ التعديلات</button>
+
+            <!-- Modal Footer -->
+            <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid #e2e8f0; padding-top:16px;">
+                <button type="button" onclick="closeEditCorrModal()" style="padding:10px 20px; background:#f1f5f9; color:#475569; border:none; border-radius:8px; font-weight:700; cursor:pointer;">إلغاء</button>
+                <button type="submit" class="btn-primary" style="padding:10px 24px; font-weight:700; border-radius:8px;">حفظ التعديلات</button>
             </div>
         </form>
     </div>
 </div>
+
+<!-- Hidden Delete Form -->
+<form id="deleteCorrForm" action="/correspondences/delete" method="post" style="display:none;">
+    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+    <input type="hidden" name="corr_id" id="delete_corr_id">
+</form>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
-let recipientsData = [];
+function openAddCorrModal() {
+    document.getElementById('addCorrModal').style.display = 'flex';
+}
 
-async function loadRecipients(caseId) {
-    const sel = document.getElementById('add_recipient');
-    sel.innerHTML = '<option value="">جاري التحميل...</option>';
-    recipientsData = [];
-    resetFeedback();
-    document.getElementById('recipientInfo').style.display = 'none';
+function closeAddCorrModal() {
+    document.getElementById('addCorrModal').style.display = 'none';
+}
 
+function toggleReplyDueDate(val, containerId) {
+    const el = document.getElementById(containerId);
+    if (el) {
+        el.style.display = (val === 'نعم') ? 'block' : 'none';
+    }
+}
+
+// Load case parties dynamically to allow quick click
+async function loadCaseParties(caseId) {
+    const quickPick = document.getElementById('partiesQuickPick');
+    const badges = document.getElementById('partiesBadges');
     if (!caseId) {
-        sel.innerHTML = '<option value="">— اختر القضية أولاً —</option>';
+        quickPick.style.display = 'none';
+        badges.innerHTML = '';
         return;
     }
+
     try {
-        const resp = await fetch(`/api/case/${caseId}/recipients`);
-        const data = await resp.json();
-        recipientsData = data.recipients || [];
-        if (recipientsData.length === 0) {
-            sel.innerHTML = '<option value="">لا يوجد أطراف مرتبطون بهذه القضية</option>';
-        } else {
-            sel.innerHTML = '<option value="">— اختر الطرف —</option>';
-            recipientsData.forEach(r => {
-                const opt = document.createElement('option');
-                opt.value = r.name;
-                opt.dataset.phone    = r.phone;
-                opt.dataset.email    = r.email;
-                opt.dataset.hasPhone = r.has_phone;
-                opt.dataset.hasEmail = r.has_email;
-                opt.textContent = `${r.name}  (${r.type})`;
-                sel.appendChild(opt);
+        const res = await fetch('/correspondences/api/case-parties/' + caseId);
+        const data = await res.json();
+        if (data.parties && data.parties.length > 0) {
+            let html = '';
+            data.parties.forEach(p => {
+                html += `<span style="display:inline-block; margin-left:6px; cursor:pointer; background:#eff6ff; color:#2563eb; padding:2px 7px; border-radius:12px; font-weight:700;" onclick="selectParty('${p.name}')">${p.name} (${p.type})</span>`;
             });
+            badges.innerHTML = html;
+            quickPick.style.display = 'block';
+        } else {
+            quickPick.style.display = 'none';
         }
-    } catch(e) {
-        sel.innerHTML = '<option value="">خطأ في التحميل</option>';
+    } catch (e) {
+        quickPick.style.display = 'none';
     }
 }
 
-function onRecipientChange() {
-    const sel  = document.getElementById('add_recipient');
-    const opt  = sel.options[sel.selectedIndex];
-    const info = document.getElementById('recipientInfo');
-    resetFeedback();
-
-    if (!opt || !opt.value) { info.style.display = 'none'; return; }
-
-    const phone = opt.dataset.phone;
-    const email = opt.dataset.email;
-
-    document.getElementById('phoneVal').textContent = phone || 'غير متوفر';
-    document.getElementById('emailVal').textContent = email || 'غير متوفر';
-    document.getElementById('recipientPhone').style.color = phone ? '' : '#ef4444';
-    document.getElementById('recipientEmail').style.color = email ? '' : '#ef4444';
-    info.style.display = 'flex';
-
-    onMethodChange(); // re-validate if method was already chosen
+function selectParty(name) {
+    document.getElementById('add_entity_name').value = name;
 }
 
-function onMethodChange() {
-    const method = document.getElementById('add_send_method').value;
-    const sel    = document.getElementById('add_recipient');
-    const opt    = sel.options[sel.selectedIndex];
-    resetFeedback();
+// Open Edit Modal
+function openEditCorrModal(corrId) {
+    const row = document.getElementById('corr-row-' + corrId);
+    if (!row) return;
 
-    if (!method || !opt || !opt.value) return;
+    document.getElementById('edit_corr_id').value = corrId;
+    document.getElementById('edit_direction').value = row.dataset.direction || 'صادر';
+    document.getElementById('edit_status').value = row.dataset.status || 'لا يتطلب رد';
+    document.getElementById('edit_letter_num').value = row.dataset.letterNum || '';
+    document.getElementById('edit_letter_date').value = row.dataset.letterDate || '';
+    document.getElementById('edit_entity_name').value = row.dataset.entity || '';
+    document.getElementById('edit_recipient_name').value = row.dataset.recipient || '';
+    document.getElementById('edit_subject').value = row.dataset.subject || '';
+    document.getElementById('edit_delivery').value = row.dataset.delivery || 'عبر النظام';
+    document.getElementById('edit_tracking').value = row.dataset.tracking || '';
+    document.getElementById('edit_needs_reply').value = row.dataset.needsReply || 'لا';
+    document.getElementById('edit_reply_due').value = row.dataset.replyDue || '';
+    toggleReplyDueDate(row.dataset.needsReply || 'لا', 'editReplyContainer');
 
-    const hasPhone = opt.dataset.hasPhone === 'true';
-    const hasEmail = opt.dataset.hasEmail === 'true';
+    const attDiv = document.getElementById('edit_att_info');
+    if (row.dataset.attachment) {
+        attDiv.innerHTML = 'يوجد أصل حالي: <a href="' + row.dataset.attachment + '" target="_blank">معاينة الملف</a>';
+    } else {
+        attDiv.innerHTML = 'لا يوجد أصل مرفق';
+    }
 
-    if (method === 'رقم الثابت') {
-        if (!hasPhone) showWarn(`${opt.value} ليس لديه رقم هاتف مسجل في النظام!`);
-        else           showOk(`سيتم الإرسال على الرقم: ${opt.dataset.phone}`);
-    } else if (method === 'البريد الإلكتروني') {
-        if (!hasEmail) showWarn(`${opt.value} ليس لديه بريد إلكتروني مسجل في النظام!`);
-        else           showOk(`سيتم الإرسال على: ${opt.dataset.email}`);
-    } else if (method === 'عبر النظام') {
-        showOk('سيتم الإرسال عبر النظام الداخلي.');
+    const proofDiv = document.getElementById('edit_proof_info');
+    if (row.dataset.proof) {
+        proofDiv.innerHTML = 'يوجد إثبات استلام: <a href="' + row.dataset.proof + '" target="_blank">معاينة الملف</a>';
+    } else {
+        proofDiv.innerHTML = 'لا يوجد إثبات استلام';
+    }
+
+    document.getElementById('editCorrModal').style.display = 'flex';
+}
+
+function closeEditCorrModal() {
+    document.getElementById('editCorrModal').style.display = 'none';
+}
+
+function confirmDeleteCorr(corrId) {
+    if (confirm('هل أنت متأكد من حذف هذه المراسلة الرسمية؟ لن تظهر في السجل.')) {
+        document.getElementById('delete_corr_id').value = corrId;
+        document.getElementById('deleteCorrForm').submit();
     }
 }
 
-function showWarn(msg) {
-    document.getElementById('methodWarnMsg').textContent = msg;
-    document.getElementById('methodWarning').style.display = 'block';
-    document.getElementById('methodOk').style.display = 'none';
-}
-function showOk(msg) {
-    document.getElementById('methodOkMsg').textContent = msg;
-    document.getElementById('methodOk').style.display = 'block';
-    document.getElementById('methodWarning').style.display = 'none';
-}
-function resetFeedback() {
-    document.getElementById('methodWarning').style.display = 'none';
-    document.getElementById('methodOk').style.display     = 'none';
+// Filtering table
+function filterCorrespondencesTable() {
+    const q = document.getElementById('corrSearchInput').value.toLowerCase().trim();
+    const dir = document.getElementById('directionFilterSelect').value;
+    const st = document.getElementById('statusFilterSelect').value;
+    const cid = document.getElementById('caseFilterSelect').value;
+    const urg = document.getElementById('urgencyFilterSelect').value;
+
+    const rows = document.querySelectorAll('.corr-row');
+    rows.forEach(r => {
+        let match = true;
+
+        if (q) {
+            const rowText = (
+                (r.dataset.registry || '') + ' ' +
+                (r.dataset.letterNum || '') + ' ' +
+                (r.dataset.subject || '') + ' ' +
+                (r.dataset.entity || '') + ' ' +
+                (r.dataset.recipient || '') + ' ' +
+                (r.dataset.caseNum || '') + ' ' +
+                (r.dataset.caseTitle || '')
+            ).toLowerCase();
+            if (!rowText.includes(q)) match = false;
+        }
+
+        if (match && dir) {
+            if (r.dataset.direction !== dir) match = false;
+        }
+
+        if (match && st) {
+            if (st === 'overdue') {
+                if (r.dataset.isOverdue !== '1') match = false;
+            } else {
+                if (r.dataset.status !== st) match = false;
+            }
+        }
+
+        if (match && cid) {
+            if (r.dataset.caseId !== cid) match = false;
+        }
+
+        if (match && urg) {
+            if (r.dataset.urgency !== urg) match = false;
+        }
+
+        r.style.display = match ? '' : 'none';
+    });
 }
 
-function validateForm() {
-    const method = document.getElementById('add_send_method').value;
-    const sel    = document.getElementById('add_recipient');
-    const opt    = sel.options[sel.selectedIndex];
-    if (!method || !opt || !opt.value) return true;
-    if (method === 'رقم الثابت' && opt.dataset.hasPhone !== 'true') {
-        return confirm(`⚠️ ${opt.value} ليس لديه رقم هاتف!\nهل تريد الحفظ على أي حال؟`);
+// Export CSV
+function exportCorrespondencesTable() {
+    const rows = document.querySelectorAll('.corr-row');
+    if (rows.length === 0) {
+        alert('لا توجد مراسلات لتصديرها.');
+        return;
     }
-    if (method === 'البريد الإلكتروني' && opt.dataset.hasEmail !== 'true') {
-        return confirm(`⚠️ ${opt.value} ليس لديه بريد إلكتروني!\nهل تريد الحفظ على أي حال؟`);
-    }
-    return true;
+
+    let csvContent = "\uFEFF";
+    csvContent += "المعرف,الاتجاه,رقم القيد,رقم الخطاب,التاريخ,الموضوع,الجهة,القضية,وسيلة التسليم,حالة الرد,موعد الرد\n";
+
+    rows.forEach(r => {
+        const row = [
+            r.dataset.id || '',
+            '"' + (r.dataset.direction || '') + '"',
+            '"' + (r.dataset.registry || '') + '"',
+            '"' + (r.dataset.letterNum || '') + '"',
+            '"' + (r.dataset.letterDate || '') + '"',
+            '"' + (r.dataset.subject || '').replace(/"/g, '""') + '"',
+            '"' + (r.dataset.entity || '').replace(/"/g, '""') + '"',
+            '"' + (r.dataset.caseNum || '') + '"',
+            '"' + (r.dataset.delivery || '') + '"',
+            '"' + (r.dataset.status || '') + '"',
+            '"' + (r.dataset.replyDue || '') + '"'
+        ];
+        csvContent += row.join(",") + "\n";
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `correspondences_registry_${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }
 
-function openEdit(id, dir, num, subj, needs, replyDate, status, letterDate) {
-    document.getElementById('ec_id').value          = id;
-    document.getElementById('ec_dir').value         = dir;
-    document.getElementById('ec_num').value         = num;
-    document.getElementById('ec_subj').value        = subj;
-    document.getElementById('ec_needs').value       = needs;
-    document.getElementById('ec_reply_date').value  = replyDate;
-    document.getElementById('ec_status').value      = status;
-    document.getElementById('ec_date').value        = letterDate;
-    document.getElementById('editModal').style.display = 'flex';
-}
+// Close modals on Escape key
+window.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeAddCorrModal();
+        closeEditCorrModal();
+    }
+});
 </script>
 {% endblock %}

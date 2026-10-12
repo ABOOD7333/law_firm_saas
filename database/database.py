@@ -378,6 +378,28 @@ def init_db():
         except Exception:
             pass
 
+    # Migrations for LawCorrespondences (Inbound & Outbound Registry)
+    corr_cols = [
+        ("registry_number", "TEXT"),
+        ("entity_name", "TEXT"),
+        ("recipient_name", "TEXT"),
+        ("delivery_method", "TEXT"),
+        ("tracking_number", "TEXT"),
+        ("urgency_level", "TEXT DEFAULT 'عادي'"),
+        ("confidentiality_level", "TEXT DEFAULT 'عادي'"),
+        ("in_reply_to_id", "INTEGER"),
+        ("attachment_path", "TEXT"),
+        ("proof_of_delivery_path", "TEXT"),
+        ("created_by_user_id", "INTEGER")
+    ]
+    for col_name, col_type in corr_cols:
+        try:
+            from sqlalchemy import text
+            with engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE law_correspondences ADD COLUMN {col_name} {col_type};"))
+        except Exception:
+            pass
+
     # Never log DATABASE_URL: it may contain a username and password.
     print(f"[Database] Connected using dialect: {engine.dialect.name}")
     print(f"[Database] Tables initialized successfully.")
