@@ -1,270 +1,819 @@
 {% extends "base.html" %}
 
-{% block title %}المهام | LawSaaS{% endblock %}
+{% block title %}إدارة المهام والمتابعة | LawSaaS{% endblock %}
 
 {% block content %}
-<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-    <div>
-        <h1>إدارة المهام والتكاليف</h1>
-        <p>توزيع المهام على فريق العمل ومتابعة نسبة الإنجاز في القضايا.</p>
+<div class="tasks-container" dir="rtl" style="margin-bottom: 40px;">
+    <!-- Page Header -->
+    <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px;">
+        <div>
+            <h1 style="margin: 0; font-size: 1.8rem; font-weight: 800; color: var(--secondary-color);">
+                <i class="fa-solid fa-list-check" style="color: var(--primary-color); margin-left: 10px;"></i>
+                إدارة المهام والمتابعة والتكاليف
+            </h1>
+            <p style="margin: 5px 0 0; color: var(--text-muted); font-size: 0.95rem;">
+                توزيع ومتابعة التكاليف الإجرائية، مؤشرات الإنجاز، وربط الساعات المنجزة بسجل الأتعاب.
+            </p>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <!-- View Switcher -->
+            <div style="background: #f1f5f9; padding: 4px; border-radius: 10px; display: inline-flex; gap: 4px;">
+                <button type="button" id="tableViewBtn" onclick="switchView('table')" style="border: none; background: white; color: #0f172a; padding: 6px 14px; border-radius: 8px; font-weight: 700; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <i class="fa-solid fa-table-list"></i> جدول
+                </button>
+                <button type="button" id="kanbanViewBtn" onclick="switchView('kanban')" style="border: none; background: transparent; color: #64748b; padding: 6px 14px; border-radius: 8px; font-weight: 700; cursor: pointer;">
+                    <i class="fa-solid fa-columns"></i> كانبان
+                </button>
+            </div>
+            <button class="btn-primary" onclick="openAddTaskModal()">
+                <i class="fa-solid fa-plus"></i> مهمة جديدة
+            </button>
+        </div>
     </div>
-    <div style="display: flex; gap: 10px;">
-        <button class="btn-primary" onclick="document.getElementById('addTaskModal').style.display='flex'">
-            <i class="fa-solid fa-list-check"></i> إضافة مهمة جديدة
-        </button>
-    </div>
-</div>
 
-<div class="card" style="margin-top: 20px;">
-    <div style="overflow-x: auto;">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>عنوان المهمة</th>
-                    <th>القضية المرتبطة</th>
-                    <th>الموكل إليه (Assignee)</th>
-                    <th>تاريخ الاستحقاق</th>
-                    <th>الأولوية</th>
-                    <th>حالة المهمة</th>
-                    <th>إجراءات</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for task in tasks %}
-                <tr>
-                    <td><strong>{{ task.title }}</strong></td>
-                    <td>
-                        {% if task.law_case %}
-                        <a href="/cases/{{ task.case_id }}" style="color: var(--primary-color); text-decoration: none;">
-                            {{ task.law_case.title }}
-                        </a>
-                        {% else %}
-                        -
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% set assignee = none %}
-                        {% for u in users %}
-                            {% if u.id == task.assignee_user_id %}
-                                {% set assignee = u %}
-                            {% endif %}
-                        {% endfor %}
-                        
-                        {% if assignee %}
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <div style="width: 25px; height: 25px; border-radius: 50%; background: var(--secondary-color); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.7rem;">
-                                {{ assignee.name[0] }}
-                            </div>
-                            <span>{{ assignee.name }}</span>
-                        </div>
-                        {% else %}
-                        غير محدد
-                        {% endif %}
-                    </td>
-                    <td dir="ltr" style="text-align: right;">{{ task.due_at or '-' }}</td>
-                    <td>
-                        {% if task.priority_level == 1 %}
-                        <span style="color: #ef4444; font-weight: bold;"><i class="fa-solid fa-arrow-up"></i> عالية</span>
-                        {% elif task.priority_level == 2 %}
-                        <span style="color: #eab308; font-weight: bold;"><i class="fa-solid fa-minus"></i> متوسطة</span>
-                        {% else %}
-                        <span style="color: #10b981; font-weight: bold;"><i class="fa-solid fa-arrow-down"></i> منخفضة</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if task.status_key == 'pending' %}
-                        <span style="background: #e2e8f0; color: #475569; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">قيد الانتظار</span>
-                        {% elif task.status_key == 'in_progress' %}
-                        <span style="background: #dbeafe; color: #1d4ed8; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">قيد التنفيذ</span>
-                        {% elif task.status_key == 'completed' %}
-                        <span style="background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">مكتملة</span>
-                        {% else %}
-                        <span style="background: #e2e8f0; color: #475569; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">{{ task.status_key }}</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <button class="action-btn" style="color: var(--primary-color);" title="تعديل" onclick="openEditTaskModal({{ task.id|tojson|forceescape }}, {{ task.title|tojson|forceescape }}, {{ (task.description or '')|tojson|forceescape }}, {{ (task.due_at or '')|tojson|forceescape }}, {{ (task.assignee_user_id or '')|tojson|forceescape }}, {{ task.priority_level|tojson|forceescape }}, {{ task.status_key|tojson|forceescape }}, {{ (task.case_id or '')|tojson|forceescape }})"><i class="fa-solid fa-pen"></i></button>
-                        
-                        <!-- Quick status update buttons -->
-                        {% if task.status_key != 'completed' %}
-                        <form action="/tasks/update_status" method="post" style="display: inline;">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
-                            <input type="hidden" name="task_id" value="{{ task.id }}">
-                            <input type="hidden" name="status_key" value="completed">
-                            <button type="submit" class="action-btn" style="color: #10b981;" title="تحديد كمكتملة"><i class="fa-solid fa-check"></i></button>
-                        </form>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-muted);">
-                        <i class="fa-solid fa-list-check" style="font-size: 3rem; margin-bottom: 10px; opacity: 0.5;"></i>
-                        <p>لا توجد مهام مسجلة حتى الآن.</p>
-                    </td>
-                </tr>
+    <!-- Live KPI Ribbon -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
+        <div class="card" style="padding: 18px; border-radius: 12px; border-right: 4px solid #3b82f6; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">إجمالي المهام</span>
+                <h3 style="margin: 5px 0 0; font-size: 1.6rem; color: #1e293b;">{{ kpis.total }}</h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #eff6ff; color: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fa-solid fa-list-check"></i>
+            </div>
+        </div>
+
+        <div class="card" style="padding: 18px; border-radius: 12px; border-right: 4px solid #ef4444; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">مهام متأخرة ⚠️</span>
+                <h3 style="margin: 5px 0 0; font-size: 1.6rem; color: #dc2626;">{{ kpis.overdue }}</h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #fef2f2; color: #ef4444; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+        </div>
+
+        <div class="card" style="padding: 18px; border-radius: 12px; border-right: 4px solid #f59e0b; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">استحقاق اليوم</span>
+                <h3 style="margin: 5px 0 0; font-size: 1.6rem; color: #d97706;">{{ kpis.today }}</h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #fffbeb; color: #f59e0b; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fa-solid fa-calendar-day"></i>
+            </div>
+        </div>
+
+        <div class="card" style="padding: 18px; border-radius: 12px; border-right: 4px solid #10b981; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">المنجزة (نسبة الإنجاز)</span>
+                <h3 style="margin: 5px 0 0; font-size: 1.6rem; color: #059669;">{{ kpis.completed }} <small style="font-size: 0.9rem; color: #64748b;">({{ kpis.rate }}%)</small></h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #ecfdf5; color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Bar & Search -->
+    <div class="card" style="padding: 15px 20px; border-radius: 12px; margin-bottom: 25px;">
+        <form method="GET" action="/tasks" id="filterForm" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+            <!-- Quick Filter Pills -->
+            <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto;">
+                <a href="/tasks" class="filter-pill {% if filter_type == 'all' %}active{% endif %}">الكل ({{ kpis.total }})</a>
+                <a href="/tasks?filter_type=my" class="filter-pill {% if filter_type == 'my' %}active{% endif %}">مهامي</a>
+                <a href="/tasks?filter_type=overdue" class="filter-pill {% if filter_type == 'overdue' %}active{% endif %}" style="{% if filter_type == 'overdue' %}background:#fee2e2; color:#b91c1c; border-color:#f87171;{% endif %}">المتأخرة ({{ kpis.overdue }})</a>
+                <a href="/tasks?filter_type=today" class="filter-pill {% if filter_type == 'today' %}active{% endif %}" style="{% if filter_type == 'today' %}background:#fef3c7; color:#b45309; border-color:#fcd34d;{% endif %}">استحقاق اليوم ({{ kpis.today }})</a>
+                <a href="/tasks?filter_type=urgent" class="filter-pill {% if filter_type == 'urgent' %}active{% endif %}">عاجلة جداً 🔴</a>
+                <a href="/tasks?filter_type=completed" class="filter-pill {% if filter_type == 'completed' %}active{% endif %}">مكتملة ✅</a>
+            </div>
+
+            <!-- Search Field -->
+            <div style="position: relative; min-width: 200px; flex: 1;">
+                <i class="fa-solid fa-magnifying-glass" style="position: absolute; right: 12px; top: 12px; color: #94a3b8;"></i>
+                <input type="text" name="q" value="{{ q }}" placeholder="بحث بعنوان المهمة..." style="width: 100%; padding: 9px 36px 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit; font-size: 0.9rem;">
+            </div>
+
+            <!-- Case Filter -->
+            <select name="case_id" onchange="this.form.submit()" style="padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit; font-size: 0.9rem; max-width: 200px;">
+                <option value="">-- كل القضايا --</option>
+                {% for c in cases %}
+                <option value="{{ c.id }}" {% if request.query_params.get('case_id')|int == c.id %}selected{% endif %}>{{ c.case_number }} - {{ c.title[:20] }}</option>
                 {% endfor %}
-            </tbody>
-        </table>
+            </select>
+
+            <!-- Assignee Filter -->
+            {% if user.role in ['مدير', 'مدير المكتب', 'صاحب المكتب', 'صاحب مكتب', 'مدير النظام'] %}
+            <select name="assignee_id" onchange="this.form.submit()" style="padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit; font-size: 0.9rem; max-width: 180px;">
+                <option value="">-- كل المحامين --</option>
+                {% for u in users %}
+                <option value="{{ u.id }}" {% if request.query_params.get('assignee_id')|int == u.id %}selected{% endif %}>{{ u.name }}</option>
+                {% endfor %}
+            </select>
+            {% endif %}
+
+            <button type="submit" class="btn-primary" style="padding: 9px 16px; border-radius: 8px;">
+                <i class="fa-solid fa-filter"></i> تصفية
+            </button>
+            {% if q or request.query_params.get('case_id') or request.query_params.get('assignee_id') or filter_type != 'all' %}
+            <a href="/tasks" style="color: #64748b; font-size: 0.85rem; text-decoration: none; padding: 6px 10px;">إلغاء الفرز</a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- VIEW 1: DATA TABLE VIEW -->
+    <div id="tableViewContainer" class="card" style="padding: 0; overflow: hidden; border-radius: 12px;">
+        <div style="overflow-x: auto;">
+            <table class="data-table" style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; text-align: right;">
+                        <th style="padding: 14px 16px;">المهمة والنوع</th>
+                        <th style="padding: 14px 16px;">القضية المرتبطة</th>
+                        <th style="padding: 14px 16px;">المكلف بالإنجاز</th>
+                        <th style="padding: 14px 16px;">المهلة والاستحقاق</th>
+                        <th style="padding: 14px 16px;">الأولوية</th>
+                        <th style="padding: 14px 16px;">الحالة</th>
+                        <th style="padding: 14px 16px; text-align: center;">إجراءات سريعة</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for task in tasks %}
+                    <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.15s;" id="task-row-{{ task.id }}">
+                        <!-- Task Title & Type -->
+                        <td style="padding: 14px 16px;">
+                            <div style="display: flex; align-items: flex-start; gap: 8px;">
+                                <input type="checkbox" {% if task.status_key == 'completed' %}checked{% endif %} onchange="toggleTaskComplete({{ task.id }}, this.checked)" title="تحديد كمكتملة" style="margin-top: 4px; cursor: pointer; width: 17px; height: 17px; accent-color: #10b981;">
+                                <div>
+                                    <strong style="font-size: 0.95rem; color: #1e293b; display: block; {% if task.status_key == 'completed' %}text-decoration: line-through; opacity: 0.6;{% endif %}">
+                                        {{ task.title }}
+                                    </strong>
+                                    <div style="display: flex; gap: 6px; align-items: center; margin-top: 4px; flex-wrap: wrap;">
+                                        <!-- Category Badge -->
+                                        {% set t_type = task.task_type or 'general' %}
+                                        {% if t_type == 'pleading' %}
+                                        <span class="badge" style="background: #e0e7ff; color: #4338ca;"><i class="fa-solid fa-scroll"></i> مذكرة</span>
+                                        {% elif t_type == 'hearing' %}
+                                        <span class="badge" style="background: #fef3c7; color: #b45309;"><i class="fa-solid fa-gavel"></i> جلسة</span>
+                                        {% elif t_type == 'court' %}
+                                        <span class="badge" style="background: #f1f5f9; color: #475569;"><i class="fa-solid fa-building-columns"></i> مراجعة</span>
+                                        {% elif t_type == 'client' %}
+                                        <span class="badge" style="background: #dcfce7; color: #15803d;"><i class="fa-solid fa-comments"></i> موكل</span>
+                                        {% elif t_type == 'research' %}
+                                        <span class="badge" style="background: #fae8ff; color: #86198f;"><i class="fa-solid fa-brain"></i> بحث</span>
+                                        {% else %}
+                                        <span class="badge" style="background: #f1f5f9; color: #64748b;">عام</span>
+                                        {% endif %}
+
+                                        <!-- Billable Badge -->
+                                        {% if task.is_billable %}
+                                        <span class="badge" style="background: #dcfce7; color: #166534;" title="قابلة للفوترة ({{ task.estimated_hours or 0 }} ساعة)">
+                                            <i class="fa-solid fa-dollar-sign"></i> أتعاب ({{ task.estimated_hours or 0 }} س)
+                                        </span>
+                                        {% endif %}
+
+                                        {% if task.description %}
+                                        <span style="font-size: 0.8rem; color: #94a3b8; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ task.description }}">
+                                            {{ task.description }}
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Case -->
+                        <td style="padding: 14px 16px;">
+                            {% if task.law_case %}
+                            <a href="/cases/{{ task.case_id }}" style="color: var(--primary-color); font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 6px;">
+                                <i class="fa-solid fa-folder-closed" style="font-size: 0.85rem;"></i>
+                                <span>{{ task.law_case.title }}</span>
+                            </a>
+                            <small style="color: #94a3b8; display: block; font-size: 0.75rem;">{{ task.law_case.case_number }}</small>
+                            {% else %}
+                            <span style="color: #94a3b8; font-size: 0.85rem;">مهمة إدارية عامة</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Assignee -->
+                        <td style="padding: 14px 16px;">
+                            {% set assignee = none %}
+                            {% for u in users %}
+                                {% if u.id == task.assignee_user_id %}
+                                    {% set assignee = u %}
+                                {% endif %}
+                            {% endfor %}
+                            {% if assignee %}
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="width: 28px; height: 28px; border-radius: 50%; background: #4f46e5; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.75rem;">
+                                    {{ assignee.name[0] }}
+                                </div>
+                                <span style="font-size: 0.9rem; font-weight: 600; color: #334155;">{{ assignee.name }}</span>
+                            </div>
+                            {% else %}
+                            <span style="color: #94a3b8; font-size: 0.85rem;">غير مسند</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Deadline & Overdue -->
+                        <td style="padding: 14px 16px;">
+                            {% if task.due_at %}
+                                <div style="display: flex; flex-direction: column; gap: 2px;">
+                                    <span dir="ltr" style="font-size: 0.9rem; font-weight: 600; color: #334155; text-align: right;">{{ task.due_at[:10] }}</span>
+                                    {% if task.status_key != 'completed' %}
+                                        {% if task.due_at[:10] < today_str %}
+                                        <span class="badge" style="background: #fee2e2; color: #b91c1c; font-size: 0.75rem;">
+                                            <i class="fa-solid fa-clock-rotate-left"></i> متأخرة
+                                        </span>
+                                        {% elif task.due_at[:10] == today_str %}
+                                        <span class="badge" style="background: #fef3c7; color: #b45309; font-size: 0.75rem;">
+                                            <i class="fa-solid fa-bell"></i> اليوم!
+                                        </span>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            {% else %}
+                            <span style="color: #94a3b8;">-</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Priority -->
+                        <td style="padding: 14px 16px;">
+                            {% if task.priority_level == 1 %}
+                            <span class="badge" style="background: #fee2e2; color: #b91c1c; font-weight: 700;">
+                                <i class="fa-solid fa-angles-up"></i> عاجلة 🔴
+                            </span>
+                            {% elif task.priority_level == 2 %}
+                            <span class="badge" style="background: #fef3c7; color: #b45309; font-weight: 600;">
+                                <i class="fa-solid fa-minus"></i> متوسطة
+                            </span>
+                            {% else %}
+                            <span class="badge" style="background: #ecfdf5; color: #047857;">
+                                <i class="fa-solid fa-angle-down"></i> منخفضة
+                            </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Status -->
+                        <td style="padding: 14px 16px;">
+                            {% if task.status_key == 'completed' %}
+                            <span class="badge" style="background: #dcfce7; color: #15803d; font-weight: 700;">
+                                <i class="fa-solid fa-check"></i> مكتملة
+                            </span>
+                            {% elif task.status_key == 'in_progress' %}
+                            <span class="badge" style="background: #dbeafe; color: #1d4ed8; font-weight: 600;">
+                                <i class="fa-solid fa-spinner fa-spin"></i> قيد التنفيذ
+                            </span>
+                            {% elif task.status_key == 'under_review' %}
+                            <span class="badge" style="background: #fae8ff; color: #86198f; font-weight: 600;">
+                                <i class="fa-solid fa-eye"></i> قيد المراجعة
+                            </span>
+                            {% else %}
+                            <span class="badge" style="background: #f1f5f9; color: #64748b; font-weight: 600;">
+                                <i class="fa-solid fa-hourglass-start"></i> بانتظار البدء
+                            </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Actions -->
+                        <td style="padding: 14px 16px; text-align: center;">
+                            <div style="display: inline-flex; gap: 6px; align-items: center;">
+                                {% if task.is_billable and task.case_id %}
+                                <button type="button" class="action-btn" style="color: #059669; background: #ecfdf5; border: 1px solid #a7f3d0;" title="تسجيل أتعاب في القضية" onclick="openTimesheetModal({{ task.id }}, {{ task.case_id }}, '{{ task.title|escape }}', {{ task.estimated_hours or 1.0 }})">
+                                    <i class="fa-solid fa-clock-rotate-left"></i> أتعاب
+                                </button>
+                                {% endif %}
+
+                                <button type="button" class="action-btn" style="color: #3b82f6; background: #eff6ff; border: 1px solid #bfdbfe;" title="تعديل المهمة" onclick="openEditTaskModalById({{ task.id }})">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+
+                                <button type="button" class="action-btn" style="color: #ef4444; background: #fef2f2; border: 1px solid #fecaca;" title="حذف" onclick="deleteTaskRow({{ task.id }})">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 50px 20px; color: #94a3b8;">
+                            <i class="fa-solid fa-clipboard-check" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.4;"></i>
+                            <h3 style="margin: 0; color: #475569;">لا توجد مهام مسجلة تطابق التصفية</h3>
+                            <p style="margin: 5px 0 20px; font-size: 0.9rem;">يمكنك إضافة مهمة جديدة وتكليف أحد أعضاء الفريق بها.</p>
+                            <button class="btn-primary" onclick="openAddTaskModal()">
+                                <i class="fa-solid fa-plus"></i> إضافة مهمة الآن
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- VIEW 2: INTERACTIVE KANBAN BOARD VIEW -->
+    <div id="kanbanViewContainer" style="display: none;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; align-items: start;">
+            <!-- Pending Column -->
+            <div class="kanban-col" data-status="pending" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #cbd5e1;">
+                    <h3 style="margin: 0; font-size: 1rem; color: #475569;"><i class="fa-solid fa-hourglass-start"></i> بانتظار البدء</h3>
+                    <span class="badge" style="background: #e2e8f0; color: #334155;" id="count-pending">0</span>
+                </div>
+                <div class="kanban-cards" id="col-pending" style="display: flex; flex-direction: column; gap: 10px; min-height: 150px;"></div>
+            </div>
+
+            <!-- In Progress Column -->
+            <div class="kanban-col" data-status="in_progress" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #3b82f6;">
+                    <h3 style="margin: 0; font-size: 1rem; color: #1d4ed8;"><i class="fa-solid fa-spinner"></i> قيد التنفيذ</h3>
+                    <span class="badge" style="background: #dbeafe; color: #1d4ed8;" id="count-in_progress">0</span>
+                </div>
+                <div class="kanban-cards" id="col-in_progress" style="display: flex; flex-direction: column; gap: 10px; min-height: 150px;"></div>
+            </div>
+
+            <!-- Under Review Column -->
+            <div class="kanban-col" data-status="under_review" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #a855f7;">
+                    <h3 style="margin: 0; font-size: 1rem; color: #7e22ce;"><i class="fa-solid fa-eye"></i> قيد المراجعة</h3>
+                    <span class="badge" style="background: #f3e8ff; color: #7e22ce;" id="count-under_review">0</span>
+                </div>
+                <div class="kanban-cards" id="col-under_review" style="display: flex; flex-direction: column; gap: 10px; min-height: 150px;"></div>
+            </div>
+
+            <!-- Completed Column -->
+            <div class="kanban-col" data-status="completed" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #10b981;">
+                    <h3 style="margin: 0; font-size: 1rem; color: #047857;"><i class="fa-solid fa-circle-check"></i> مكتملة</h3>
+                    <span class="badge" style="background: #dcfce7; color: #15803d;" id="count-completed">0</span>
+                </div>
+                <div class="kanban-cards" id="col-completed" style="display: flex; flex-direction: column; gap: 10px; min-height: 150px;"></div>
+            </div>
+        </div>
     </div>
 </div>
 
-<!-- Modal for Adding Task -->
-<div id="addTaskModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000;">
-    <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; width: 600px; max-width: 90%;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h2 style="margin: 0; font-size: 1.5rem; color: var(--secondary-color);">إضافة مهمة جديدة</h2>
-            <button onclick="document.getElementById('addTaskModal').style.display='none'" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted);">&times;</button>
+<!-- ================= MODALS ================= -->
+
+<!-- 1. Add Task Modal -->
+<div id="addTaskModal" class="modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.6); align-items: center; justify-content: center; z-index: 1000; padding: 15px;">
+    <div class="modal-content" style="background: white; border-radius: 16px; width: 680px; max-width: 100%; max-height: 90vh; overflow-y: auto; padding: 25px; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;">
+            <h2 style="margin: 0; font-size: 1.3rem; color: #1e293b;">
+                <i class="fa-solid fa-plus-circle" style="color: var(--primary-color);"></i> إنشاء مهمة وتكليف إجرائي جديد
+            </h2>
+            <button onclick="closeModal('addTaskModal')" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #94a3b8;">&times;</button>
         </div>
-        
-        <form action="/tasks/add" method="post">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+
+        <form action="/tasks/add" method="post" id="addTaskForm">
+            <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+
             <div class="form-group" style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">عنوان المهمة <span style="color: red;">*</span></label>
-                <input type="text" name="title" required placeholder="مثال: كتابة مسودة الرد التمهيدي" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif;">
-            </div>
-            
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">تفاصيل المهمة (اختياري)</label>
-                <textarea name="description" rows="2" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif; resize: vertical;"></textarea>
+                <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #334155;">عنوان المهمة <span style="color: red;">*</span></label>
+                <input type="text" name="title" required placeholder="مثال: إعداد اللائحة الاعتراضية ضد حكم الدائرة..." style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                 <div class="form-group">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">القضية المرتبطة</label>
-                    <select name="case_id" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif;">
-                        <option value="">بدون قضية (مهمة عامة)</option>
-                        {% for case in cases %}
-                        <option value="{{ case.id }}">{{ case.case_number }} - {{ case.title }}</option>
+                    <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #334155;">تصنيف العمل القضائي</label>
+                    <select name="task_type" style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
+                        <option value="general">عام / إداري</option>
+                        <option value="pleading">كتابة مذكرة / لائحة</option>
+                        <option value="hearing">حضور تمثيل جلسة</option>
+                        <option value="court">مراجعة محكمة / جهة</option>
+                        <option value="client">تواصل مع موكل / طرف</option>
+                        <option value="research">بحث قانوني واطلاع</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #334155;">القضية المرتبطة</label>
+                    <select name="case_id" style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
+                        <option value="">بدون قضية (مهمة عامة للمكتب)</option>
+                        {% for c in cases %}
+                        <option value="{{ c.id }}">{{ c.case_number }} - {{ c.title }}</option>
                         {% endfor %}
                     </select>
                 </div>
-                
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                 <div class="form-group">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">إسناد إلى (المحامي/الموظف)</label>
-                    <select name="assignee_user_id" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif;">
-                        <option value="">-- اختر --</option>
+                    <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #334155;">إسناد إلى المحامي / المكلف</label>
+                    <select name="assignee_user_id" style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
+                        <option value="">-- اختر المكلف --</option>
                         {% for u in users %}
-                        <option value="{{ u.id }}">{{ u.name }}</option>
+                        <option value="{{ u.id }}">{{ u.name }} ({{ u.role }})</option>
                         {% endfor %}
                     </select>
                 </div>
+
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #334155;">تاريخ الاستحقاق (Deadline)</label>
+                    <input type="date" name="due_at" style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
+                </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                 <div class="form-group">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">تاريخ الاستحقاق (Deadline)</label>
-                    <input type="date" name="due_at" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif;">
-                </div>
-
-                <div class="form-group">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">الأولوية</label>
-                    <select name="priority_level" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif;">
-                        <option value="1">عالية</option>
-                        <option value="2" selected>متوسطة</option>
-                        <option value="3">منخفضة</option>
+                    <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #334155;">الأولوية</label>
+                    <select name="priority_level" style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
+                        <option value="1">عالية جداً (عاجل) 🔴</option>
+                        <option value="2" selected>متوسطة 🟡</option>
+                        <option value="3">منخفضة 🟢</option>
                     </select>
                 </div>
+
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #334155;">ساعات العمل المقدرة</label>
+                    <input type="number" step="0.5" name="estimated_hours" value="1.0" min="0" style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
+                </div>
+
+                <div class="form-group" style="display: flex; flex-direction: column; justify-content: center;">
+                    <label style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #334155; margin-top: 20px; cursor: pointer;">
+                        <input type="checkbox" name="is_billable" value="1" style="width: 18px; height: 18px; accent-color: #10b981;">
+                        <span>قابلة للفوترة (Billable)</span>
+                    </label>
+                </div>
             </div>
-            
-            <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                <button type="button" onclick="document.getElementById('addTaskModal').style.display='none'" style="padding: 12px 20px; background: #e2e8f0; color: #475569; border: none; border-radius: 8px; cursor: pointer; font-family: 'Cairo', sans-serif; font-weight: 600;">إلغاء</button>
-                <button type="submit" class="btn-primary" style="padding: 12px 20px; font-family: 'Cairo', sans-serif;">حفظ المهمة</button>
+
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #334155;">تفاصيل وتعليمات المهمة</label>
+                <textarea name="description" rows="2" placeholder="أية ملاحظات أو مرفقات مطلوبة..." style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit; resize: vertical;"></textarea>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end; border-top: 1px solid #e2e8f0; padding-top: 15px;">
+                <button type="button" onclick="closeModal('addTaskModal')" class="cancel-btn">إلغاء</button>
+                <button type="submit" class="btn-primary"><i class="fa-solid fa-check"></i> حفظ المهمة</button>
             </div>
         </form>
     </div>
 </div>
 
-<!-- Modal for Editing Task -->
-<div id="editTaskModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000;">
-    <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; width: 600px; max-width: 90%;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h2 style="margin: 0; font-size: 1.5rem; color: var(--secondary-color);">تعديل المهمة</h2>
-            <button onclick="document.getElementById('editTaskModal').style.display='none'" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted);">&times;</button>
+<!-- 2. Edit Task Modal -->
+<div id="editTaskModal" class="modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.6); align-items: center; justify-content: center; z-index: 1000; padding: 15px;">
+    <div class="modal-content" style="background: white; border-radius: 16px; width: 680px; max-width: 100%; max-height: 90vh; overflow-y: auto; padding: 25px; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;">
+            <h2 style="margin: 0; font-size: 1.3rem; color: #1e293b;">
+                <i class="fa-solid fa-pen-to-square" style="color: var(--primary-color);"></i> تعديل تفاصيل المهمة
+            </h2>
+            <button onclick="closeModal('editTaskModal')" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #94a3b8;">&times;</button>
         </div>
-        
-        <form action="/tasks/edit" method="post">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+
+        <form action="/tasks/edit" method="post" id="editTaskForm">
+            <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
             <input type="hidden" name="task_id" id="edit_task_id">
-            
+
             <div class="form-group" style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">عنوان المهمة <span style="color: red;">*</span></label>
-                <input type="text" name="title" id="edit_task_title" required style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif;">
-            </div>
-            
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">تفاصيل المهمة</label>
-                <textarea name="description" id="edit_task_description" rows="2" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif; resize: vertical;"></textarea>
+                <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #334155;">عنوان المهمة <span style="color: red;">*</span></label>
+                <input type="text" name="title" id="edit_task_title" required style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                 <div class="form-group">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">القضية المرتبطة</label>
-                    <select name="case_id" id="edit_task_case_id" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                    <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #334155;">تصنيف العمل</label>
+                    <select name="task_type" id="edit_task_type" style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
+                        <option value="general">عام / إداري</option>
+                        <option value="pleading">كتابة مذكرة / لائحة</option>
+                        <option value="hearing">حضور تمثيل جلسة</option>
+                        <option value="court">مراجعة محكمة / جهة</option>
+                        <option value="client">تواصل مع موكل / طرف</option>
+                        <option value="research">بحث قانوني واطلاع</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #334155;">القضية المرتبطة</label>
+                    <select name="case_id" id="edit_task_case_id" style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
                         <option value="">بدون قضية (مهمة عامة)</option>
-                        {% for case in cases %}
-                        <option value="{{ case.id }}">{{ case.case_number }} - {{ case.title }}</option>
+                        {% for c in cases %}
+                        <option value="{{ c.id }}">{{ c.case_number }} - {{ c.title }}</option>
                         {% endfor %}
                     </select>
                 </div>
-                
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                 <div class="form-group">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">إسناد إلى</label>
-                    <select name="assignee_user_id" id="edit_task_assignee" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif;">
-                        <option value="">-- اختر --</option>
+                    <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #334155;">إسناد إلى</label>
+                    <select name="assignee_user_id" id="edit_task_assignee_id" style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
+                        <option value="">-- غير مسند --</option>
                         {% for u in users %}
-                        <option value="{{ u.id }}">{{ u.name }}</option>
+                        <option value="{{ u.id }}">{{ u.name }} ({{ u.role }})</option>
                         {% endfor %}
                     </select>
                 </div>
+
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #334155;">تاريخ الاستحقاق</label>
+                    <input type="date" name="due_at" id="edit_task_due_at" style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
+                </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 25px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                 <div class="form-group">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">تاريخ الاستحقاق</label>
-                    <input type="date" name="due_at" id="edit_task_due_at" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                    <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #334155;">الأولوية</label>
+                    <select name="priority_level" id="edit_task_priority" style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
+                        <option value="1">عالية جداً (عاجل) 🔴</option>
+                        <option value="2">متوسطة 🟡</option>
+                        <option value="3">منخفضة 🟢</option>
+                    </select>
                 </div>
 
                 <div class="form-group">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">الأولوية</label>
-                    <select name="priority_level" id="edit_task_priority" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif;">
-                        <option value="1">عالية</option>
-                        <option value="2">متوسطة</option>
-                        <option value="3">منخفضة</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">الحالة</label>
-                    <select name="status_key" id="edit_task_status" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: 'Cairo', sans-serif;">
-                        <option value="pending">قيد الانتظار</option>
+                    <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #334155;">الحالة الحالية</label>
+                    <select name="status_key" id="edit_task_status" style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
+                        <option value="pending">بانتظار البدء</option>
                         <option value="in_progress">قيد التنفيذ</option>
-                        <option value="completed">مكتملة</option>
+                        <option value="under_review">قيد المراجعة</option>
+                        <option value="completed">مكتملة ✅</option>
                     </select>
                 </div>
+
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #334155;">الساعات المقدرة</label>
+                    <input type="number" step="0.5" name="estimated_hours" id="edit_task_hours" style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
+                </div>
             </div>
-            
-            <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                <button type="button" onclick="document.getElementById('editTaskModal').style.display='none'" style="padding: 12px 20px; background: #e2e8f0; color: #475569; border: none; border-radius: 8px; cursor: pointer; font-family: 'Cairo', sans-serif; font-weight: 600;">إلغاء</button>
-                <button type="submit" class="btn-primary" style="padding: 12px 20px; font-family: 'Cairo', sans-serif;">حفظ التعديلات</button>
+
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #334155;">تفاصيل المهمة</label>
+                <textarea name="description" id="edit_task_description" rows="2" style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit; resize: vertical;"></textarea>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #334155; cursor: pointer;">
+                    <input type="checkbox" name="is_billable" id="edit_task_billable" value="1" style="width: 18px; height: 18px; accent-color: #10b981;">
+                    <span>خاضعة لاحتساب أتعاب الموكل (Billable)</span>
+                </label>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end; border-top: 1px solid #e2e8f0; padding-top: 15px;">
+                <button type="button" onclick="closeModal('editTaskModal')" class="cancel-btn">إلغاء</button>
+                <button type="submit" class="btn-primary"><i class="fa-solid fa-check"></i> حفظ التعديلات</button>
             </div>
         </form>
     </div>
 </div>
+
+<!-- 3. Convert to Timesheet Modal -->
+<div id="timesheetModal" class="modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.6); align-items: center; justify-content: center; z-index: 1000; padding: 15px;">
+    <div class="modal-content" style="background: white; border-radius: 16px; width: 480px; max-width: 100%; padding: 25px; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">
+            <h3 style="margin: 0; color: #059669; font-size: 1.2rem;">
+                <i class="fa-solid fa-clock-rotate-left"></i> ترحيل المهمة إلى سجل الأتعاب (Timesheet)
+            </h3>
+            <button onclick="closeModal('timesheetModal')" style="background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #94a3b8;">&times;</button>
+        </div>
+        <form action="/tasks/convert-timesheet" method="post">
+            <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+            <input type="hidden" name="task_id" id="ts_task_id">
+
+            <p id="ts_task_title" style="margin: 0 0 15px; font-weight: 700; color: #1e293b; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;"></p>
+
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #334155;">الساعات الفعلية المستغرقة</label>
+                <input type="number" step="0.25" name="hours" id="ts_hours" min="0.25" value="1.0" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #334155;">ملاحظات ووصف النشاط</label>
+                <textarea name="notes" id="ts_notes" rows="2" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit; resize: vertical;"></textarea>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button type="button" onclick="closeModal('timesheetModal')" class="cancel-btn">إلغاء</button>
+                <button type="submit" class="btn-primary" style="background: #059669;"><i class="fa-solid fa-floppy-disk"></i> ترحيل الساعات</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.filter-pill {
+    padding: 6px 12px;
+    border-radius: 20px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.15s ease;
+    border: 1px solid transparent;
+}
+.filter-pill:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+.filter-pill.active {
+    background: #0f172a;
+    color: white;
+}
+.badge {
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.kanban-card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    cursor: grab;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+.kanban-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+</style>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    function openEditTaskModal(id, title, description, dueAt, assignee, priority, statusKey, caseId) {
-        document.getElementById('edit_task_id').value = id;
-        document.getElementById('edit_task_title').value = title;
-        document.getElementById('edit_task_description').value = description && description != 'None' ? description : '';
-        document.getElementById('edit_task_due_at').value = dueAt && dueAt != 'None' ? dueAt.split(' ')[0] : '';
-        document.getElementById('edit_task_assignee').value = assignee && assignee != 'None' ? assignee : '';
-        document.getElementById('edit_task_priority').value = priority;
-        document.getElementById('edit_task_status').value = statusKey;
-        document.getElementById('edit_task_case_id').value = caseId && caseId != 'None' ? caseId : '';
-        document.getElementById('editTaskModal').style.display = 'flex';
+    const csrfToken = "{{ request.cookies.get('csrf_token', '') }}";
+
+    function closeModal(id) {
+        document.getElementById(id).style.display = 'none';
+    }
+
+    function openAddTaskModal() {
+        document.getElementById('addTaskModal').style.display = 'flex';
+    }
+
+    function switchView(view) {
+        const tableContainer = document.getElementById('tableViewContainer');
+        const kanbanContainer = document.getElementById('kanbanViewContainer');
+        const tableBtn = document.getElementById('tableViewBtn');
+        const kanbanBtn = document.getElementById('kanbanViewBtn');
+
+        if (view === 'table') {
+            tableContainer.style.display = 'block';
+            kanbanContainer.style.display = 'none';
+            tableBtn.style.background = 'white';
+            tableBtn.style.color = '#0f172a';
+            kanbanBtn.style.background = 'transparent';
+            kanbanBtn.style.color = '#64748b';
+        } else {
+            tableContainer.style.display = 'none';
+            kanbanContainer.style.display = 'block';
+            kanbanBtn.style.background = 'white';
+            kanbanBtn.style.color = '#0f172a';
+            tableBtn.style.background = 'transparent';
+            tableBtn.style.color = '#64748b';
+            loadKanbanCards();
+        }
+    }
+
+    async function toggleTaskComplete(taskId, isChecked) {
+        const statusKey = isChecked ? 'completed' : 'pending';
+        const formData = new FormData();
+        formData.append('task_id', taskId);
+        formData.append('status_key', statusKey);
+        formData.append('csrf_token', csrfToken);
+
+        try {
+            const res = await fetch('/tasks/update_status', {
+                method: 'POST',
+                headers: { 'Accept': 'application/json' },
+                body: formData
+            });
+            if (res.ok) {
+                location.reload();
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    async function deleteTaskRow(taskId) {
+        if (!confirm('هل أنت متأكد من حذف هذه المهمة نهائياً؟')) return;
+        const formData = new FormData();
+        formData.append('task_id', taskId);
+        formData.append('csrf_token', csrfToken);
+
+        try {
+            const res = await fetch('/tasks/delete', {
+                method: 'POST',
+                headers: { 'Accept': 'application/json' },
+                body: formData
+            });
+            if (res.ok) {
+                const row = document.getElementById('task-row-' + taskId);
+                if (row) row.remove();
+                else location.reload();
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    async function openEditTaskModalById(taskId) {
+        try {
+            const res = await fetch('/api/tasks/' + taskId);
+            if (!res.ok) return;
+            const data = await res.json();
+            document.getElementById('edit_task_id').value = data.id;
+            document.getElementById('edit_task_title').value = data.title || '';
+            document.getElementById('edit_task_description').value = data.description || '';
+            document.getElementById('edit_task_case_id').value = data.case_id || '';
+            document.getElementById('edit_task_assignee_id').value = data.assignee_user_id || '';
+            document.getElementById('edit_task_due_at').value = data.due_at ? data.due_at.split(' ')[0] : '';
+            document.getElementById('edit_task_priority').value = data.priority_level || 2;
+            document.getElementById('edit_task_status').value = data.status_key || 'pending';
+            document.getElementById('edit_task_type').value = data.task_type || 'general';
+            document.getElementById('edit_task_hours').value = data.estimated_hours || 0;
+            document.getElementById('edit_task_billable').checked = !!data.is_billable;
+            document.getElementById('editTaskModal').style.display = 'flex';
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    function openTimesheetModal(taskId, caseId, title, hours) {
+        document.getElementById('ts_task_id').value = taskId;
+        document.getElementById('ts_task_title').textContent = title;
+        document.getElementById('ts_hours').value = hours || 1.0;
+        document.getElementById('ts_notes').value = 'إنجاز مهمة: ' + title;
+        document.getElementById('timesheetModal').style.display = 'flex';
+    }
+
+    async function loadKanbanCards() {
+        try {
+            const res = await fetch('/kanban/api/tasks');
+            if (!res.ok) return;
+            const data = await res.json();
+            if (!data.ok) return;
+
+            const cols = {
+                'pending': document.getElementById('col-pending'),
+                'in_progress': document.getElementById('col-in_progress'),
+                'under_review': document.getElementById('col-under_review'),
+                'completed': document.getElementById('col-completed')
+            };
+
+            for (let k in cols) {
+                cols[k].innerHTML = '';
+            }
+
+            const counts = { 'pending': 0, 'in_progress': 0, 'under_review': 0, 'completed': 0 };
+
+            data.tasks.forEach(t => {
+                const colKey = cols[t.status_key] ? t.status_key : 'pending';
+                counts[colKey] = (counts[colKey] || 0) + 1;
+
+                const card = document.createElement('div');
+                card.className = 'kanban-card';
+                card.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+                        <strong style="font-size: 0.9rem; color: #1e293b;">${t.title}</strong>
+                        <span class="badge" style="background: #f1f5f9; font-size: 0.7rem;">${t.task_type || 'عام'}</span>
+                    </div>
+                    ${t.case ? `<div style="font-size: 0.8rem; color: #4338ca; margin-bottom: 6px;"><i class="fa-solid fa-folder"></i> ${t.case.title}</div>` : ''}
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 0.8rem; color: #64748b;">
+                        <span><i class="fa-regular fa-clock"></i> ${t.due_at ? t.due_at.split(' ')[0] : '-'}</span>
+                        ${t.assignee ? `<span style="font-weight: 600; color: #334155;"><i class="fa-solid fa-user"></i> ${t.assignee.name}</span>` : ''}
+                    </div>
+                    <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                        <select onchange="moveKanbanTask(${t.id}, this.value)" style="padding: 3px 6px; font-size: 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px; font-family: inherit;">
+                            <option value="pending" ${t.status_key === 'pending' ? 'selected' : ''}>بانتظار البدء</option>
+                            <option value="in_progress" ${t.status_key === 'in_progress' ? 'selected' : ''}>قيد التنفيذ</option>
+                            <option value="under_review" ${t.status_key === 'under_review' ? 'selected' : ''}>قيد المراجعة</option>
+                            <option value="completed" ${t.status_key === 'completed' ? 'selected' : ''}>مكتملة</option>
+                        </select>
+                        <button onclick="openEditTaskModalById(${t.id})" style="border: none; background: none; color: #3b82f6; cursor: pointer; font-size: 0.85rem;"><i class="fa-solid fa-pen"></i></button>
+                    </div>
+                `;
+                cols[colKey].appendChild(card);
+            });
+
+            for (let k in counts) {
+                const el = document.getElementById('count-' + k);
+                if (el) el.textContent = counts[k];
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    async function moveKanbanTask(taskId, newStatus) {
+        try {
+            const res = await fetch('/kanban/api/tasks/' + taskId + '/move', {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                body: JSON.stringify({ status_key: newStatus })
+            });
+            if (res.ok) {
+                loadKanbanCards();
+            }
+        } catch (err) {
+            console.error(err);
+        }
     }
 </script>
 {% endblock %}

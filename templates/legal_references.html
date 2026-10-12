@@ -1,208 +1,466 @@
 {% extends "base.html" %}
-{% block title %}المراجع القانونية | LawSaaS{% endblock %}
-
-{% block head %}
-<style>
-.page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
-.filter-card { background: var(--card-bg); border-radius: 14px; padding: 18px; border: 1px solid var(--border-color); margin-bottom: 20px; display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; box-shadow: 0 2px 8px rgba(0,0,0,.05); }
-.filter-card .fg { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 150px; }
-.filter-card label { font-size: .8rem; font-weight: 700; color: var(--text-muted); }
-.filter-card input, .filter-card select { padding: 9px 12px; border: 1.5px solid var(--border-color); border-radius: 9px; font-family: 'Cairo', sans-serif; font-size: .88rem; outline: none; background: var(--card-bg); color: var(--secondary-color); }
-.filter-card input:focus, .filter-card select:focus { border-color: var(--primary-color); }
-.grid-layout { display: grid; grid-template-columns: 350px 1fr; gap: 24px; align-items: start; }
-.form-card { background: var(--card-bg); border-radius: 14px; padding: 22px; border: 1px solid var(--border-color); box-shadow: 0 2px 8px rgba(0,0,0,.05); }
-.form-card h3 { font-size: 1.05rem; font-weight: 800; color: var(--secondary-color); margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
-.form-group { margin-bottom: 14px; display: flex; flex-direction: column; gap: 6px; }
-.form-group label { font-size: .85rem; font-weight: 700; color: var(--text-muted); }
-.form-group input, .form-group select, .form-group textarea { padding: 10px 12px; border: 1.5px solid var(--border-color); border-radius: 9px; font-family: 'Cairo', sans-serif; font-size: .88rem; background: var(--card-bg); color: var(--secondary-color); outline: none; }
-.form-group input:focus, .form-group select:focus { border-color: var(--primary-color); }
-.btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
-.data-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
-.data-table th { background: #f8fafc; color: var(--text-muted); font-weight: 700; padding: 12px 14px; text-align: right; border-bottom: 2px solid var(--border-color); }
-.data-table td { padding: 12px 14px; border-bottom: 1px solid var(--border-color); color: var(--secondary-color); vertical-align: middle; }
-.data-table tr { cursor: pointer; transition: background .15s; }
-.data-table tr:hover td { background: #f0f4ff; }
-.data-table tr.selected td { background: #eff6ff; }
-.empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
-.empty-state i { font-size: 3rem; opacity: .2; display: block; margin-bottom: 12px; }
-.alert-box { padding: 12px 16px; border-radius: 10px; font-size: .88rem; font-weight: 600; margin-bottom: 16px; display: none; }
-.alert-success { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
-.alert-error   { background: #fee2e2; color: #7f1d1d; border: 1px solid #fecaca; }
-.link-btn { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; background: #e0e7ff; color: #4f46e5; transition: all .2s; }
-.link-btn:hover { background: #4f46e5; color: white; }
-</style>
-{% endblock %}
+{% block title %}المراجع والأنظمة القانونية | LawSaaS{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <div>
-    <h1 style="font-size:1.8rem;font-weight:800;color:var(--secondary-color);margin-bottom:4px;">
-      <i class="fa-solid fa-book-open" style="color:#6366f1;margin-left:10px;"></i>المراجع القانونية
-    </h1>
-    <p style="color:var(--text-muted);font-size:.95rem;">إدارة المراجع، المبادئ، والنصوص القانونية المرتبطة بالقضايا.</p>
-  </div>
-</div>
-
-<div class="filter-card">
-  <div class="fg">
-    <label>بحث عام</label>
-    <input type="text" id="filterSearch" placeholder="العنوان، المرجع..." oninput="filterTable()">
-  </div>
-  <div class="fg">
-    <label>القضية المرتبطة</label>
-    <input type="text" id="filterCase" placeholder="رقم القضية..." oninput="filterTable()">
-  </div>
-</div>
-
-<div class="grid-layout">
-  <!-- Form -->
-  <div class="form-card">
-    <h3><i class="fa-solid fa-pen-to-square" style="color:#6366f1;"></i> إضافة / تعديل مرجع</h3>
-    <div id="alertBox" class="alert-box"></div>
-    <form onsubmit="saveRecord(event)">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
-      <input type="hidden" id="recId">
-      <div class="form-group">
-        <label>القضية المرتبطة <span style="color:#ef4444;">*</span></label>
-        <select id="fCaseId" required>
-          <option value="">-- اختر القضية --</option>
-          {% for c in cases %}
-          <option value="{{ c.id }}">{{ c.case_number }} - {{ c.title[:30] }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="form-group">
-        <label>عنوان المرجع <span style="color:#ef4444;">*</span></label>
-        <input type="text" id="fTitle" required placeholder="مثال: مبدأ محكمة النقض...">
-      </div>
-      <div class="form-group">
-        <label>الرابط الإلكتروني / المسار</label>
-        <input type="text" id="fUrl" style="direction:ltr;text-align:left;" placeholder="https://...">
-      </div>
-      <div class="btn-row">
-        <button type="submit" class="action-btn" style="background:linear-gradient(135deg,#10b981,#047857);">
-          <i class="fa-solid fa-floppy-disk"></i> حفظ
-        </button>
-        <button type="button" class="action-btn" style="background:linear-gradient(135deg,#6366f1,#4f46e5);" onclick="clearForm()">
-          <i class="fa-solid fa-plus"></i> جديد
-        </button>
-        <button type="button" class="action-btn" style="background:linear-gradient(135deg,#ef4444,#dc2626);" onclick="deleteRecord()">
-          <i class="fa-solid fa-trash"></i> حذف
-        </button>
-      </div>
-    </form>
-  </div>
-
-  <!-- Table -->
-  <div class="form-card" style="padding:0;overflow:hidden;">
-    <div style="padding:18px 22px;border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;">
-      <h3 style="margin:0;"><i class="fa-solid fa-list" style="color:#6366f1;margin-left:8px;"></i> قائمة المراجع</h3>
-      <span style="font-size:.8rem;font-weight:700;color:var(--text-muted);background:#f1f5f9;padding:4px 10px;border-radius:50px;">{{ records|length }} مرجع</span>
+<div class="legal-references-container" dir="rtl" style="margin-bottom: 40px;">
+    <!-- Page Header -->
+    <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px;">
+        <div>
+            <h1 style="margin: 0; font-size: 1.8rem; font-weight: 800; color: var(--secondary-color);">
+                <i class="fa-solid fa-book-bookmark" style="color: #6366f1; margin-left: 10px;"></i>
+                المراجع والأنظمة القانونية
+            </h1>
+            <p style="margin: 5px 0 0; color: var(--text-muted); font-size: 0.95rem;">
+                موسوعة الأنظمة، اللوائح، والمبادئ والسوابق القضائية مع إمكانية ربطها بالقضايا ونسخ السندات للمذكرات.
+            </p>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <button class="btn-primary" onclick="clearForm()" style="background: linear-gradient(135deg, #6366f1, #4f46e5); border: none; padding: 10px 18px; border-radius: 10px; color: white; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-plus"></i> إضافة مرجع جديد
+            </button>
+        </div>
     </div>
-    <div style="overflow-x:auto;">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>القضية</th>
-            <th>عنوان المرجع</th>
-            <th>الرابط</th>
-            <th>تاريخ الإضافة</th>
-          </tr>
-        </thead>
-        <tbody id="refTbody">
-          {% for r in records %}
-          <tr onclick="selectRecord({{ r.id }}, this)" data-search="{{ r.title | lower }}" data-case="{{ r.law_case.case_number if r.law_case else '' }}">
-            <td><strong>{{ r.law_case.case_number if r.law_case else '—' }}</strong></td>
-            <td><div style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ r.title }}</div></td>
-            <td>
-              {% if r.reference_url %}
-              <a href="{{ r.reference_url }}" target="_blank" class="link-btn" title="فتح الرابط" onclick="event.stopPropagation()"><i class="fa-solid fa-link"></i></a>
-              {% else %}<span style="color:var(--text-muted);">—</span>{% endif %}
-            </td>
-            <td style="font-size:.78rem;color:var(--text-muted);">{{ (r.created_at or '')[:10] }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% if not records %}
-      <div class="empty-state">
-        <i class="fa-solid fa-book-open"></i>
-        <p style="font-weight:600;">لا توجد مراجع قانونية مسجلة بعد.</p>
-      </div>
-      {% endif %}
+
+    <!-- Live KPI Ribbon -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
+        <div class="card" style="padding: 16px; border-radius: 12px; border-right: 4px solid #6366f1; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">إجمالي المراجع</span>
+                <h3 style="margin: 5px 0 0; font-size: 1.6rem; color: #1e293b;">{{ stats.total }}</h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #e0e7ff; color: #6366f1; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fa-solid fa-scale-balanced"></i>
+            </div>
+        </div>
+
+        <div class="card" style="padding: 16px; border-radius: 12px; border-right: 4px solid #10b981; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">أنظمة وقوانين</span>
+                <h3 style="margin: 5px 0 0; font-size: 1.6rem; color: #059669;">{{ stats.laws }}</h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #ecfdf5; color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fa-solid fa-landmark"></i>
+            </div>
+        </div>
+
+        <div class="card" style="padding: 16px; border-radius: 12px; border-right: 4px solid #f59e0b; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">سوابق ومبادئ قضائية</span>
+                <h3 style="margin: 5px 0 0; font-size: 1.6rem; color: #d97706;">{{ stats.precedents }}</h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #fef3c7; color: #f59e0b; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fa-solid fa-gavel"></i>
+            </div>
+        </div>
+
+        <div class="card" style="padding: 16px; border-radius: 12px; border-right: 4px solid #8b5cf6; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">لوائح وتعاميم</span>
+                <h3 style="margin: 5px 0 0; font-size: 1.6rem; color: #7c3aed;">{{ stats.regulations }}</h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #f3e8ff; color: #8b5cf6; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fa-solid fa-file-contract"></i>
+            </div>
+        </div>
+
+        <div class="card" style="padding: 16px; border-radius: 12px; border-right: 4px solid #06b6d4; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">مرتبطة بقضايا</span>
+                <h3 style="margin: 5px 0 0; font-size: 1.6rem; color: #0891b2;">{{ stats.linked_cases }}</h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #cffafe; color: #06b6d4; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fa-solid fa-link"></i>
+            </div>
+        </div>
     </div>
-  </div>
+
+    <!-- Filters Bar -->
+    <div class="card" style="padding: 16px; border-radius: 12px; margin-bottom: 25px;">
+        <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
+            <!-- Category Filter Pills -->
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="pill-btn active" onclick="setQuickCategory('all', this)">الكل ({{ stats.total }})</button>
+                <button class="pill-btn pill-success" onclick="setQuickCategory('نظام / قانون', this)">أنظمة وقوانين ({{ stats.laws }})</button>
+                <button class="pill-btn pill-warning" onclick="setQuickCategory('precedents', this)">سوابق ومبادئ ({{ stats.precedents }})</button>
+                <button class="pill-btn pill-purple" onclick="setQuickCategory('regulations', this)">لوائح وتعاميم ({{ stats.regulations }})</button>
+                <button class="pill-btn pill-info" onclick="setQuickCategory('linked', this)">مرتبطة بقضايا ({{ stats.linked_cases }})</button>
+            </div>
+
+            <!-- Search Field -->
+            <div style="position: relative; min-width: 280px;">
+                <i class="fa-solid fa-magnifying-glass" style="position: absolute; right: 12px; top: 11px; color: #94a3b8;"></i>
+                <input type="text" id="filterSearch" placeholder="بحث بالعنوان، المادة، المصدر، الكلمات..." oninput="filterCards()"
+                       style="width: 100%; padding: 8px 36px 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.88rem;">
+            </div>
+        </div>
+    </div>
+
+    <!-- Split Grid Layout -->
+    <div style="display: grid; grid-template-columns: 380px 1fr; gap: 24px; align-items: start;">
+        <!-- Form Column -->
+        <div class="card" style="padding: 22px; border-radius: 14px; background: var(--card-bg); border: 1px solid var(--border-color); box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
+                <h3 id="formTitle" style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--secondary-color); display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-pen-to-square" style="color: #6366f1;"></i> إضافة مرجع قانوني
+                </h3>
+                <span id="editBadge" style="display:none; background: #e0e7ff; color: #4338ca; font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 20px;">تعديل مرجع</span>
+            </div>
+
+            <div id="alertBox" style="display:none; padding: 10px 14px; border-radius: 8px; margin-bottom: 15px; font-size: 0.85rem; font-weight: 600;"></div>
+
+            <form id="refForm" onsubmit="saveReference(event)">
+                <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+                <input type="hidden" id="recId">
+
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">
+                        عنوان المرجع / السند <span style="color: #ef4444;">*</span>
+                    </label>
+                    <input type="text" id="fTitle" required placeholder="مثال: التعويض عن إنهاء عقد العمل غير المشروع"
+                           style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.88rem;">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">التصنيف</label>
+                        <select id="fCategory" style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.88rem;">
+                            <option value="نظام / قانون">نظام / قانون</option>
+                            <option value="لائحة تنفيذية">لائحة تنفيذية</option>
+                            <option value="سابقة قضائية">سابقة قضائية</option>
+                            <option value="مبدأ محكمة عليا">مبدأ محكمة عليا</option>
+                            <option value="تعميم وزاري">تعميم وزاري</option>
+                            <option value="أخرى">أخرى</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">رقم المادة / المبدأ</label>
+                        <input type="text" id="fArticleNumber" placeholder="مثال: المادة 77"
+                               style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.88rem;">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">المصدر النظامي / القضائي</label>
+                    <input type="text" id="fSource" placeholder="مثال: نظام العمل السعودي / المحكمة العليا - الدائرة التجارية"
+                           style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.88rem;">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">القضية المرتبطة (اختياري)</label>
+                    <select id="fCaseId" style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.88rem;">
+                        <option value="">-- عام (غير مخصص لقضية معينة) --</option>
+                        {% for c in cases %}
+                        <option value="{{ c.id }}">{{ c.case_number }} - {{ c.title[:30] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">نص المادة أو المبدأ القضائي</label>
+                    <textarea id="fContent" rows="4" placeholder="اكتب أو الصق نص المادة القانونية أو حيثيات المبدأ هنا..."
+                              style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.88rem; line-height: 1.5;"></textarea>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">الكلمات الدلالية / وسوم البحث</label>
+                    <input type="text" id="fKeywords" placeholder="مثال: فسخ عقد، تعويض، فصل، إنذار"
+                           style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.88rem;">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 18px;">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">الرابط الإلكتروني / مصدر رسمي</label>
+                    <input type="text" id="fUrl" placeholder="https://..." style="direction: ltr; text-align: left; width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.88rem;">
+                </div>
+
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button type="submit" id="btnSave" style="flex: 1; padding: 10px; border-radius: 8px; background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                        <i class="fa-solid fa-floppy-disk"></i> حفظ المرجع
+                    </button>
+                    <button type="button" onclick="clearForm()" style="padding: 10px 14px; border-radius: 8px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; font-weight: 700; cursor: pointer;">
+                        إلغاء
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Records List Cards / Table -->
+        <div style="display: flex; flex-direction: column; gap: 14px;" id="referencesContainer">
+            {% for r in records %}
+            <div id="ref-card-{{ r.id }}" class="ref-card card"
+                 data-search="{{ r.title | lower }} {{ (r.content or '') | lower }} {{ (r.source or '') | lower }} {{ (r.article_number or '') | lower }} {{ (r.keywords or '') | lower }} {{ (r.law_case.case_number if r.law_case else '') | lower }}"
+                 data-category="{{ r.category or 'نظام / قانون' }}"
+                 data-has-case="{{ '1' if r.case_id else '0' }}"
+                 style="padding: 18px 20px; border-radius: 12px; background: var(--card-bg); border: 1px solid var(--border-color); transition: all 0.2s;">
+                
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 8px;">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <h4 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #0f172a;">{{ r.title }}</h4>
+                            
+                            {% if r.category == 'نظام / قانون' %}
+                            <span style="padding: 3px 10px; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #ecfdf5; color: #059669;">نظام / قانون</span>
+                            {% elif r.category in ['سابقة قضائية', 'مبدأ محكمة عليا'] %}
+                            <span style="padding: 3px 10px; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #fef3c7; color: #d97706;">{{ r.category }}</span>
+                            {% elif r.category in ['لائحة تنفيذية', 'تعميم وزاري'] %}
+                            <span style="padding: 3px 10px; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #f3e8ff; color: #7c3aed;">{{ r.category }}</span>
+                            {% else %}
+                            <span style="padding: 3px 10px; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #e0e7ff; color: #4338ca;">{{ r.category or 'مرجع' }}</span>
+                            {% endif %}
+
+                            {% if r.article_number %}
+                            <span style="padding: 3px 8px; border-radius: 6px; font-size: 0.74rem; font-weight: 700; background: #f1f5f9; color: #475569;">
+                                <i class="fa-solid fa-hashtag" style="font-size: 0.68rem;"></i> {{ r.article_number }}
+                            </span>
+                            {% endif %}
+                        </div>
+
+                        {% if r.source %}
+                        <div style="margin-top: 4px; font-size: 0.82rem; color: #64748b; font-weight: 600;">
+                            <i class="fa-solid fa-landmark" style="margin-left: 4px;"></i> {{ r.source }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Action buttons -->
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                        <button onclick="copyCitation({{ r.id }})" title="نسخ السند القانوني للمذكرة"
+                                style="padding: 6px 12px; border-radius: 8px; border: 1px solid #c7d2fe; background: #e0e7ff; color: #4338ca; font-size: 0.8rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                            <i class="fa-regular fa-copy"></i> نسخ السند
+                        </button>
+                        
+                        {% if r.reference_url %}
+                        <a href="{{ r.reference_url }}" target="_blank" title="فتح الرابط الرسمي"
+                           style="width: 32px; height: 32px; border-radius: 8px; background: #f1f5f9; color: #475569; display: flex; align-items: center; justify-content: center; text-decoration: none;">
+                            <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.8rem;"></i>
+                        </a>
+                        {% endif %}
+
+                        <button onclick="selectReference({{ r.id }})" title="تعديل"
+                                style="width: 32px; height: 32px; border-radius: 8px; border: none; background: #e2e8f0; color: #334155; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                            <i class="fa-solid fa-pen" style="font-size: 0.8rem;"></i>
+                        </button>
+
+                        <button onclick="deleteReference({{ r.id }})" title="حذف"
+                                style="width: 32px; height: 32px; border-radius: 8px; border: none; background: #fee2e2; color: #dc2626; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                            <i class="fa-solid fa-trash" style="font-size: 0.8rem;"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Reference Content / Text -->
+                {% if r.content %}
+                <div style="margin: 10px 0; padding: 12px 14px; background: #f8fafc; border-right: 3px solid #6366f1; border-radius: 8px; font-size: 0.88rem; color: #334155; line-height: 1.6; white-space: pre-wrap;">{{ r.content }}</div>
+                {% endif %}
+
+                <!-- Footer with Keywords and Linked Case -->
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #f1f5f9;">
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+                        {% if r.keywords %}
+                            {% for tag in r.keywords.split('،') if tag.strip() %}
+                            <span style="font-size: 0.72rem; background: #f1f5f9; color: #64748b; padding: 2px 7px; border-radius: 4px;">#{{ tag.strip() }}</span>
+                            {% endfor %}
+                            {% for tag in r.keywords.split(',') if tag.strip() and '،' not in r.keywords %}
+                            <span style="font-size: 0.72rem; background: #f1f5f9; color: #64748b; padding: 2px 7px; border-radius: 4px;">#{{ tag.strip() }}</span>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        {% if r.law_case %}
+                        <span style="font-size: 0.78rem; color: #0891b2; font-weight: 700;">
+                            <i class="fa-solid fa-folder-closed"></i> القضية: {{ r.law_case.case_number }}
+                        </span>
+                        {% else %}
+                        <span style="font-size: 0.75rem; color: #94a3b8;">مرجع عام</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+
+            {% if not records %}
+            <div class="card" style="text-align: center; padding: 60px 20px; color: #94a3b8; border-radius: 14px;">
+                <i class="fa-solid fa-book-bookmark" style="font-size: 3.5rem; opacity: 0.3; margin-bottom: 15px; display: block;"></i>
+                <h4 style="margin: 0 0 5px; color: #64748b;">لا توجد مراجع أو أنظمة قانونية مسجلة بعد</h4>
+                <p style="margin: 0; font-size: 0.88rem;">يمكنك بناء مكتبتك وسوابقك القضائية من خلال النموذج الجانبي لتسهيل صياغة المذكرات.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
 </div>
+
+<style>
+.pill-btn {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.pill-btn:hover { background: #e2e8f0; }
+.pill-btn.active { background: #1e293b; color: white; border-color: #1e293b; }
+.pill-success.active { background: #059669 !important; border-color: #059669 !important; }
+.pill-warning.active { background: #d97706 !important; border-color: #d97706 !important; }
+.pill-purple.active { background: #7c3aed !important; border-color: #7c3aed !important; }
+.pill-info.active { background: #0891b2 !important; border-color: #0891b2 !important; }
+.ref-card:hover { border-color: #cbd5e1; box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+.ref-card.selected { border-color: #6366f1 !important; background: #faf5ff !important; }
+</style>
 {% endblock %}
 
 {% block scripts %}
 <div id="legal-ref-data-store" data-records="{{ records_json | forceescape }}" style="display: none;"></div>
 <script>
-const allRecords = JSON.parse(document.getElementById('legal-ref-data-store').getAttribute('data-records'));
-let selectedId = null;
+const allRecords = JSON.parse(document.getElementById('legal-ref-data-store').getAttribute('data-records') || '[]');
+let currentCategoryFilter = 'all';
 
-function showAlert(msg, type='success') {
-  const el = document.getElementById('alertBox');
-  el.className = 'alert-box alert-' + type;
-  el.textContent = msg;
-  el.style.display = 'block';
-  setTimeout(() => el.style.display = 'none', 4000);
+function showAlert(msg, isSuccess=true) {
+    const el = document.getElementById('alertBox');
+    el.style.display = 'block';
+    el.style.background = isSuccess ? '#dcfce7' : '#fee2e2';
+    el.style.color = isSuccess ? '#15803d' : '#b91c1c';
+    el.style.border = isSuccess ? '1px solid #86efac' : '1px solid #fca5a5';
+    el.textContent = msg;
+    setTimeout(() => { el.style.display = 'none'; }, 4000);
 }
 
-function filterTable() {
-  const search = document.getElementById('filterSearch').value.toLowerCase();
-  const caseNum = document.getElementById('filterCase').value.toLowerCase();
-  document.querySelectorAll('#refTbody tr').forEach(row => {
-    const textSearch = row.dataset.search || '';
-    const textCase = row.dataset.case || '';
-    const match1 = !search || textSearch.includes(search);
-    const match2 = !caseNum || textCase.includes(caseNum);
-    row.style.display = (match1 && match2) ? '' : 'none';
-  });
+function setQuickCategory(cat, btn) {
+    currentCategoryFilter = cat;
+    document.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    filterCards();
 }
 
-function selectRecord(id, row) {
-  selectedId = id;
-  document.querySelectorAll('#refTbody tr').forEach(r => r.classList.remove('selected'));
-  row.classList.add('selected');
-  const rec = allRecords.find(r => r.id === id);
-  if (!rec) return;
-  document.getElementById('recId').value = rec.id;
-  document.getElementById('fCaseId').value = rec.case_id || '';
-  document.getElementById('fTitle').value = rec.title || '';
-  document.getElementById('fUrl').value = rec.reference_url || '';
+function filterCards() {
+    const search = (document.getElementById('filterSearch').value || '').toLowerCase().trim();
+
+    document.querySelectorAll('.ref-card').forEach(card => {
+        const text = card.dataset.search || '';
+        const category = card.dataset.category || '';
+        const hasCase = card.dataset.hasCase === '1';
+
+        let matchCat = true;
+        if (currentCategoryFilter === 'نظام / قانون') matchCat = (category === 'نظام / قانون');
+        else if (currentCategoryFilter === 'precedents') matchCat = ['سابقة قضائية', 'مبدأ محكمة عليا'].includes(category);
+        else if (currentCategoryFilter === 'regulations') matchCat = ['لائحة تنفيذية', 'تعميم وزاري'].includes(category);
+        else if (currentCategoryFilter === 'linked') matchCat = hasCase;
+
+        const matchSearch = !search || text.includes(search);
+        card.style.display = (matchCat && matchSearch) ? '' : 'none';
+    });
+}
+
+function selectReference(id) {
+    const rec = allRecords.find(r => r.id === id);
+    if (!rec) return;
+
+    document.querySelectorAll('.ref-card').forEach(c => c.classList.remove('selected'));
+    const selectedCard = document.getElementById('ref-card-' + id);
+    if (selectedCard) selectedCard.classList.add('selected');
+
+    document.getElementById('formTitle').innerHTML = '<i class="fa-solid fa-pen-to-square" style="color:#6366f1;"></i> تعديل المرجع القانوني';
+    document.getElementById('editBadge').style.display = 'inline-block';
+    document.getElementById('recId').value = rec.id;
+    document.getElementById('fTitle').value = rec.title || '';
+    document.getElementById('fCategory').value = rec.category || 'نظام / قانون';
+    document.getElementById('fArticleNumber').value = rec.article_number || '';
+    document.getElementById('fSource').value = rec.source || '';
+    document.getElementById('fCaseId').value = rec.case_id || '';
+    document.getElementById('fContent').value = rec.content || '';
+    document.getElementById('fKeywords').value = rec.keywords || '';
+    document.getElementById('fUrl').value = rec.reference_url || '';
+
+    document.getElementById('refForm').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function clearForm() {
-  selectedId = null;
-  document.getElementById('recId').value = '';
-  document.getElementById('fCaseId').value = '';
-  document.getElementById('fTitle').value = '';
-  document.getElementById('fUrl').value = '';
-  document.querySelectorAll('#refTbody tr').forEach(r => r.classList.remove('selected'));
+    document.querySelectorAll('.ref-card').forEach(c => c.classList.remove('selected'));
+    document.getElementById('formTitle').innerHTML = '<i class="fa-solid fa-pen-to-square" style="color:#6366f1;"></i> إضافة مرجع قانوني';
+    document.getElementById('editBadge').style.display = 'none';
+    document.getElementById('refForm').reset();
+    document.getElementById('recId').value = '';
 }
 
-async function saveRecord(e) {
-  e.preventDefault();
-  const payload = {
-    id: document.getElementById('recId').value || null,
-    case_id: document.getElementById('fCaseId').value,
-    title: document.getElementById('fTitle').value.trim(),
-    reference_url: document.getElementById('fUrl').value.trim()
-  };
-  const res = await fetch('/api/legal_references/save', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-  const data = await res.json();
-  if (data.ok) { showAlert(data.message); setTimeout(() => location.reload(), 1000); }
-  else showAlert(data.message, 'error');
+async function saveReference(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btnSave');
+    btn.disabled = true;
+
+    const payload = {
+        id: document.getElementById('recId').value ? parseInt(document.getElementById('recId').value) : null,
+        title: document.getElementById('fTitle').value.trim(),
+        category: document.getElementById('fCategory').value,
+        article_number: document.getElementById('fArticleNumber').value.trim() || null,
+        source: document.getElementById('fSource').value.trim() || null,
+        case_id: document.getElementById('fCaseId').value || null,
+        content: document.getElementById('fContent').value.trim() || null,
+        keywords: document.getElementById('fKeywords').value.trim() || null,
+        reference_url: document.getElementById('fUrl').value.trim() || null
+    };
+
+    try {
+        const res = await fetch('/api/legal_references/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.ok) {
+            showAlert(data.message, true);
+            setTimeout(() => location.reload(), 800);
+        } else {
+            showAlert(data.message, false);
+            btn.disabled = false;
+        }
+    } catch (err) {
+        showAlert('فشل الاتصال بالخادم', false);
+        btn.disabled = false;
+    }
 }
 
-async function deleteRecord() {
-  if (!selectedId) { showAlert('اختر سجلاً أولاً', 'error'); return; }
-  if (!confirm('هل تريد حذف هذا المرجع؟')) return;
-  const res = await fetch(`/api/legal_references/delete/${selectedId}`, { method: 'DELETE' });
-  const data = await res.json();
-  if (data.ok) { showAlert(data.message); setTimeout(() => location.reload(), 900); }
-  else showAlert(data.message, 'error');
+function copyCitation(id) {
+    const rec = allRecords.find(r => r.id === id);
+    if (!rec) return;
+
+    let citation = `【السند القانوني】: ${rec.title}\n`;
+    if (rec.source || rec.article_number) {
+        citation += `المصدر: ${rec.source || ''} ${rec.article_number ? '- ' + rec.article_number : ''}\n`;
+    }
+    if (rec.content) {
+        citation += `نص المادة / المبدأ:\n"${rec.content}"\n`;
+    }
+    if (rec.reference_url) {
+        citation += `المرجع الإلكتروني: ${rec.reference_url}\n`;
+    }
+
+    navigator.clipboard.writeText(citation).then(() => {
+        showAlert('تم نسخ السند القانوني للحافظة بنجاح! جاهز للصق في المذكرة.');
+    }).catch(() => {
+        showAlert('تعذر النسخ التلقائي للحافظة', false);
+    });
+}
+
+async function deleteReference(id) {
+    if (!confirm('هل أنت متأكد من حذف هذا المرجع القانوني؟')) return;
+
+    try {
+        const res = await fetch(`/api/legal_references/delete/${id}`, {
+            method: 'DELETE'
+        });
+        const data = await res.json();
+        if (data.ok) {
+            showAlert(data.message, true);
+            setTimeout(() => location.reload(), 700);
+        } else {
+            showAlert(data.message, false);
+        }
+    } catch (e) {
+        showAlert('فشل الحذف', false);
+    }
 }
 </script>
 {% endblock %}

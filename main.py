@@ -25,7 +25,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from database.database import get_db, init_db
 from database.models import (AccessProfiles, AuthSessions, AuthVerificationTokens, LawClients, LawCases, LawOffices,
-    LawHearings, LawTransactions, LawExpenses, LawDocuments, LawTasks, PaymentRequest)
+    LawHearings, LawTransactions, LawExpenses, LawDocuments, LawTasks, PaymentRequest, LawTimesheets)
 import shutil
 
 # --- PDF Generation & Arabic support ---
@@ -3370,200 +3370,298 @@ async def add_document(
     return RedirectResponse(url=f"/cases/{case_id}", status_code=303)
 
 @app.get("/tasks", response_class=HTMLResponse)
-
-async def tasks_page(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
-
+async def tasks_page(
+    request: Request,
+    filter_type: Optional[str] = None,
+    q: Optional[str] = None,
+    case_id: Optional[int] = None,
+    assignee_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
     if not user:
-
         return RedirectResponse(url="/", status_code=303)
-
     try:
-
+        from datetime import date as _date, datetime as _dt
+        today_str = str(_date.today())
         office_id = user.office_id
 
-        # Manager sees all tasks in office, lawyer sees only their own
-
-        if user.role in ['مدير', 'مدير المكتب', 'صاحب المكتب']:
-
-            tasks = db.query(LawTasks).filter(LawTasks.office_id == office_id).order_by(LawTasks.priority_level.asc(), LawTasks.due_at.asc()).all()
-
-        else:
-
-            tasks = db.query(LawTasks).filter(
-
-                LawTasks.office_id == office_id,
-
-                LawTasks.assignee_user_id == user.id
-
-            ).order_by(LawTasks.priority_level.asc(), LawTasks.due_at.asc()).all()
-
-        cases = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0).all()
-
-        users = db.query(AccessProfiles).filter(AccessProfiles.office_id == office_id).all()
-
-        return templates.TemplateResponse(
-
-            request=request, name="tasks.html",
-
-            context={"user": user, "tasks": tasks, "cases": cases, "users": users, "active_page": "tasks"}
-
+        # Base query
+        query = db.query(LawTasks).filter(
+            LawTasks.office_id == office_id,
+            LawTasks.is_deleted == 0
         )
 
+        # Role restrictions: regular lawyers see own tasks or cases they lead
+        if user.role not in ['مدير', 'مدير المكتب', 'صاحب المكتب', 'صاحب مكتب', 'مدير النظام']:
+            query = query.filter(LawTasks.assignee_user_id == user.id)
+
+        all_office_tasks = query.all()
+
+        # Calculate live KPI Ribbon statistics
+        total_tasks = len(all_office_tasks)
+        overdue_tasks = sum(1 for t in all_office_tasks if t.due_at and t.due_at[:10] < today_str and t.status_key != 'completed')
+        due_today_tasks = sum(1 for t in all_office_tasks if t.due_at and t.due_at[:10] == today_str and t.status_key != 'completed')
+        completed_tasks = sum(1 for t in all_office_tasks if t.status_key == 'completed')
+        completion_rate = round((completed_tasks / total_tasks * 100) if total_tasks > 0 else 0, 1)
+
+        # Apply user filters
+        filtered_tasks = all_office_tasks
+        if filter_type == 'my':
+            filtered_tasks = [t for t in filtered_tasks if t.assignee_user_id == user.id]
+        elif filter_type == 'overdue':
+            filtered_tasks = [t for t in filtered_tasks if t.due_at and t.due_at[:10] < today_str and t.status_key != 'completed']
+        elif filter_type == 'today':
+            filtered_tasks = [t for t in filtered_tasks if t.due_at and t.due_at[:10] == today_str and t.status_key != 'completed']
+        elif filter_type == 'urgent':
+            filtered_tasks = [t for t in filtered_tasks if t.priority_level == 1 and t.status_key != 'completed']
+        elif filter_type == 'completed':
+            filtered_tasks = [t for t in filtered_tasks if t.status_key == 'completed']
+
+        if q:
+            q_lower = q.lower()
+            filtered_tasks = [t for t in filtered_tasks if (t.title and q_lower in t.title.lower()) or (t.description and q_lower in t.description.lower())]
+
+        if case_id:
+            filtered_tasks = [t for t in filtered_tasks if t.case_id == case_id]
+
+        if assignee_id:
+            filtered_tasks = [t for t in filtered_tasks if t.assignee_user_id == assignee_id]
+
+        # Sorting: priority asc, due_at asc (safe against mixed int/str types)
+        def _task_priority_weight(p):
+            if p is None: return 2
+            if isinstance(p, int): return p
+            p_str = str(p).strip().lower()
+            if p_str in ['1', 'عالية', 'عاجل', 'عاجلة', 'urgent', 'high']: return 1
+            if p_str in ['2', 'متوسطة', 'medium', 'normal']: return 2
+            if p_str in ['3', 'منخفضة', 'low']: return 3
+            try: return int(p_str)
+            except Exception: return 2
+
+        filtered_tasks.sort(key=lambda t: (_task_priority_weight(t.priority_level), t.due_at or '9999-12-31'))
+
+        cases = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0).order_by(LawCases.title.asc()).all()
+        users = db.query(AccessProfiles).filter(AccessProfiles.office_id == office_id).order_by(AccessProfiles.name.asc()).all()
+
+        return templates.TemplateResponse(
+            request=request, name="tasks.html",
+            context={
+                "user": user,
+                "tasks": filtered_tasks,
+                "cases": cases,
+                "users": users,
+                "active_page": "tasks",
+                "filter_type": filter_type or "all",
+                "q": q or "",
+                "today_str": today_str,
+                "kpis": {
+                    "total": total_tasks,
+                    "overdue": overdue_tasks,
+                    "today": due_today_tasks,
+                    "completed": completed_tasks,
+                    "rate": completion_rate
+                }
+            }
+        )
     except Exception as e:
-
         import traceback
-
         return _safe_error(traceback.format_exc())
 
-@app.post("/tasks/add")
-
-async def add_task(
-
-    request: Request,
-
-    title: str = Form(...),
-
-    description: str = Form(None),
-
-    case_id: int = Form(None),
-
-    assignee_user_id: int = Form(None),
-
-    due_at: str = Form(None),
-
-    priority_level: int = Form(2),
-
+@app.get("/api/tasks/{task_id}")
+async def get_task_api(
+    task_id: int,
     db: Session = Depends(get_db),
-
     user: AccessProfiles = Depends(get_current_user)
-
 ):
+    if not user:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+    task = db.query(LawTasks).filter(
+        LawTasks.id == task_id,
+        LawTasks.office_id == user.office_id,
+        LawTasks.is_deleted == 0
+    ).first()
+    if not task:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    return JSONResponse({
+        "id": task.id,
+        "title": task.title,
+        "description": task.description or "",
+        "case_id": task.case_id,
+        "assignee_user_id": task.assignee_user_id,
+        "due_at": task.due_at or "",
+        "priority_level": task.priority_level,
+        "status_key": task.status_key,
+        "task_type": getattr(task, 'task_type', None) or "general",
+        "estimated_hours": getattr(task, 'estimated_hours', 0.0) or 0.0,
+        "actual_hours": getattr(task, 'actual_hours', 0.0) or 0.0,
+        "is_billable": getattr(task, 'is_billable', 0) or 0,
+        "checklist_json": getattr(task, 'checklist_json', None) or ""
+    })
 
+@app.post("/tasks/add")
+async def add_task(
+    request: Request,
+    title: str = Form(...),
+    description: Optional[str] = Form(None),
+    case_id: Optional[int] = Form(None),
+    assignee_user_id: Optional[int] = Form(None),
+    due_at: Optional[str] = Form(None),
+    priority_level: int = Form(2),
+    task_type: Optional[str] = Form("general"),
+    estimated_hours: Optional[float] = Form(0.0),
+    is_billable: Optional[int] = Form(0),
+    checklist_json: Optional[str] = Form(None),
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
     if not user: return RedirectResponse(url="/", status_code=303)
-
     office_id = user.office_id
-
     if case_id:
-
         case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
-
         if not case: raise HTTPException(status_code=403, detail="غير مصرح")
 
     task = LawTasks(
-
-        title=title,
-
-        description=description,
-
-        case_id=case_id,
-
+        title=title.strip(),
+        description=description.strip() if description else None,
+        case_id=case_id if case_id and case_id > 0 else None,
         office_id=office_id,
-
-        assignee_user_id=assignee_user_id,
-
-        due_at=due_at,
-
+        assignee_user_id=assignee_user_id if assignee_user_id and assignee_user_id > 0 else None,
+        due_at=due_at.strip() if due_at else None,
         priority_level=priority_level,
-
-        status_key='pending'
-
+        status_key='pending',
+        task_type=task_type or 'general',
+        estimated_hours=estimated_hours or 0.0,
+        actual_hours=0.0,
+        is_billable=is_billable or 0,
+        checklist_json=checklist_json
     )
-
     db.add(task)
-
     db.commit()
+    db.refresh(task)
 
+    if request.headers.get("accept") == "application/json":
+        return JSONResponse({"ok": True, "task_id": task.id})
     return RedirectResponse(url="/tasks", status_code=303)
 
 @app.post("/tasks/edit")
-
 async def edit_task(
-
     request: Request,
-
     task_id: int = Form(...),
-
     title: str = Form(...),
-
-    description: str = Form(None),
-
-    case_id: int = Form(None),
-
-    assignee_user_id: int = Form(None),
-
-    due_at: str = Form(None),
-
+    description: Optional[str] = Form(None),
+    case_id: Optional[int] = Form(None),
+    assignee_user_id: Optional[int] = Form(None),
+    due_at: Optional[str] = Form(None),
     priority_level: int = Form(2),
-
     status_key: str = Form('pending'),
-
+    task_type: Optional[str] = Form("general"),
+    estimated_hours: Optional[float] = Form(0.0),
+    actual_hours: Optional[float] = Form(0.0),
+    is_billable: Optional[int] = Form(0),
+    checklist_json: Optional[str] = Form(None),
     db: Session = Depends(get_db),
-
     user: AccessProfiles = Depends(get_current_user)
-
 ):
-
     if not user: return RedirectResponse(url="/", status_code=303)
-
     office_id = user.office_id
-
-    task = db.query(LawTasks).filter(LawTasks.id == task_id, LawTasks.office_id == office_id).first()
-
+    task = db.query(LawTasks).filter(LawTasks.id == task_id, LawTasks.office_id == office_id, LawTasks.is_deleted == 0).first()
     if task:
-
+        from datetime import datetime as _dt
         if case_id:
-
             case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
-
             if not case: raise HTTPException(status_code=403, detail="غير مصرح")
-
-        task.title = title
-
-        task.description = description
-
-        task.case_id = case_id
-
-        task.assignee_user_id = assignee_user_id
-
-        task.due_at = due_at
-
+        task.title = title.strip()
+        task.description = description.strip() if description else None
+        task.case_id = case_id if case_id and case_id > 0 else None
+        task.assignee_user_id = assignee_user_id if assignee_user_id and assignee_user_id > 0 else None
+        task.due_at = due_at.strip() if due_at else None
         task.priority_level = priority_level
-
+        if status_key == 'completed' and task.status_key != 'completed':
+            task.completed_at = str(_dt.now())[:19]
         task.status_key = status_key
-
+        task.task_type = task_type or 'general'
+        task.estimated_hours = estimated_hours or 0.0
+        task.actual_hours = actual_hours or 0.0
+        task.is_billable = is_billable or 0
+        task.checklist_json = checklist_json
         db.commit()
 
+    if request.headers.get("accept") == "application/json":
+        return JSONResponse({"ok": True, "task_id": task_id})
     return RedirectResponse(url="/tasks", status_code=303)
 
 @app.post("/tasks/update_status")
-
 async def update_task_status(
-
     request: Request,
-
     task_id: int = Form(...),
-
     status_key: str = Form(...),
-
     db: Session = Depends(get_db),
-
     user: AccessProfiles = Depends(get_current_user)
-
 ):
-
     if not user: return RedirectResponse(url="/", status_code=303)
-
     office_id = user.office_id
-
-    task = db.query(LawTasks).filter(LawTasks.id == task_id, LawTasks.office_id == office_id).first()
-
+    task = db.query(LawTasks).filter(LawTasks.id == task_id, LawTasks.office_id == office_id, LawTasks.is_deleted == 0).first()
     if task:
-
+        from datetime import datetime as _dt
         task.status_key = status_key
-
+        if status_key == 'completed':
+            task.completed_at = str(_dt.now())[:19]
         db.commit()
 
+    if request.headers.get("accept") == "application/json":
+        return JSONResponse({"ok": True, "task_id": task_id, "status_key": status_key})
     return RedirectResponse(url="/tasks", status_code=303)
+
+@app.post("/tasks/delete")
+async def delete_task(
+    request: Request,
+    task_id: int = Form(...),
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    if not user: return RedirectResponse(url="/", status_code=303)
+    office_id = user.office_id
+    task = db.query(LawTasks).filter(LawTasks.id == task_id, LawTasks.office_id == office_id).first()
+    if task:
+        task.is_deleted = 1
+        db.commit()
+
+    if request.headers.get("accept") == "application/json":
+        return JSONResponse({"ok": True, "deleted_id": task_id})
+    return RedirectResponse(url="/tasks", status_code=303)
+
+@app.post("/tasks/convert-timesheet")
+async def convert_task_to_timesheet(
+    request: Request,
+    task_id: int = Form(...),
+    hours: float = Form(1.0),
+    hourly_rate: Optional[float] = Form(0.0),
+    notes: Optional[str] = Form(None),
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    if not user: return RedirectResponse(url="/", status_code=303)
+    office_id = user.office_id
+    task = db.query(LawTasks).filter(LawTasks.id == task_id, LawTasks.office_id == office_id, LawTasks.is_deleted == 0).first()
+    if not task or not task.case_id:
+        raise HTTPException(status_code=400, detail="المهمة غير مرتبطة بقضية محددة لتحويلها إلى سجل أتعاب")
+
+    entry = LawTimesheets(
+        case_id=task.case_id,
+        office_id=office_id,
+        user_id=user.id,
+        title=notes or f"إنجاز مهمة: {task.title}",
+        duration_hours=hours,
+        billable_rate=hourly_rate or 0.0
+    )
+    db.add(entry)
+    task.actual_hours = hours
+    db.commit()
+
+    if request.headers.get("accept") == "application/json":
+        return JSONResponse({"ok": True, "timesheet_id": entry.id})
+    return RedirectResponse(url=f"/cases/{task.case_id}", status_code=303)
 
 @app.get("/activity", response_class=HTMLResponse)
 

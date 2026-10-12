@@ -1,214 +1,435 @@
 {% extends "base.html" %}
-{% block title %}الوكالات الرسمية | LawSaaS{% endblock %}
+{% block title %}الوكالات الرسمية والشرعية | LawSaaS{% endblock %}
 
-{% block head %}
+{% block content %}
+<div class="poa-container" dir="rtl" style="margin-bottom: 40px;">
+    <!-- Page Header -->
+    <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px;">
+        <div>
+            <h1 style="margin: 0; font-size: 1.8rem; font-weight: 800; color: var(--secondary-color);">
+                <i class="fa-solid fa-file-signature" style="color: #0d9488; margin-left: 10px;"></i>
+                إدارة الوكالات الرسمية والشرعية
+            </h1>
+            <p style="margin: 5px 0 0; color: var(--text-muted); font-size: 0.95rem;">
+                توثيق وكالات الموكلين، تتبع صلاحيات التمثيل القضائي، ومراقبة مدد وسريان الوكالات.
+            </p>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <button class="btn-primary" onclick="openNewRecordForm()" style="background: #0d9488;">
+                <i class="fa-solid fa-plus"></i> إضافة وكالة جديدة
+            </button>
+        </div>
+    </div>
+
+    <!-- Live KPI Stats Ribbon -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 15px; margin-bottom: 25px;">
+        <div class="card" style="padding: 16px; border-radius: 12px; border-right: 4px solid #0d9488; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">إجمالي الوكالات</span>
+                <h3 style="margin: 5px 0 0; font-size: 1.6rem; color: #1e293b;">{{ kpis.total }}</h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #f0fdfa; color: #0d9488; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fa-solid fa-file-signature"></i>
+            </div>
+        </div>
+
+        <div class="card" style="padding: 16px; border-radius: 12px; border-right: 4px solid #10b981; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">وكالات سارية وصالحة</span>
+                <h3 style="margin: 5px 0 0; font-size: 1.6rem; color: #059669;">{{ kpis.active }}</h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #ecfdf5; color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+        </div>
+
+        <div class="card" style="padding: 16px; border-radius: 12px; border-right: 4px solid #f59e0b; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">تنتهي قريباً (30 يوم) ⚠️</span>
+                <h3 style="margin: 5px 0 0; font-size: 1.6rem; color: #d97706;">{{ kpis.expiring }}</h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #fffbeb; color: #f59e0b; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fa-solid fa-hourglass-half"></i>
+            </div>
+        </div>
+
+        <div class="card" style="padding: 16px; border-radius: 12px; border-right: 4px solid #ef4444; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">وكالات منتهية الصلاحية</span>
+                <h3 style="margin: 5px 0 0; font-size: 1.6rem; color: #dc2626;">{{ kpis.expired }}</h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #fef2f2; color: #ef4444; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fa-solid fa-calendar-xmark"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="card" style="padding: 15px 20px; border-radius: 12px; margin-bottom: 25px;">
+        <form method="GET" action="/power_of_attorney" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+            <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto;">
+                <a href="/power_of_attorney" class="filter-pill {% if filter_type == 'all' %}active{% endif %}">الكل ({{ kpis.total }})</a>
+                <a href="/power_of_attorney?filter_type=active" class="filter-pill {% if filter_type == 'active' %}active{% endif %}">سارية ({{ kpis.active }})</a>
+                <a href="/power_of_attorney?filter_type=expiring" class="filter-pill {% if filter_type == 'expiring' %}active{% endif %}" style="{% if filter_type == 'expiring' %}background:#fef3c7; color:#b45309; border-color:#fcd34d;{% endif %}">تنتهي قريباً ({{ kpis.expiring }})</a>
+                <a href="/power_of_attorney?filter_type=expired" class="filter-pill {% if filter_type == 'expired' %}active{% endif %}" style="{% if filter_type == 'expired' %}background:#fee2e2; color:#b91c1c; border-color:#f87171;{% endif %}">منتهية ({{ kpis.expired }})</a>
+                <a href="/power_of_attorney?filter_type=litigation" class="filter-pill {% if filter_type == 'litigation' %}active{% endif %}">مرافعة ودفاع</a>
+            </div>
+
+            <div style="position: relative; min-width: 240px; flex: 1;">
+                <i class="fa-solid fa-magnifying-glass" style="position: absolute; right: 12px; top: 11px; color: #94a3b8;"></i>
+                <input type="text" name="q" value="{{ q }}" placeholder="بحث بالموكل، الوكيل، أو رقم الوكالة..." style="width: 100%; padding: 8px 36px 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit; font-size: 0.9rem;">
+            </div>
+
+            <button type="submit" class="btn-primary" style="padding: 8px 16px; border-radius: 8px; background: #0d9488;">
+                <i class="fa-solid fa-filter"></i> تصفية
+            </button>
+            {% if q or filter_type != 'all' %}
+            <a href="/power_of_attorney" style="color: #64748b; font-size: 0.85rem; text-decoration: none; padding: 6px 10px;">إلغاء الفرز</a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Layout: Split Form & Table -->
+    <div style="display: grid; grid-template-columns: 380px 1fr; gap: 24px; align-items: start;">
+        <!-- Right Column: Form Card -->
+        <div class="card" style="padding: 22px; border-radius: 14px; position: sticky; top: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">
+                <h3 style="margin: 0; font-size: 1.1rem; color: #1e293b;" id="formTitle">
+                    <i class="fa-solid fa-pen-to-square" style="color: #0d9488;"></i> إضافة وكالة رسمية
+                </h3>
+                <button type="button" onclick="clearForm()" style="background: none; border: none; color: #64748b; cursor: pointer; font-size: 0.85rem; font-weight: 700;">
+                    <i class="fa-solid fa-rotate-left"></i> تفريغ
+                </button>
+            </div>
+
+            <div id="alertBox" style="display: none; padding: 10px 14px; border-radius: 8px; font-size: 0.88rem; font-weight: 600; margin-bottom: 15px;"></div>
+
+            <form id="poaForm" onsubmit="saveRecord(event)">
+                <input type="hidden" id="recId">
+
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 700; font-size: 0.85rem; color: #334155;">القضية المرتبطة</label>
+                    <select id="fCaseId" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
+                        <option value="">بدون قضية (وكالة عامة للمكتب)</option>
+                        {% for c in cases %}
+                        <option value="{{ c.id }}">{{ c.case_number }} - {{ c.title[:30] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 700; font-size: 0.85rem; color: #334155;">اسم الموكل (الطرف الأول) <span style="color: red;">*</span></label>
+                    <input type="text" id="fName" required placeholder="اسم الموكل صاحب الوكالة..." style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 700; font-size: 0.85rem; color: #334155;">اسم الوكيل (المحامي)</label>
+                        <input type="text" id="fAgent" placeholder="المحامي الوكيل..." style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 700; font-size: 0.85rem; color: #334155;">رقم صك الوكالة <span style="color: red;">*</span></label>
+                        <input type="text" id="fNum" required placeholder="مثال: 441029482" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 700; font-size: 0.85rem; color: #334155;">نوع الوكالة</label>
+                        <select id="fPoaType" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
+                            <option value="litigation">مرافعة ومدافعة وقضاء</option>
+                            <option value="general">وكالة شرعية عامة</option>
+                            <option value="collection">استلام وتحصيل شيكات</option>
+                            <option value="settlement">صلح وإقرار وإبراء</option>
+                            <option value="property">بيع وإفراغ عقارات</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 700; font-size: 0.85rem; color: #334155;">جهة الإصدار</label>
+                        <input type="text" id="fAuth" value="كتابة العدل / منصة ناجز" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 700; font-size: 0.85rem; color: #334155;">تاريخ الإصدار</label>
+                        <input type="date" id="fIssueDate" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 700; font-size: 0.85rem; color: #334155;">تاريخ الانتهاء</label>
+                        <input type="date" id="fExpiryDate" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 700; font-size: 0.85rem; color: #334155;">نطاق الصلاحيات والتفويض</label>
+                    <textarea id="fScope" rows="2" placeholder="المرافعة، تقديم اللوائح، التنازل، استلام المبالغ..." style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit; resize: vertical;"></textarea>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 700; font-size: 0.85rem; color: #334155;">ملاحظات داخلية</label>
+                    <textarea id="fNotes" rows="1" placeholder="أية ملاحظات إضافية..." style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit; resize: vertical;"></textarea>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 0.85rem; color: #334155; cursor: pointer;">
+                        <input type="checkbox" id="fCreateReminder" style="width: 17px; height: 17px; accent-color: #0d9488;">
+                        <span>توليد مهمة تنبيه تلقائية قبل انتهاء الوكالة</span>
+                    </label>
+                </div>
+
+                <div style="display: flex; gap: 8px;">
+                    <button type="submit" class="btn-primary" style="flex: 1; background: #0d9488;">
+                        <i class="fa-solid fa-floppy-disk"></i> حفظ الوكالة
+                    </button>
+                    <button type="button" id="btnDelete" onclick="deleteRecord()" class="cancel-btn" style="display: none; color: #dc2626; border-color: #fecaca;">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Left Column: Records Table -->
+        <div class="card" style="padding: 0; overflow: hidden; border-radius: 14px;">
+            <div style="overflow-x: auto;">
+                <table class="data-table" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; text-align: right;">
+                            <th style="padding: 14px 16px;">الموكل ورقم الوكالة</th>
+                            <th style="padding: 14px 16px;">الوكيل المفوض</th>
+                            <th style="padding: 14px 16px;">القضية والنوع</th>
+                            <th style="padding: 14px 16px;">جهة التوثيق</th>
+                            <th style="padding: 14px 16px;">الصلاحية والانتهاء</th>
+                            <th style="padding: 14px 16px;">الحالة</th>
+                            <th style="padding: 14px 16px; text-align: center;">إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="poaTbody">
+                        {% for r in records %}
+                        {% set is_expired = r.expiry_date and r.expiry_date < today %}
+                        <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.15s;" id="row-{{ r.id }}" onclick="loadRecordIntoForm({{ r.id }})">
+                            <!-- Principal & Number -->
+                            <td style="padding: 14px 16px;">
+                                <strong style="color: #1e293b; font-size: 0.95rem; display: block;">{{ r.principal_name }}</strong>
+                                <span style="font-size: 0.8rem; color: #64748b; font-family: monospace;">#{{ r.agency_number }}</span>
+                            </td>
+
+                            <!-- Agent -->
+                            <td style="padding: 14px 16px; font-size: 0.88rem; color: #334155;">
+                                {{ r.agent_name or 'المكتب / المحامي' }}
+                            </td>
+
+                            <!-- Case & Type -->
+                            <td style="padding: 14px 16px;">
+                                {% if r.law_case %}
+                                <a href="/cases/{{ r.case_id }}" style="color: var(--primary-color); font-weight: 700; text-decoration: none;" onclick="event.stopPropagation()">
+                                    {{ r.law_case.title }}
+                                </a>
+                                {% else %}
+                                <span style="color: #94a3b8; font-size: 0.85rem;">وكالة عامة</span>
+                                {% endif %}
+                                <div style="margin-top: 3px;">
+                                    <span class="badge" style="background: #f0fdfa; color: #0d9488; font-size: 0.72rem;">
+                                        {% if r.poa_type == 'litigation' %}مرافعة ودفاع
+                                        {% elif r.poa_type == 'general' %}عامة
+                                        {% elif r.poa_type == 'collection' %}تحصيل
+                                        {% else %}أخرى{% endif %}
+                                    </span>
+                                </div>
+                            </td>
+
+                            <!-- Authority -->
+                            <td style="padding: 14px 16px; font-size: 0.85rem; color: #475569;">
+                                {{ r.issuing_authority or 'كتابة العدل' }}
+                                {% if r.issue_date %}
+                                <small style="display: block; color: #94a3b8; font-size: 0.75rem;">إصدار: {{ r.issue_date }}</small>
+                                {% endif %}
+                            </td>
+
+                            <!-- Expiry & Validity -->
+                            <td style="padding: 14px 16px;">
+                                {% if r.expiry_date %}
+                                <span dir="ltr" style="font-size: 0.88rem; font-weight: 700; color: #334155;">{{ r.expiry_date }}</span>
+                                {% if is_expired %}
+                                <span class="badge" style="background: #fee2e2; color: #b91c1c; display: block; margin-top: 2px;">منتهية</span>
+                                {% else %}
+                                <span class="badge" style="background: #dcfce7; color: #15803d; display: block; margin-top: 2px;">سارية</span>
+                                {% endif %}
+                                {% else %}
+                                <span style="color: #94a3b8; font-size: 0.85rem;">غير محدد</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Status -->
+                            <td style="padding: 14px 16px;">
+                                {% if is_expired %}
+                                <span class="badge" style="background: #fee2e2; color: #dc2626; font-weight: 700;">منتهية ❌</span>
+                                {% else %}
+                                <span class="badge" style="background: #d1fae5; color: #047857; font-weight: 700;">صالحة وسارية ✅</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Actions -->
+                            <td style="padding: 14px 16px; text-align: center;">
+                                <div style="display: inline-flex; gap: 6px;">
+                                    <button type="button" class="action-btn" style="color: #0d9488; background: #f0fdfa;" title="تعديل" onclick="event.stopPropagation(); loadRecordIntoForm({{ r.id }})">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: 50px 20px; color: #94a3b8;">
+                                <i class="fa-solid fa-file-signature" style="font-size: 3rem; margin-bottom: 12px; opacity: 0.3;"></i>
+                                <h3 style="margin: 0; color: #475569;">لا توجد وكالات مسجلة</h3>
+                                <p style="margin: 5px 0 15px; font-size: 0.9rem;">يمكنك تسجيل صكوك الوكالات ومتابعة انتهاء صلاحيتها بسهولة.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
-.page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
-.grid-layout { display: grid; grid-template-columns: 360px 1fr; gap: 24px; align-items: start; }
-.form-card { background: var(--card-bg); border-radius: 14px; padding: 22px; border: 1px solid var(--border-color); box-shadow: 0 2px 8px rgba(0,0,0,.05); }
-.form-card h3 { font-size: 1.05rem; font-weight: 800; color: var(--secondary-color); margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
-.form-group { margin-bottom: 14px; display: flex; flex-direction: column; gap: 6px; }
-.form-group label { font-size: .85rem; font-weight: 700; color: var(--text-muted); }
-.form-group input, .form-group select, .form-group textarea { padding: 10px 12px; border: 1.5px solid var(--border-color); border-radius: 9px; font-family: 'Cairo', sans-serif; font-size: .88rem; background: var(--card-bg); color: var(--secondary-color); outline: none; }
-.form-group input:focus, .form-group select:focus { border-color: var(--primary-color); }
-.btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
-.data-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
-.data-table th { background: #f8fafc; color: var(--text-muted); font-weight: 700; padding: 12px 14px; text-align: right; border-bottom: 2px solid var(--border-color); }
-.data-table td { padding: 12px 14px; border-bottom: 1px solid var(--border-color); color: var(--secondary-color); vertical-align: middle; }
-.data-table tr { cursor: pointer; transition: background .15s; }
-.data-table tr:hover td { background: #f0f4ff; }
-.data-table tr.selected td { background: #eff6ff; }
-.empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
-.empty-state i { font-size: 3rem; opacity: .2; display: block; margin-bottom: 12px; }
-.alert-box { padding: 12px 16px; border-radius: 10px; font-size: .88rem; font-weight: 600; margin-bottom: 16px; display: none; }
-.alert-success { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
-.alert-error   { background: #fee2e2; color: #7f1d1d; border: 1px solid #fecaca; }
-.badge { padding: 4px 10px; border-radius: 8px; font-weight: 700; font-size: .75rem; }
-.b-valid { background: #d1fae5; color: #047857; }
-.b-expired { background: #fee2e2; color: #dc2626; }
+.filter-pill {
+    padding: 6px 14px;
+    border-radius: 20px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.15s ease;
+    border: 1px solid transparent;
+}
+.filter-pill:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+.filter-pill.active {
+    background: #0f172a;
+    color: white;
+}
+.badge {
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
 </style>
 {% endblock %}
 
-{% block content %}
-<div class="page-header">
-  <div>
-    <h1 style="font-size:1.8rem;font-weight:800;color:var(--secondary-color);margin-bottom:4px;">
-      <i class="fa-solid fa-file-signature" style="color:#6366f1;margin-left:10px;"></i>الوكالات الرسمية
-    </h1>
-    <p style="color:var(--text-muted);font-size:.95rem;">إدارة التوكيلات الصادرة من الموكلين وتتبع صلاحيتها.</p>
-  </div>
-</div>
-
-<div class="grid-layout">
-  <div class="form-card">
-    <h3><i class="fa-solid fa-pen-to-square" style="color:#6366f1;"></i> إضافة / تعديل وكالة</h3>
-    <div id="alertBox" class="alert-box"></div>
-    <form onsubmit="saveRecord(event)">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
-      <input type="hidden" id="recId">
-      <div class="form-group">
-        <label>القضية / الموكل <span style="color:#ef4444;">*</span></label>
-        <select id="fCaseId" required>
-          <option value="">-- اختر القضية --</option>
-          {% for c in cases %}
-          <option value="{{ c.id }}">{{ c.case_number }} - {{ c.title[:30] }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="form-group">
-        <label>اسم الموكل (الطرف الأول) <span style="color:#ef4444;">*</span></label>
-        <input type="text" id="fName" required placeholder="اسم مصدر الوكالة...">
-      </div>
-      <div class="form-group">
-        <label>رقم الوكالة <span style="color:#ef4444;">*</span></label>
-        <input type="text" id="fNum" required placeholder="رقم الصك / الوكالة...">
-      </div>
-      <div class="form-group" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        <div>
-          <label>تاريخ الإصدار</label>
-          <input type="date" id="fIssueDate">
-        </div>
-        <div>
-          <label>تاريخ الانتهاء</label>
-          <input type="date" id="fExpiryDate">
-        </div>
-      </div>
-      <div class="form-group">
-        <label>ملاحظات (نطاق الوكالة)</label>
-        <textarea id="fNotes" rows="2" placeholder="مثال: وكالة عامة، مرافعة، استلام شيكات..."></textarea>
-      </div>
-      <div class="btn-row">
-        <button type="submit" class="action-btn" style="background:linear-gradient(135deg,#10b981,#047857);">
-          <i class="fa-solid fa-floppy-disk"></i> حفظ
-        </button>
-        <button type="button" class="action-btn" style="background:linear-gradient(135deg,#6366f1,#4f46e5);" onclick="clearForm()">
-          <i class="fa-solid fa-plus"></i> جديد
-        </button>
-        <button type="button" class="action-btn" style="background:linear-gradient(135deg,#ef4444,#dc2626);" onclick="deleteRecord()">
-          <i class="fa-solid fa-trash"></i> حذف
-        </button>
-      </div>
-    </form>
-  </div>
-
-  <div class="form-card" style="padding:0;overflow:hidden;">
-    <div style="padding:18px 22px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;">
-      <h3 style="margin:0;"><i class="fa-solid fa-list" style="color:#6366f1;margin-left:8px;"></i> الوكالات المسجلة</h3>
-      <input type="text" id="filterSearch" placeholder="بحث بالاسم أو الرقم..." style="padding:6px 12px;border:1px solid var(--border-color);border-radius:6px;outline:none;" oninput="filterTable()">
-    </div>
-    <div style="overflow-x:auto;">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>القضية</th>
-            <th>اسم الموكل</th>
-            <th>رقم الوكالة</th>
-            <th>تاريخ الانتهاء</th>
-            <th>الحالة</th>
-          </tr>
-        </thead>
-        <tbody id="refTbody">
-          {% for r in records %}
-          {% set is_expired = (r.expiry_date and r.expiry_date < today) %}
-          <tr onclick="selectRecord({{ r.id }}, this)" data-search="{{ r.principal_name | lower }} {{ r.agency_number | lower }} {{ r.law_case.case_number if r.law_case else '' }}">
-            <td><strong>{{ r.law_case.case_number if r.law_case else '—' }}</strong></td>
-            <td>{{ r.principal_name }}</td>
-            <td style="font-weight:700;">{{ r.agency_number }}</td>
-            <td style="direction:ltr;text-align:right;">{{ r.expiry_date or '—' }}</td>
-            <td>
-              {% if is_expired %}
-              <span class="badge b-expired">منتهية</span>
-              {% else %}
-              <span class="badge b-valid">سارية</span>
-              {% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% if not records %}
-      <div class="empty-state">
-        <i class="fa-solid fa-file-signature"></i>
-        <p style="font-weight:600;">لا توجد وكالات مسجلة بعد.</p>
-      </div>
-      {% endif %}
-    </div>
-  </div>
-</div>
-{% endblock %}
-
 {% block scripts %}
-<div id="poa-data-store" data-records="{{ records_json | forceescape }}" style="display: none;"></div>
 <script>
-const allRecords = JSON.parse(document.getElementById('poa-data-store').getAttribute('data-records'));
-let selectedId = null;
+    const csrfToken = "{{ request.cookies.get('csrf_token', '') }}";
+    const allRecords = {{ records_json|safe }};
 
-function showAlert(msg, type='success') {
-  const el = document.getElementById('alertBox');
-  el.className = 'alert-box alert-' + type;
-  el.textContent = msg;
-  el.style.display = 'block';
-  setTimeout(() => el.style.display = 'none', 3000);
-}
+    function showAlert(msg, isSuccess) {
+        const box = document.getElementById('alertBox');
+        box.style.display = 'block';
+        box.style.background = isSuccess ? '#dcfce7' : '#fee2e2';
+        box.style.color = isSuccess ? '#15803d' : '#b91c1c';
+        box.textContent = msg;
+        setTimeout(() => { box.style.display = 'none'; }, 4000);
+    }
 
-function filterTable() {
-  const s = document.getElementById('filterSearch').value.toLowerCase();
-  document.querySelectorAll('#refTbody tr').forEach(r => {
-    r.style.display = (r.dataset.search.includes(s)) ? '' : 'none';
-  });
-}
+    function clearForm() {
+        document.getElementById('recId').value = '';
+        document.getElementById('poaForm').reset();
+        document.getElementById('formTitle').innerHTML = '<i class="fa-solid fa-pen-to-square" style="color: #0d9488;"></i> إضافة وكالة رسمية';
+        document.getElementById('btnDelete').style.display = 'none';
+    }
 
-function selectRecord(id, row) {
-  selectedId = id;
-  document.querySelectorAll('#refTbody tr').forEach(r => r.classList.remove('selected'));
-  row.classList.add('selected');
-  const rec = allRecords.find(r => r.id === id);
-  if (!rec) return;
-  document.getElementById('recId').value = rec.id;
-  document.getElementById('fCaseId').value = rec.case_id || '';
-  document.getElementById('fName').value = rec.principal_name || '';
-  document.getElementById('fNum').value = rec.agency_number || '';
-  document.getElementById('fIssueDate').value = rec.issue_date || '';
-  document.getElementById('fExpiryDate').value = rec.expiry_date || '';
-  document.getElementById('fNotes').value = rec.notes || '';
-}
+    function openNewRecordForm() {
+        clearForm();
+        document.getElementById('fName').focus();
+    }
 
-function clearForm() {
-  selectedId = null;
-  document.getElementById('recId').value = '';
-  document.getElementById('fCaseId').value = '';
-  document.getElementById('fName').value = '';
-  document.getElementById('fNum').value = '';
-  document.getElementById('fIssueDate').value = '';
-  document.getElementById('fExpiryDate').value = '';
-  document.getElementById('fNotes').value = '';
-  document.querySelectorAll('#refTbody tr').forEach(r => r.classList.remove('selected'));
-}
+    function loadRecordIntoForm(recId) {
+        const r = allRecords.find(item => item.id === recId);
+        if (!r) return;
 
-async function saveRecord(e) {
-  e.preventDefault();
-  const payload = {
-    id: document.getElementById('recId').value || null,
-    case_id: document.getElementById('fCaseId').value,
-    principal_name: document.getElementById('fName').value.trim(),
-    agency_number: document.getElementById('fNum').value.trim(),
-    issue_date: document.getElementById('fIssueDate').value || null,
-    expiry_date: document.getElementById('fExpiryDate').value || null,
-    notes: document.getElementById('fNotes').value.trim()
-  };
-  const res = await fetch('/api/poa/save', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-  const data = await res.json();
-  if (data.ok) { showAlert(data.message); setTimeout(() => location.reload(), 900); }
-  else showAlert(data.message, 'error');
-}
+        document.getElementById('recId').value = r.id;
+        document.getElementById('fCaseId').value = r.case_id || '';
+        document.getElementById('fName').value = r.principal_name || '';
+        document.getElementById('fAgent').value = r.agent_name || '';
+        document.getElementById('fNum').value = r.agency_number || '';
+        document.getElementById('fPoaType').value = r.poa_type || 'litigation';
+        document.getElementById('fAuth').value = r.issuing_authority || '';
+        document.getElementById('fIssueDate').value = r.issue_date || '';
+        document.getElementById('fExpiryDate').value = r.expiry_date || '';
+        document.getElementById('fScope').value = r.scope_of_powers || '';
+        document.getElementById('fNotes').value = r.notes || '';
 
-async function deleteRecord() {
-  if (!selectedId) { showAlert('اختر سجلاً أولاً', 'error'); return; }
-  if (!confirm('تأكيد الحذف؟')) return;
-  const res = await fetch(`/api/poa/delete/${selectedId}`, { method: 'DELETE' });
-  const data = await res.json();
-  if (data.ok) { showAlert(data.message); setTimeout(() => location.reload(), 900); }
-  else showAlert(data.message, 'error');
-}
+        document.getElementById('formTitle').innerHTML = '<i class="fa-solid fa-pen" style="color: #0d9488;"></i> تعديل وكالة #' + r.agency_number;
+        document.getElementById('btnDelete').style.display = 'inline-block';
+    }
+
+    async function saveRecord(e) {
+        e.preventDefault();
+        const payload = {
+            id: document.getElementById('recId').value || null,
+            case_id: document.getElementById('fCaseId').value,
+            principal_name: document.getElementById('fName').value,
+            agent_name: document.getElementById('fAgent').value,
+            agency_number: document.getElementById('fNum').value,
+            poa_type: document.getElementById('fPoaType').value,
+            issuing_authority: document.getElementById('fAuth').value,
+            issue_date: document.getElementById('fIssueDate').value,
+            expiry_date: document.getElementById('fExpiryDate').value,
+            scope_of_powers: document.getElementById('fScope').value,
+            notes: document.getElementById('fNotes').value,
+            create_reminder: document.getElementById('fCreateReminder').checked
+        };
+
+        try {
+            const res = await fetch('/api/poa/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (data.ok) {
+                showAlert(data.message, true);
+                setTimeout(() => location.reload(), 800);
+            } else {
+                showAlert(data.message || 'فشل حفظ الوكالة', false);
+            }
+        } catch (err) {
+            showAlert('حدث خطأ في الاتصال بالخادم', false);
+        }
+    }
+
+    async function deleteRecord() {
+        const recId = document.getElementById('recId').value;
+        if (!recId) return;
+        if (!confirm('هل أنت متأكد من حذف هذه الوكالة نهائياً؟')) return;
+
+        try {
+            const res = await fetch('/api/poa/delete/' + recId, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-Token': csrfToken
+                }
+            });
+            const data = await res.json();
+            if (data.ok) {
+                location.reload();
+            } else {
+                showAlert(data.message || 'فشل الحذف', false);
+            }
+        } catch (err) {
+            showAlert('حدث خطأ في الاتصال', false);
+        }
+    }
 </script>
 {% endblock %}

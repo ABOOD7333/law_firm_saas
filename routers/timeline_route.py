@@ -1,57 +1,85 @@
-from fastapi import APIRouter, Request, Depends, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import APIRouter, Request, Depends, HTTPException, Query
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, date
 import traceback
+from typing import Optional
 from core.error_handler import safe_error_html
 
 from database.database import get_db
 from database.models import (
     AccessProfiles, LawCases, LawHearings, LawTasks,
-    LawJudgments, LawDocuments, LawNotes, LawCorrespondences
+    LawJudgments, LawDocuments, LawNotes, LawCorrespondences,
+    LawExecutions, LawPowerOfAttorney
 )
 from dependencies import get_current_user, templates
 
 router = APIRouter()
 
-
 @router.get("/timeline", response_class=HTMLResponse)
 async def timeline_page(
     request: Request,
+    case_id: Optional[int] = Query(None),
+    q: Optional[str] = Query(None),
+    event_type: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     user: AccessProfiles = Depends(get_current_user)
 ):
-    if not user: return RedirectResponse(url="/", status_code=303)
-    try:
-        from datetime import date as _date
-        today_str = str(_date.today())
+    if not user:
+        return RedirectResponse(url="/", status_code=303)
+    if not user.office_id:
+        raise HTTPException(status_code=403, detail="حسابك غير مرتبط بمكتب")
 
-        # Determine office scope
+    try:
+        today_str = str(date.today())
         office_id = user.office_id
 
-        # --- Fetch all data ---
-        hearings      = db.query(LawHearings).filter(LawHearings.office_id == office_id).all()
-        tasks         = db.query(LawTasks).filter(LawTasks.office_id == office_id).all()
-        judgments     = db.query(LawJudgments).filter(LawJudgments.office_id == office_id).all()
-        documents     = db.query(LawDocuments).filter(LawDocuments.office_id == office_id).all()
-        notes         = db.query(LawNotes).filter(LawNotes.office_id == office_id).all()
-        correspondences = db.query(LawCorrespondences).filter(LawCorrespondences.office_id == office_id).all()
-        cases         = db.query(LawCases).filter(LawCases.is_deleted == 0).all()
-
-        # Build cases lookup
+        # 1. Fetch available cases for office (Fixed multi-tenant isolation!)
+        cases = db.query(LawCases).filter(
+            LawCases.office_id == office_id,
+            LawCases.is_deleted == 0
+        ).order_by(LawCases.title.asc()).all()
         cases_map = {c.id: c for c in cases}
+
+        # 2. Build queries with optional case_id filtering
+        hearings_q = db.query(LawHearings).filter(LawHearings.office_id == office_id, LawHearings.is_deleted == 0)
+        tasks_q = db.query(LawTasks).filter(LawTasks.office_id == office_id, LawTasks.is_deleted == 0)
+        judgments_q = db.query(LawJudgments).filter(LawJudgments.office_id == office_id, LawJudgments.is_deleted == 0)
+        documents_q = db.query(LawDocuments).filter(LawDocuments.office_id == office_id, LawDocuments.is_deleted == 0)
+        notes_q = db.query(LawNotes).filter(LawNotes.office_id == office_id, LawNotes.is_deleted == 0)
+        correspondences_q = db.query(LawCorrespondences).filter(LawCorrespondences.office_id == office_id, LawCorrespondences.is_deleted == 0)
+        executions_q = db.query(LawExecutions).filter(LawExecutions.office_id == office_id, LawExecutions.is_deleted == 0)
+        poa_q = db.query(LawPowerOfAttorney).filter(LawPowerOfAttorney.office_id == office_id, LawPowerOfAttorney.is_deleted == 0)
+
+        if case_id:
+            hearings_q = hearings_q.filter(LawHearings.case_id == case_id)
+            tasks_q = tasks_q.filter(LawTasks.case_id == case_id)
+            judgments_q = judgments_q.filter(LawJudgments.case_id == case_id)
+            documents_q = documents_q.filter(LawDocuments.case_id == case_id)
+            notes_q = notes_q.filter(LawNotes.case_id == case_id)
+            correspondences_q = correspondences_q.filter(LawCorrespondences.case_id == case_id)
+            executions_q = executions_q.filter(LawExecutions.case_id == case_id)
+            poa_q = poa_q.filter(LawPowerOfAttorney.case_id == case_id)
+
+        hearings = hearings_q.all()
+        tasks = tasks_q.all()
+        judgments = judgments_q.all()
+        documents = documents_q.all()
+        notes = notes_q.all()
+        correspondences = correspondences_q.all()
+        executions = executions_q.all()
+        poas = poa_q.all()
 
         def _timing(date_str):
             if not date_str: return 'past'
             d = str(date_str)[:10]
             if d == today_str: return 'today'
-            if d > today_str:  return 'upcoming'
+            if d > today_str: return 'upcoming'
             return 'past'
 
         def _month_label(date_str):
-            """Convert YYYY-MM to Arabic month label"""
-            if not date_str or len(date_str) < 7: return ''
-            year  = date_str[:4]
+            if not date_str or len(date_str) < 7: return 'سجل غير محدد'
+            year = date_str[:4]
             month = date_str[5:7]
             arabic_months = {
                 '01': 'يناير','02': 'فبراير','03': 'مارس','04': 'أبريل',
@@ -60,155 +88,222 @@ async def timeline_page(
             }
             return f"{arabic_months.get(month, month)} {year}"
 
-        def _status_chip(status_key, event_type):
-            mapping = {
-                'hearing': {
-                    'pending':     {'cls': 'chip-pending',     'label': 'قيد الانتظار'},
-                    'completed':   {'cls': 'chip-completed',   'label': 'منتهية'},
-                    'in_progress': {'cls': 'chip-in_progress', 'label': 'جارية'},
-                },
-                'task': {
-                    'pending':     {'cls': 'chip-pending',     'label': 'قيد الانتظار'},
-                    'in_progress': {'cls': 'chip-in_progress', 'label': 'قيد التنفيذ'},
-                    'completed':   {'cls': 'chip-completed',   'label': 'مكتملة'},
-                },
-                'judgment': {
-                    'صدر لصالحنا': {'cls': 'chip-win',  'label': 'لصالحنا'},
-                    'صدر ضدنا':    {'cls': 'chip-lose', 'label': 'ضدنا'},
-                },
-            }
-            chip = mapping.get(event_type, {}).get(status_key)
-            if not chip and status_key:
-                chip = {'cls': 'chip-default', 'label': status_key}
-            return chip
-
         events = []
 
         # Hearings
         for h in hearings:
-            date_str = str(h.hearing_at or '')[:10]
-            case = cases_map.get(h.case_id)
+            d_str = str(h.hearing_at or '')[:10]
+            c = cases_map.get(h.case_id)
             events.append({
-                'type':       'hearing',
+                'type': 'hearing',
                 'type_label': 'جلسة قضائية',
-                'icon':       'fa-calendar-days',
-                'title':      h.title,
-                'date':       date_str,
-                'case_id':    h.case_id,
-                'case_title': case.title if case else '',
-                'sub':        h.result_summary[:60] if h.result_summary else '',
-                'status_chip': _status_chip(h.status_key, 'hearing'),
-                'timing':     _timing(date_str),
-                'month_label': _month_label(date_str[:7] if date_str else ''),
+                'icon': 'fa-calendar-days',
+                'color': '#3b82f6',
+                'title': h.title or 'جلسة مرافعة',
+                'date': d_str,
+                'case_id': h.case_id,
+                'case_title': c.title if c else '',
+                'sub': h.result_summary[:80] if getattr(h, 'result_summary', None) else '',
+                'status': h.status_key or 'pending',
+                'timing': _timing(d_str),
+                'month_label': _month_label(d_str[:7] if d_str else '')
             })
 
         # Tasks
         for t in tasks:
-            date_str = str(t.due_at or '')[:10]
-            case = cases_map.get(t.case_id) if t.case_id else None
+            d_str = str(t.due_at or '')[:10]
+            c = cases_map.get(t.case_id) if t.case_id else None
             events.append({
-                'type':       'task',
-                'type_label': 'مهمة',
-                'icon':       'fa-list-check',
-                'title':      t.title,
-                'date':       date_str,
-                'case_id':    t.case_id,
-                'case_title': case.title if case else '',
-                'sub':        t.description[:60] if t.description else '',
-                'status_chip': _status_chip(t.status_key, 'task'),
-                'timing':     _timing(date_str),
-                'month_label': _month_label(date_str[:7] if date_str else ''),
+                'type': 'task',
+                'type_label': 'مهمة عمل',
+                'icon': 'fa-list-check',
+                'color': '#f59e0b',
+                'title': t.title,
+                'date': d_str,
+                'case_id': t.case_id,
+                'case_title': c.title if c else '',
+                'sub': t.description[:80] if t.description else '',
+                'status': t.status_key or 'pending',
+                'timing': _timing(d_str),
+                'month_label': _month_label(d_str[:7] if d_str else '')
             })
 
         # Judgments
         for j in judgments:
-            date_str = str(j.judgment_date or '')[:10]
-            case = cases_map.get(j.case_id)
+            d_str = str(j.judgment_date or j.created_at or '')[:10]
+            c = cases_map.get(j.case_id)
             events.append({
-                'type':       'judgment',
+                'type': 'judgment',
                 'type_label': 'حكم قضائي',
-                'icon':       'fa-scale-balanced',
-                'title':      f"حكم – {j.court_name or 'محكمة غير محددة'}",
-                'date':       date_str,
-                'case_id':    j.case_id,
-                'case_title': case.title if case else '',
-                'sub':        j.judge_name or '',
-                'status_chip': _status_chip(j.status_key, 'judgment'),
-                'timing':     _timing(date_str),
-                'month_label': _month_label(date_str[:7] if date_str else ''),
+                'icon': 'fa-gavel',
+                'color': '#10b981',
+                'title': f"صك حكم #{j.judgment_number}",
+                'date': d_str,
+                'case_id': j.case_id,
+                'case_title': c.title if c else '',
+                'sub': (j.operative_clause or '')[:80],
+                'status': j.outcome_type or 'صدر الحكم',
+                'timing': _timing(d_str),
+                'month_label': _month_label(d_str[:7] if d_str else '')
             })
 
         # Documents
         for d in documents:
-            date_str = str(d.doc_date or d.created_at or '')[:10]
-            case = cases_map.get(d.case_id)
+            d_str = str(d.created_at or '')[:10]
+            c = cases_map.get(d.case_id)
             events.append({
-                'type':       'doc',
-                'type_label': 'وثيقة',
-                'icon':       'fa-file-lines',
-                'title':      d.name,
-                'date':       date_str,
-                'case_id':    d.case_id,
-                'case_title': case.title if case else '',
-                'sub':        d.document_type_key or '',
-                'status_chip': None,
-                'timing':     _timing(date_str),
-                'month_label': _month_label(date_str[:7] if date_str else ''),
+                'type': 'document',
+                'type_label': 'وثيقة ومستند',
+                'icon': 'fa-folder-open',
+                'color': '#8b5cf6',
+                'title': getattr(d, 'name', None) or getattr(d, 'doc_code', None) or 'مستند قانوني',
+                'date': d_str,
+                'case_id': d.case_id,
+                'case_title': c.title if c else '',
+                'sub': getattr(d, 'document_type_key', '') or getattr(d, 'description', '') or '',
+                'status': 'مؤرشف',
+                'timing': _timing(d_str),
+                'month_label': _month_label(d_str[:7] if d_str else '')
             })
 
-        # Notes
+        # Notes & Communications
         for n in notes:
-            date_str = str(n.created_at or '')[:10]
-            case = cases_map.get(n.case_id)
+            d_str = str(n.created_at or '')[:10]
+            c = cases_map.get(n.case_id)
             events.append({
-                'type':       'note',
-                'type_label': 'ملاحظة',
-                'icon':       'fa-note-sticky',
-                'title':      n.title,
-                'date':       date_str,
-                'case_id':    n.case_id,
-                'case_title': case.title if case else '',
-                'sub':        (n.content or '')[:60],
-                'status_chip': None,
-                'timing':     _timing(date_str),
-                'month_label': _month_label(date_str[:7] if date_str else ''),
+                'type': 'note',
+                'type_label': 'ملاحظة واتصال',
+                'icon': 'fa-note-sticky',
+                'color': '#ec4899',
+                'title': n.title,
+                'date': d_str,
+                'case_id': n.case_id,
+                'case_title': c.title if c else '',
+                'sub': n.content[:80] if n.content else '',
+                'status': getattr(n, 'communication_channel', '') or 'سجل داخلي',
+                'timing': _timing(d_str),
+                'month_label': _month_label(d_str[:7] if d_str else '')
             })
 
         # Correspondences
-        for c in correspondences:
-            date_str = str(c.letter_date or c.created_at or '')[:10]
-            case = cases_map.get(c.case_id)
+        for corr in correspondences:
+            d_str = str(corr.created_at or '')[:10]
+            c = cases_map.get(corr.case_id)
             events.append({
-                'type':       'corr',
+                'type': 'correspondence',
                 'type_label': 'مراسلة رسمية',
-                'icon':       'fa-envelope',
-                'title':      c.subject or f"مراسلة رقم {c.letter_number or c.id}",
-                'date':       date_str,
-                'case_id':    c.case_id,
-                'case_title': case.title if case else '',
-                'sub':        c.direction_key or '',
-                'status_chip': None,
-                'timing':     _timing(date_str),
-                'month_label': _month_label(date_str[:7] if date_str else ''),
+                'icon': 'fa-envelope',
+                'color': '#0ea5e9',
+                'title': f"{corr.direction_key}: {corr.subject or corr.letter_number or 'مراسلة رسمية'}",
+                'date': d_str,
+                'case_id': corr.case_id,
+                'case_title': c.title if c else '',
+                'sub': getattr(corr, 'registry_number', '') or '',
+                'status': corr.direction_key,
+                'timing': _timing(d_str),
+                'month_label': _month_label(d_str[:7] if d_str else '')
             })
 
-        # Sort descending (most recent first), empty dates go to bottom
-        events.sort(key=lambda x: x['date'] or '0000-00-00', reverse=True)
+        # Executions
+        for ex in executions:
+            d_str = str(ex.request_date or ex.created_at or '')[:10]
+            c = cases_map.get(ex.case_id)
+            events.append({
+                'type': 'execution',
+                'type_label': 'إجراء تنفيذ',
+                'icon': 'fa-scale-unbalanced',
+                'color': '#6366f1',
+                'title': f"طلب تنفيذ #{ex.execution_number}",
+                'date': d_str,
+                'case_id': ex.case_id,
+                'case_title': c.title if c else '',
+                'sub': f"مطالبة: {getattr(ex, 'claimed_amount', 0) or 0} ر.س | ضد: {getattr(ex, 'debtor_name', '-') or '-'}",
+                'status': ex.status_key or 'جاري',
+                'timing': _timing(d_str),
+                'month_label': _month_label(d_str[:7] if d_str else '')
+            })
 
-        return templates.TemplateResponse(request=request, name="timeline.html", context={
-            "user": user,
-            "active_page": "timeline",
-            "events": events,
-            "cases": cases,
-            "hearings": hearings,
-            "tasks": tasks,
-            "judgments": judgments,
-            "documents": documents,
-            "notes": notes,
-            "correspondences": correspondences,
-        })
+        # Sort all events chronologically desc
+        events.sort(key=lambda x: x['date'] or '', reverse=True)
+
+        # Apply search and type filtering
+        if event_type and event_type != 'all':
+            events = [e for e in events if e['type'] == event_type]
+
+        if q:
+            q_lower = q.lower()
+            events = [e for e in events if q_lower in e['title'].lower() or q_lower in e['sub'].lower()]
+
+        # Group by month
+        from itertools import groupby
+        grouped_events = []
+        for month_lbl, group in groupby(events, key=lambda x: x['month_label']):
+            grouped_events.append({
+                'month': month_lbl,
+                'items': list(group)
+            })
+
+        kpi_counts = {
+            'all': len(events),
+            'hearing': len(hearings),
+            'task': len(tasks),
+            'judgment': len(judgments),
+            'document': len(documents),
+            'note': len(notes),
+            'correspondence': len(correspondences),
+            'execution': len(executions)
+        }
+
+        return templates.TemplateResponse(
+            request=request, name="timeline.html",
+            context={
+                "user": user,
+                "active_page": "timeline",
+                "grouped_events": grouped_events,
+                "cases": cases,
+                "selected_case_id": case_id,
+                "event_type": event_type or 'all',
+                "q": q or '',
+                "hearings": hearings,
+                "tasks": tasks,
+                "judgments": judgments,
+                "documents": documents,
+                "notes": notes,
+                "correspondences": correspondences,
+                "executions": executions,
+                "kpis": kpi_counts
+            }
+        )
     except Exception as exc:
         return safe_error_html(exc, context="timeline_route.py")
 
 
+@router.get("/api/timeline")
+async def timeline_api(
+    case_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    if not user or not user.office_id:
+        return JSONResponse({"ok": False, "error": "unauthorized"}, status_code=401)
 
+    office_id = user.office_id
+    hearings_q = db.query(LawHearings).filter(LawHearings.office_id == office_id, LawHearings.is_deleted == 0)
+    tasks_q = db.query(LawTasks).filter(LawTasks.office_id == office_id, LawTasks.is_deleted == 0)
+    judgments_q = db.query(LawJudgments).filter(LawJudgments.office_id == office_id, LawJudgments.is_deleted == 0)
+
+    if case_id:
+        hearings_q = hearings_q.filter(LawHearings.case_id == case_id)
+        tasks_q = tasks_q.filter(LawTasks.case_id == case_id)
+        judgments_q = judgments_q.filter(LawJudgments.case_id == case_id)
+
+    items = []
+    for h in hearings_q.all():
+        items.append({"type": "hearing", "title": h.title, "date": str(h.hearing_at or '')[:10], "case_id": h.case_id})
+    for t in tasks_q.all():
+        items.append({"type": "task", "title": t.title, "date": str(t.due_at or '')[:10], "case_id": t.case_id})
+    for j in judgments_q.all():
+        items.append({"type": "judgment", "title": f"حكم #{j.judgment_number}", "date": str(j.judgment_date or '')[:10], "case_id": j.case_id})
+
+    items.sort(key=lambda x: x['date'], reverse=True)
+    return JSONResponse({"ok": True, "count": len(items), "events": items})

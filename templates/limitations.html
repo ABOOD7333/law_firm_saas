@@ -1,287 +1,564 @@
 {% extends "base.html" %}
-{% block title %}تنبيهات التقادم | LawSaaS{% endblock %}
-
-{% block head %}
-<style>
-.page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
-.filter-card { background: var(--card-bg); border-radius: 14px; padding: 18px; border: 1px solid var(--border-color); margin-bottom: 20px; display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; box-shadow: 0 2px 8px rgba(0,0,0,.05); }
-.filter-card .fg { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 150px; }
-.filter-card label { font-size: .8rem; font-weight: 700; color: var(--text-muted); }
-.filter-card input, .filter-card select { padding: 9px 12px; border: 1.5px solid var(--border-color); border-radius: 9px; font-family: 'Cairo', sans-serif; font-size: .88rem; outline: none; background: var(--card-bg); color: var(--secondary-color); }
-.filter-card input:focus, .filter-card select:focus { border-color: var(--primary-color); }
-.grid-layout { display: grid; grid-template-columns: 360px 1fr; gap: 24px; align-items: start; }
-.form-card { background: var(--card-bg); border-radius: 14px; padding: 22px; border: 1px solid var(--border-color); box-shadow: 0 2px 8px rgba(0,0,0,.05); }
-.form-card h3 { font-size: 1.05rem; font-weight: 800; color: var(--secondary-color); margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
-.form-group { margin-bottom: 14px; display: flex; flex-direction: column; gap: 6px; }
-.form-group label { font-size: .85rem; font-weight: 700; color: var(--text-muted); }
-.form-group input, .form-group select, .form-group textarea { padding: 10px 12px; border: 1.5px solid var(--border-color); border-radius: 9px; font-family: 'Cairo', sans-serif; font-size: .88rem; background: var(--card-bg); color: var(--secondary-color); outline: none; }
-.form-group input:focus, .form-group select:focus { border-color: var(--primary-color); }
-.btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
-.data-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
-.data-table th { background: #f8fafc; color: var(--text-muted); font-weight: 700; padding: 12px 14px; text-align: right; border-bottom: 2px solid var(--border-color); }
-.data-table td { padding: 12px 14px; border-bottom: 1px solid var(--border-color); color: var(--secondary-color); vertical-align: middle; }
-.data-table tr { cursor: pointer; transition: background .15s; }
-.data-table tr:hover td { background: #f0f4ff; }
-.data-table tr.selected td { background: #eff6ff; }
-.empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
-.empty-state i { font-size: 3rem; opacity: .2; display: block; margin-bottom: 12px; }
-.alert-box { padding: 12px 16px; border-radius: 10px; font-size: .88rem; font-weight: 600; margin-bottom: 16px; display: none; }
-.alert-success { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
-.alert-error   { background: #fee2e2; color: #7f1d1d; border: 1px solid #fecaca; }
-.status-badge { padding: 4px 12px; border-radius: 50px; font-size: .75rem; font-weight: 700; }
-.status-active { background: #fee2e2; color: #dc2626; } /* أحمر لأنه تنبيه تقادم */
-.status-completed { background: #d1fae5; color: #047857; }
-.status-expired { background: #f1f5f9; color: #475569; }
-.status-canceled { background: #fef3c7; color: #d97706; }
-</style>
-{% endblock %}
+{% block title %}تنبيهات ومدد التقادم والمواعيد النظامية | LawSaaS{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <div>
-    <h1 style="font-size:1.8rem;font-weight:800;color:var(--secondary-color);margin-bottom:4px;">
-      <i class="fa-solid fa-clock-rotate-left" style="color:#ef4444;margin-left:10px;"></i>تنبيهات التقادم
-    </h1>
-    <p style="color:var(--text-muted);font-size:.95rem;">مراقبة المواعيد النهائية وسقوط الحقوق القانونية بالتقادم.</p>
-  </div>
-</div>
-
-<div class="filter-card">
-  <div class="fg">
-    <label>بحث عام</label>
-    <input type="text" id="filterSearch" placeholder="العنوان، الملاحظات..." oninput="filterTable()">
-  </div>
-  <div class="fg">
-    <label>رقم القضية</label>
-    <input type="text" id="filterCase" placeholder="مثال: ق-2023-..." oninput="filterTable()">
-  </div>
-  <div class="fg">
-    <label>الحالة</label>
-    <select id="filterStatus" onchange="filterTable()">
-      <option value="">الكل</option>
-      <option value="ساري">ساري (تحذير)</option>
-      <option value="مكتمل">مكتمل</option>
-      <option value="منتهي">منتهي</option>
-      <option value="ملغي">ملغي</option>
-    </select>
-  </div>
-  <div class="fg">
-    <label>نوع التقادم</label>
-    <select id="filterType" onchange="filterTable()">
-      <option value="">الكل</option>
-      <option value="تقادم مدني">تقادم مدني</option>
-      <option value="تقادم جزائي">تقادم جزائي</option>
-      <option value="استحقاق إجرائي">استحقاق إجرائي</option>
-      <option value="تنبيه جلسة">تنبيه جلسة</option>
-      <option value="أخرى">أخرى</option>
-    </select>
-  </div>
-</div>
-
-<div class="grid-layout">
-  <!-- Form -->
-  <div class="form-card">
-    <h3><i class="fa-solid fa-pen-to-square" style="color:#ef4444;"></i> إضافة / تعديل تنبيه تقادم</h3>
-    <div id="alertBox" class="alert-box"></div>
-    <form onsubmit="saveRecord(event)">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
-      <input type="hidden" id="recId">
-      <div class="form-group">
-        <label>القضية المرتبطة <span style="color:#ef4444;">*</span></label>
-        <select id="fCaseId" required>
-          <option value="">-- اختر القضية --</option>
-          {% for c in cases %}
-          <option value="{{ c.id }}">{{ c.case_number }} - {{ c.title[:30] }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="form-group">
-        <label>العنوان / الوصف <span style="color:#ef4444;">*</span></label>
-        <input type="text" id="fTitle" required placeholder="مثال: موعد الاستئناف الأخير...">
-      </div>
-      <div class="form-group" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+<div class="limitations-container" dir="rtl" style="margin-bottom: 40px;">
+    <!-- Page Header -->
+    <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px;">
         <div>
-          <label>النوع</label>
-          <select id="fType">
-            <option>تقادم مدني</option>
-            <option>تقادم جزائي</option>
-            <option>استحقاق إجرائي</option>
-            <option>تنبيه جلسة</option>
-            <option>أخرى</option>
-          </select>
+            <h1 style="margin: 0; font-size: 1.8rem; font-weight: 800; color: var(--secondary-color);">
+                <i class="fa-solid fa-clock-rotate-left" style="color: #ef4444; margin-left: 10px;"></i>
+                تنبيهات التقادم والمواعيد النظامية
+            </h1>
+            <p style="margin: 5px 0 0; color: var(--text-muted); font-size: 0.95rem;">
+                مراقبة دقيقة للمدد القانونية، مواعيد الطعن والاستئناف، وحساب المتبقي تفادياً لسقوط الحقوق.
+            </p>
         </div>
-        <div>
-          <label>الحالة</label>
-          <select id="fStatus">
-            <option>ساري</option>
-            <option>مكتمل</option>
-            <option>منتهي</option>
-            <option>ملغي</option>
-          </select>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <button class="btn-primary" onclick="clearForm()" style="background: linear-gradient(135deg, #ef4444, #dc2626); border: none; padding: 10px 18px; border-radius: 10px; color: white; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-plus"></i> إضافة تنبيه جديد
+            </button>
         </div>
-      </div>
-      <div class="form-group" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        <div>
-          <label>تاريخ البدء</label>
-          <input type="date" id="fStartDate">
-        </div>
-        <div>
-          <label>تاريخ الاستحقاق <span style="color:#ef4444;">*</span></label>
-          <input type="date" id="fDueDate" required>
-        </div>
-      </div>
-      <div class="form-group">
-        <label>ملاحظات (اختياري)</label>
-        <textarea id="fNotes" rows="2" placeholder="إجراءات مطلوبة..."></textarea>
-      </div>
-      <div class="btn-row">
-        <button type="submit" class="action-btn" style="background:linear-gradient(135deg,#10b981,#047857);">
-          <i class="fa-solid fa-floppy-disk"></i> حفظ
-        </button>
-        <button type="button" class="action-btn" style="background:linear-gradient(135deg,#6366f1,#4f46e5);" onclick="clearForm()">
-          <i class="fa-solid fa-plus"></i> جديد
-        </button>
-        <button type="button" class="action-btn" style="background:linear-gradient(135deg,#ef4444,#dc2626);" onclick="deleteRecord()">
-          <i class="fa-solid fa-trash"></i> حذف
-        </button>
-      </div>
-    </form>
-  </div>
-
-  <!-- Table -->
-  <div class="form-card" style="padding:0;overflow:hidden;">
-    <div style="padding:18px 22px;border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;">
-      <h3 style="margin:0;"><i class="fa-solid fa-list" style="color:#ef4444;margin-left:8px;"></i> قائمة التقادم والاستحقاقات</h3>
-      <span style="font-size:.8rem;font-weight:700;color:var(--text-muted);background:#f1f5f9;padding:4px 10px;border-radius:50px;">{{ records|length }} سجل</span>
     </div>
-    <div style="overflow-x:auto;">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>القضية</th>
-            <th>العنوان</th>
-            <th>النوع</th>
-            <th>تاريخ الاستحقاق</th>
-            <th>الحالة</th>
-          </tr>
-        </thead>
-        <tbody id="refTbody">
-          {% for r in records %}
-          <tr onclick="selectRecord({{ r.id }}, this)" data-search="{{ r.title | lower }} {{ (r.notes or '') | lower }}" data-case="{{ r.law_case.case_number if r.law_case else '' }}" data-status="{{ r.status_key }}" data-type="{{ r.limitation_type_key }}">
-            <td><strong>{{ r.law_case.case_number if r.law_case else '—' }}</strong></td>
-            <td><div style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ r.title }}</div></td>
-            <td>{{ r.limitation_type_key }}</td>
-            <td style="direction:ltr;text-align:right;font-weight:700;color:var(--secondary-color);">{{ r.due_date }}</td>
-            <td>
-              {% if r.status_key == 'ساري' %}<span class="status-badge status-active">ساري</span>
-              {% elif r.status_key == 'مكتمل' %}<span class="status-badge status-completed">مكتمل</span>
-              {% elif r.status_key == 'منتهي' %}<span class="status-badge status-expired">منتهي</span>
-              {% else %}<span class="status-badge status-canceled">{{ r.status_key }}</span>{% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% if not records %}
-      <div class="empty-state">
-        <i class="fa-solid fa-clock-rotate-left"></i>
-        <p style="font-weight:600;">لا توجد تنبيهات تقادم مسجلة بعد.</p>
-      </div>
-      {% endif %}
+
+    <!-- Live KPI Ribbon -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
+        <div class="card" style="padding: 16px; border-radius: 12px; border-right: 4px solid #6366f1; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">إجمالي التنبيهات</span>
+                <h3 style="margin: 5px 0 0; font-size: 1.6rem; color: #1e293b;">{{ stats.total }}</h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #e0e7ff; color: #6366f1; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fa-solid fa-list-check"></i>
+            </div>
+        </div>
+
+        <div class="card" style="padding: 16px; border-radius: 12px; border-right: 4px solid #ef4444; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span style="font-size: 0.85rem; color: #ef4444; font-weight: 700;">حرجة وعاجلة (≤ 7 أيام)</span>
+                <h3 style="margin: 5px 0 0; font-size: 1.6rem; color: #dc2626;">{{ stats.critical }}</h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #fee2e2; color: #ef4444; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+        </div>
+
+        <div class="card" style="padding: 16px; border-radius: 12px; border-right: 4px solid #3b82f6; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">سارية وقيد المراقبة</span>
+                <h3 style="margin: 5px 0 0; font-size: 1.6rem; color: #1d4ed8;">{{ stats.active }}</h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #eff6ff; color: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fa-solid fa-hourglass-half"></i>
+            </div>
+        </div>
+
+        <div class="card" style="padding: 16px; border-radius: 12px; border-right: 4px solid #10b981; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">تم اتخاذ الإجراء (مكتملة)</span>
+                <h3 style="margin: 5px 0 0; font-size: 1.6rem; color: #059669;">{{ stats.completed }}</h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #ecfdf5; color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+        </div>
+
+        <div class="card" style="padding: 16px; border-radius: 12px; border-right: 4px solid #94a3b8; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">منتهية / سقطت</span>
+                <h3 style="margin: 5px 0 0; font-size: 1.6rem; color: #64748b;">{{ stats.expired }}</h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #f1f5f9; color: #64748b; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fa-solid fa-ban"></i>
+            </div>
+        </div>
     </div>
-  </div>
+
+    <!-- Filters Bar -->
+    <div class="card" style="padding: 16px; border-radius: 12px; margin-bottom: 25px;">
+        <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
+            <!-- Filter Pills -->
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="pill-btn active" onclick="setQuickFilter('all', this)">الكل ({{ stats.total }})</button>
+                <button class="pill-btn pill-danger" onclick="setQuickFilter('critical', this)">حرجة وعاجلة ({{ stats.critical }})</button>
+                <button class="pill-btn pill-primary" onclick="setQuickFilter('active', this)">سارية ({{ stats.active }})</button>
+                <button class="pill-btn pill-success" onclick="setQuickFilter('completed', this)">مكتملة ({{ stats.completed }})</button>
+                <button class="pill-btn pill-muted" onclick="setQuickFilter('expired', this)">منتهية ({{ stats.expired }})</button>
+            </div>
+
+            <!-- Search and Dropdowns -->
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                <div style="position: relative; min-width: 220px;">
+                    <i class="fa-solid fa-magnifying-glass" style="position: absolute; right: 12px; top: 11px; color: #94a3b8;"></i>
+                    <input type="text" id="filterSearch" placeholder="بحث بالعنوان، السند، القضية..." oninput="filterTable()"
+                           style="width: 100%; padding: 8px 36px 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.88rem;">
+                </div>
+                <select id="filterType" onchange="filterTable()" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.88rem;">
+                    <option value="">جميع الأنواع</option>
+                    <option value="تقادم مدني">تقادم مدني</option>
+                    <option value="تقادم تجاري">تقادم تجاري</option>
+                    <option value="تقادم جزائي">تقادم جزائي</option>
+                    <option value="ميعاد استئناف/طعن">ميعاد استئناف/طعن</option>
+                    <option value="ميعاد تنفيذ">ميعاد تنفيذ</option>
+                    <option value="أخرى">أخرى</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Layout (Form + Data Table) -->
+    <div style="display: grid; grid-template-columns: 380px 1fr; gap: 24px; align-items: start;">
+        <!-- Form Card (Add/Edit) -->
+        <div class="card" style="padding: 22px; border-radius: 14px; background: var(--card-bg); border: 1px solid var(--border-color); box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
+                <h3 id="formTitle" style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--secondary-color); display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-pen-to-square" style="color: #ef4444;"></i> إضافة تنبيه تقادم
+                </h3>
+                <span id="editBadge" style="display:none; background: #fee2e2; color: #dc2626; font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 20px;">تعديل سجل</span>
+            </div>
+
+            <div id="alertBox" style="display:none; padding: 10px 14px; border-radius: 8px; margin-bottom: 15px; font-size: 0.85rem; font-weight: 600;"></div>
+
+            <form id="limitationForm" onsubmit="saveLimitation(event)">
+                <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+                <input type="hidden" id="recId">
+
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">
+                        القضية المرتبطة <span style="color: #ef4444;">*</span>
+                    </label>
+                    <select id="fCaseId" required style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.88rem;">
+                        <option value="">-- اختر القضية --</option>
+                        {% for c in cases %}
+                        <option value="{{ c.id }}">{{ c.case_number }} - {{ c.title[:30] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">
+                        عنوان التنبيه / الإجراء <span style="color: #ef4444;">*</span>
+                    </label>
+                    <input type="text" id="fTitle" required placeholder="مثال: آخر ميعاد لتقديم لائحة الاستئناف"
+                           style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.88rem;">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">نوع الميعاد</label>
+                        <select id="fType" style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.88rem;">
+                            <option value="ميعاد استئناف/طعن">ميعاد استئناف/طعن</option>
+                            <option value="تقادم مدني">تقادم مدني</option>
+                            <option value="تقادم تجاري">تقادم تجاري</option>
+                            <option value="تقادم جزائي">تقادم جزائي</option>
+                            <option value="ميعاد تنفيذ">ميعاد تنفيذ</option>
+                            <option value="أخرى">أخرى</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">الحالة</label>
+                        <select id="fStatus" style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.88rem;">
+                            <option value="ساري">ساري (تحت المراقبة)</option>
+                            <option value="مكتمل">مكتمل (تم الإجراء)</option>
+                            <option value="منتهي">منتهي الصلاحية</option>
+                            <option value="ملغي">ملغي</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">تاريخ البدء</label>
+                        <input type="date" id="fStartDate" style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.88rem;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">
+                            تاريخ الاستحقاق <span style="color: #ef4444;">*</span>
+                        </label>
+                        <input type="date" id="fDueDate" required style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.88rem;">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">إجمالي المدة (يوم)</label>
+                        <input type="number" id="fDaysCount" placeholder="مثال: 30" min="1"
+                               style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.88rem;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">تنبيه مسبق قبل</label>
+                        <input type="number" id="fAlertDaysBefore" value="7" min="1"
+                               style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.88rem;">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">السند النظامي / المادة</label>
+                    <input type="text" id="fLawRef" placeholder="مثال: المادة 187 من نظام المرافعات الشرعية"
+                           style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.88rem;">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">الإجراء المطلوب لمنع السقوط</label>
+                    <textarea id="fActionRequired" rows="2" placeholder="مثال: قيد صحيفة الاستئناف لدى المحكمة وسداد الرسوم..."
+                              style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.88rem;"></textarea>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="fIsCritical" style="width: 18px; height: 18px; accent-color: #ef4444; cursor: pointer;">
+                    <label for="fIsCritical" style="font-size: 0.85rem; font-weight: 700; color: #dc2626; cursor: pointer;">
+                        <i class="fa-solid fa-triangle-exclamation"></i> موعد حرج وسقوط حاسم للحق
+                    </label>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 18px;">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">ملاحظات إضافية</label>
+                    <textarea id="fNotes" rows="2" placeholder="ملاحظات المتابعة الداخلية..."
+                              style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.88rem;"></textarea>
+                </div>
+
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button type="submit" id="btnSave" style="flex: 1; padding: 10px; border-radius: 8px; background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                        <i class="fa-solid fa-floppy-disk"></i> حفظ التنبيه
+                    </button>
+                    <button type="button" onclick="clearForm()" style="padding: 10px 14px; border-radius: 8px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; font-weight: 700; cursor: pointer;">
+                        إلغاء
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Table Card -->
+        <div class="card" style="padding: 0; border-radius: 14px; overflow: hidden; background: var(--card-bg); border: 1px solid var(--border-color); box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+            <div style="padding: 18px 22px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--secondary-color); display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-table-list" style="color: #ef4444;"></i> جدول مواعيد وسقوط الحقوق
+                </h3>
+                <span style="font-size: 0.8rem; font-weight: 700; background: #fee2e2; color: #dc2626; padding: 4px 12px; border-radius: 50px;">
+                    {{ records|length }} موعد مسجل
+                </span>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.88rem;">
+                    <thead>
+                        <tr style="background: #f8fafc; color: #64748b; border-bottom: 2px solid var(--border-color); text-align: right;">
+                            <th style="padding: 12px 14px;">القضية</th>
+                            <th style="padding: 12px 14px;">العنوان والسند</th>
+                            <th style="padding: 12px 14px;">النوع</th>
+                            <th style="padding: 12px 14px;">تاريخ الاستحقاق والعد التنازلي</th>
+                            <th style="padding: 12px 14px;">الحالة</th>
+                            <th style="padding: 12px 14px; text-align: center;">إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="limitationsTbody">
+                        {% for item in records %}
+                        {% set r = item.record %}
+                        <tr id="row-{{ r.id }}" class="limitation-row"
+                            data-search="{{ r.title | lower }} {{ (r.notes or '') | lower }} {{ (r.law_reference or '') | lower }} {{ (r.law_case.case_number if r.law_case else '') | lower }}"
+                            data-status="{{ r.status_key }}"
+                            data-type="{{ r.limitation_type_key }}"
+                            data-critical="{{ 1 if item.is_urgent else 0 }}"
+                            data-expired="{{ 1 if item.is_expired else 0 }}"
+                            style="border-bottom: 1px solid var(--border-color); transition: background 0.15s; cursor: pointer;"
+                            onclick="selectLimitation({{ r.id }})">
+                            
+                            <td style="padding: 12px 14px;">
+                                {% if r.law_case %}
+                                <span style="font-weight: 800; color: #1e293b; display: block;">{{ r.law_case.case_number }}</span>
+                                <small style="color: #64748b;">{{ r.law_case.title[:25] }}</small>
+                                {% else %}
+                                <span style="color: #94a3b8;">—</span>
+                                {% endif %}
+                            </td>
+
+                            <td style="padding: 12px 14px;">
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    {% if r.is_critical %}
+                                    <span title="موعد حرج" style="color: #ef4444; font-size: 0.9rem;"><i class="fa-solid fa-triangle-exclamation"></i></span>
+                                    {% endif %}
+                                    <strong style="color: #0f172a;">{{ r.title }}</strong>
+                                </div>
+                                {% if r.law_reference %}
+                                <small style="color: #6366f1; display: block; margin-top: 2px;">
+                                    <i class="fa-solid fa-scale-balanced" style="font-size: 0.75rem;"></i> {{ r.law_reference }}
+                                </small>
+                                {% endif %}
+                                {% if r.action_required %}
+                                <small style="color: #475569; display: block; margin-top: 2px; font-style: italic;">
+                                    المطلوب: {{ r.action_required[:40] }}
+                                </small>
+                                {% endif %}
+                            </td>
+
+                            <td style="padding: 12px 14px;">
+                                <span style="padding: 3px 9px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; background: #e0e7ff; color: #4338ca;">
+                                    {{ r.limitation_type_key }}
+                                </span>
+                            </td>
+
+                            <td style="padding: 12px 14px;">
+                                <div style="font-weight: 700; color: #1e293b; direction: ltr; text-align: right;">{{ r.due_date }}</div>
+                                {% if r.status_key == 'مكتمل' %}
+                                <span style="display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; background: #dcfce7; color: #15803d; margin-top: 3px;">
+                                    <i class="fa-solid fa-check"></i> مكتمل
+                                </span>
+                                {% elif item.days_left is not none %}
+                                    {% if item.days_left < 0 %}
+                                    <span style="display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; background: #fee2e2; color: #b91c1c; margin-top: 3px;">
+                                        <i class="fa-solid fa-circle-xmark"></i> منتهي منذ {{ item.days_left|abs }} يوم
+                                    </span>
+                                    {% elif item.days_left == 0 %}
+                                    <span style="display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 0.72rem; font-weight: 800; background: #ef4444; color: white; margin-top: 3px; animation: pulse 1.5s infinite;">
+                                        ⚠️ اليوم الأخير!
+                                    </span>
+                                    {% elif item.days_left <= 7 %}
+                                    <span style="display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 0.72rem; font-weight: 800; background: #ffedd5; color: #c2410c; margin-top: 3px;">
+                                        ⏳ متبقي {{ item.days_left }} أيام
+                                    </span>
+                                    {% else %}
+                                    <span style="display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; background: #e0f2fe; color: #0369a1; margin-top: 3px;">
+                                        متبقي {{ item.days_left }} يوم
+                                    </span>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+
+                            <td style="padding: 12px 14px;">
+                                {% if r.status_key == 'ساري' %}
+                                <span style="padding: 3px 10px; border-radius: 50px; font-size: 0.75rem; font-weight: 700; background: #fee2e2; color: #dc2626;">ساري</span>
+                                {% elif r.status_key == 'مكتمل' %}
+                                <span style="padding: 3px 10px; border-radius: 50px; font-size: 0.75rem; font-weight: 700; background: #dcfce7; color: #16a34a;">مكتمل</span>
+                                {% elif r.status_key == 'منتهي' %}
+                                <span style="padding: 3px 10px; border-radius: 50px; font-size: 0.75rem; font-weight: 700; background: #f1f5f9; color: #64748b;">منتهي</span>
+                                {% else %}
+                                <span style="padding: 3px 10px; border-radius: 50px; font-size: 0.75rem; font-weight: 700; background: #fef3c7; color: #d97706;">{{ r.status_key }}</span>
+                                {% endif %}
+                            </td>
+
+                            <td style="padding: 12px 14px; text-align: center;">
+                                <div style="display: flex; gap: 5px; justify-content: center;" onclick="event.stopPropagation()">
+                                    <button onclick="convertToTask({{ r.id }}, '{{ r.title }}')" title="تحويل لمهمة عمل"
+                                            style="width: 32px; height: 32px; border-radius: 6px; border: none; background: #e0e7ff; color: #4f46e5; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fa-solid fa-list-check"></i>
+                                    </button>
+                                    <button onclick="selectLimitation({{ r.id }})" title="تعديل"
+                                            style="width: 32px; height: 32px; border-radius: 6px; border: none; background: #e2e8f0; color: #334155; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    <button onclick="deleteLimitation({{ r.id }})" title="حذف"
+                                            style="width: 32px; height: 32px; border-radius: 6px; border: none; background: #fee2e2; color: #dc2626; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                {% if not records %}
+                <div style="text-align: center; padding: 60px 20px; color: #94a3b8;">
+                    <i class="fa-solid fa-clock-rotate-left" style="font-size: 3.5rem; opacity: 0.3; margin-bottom: 15px; display: block;"></i>
+                    <h4 style="margin: 0 0 5px; color: #64748b;">لا توجد مواعيد تقادم مسجلة حالياً</h4>
+                    <p style="margin: 0; font-size: 0.88rem;">يمكنك تسجيل مواعيد الطعن والاستئناف من النموذج الجانبي لحمايتها من السقوط.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
 </div>
+
+<style>
+.pill-btn {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.pill-btn:hover { background: #e2e8f0; }
+.pill-btn.active { background: #1e293b; color: white; border-color: #1e293b; }
+.pill-danger.active { background: #dc2626 !important; border-color: #dc2626 !important; }
+.pill-primary.active { background: #2563eb !important; border-color: #2563eb !important; }
+.pill-success.active { background: #16a34a !important; border-color: #16a34a !important; }
+.pill-muted.active { background: #64748b !important; border-color: #64748b !important; }
+.limitation-row:hover td { background: #f8fafc; }
+.limitation-row.selected td { background: #eff6ff !important; }
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+</style>
 {% endblock %}
 
 {% block scripts %}
 <div id="limitations-data-store" data-records="{{ records_json | forceescape }}" style="display: none;"></div>
 <script>
-const allRecords = JSON.parse(document.getElementById('limitations-data-store').getAttribute('data-records'));
-let selectedId = null;
+const allRecords = JSON.parse(document.getElementById('limitations-data-store').getAttribute('data-records') || '[]');
+let currentQuickFilter = 'all';
 
-function showAlert(msg, type='success') {
-  const el = document.getElementById('alertBox');
-  el.className = 'alert-box alert-' + type;
-  el.textContent = msg;
-  el.style.display = 'block';
-  setTimeout(() => el.style.display = 'none', 4000);
+function showAlert(msg, isSuccess=true) {
+    const el = document.getElementById('alertBox');
+    el.style.display = 'block';
+    el.style.background = isSuccess ? '#dcfce7' : '#fee2e2';
+    el.style.color = isSuccess ? '#15803d' : '#b91c1c';
+    el.style.border = isSuccess ? '1px solid #86efac' : '1px solid #fca5a5';
+    el.textContent = msg;
+    setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+function setQuickFilter(type, btn) {
+    currentQuickFilter = type;
+    document.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    filterTable();
 }
 
 function filterTable() {
-  const search = document.getElementById('filterSearch').value.toLowerCase();
-  const caseNum = document.getElementById('filterCase').value.toLowerCase();
-  const status = document.getElementById('filterStatus').value;
-  const type = document.getElementById('filterType').value;
-  
-  document.querySelectorAll('#refTbody tr').forEach(row => {
-    const textSearch = row.dataset.search || '';
-    const textCase = row.dataset.case || '';
-    const rStatus = row.dataset.status || '';
-    const rType = row.dataset.type || '';
-    
-    const match1 = !search || textSearch.includes(search);
-    const match2 = !caseNum || textCase.includes(caseNum);
-    const match3 = !status || rStatus === status;
-    const match4 = !type || rType === type;
-    
-    row.style.display = (match1 && match2 && match3 && match4) ? '' : 'none';
-  });
+    const search = (document.getElementById('filterSearch').value || '').toLowerCase().trim();
+    const type = document.getElementById('filterType').value;
+
+    document.querySelectorAll('.limitation-row').forEach(row => {
+        const text = row.dataset.search || '';
+        const rStatus = row.dataset.status || '';
+        const rType = row.dataset.type || '';
+        const isCritical = row.dataset.critical === '1';
+        const isExpired = row.dataset.expired === '1';
+
+        let matchFilter = true;
+        if (currentQuickFilter === 'critical') matchFilter = isCritical;
+        else if (currentQuickFilter === 'active') matchFilter = (rStatus === 'ساري' && !isExpired);
+        else if (currentQuickFilter === 'completed') matchFilter = (rStatus === 'مكتمل');
+        else if (currentQuickFilter === 'expired') matchFilter = (rStatus === 'منتهي' || isExpired);
+
+        const matchSearch = !search || text.includes(search);
+        const matchType = !type || rType === type;
+
+        row.style.display = (matchFilter && matchSearch && matchType) ? '' : 'none';
+    });
 }
 
-function selectRecord(id, row) {
-  selectedId = id;
-  document.querySelectorAll('#refTbody tr').forEach(r => r.classList.remove('selected'));
-  row.classList.add('selected');
-  const rec = allRecords.find(r => r.id === id);
-  if (!rec) return;
-  document.getElementById('recId').value = rec.id;
-  document.getElementById('fCaseId').value = rec.case_id || '';
-  document.getElementById('fTitle').value = rec.title || '';
-  document.getElementById('fType').value = rec.limitation_type_key || 'تقادم مدني';
-  document.getElementById('fStatus').value = rec.status_key || 'ساري';
-  document.getElementById('fStartDate').value = rec.start_date || '';
-  document.getElementById('fDueDate').value = rec.due_date || '';
-  document.getElementById('fNotes').value = rec.notes || '';
+function selectLimitation(id) {
+    const rec = allRecords.find(r => r.id === id);
+    if (!rec) return;
+
+    document.querySelectorAll('.limitation-row').forEach(r => r.classList.remove('selected'));
+    const selectedRow = document.getElementById('row-' + id);
+    if (selectedRow) selectedRow.classList.add('selected');
+
+    document.getElementById('formTitle').innerHTML = '<i class="fa-solid fa-pen-to-square" style="color:#ef4444;"></i> تعديل تنبيه التقادم';
+    document.getElementById('editBadge').style.display = 'inline-block';
+    document.getElementById('recId').value = rec.id;
+    document.getElementById('fCaseId').value = rec.case_id || '';
+    document.getElementById('fTitle').value = rec.title || '';
+    document.getElementById('fType').value = rec.limitation_type_key || 'ميعاد استئناف/طعن';
+    document.getElementById('fStatus').value = rec.status_key || 'ساري';
+    document.getElementById('fStartDate').value = rec.start_date || '';
+    document.getElementById('fDueDate').value = rec.due_date || '';
+    document.getElementById('fDaysCount').value = rec.days_count || '';
+    document.getElementById('fAlertDaysBefore').value = rec.alert_days_before || 7;
+    document.getElementById('fLawRef').value = rec.law_reference || '';
+    document.getElementById('fActionRequired').value = rec.action_required || '';
+    document.getElementById('fIsCritical').checked = (rec.is_critical === 1);
+    document.getElementById('fNotes').value = rec.notes || '';
+
+    // Scroll to form smoothly
+    document.getElementById('limitationForm').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function clearForm() {
-  selectedId = null;
-  document.getElementById('recId').value = '';
-  document.getElementById('fCaseId').value = '';
-  document.getElementById('fTitle').value = '';
-  document.getElementById('fType').value = 'تقادم مدني';
-  document.getElementById('fStatus').value = 'ساري';
-  document.getElementById('fStartDate').value = '';
-  document.getElementById('fDueDate').value = '';
-  document.getElementById('fNotes').value = '';
-  document.querySelectorAll('#refTbody tr').forEach(r => r.classList.remove('selected'));
+    document.querySelectorAll('.limitation-row').forEach(r => r.classList.remove('selected'));
+    document.getElementById('formTitle').innerHTML = '<i class="fa-solid fa-pen-to-square" style="color:#ef4444;"></i> إضافة تنبيه تقادم';
+    document.getElementById('editBadge').style.display = 'none';
+    document.getElementById('limitationForm').reset();
+    document.getElementById('recId').value = '';
+    document.getElementById('fAlertDaysBefore').value = 7;
+    document.getElementById('fIsCritical').checked = false;
 }
 
-async function saveRecord(e) {
-  e.preventDefault();
-  const payload = {
-    id: document.getElementById('recId').value || null,
-    case_id: document.getElementById('fCaseId').value,
-    title: document.getElementById('fTitle').value.trim(),
-    limitation_type_key: document.getElementById('fType').value,
-    status_key: document.getElementById('fStatus').value,
-    start_date: document.getElementById('fStartDate').value,
-    due_date: document.getElementById('fDueDate').value,
-    notes: document.getElementById('fNotes').value.trim()
-  };
-  const res = await fetch('/api/limitations/save', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-  const data = await res.json();
-  if (data.ok) { showAlert(data.message); setTimeout(() => location.reload(), 1000); }
-  else showAlert(data.message, 'error');
+async function saveLimitation(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btnSave');
+    btn.disabled = true;
+
+    const payload = {
+        id: document.getElementById('recId').value ? parseInt(document.getElementById('recId').value) : null,
+        case_id: document.getElementById('fCaseId').value,
+        title: document.getElementById('fTitle').value.trim(),
+        limitation_type_key: document.getElementById('fType').value,
+        status_key: document.getElementById('fStatus').value,
+        start_date: document.getElementById('fStartDate').value || null,
+        due_date: document.getElementById('fDueDate').value,
+        days_count: document.getElementById('fDaysCount').value || null,
+        alert_days_before: document.getElementById('fAlertDaysBefore').value || 7,
+        law_reference: document.getElementById('fLawRef').value.trim() || null,
+        action_required: document.getElementById('fActionRequired').value.trim() || null,
+        is_critical: document.getElementById('fIsCritical').checked ? 1 : 0,
+        notes: document.getElementById('fNotes').value.trim() || null
+    };
+
+    try {
+        const res = await fetch('/api/limitations/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.ok) {
+            showAlert(data.message, true);
+            setTimeout(() => location.reload(), 800);
+        } else {
+            showAlert(data.message, false);
+            btn.disabled = false;
+        }
+    } catch (err) {
+        showAlert('فشل الاتصال بالخادم', false);
+        btn.disabled = false;
+    }
 }
 
-async function deleteRecord() {
-  if (!selectedId) { showAlert('اختر سجلاً أولاً', 'error'); return; }
-  if (!confirm('هل تريد حذف هذا التنبيه؟')) return;
-  const res = await fetch(`/api/limitations/delete/${selectedId}`, { method: 'DELETE' });
-  const data = await res.json();
-  if (data.ok) { showAlert(data.message); setTimeout(() => location.reload(), 900); }
-  else showAlert(data.message, 'error');
+async function convertToTask(id, title) {
+    if (!confirm(`هل تريد تحويل موعد التقادم "${title}" إلى مهمة عمل في النظام للمتابعة؟`)) return;
+
+    try {
+        const res = await fetch(`/api/limitations/${id}/create-task`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (data.ok) {
+            showAlert('تم إنشاء مهمة العمل بنجاح!', true);
+        } else {
+            showAlert(data.message, false);
+        }
+    } catch (e) {
+        showAlert('فشل إنشاء المهمة', false);
+    }
+}
+
+async function deleteLimitation(id) {
+    if (!confirm('هل أنت متأكد من حذف هذا التنبيه؟')) return;
+
+    try {
+        const res = await fetch(`/api/limitations/delete/${id}`, {
+            method: 'DELETE'
+        });
+        const data = await res.json();
+        if (data.ok) {
+            showAlert(data.message, true);
+            setTimeout(() => location.reload(), 700);
+        } else {
+            showAlert(data.message, false);
+        }
+    } catch (e) {
+        showAlert('فشل الحذف', false);
+    }
 }
 </script>
 {% endblock %}

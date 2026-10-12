@@ -1,212 +1,468 @@
 {% extends "base.html" %}
-{% block title %}إجراءات التنفيذ | LawSaaS{% endblock %}
+{% block title %}إجراءات التنفيذ والتحصيل | LawSaaS{% endblock %}
 
-{% block head %}
+{% block content %}
+<div class="executions-container" dir="rtl" style="margin-bottom: 40px;">
+    <!-- Page Header -->
+    <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px;">
+        <div>
+            <h1 style="margin: 0; font-size: 1.8rem; font-weight: 800; color: var(--secondary-color);">
+                <i class="fa-solid fa-gavel" style="color: #6366f1; margin-left: 10px;"></i>
+                إجراءات ومحاكم التنفيذ
+            </h1>
+            <p style="margin: 5px 0 0; color: var(--text-muted); font-size: 0.95rem;">
+                متابعة تنفيذ السندات والأحكام القضائية، قرارات الحجز (34 / 46)، وإحصائيات التحصيل المالي.
+            </p>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <button class="btn-primary" onclick="openNewRecordForm()">
+                <i class="fa-solid fa-plus"></i> طلب تنفيذ جديد
+            </button>
+        </div>
+    </div>
+
+    <!-- Live KPI Financial Ribbon -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 15px; margin-bottom: 25px;">
+        <div class="card" style="padding: 16px; border-radius: 12px; border-right: 4px solid #6366f1; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">إجمالي ملفات التنفيذ</span>
+                <h3 style="margin: 5px 0 0; font-size: 1.6rem; color: #1e293b;">{{ kpis.total }}</h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #e0e7ff; color: #6366f1; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fa-solid fa-file-invoice"></i>
+            </div>
+        </div>
+
+        <div class="card" style="padding: 16px; border-radius: 12px; border-right: 4px solid #3b82f6; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">قيد التنفيذ والمتابعة</span>
+                <h3 style="margin: 5px 0 0; font-size: 1.6rem; color: #1d4ed8;">{{ kpis.active }}</h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #eff6ff; color: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fa-solid fa-spinner"></i>
+            </div>
+        </div>
+
+        <div class="card" style="padding: 16px; border-radius: 12px; border-right: 4px solid #10b981; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">المبالغ المحصلة</span>
+                <h3 style="margin: 5px 0 0; font-size: 1.5rem; color: #059669;">{{ "{:,.0f}".format(kpis.collected) }} <small style="font-size: 0.8rem;">ر.س</small></h3>
+                <small style="color: #64748b; font-size: 0.75rem;">نسبة التحصيل: {{ kpis.rate }}%</small>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #ecfdf5; color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fa-solid fa-money-bill-trend-up"></i>
+            </div>
+        </div>
+
+        <div class="card" style="padding: 16px; border-radius: 12px; border-right: 4px solid #f59e0b; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">المبالغ المطالب بها</span>
+                <h3 style="margin: 5px 0 0; font-size: 1.5rem; color: #d97706;">{{ "{:,.0f}".format(kpis.claimed) }} <small style="font-size: 0.8rem;">ر.س</small></h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #fffbeb; color: #f59e0b; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fa-solid fa-coins"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="card" style="padding: 15px 20px; border-radius: 12px; margin-bottom: 25px;">
+        <form method="GET" action="/execution" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+            <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto;">
+                <a href="/execution" class="filter-pill {% if filter_type == 'all' %}active{% endif %}">الكل ({{ kpis.total }})</a>
+                <a href="/execution?filter_type=active" class="filter-pill {% if filter_type == 'active' %}active{% endif %}">قيد التنفيذ ({{ kpis.active }})</a>
+                <a href="/execution?filter_type=completed" class="filter-pill {% if filter_type == 'completed' %}active{% endif %}">مكتملة ومحصلة ({{ kpis.completed }})</a>
+                <a href="/execution?filter_type=financial" class="filter-pill {% if filter_type == 'financial' %}active{% endif %}">تنفيذ مالي</a>
+            </div>
+
+            <div style="position: relative; min-width: 240px; flex: 1;">
+                <i class="fa-solid fa-magnifying-glass" style="position: absolute; right: 12px; top: 11px; color: #94a3b8;"></i>
+                <input type="text" name="q" value="{{ q }}" placeholder="بحث برقم التنفيذ، المنفذ ضده، أو المحكمة..." style="width: 100%; padding: 8px 36px 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit; font-size: 0.9rem;">
+            </div>
+
+            <button type="submit" class="btn-primary" style="padding: 8px 16px; border-radius: 8px;">
+                <i class="fa-solid fa-filter"></i> تصفية
+            </button>
+            {% if q or filter_type != 'all' %}
+            <a href="/execution" style="color: #64748b; font-size: 0.85rem; text-decoration: none; padding: 6px 10px;">إلغاء الفرز</a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Layout: Grid or Table -->
+    <div style="display: grid; grid-template-columns: 380px 1fr; gap: 24px; align-items: start;">
+        <!-- Right Column: Add/Edit Form Card -->
+        <div class="card" style="padding: 22px; border-radius: 14px; position: sticky; top: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">
+                <h3 style="margin: 0; font-size: 1.1rem; color: #1e293b;" id="formTitle">
+                    <i class="fa-solid fa-pen-to-square" style="color: #6366f1;"></i> إضافة طلب تنفيذ
+                </h3>
+                <button type="button" onclick="clearForm()" style="background: none; border: none; color: #64748b; cursor: pointer; font-size: 0.85rem; font-weight: 700;">
+                    <i class="fa-solid fa-rotate-left"></i> تفريغ
+                </button>
+            </div>
+
+            <div id="alertBox" style="display: none; padding: 10px 14px; border-radius: 8px; font-size: 0.88rem; font-weight: 600; margin-bottom: 15px;"></div>
+
+            <form id="execForm" onsubmit="saveRecord(event)">
+                <input type="hidden" id="recId">
+
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 700; font-size: 0.85rem; color: #334155;">القضية المرتبطة <span style="color: red;">*</span></label>
+                    <select id="fCaseId" required style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
+                        <option value="">-- اختر القضية --</option>
+                        {% for c in cases %}
+                        <option value="{{ c.id }}">{{ c.case_number }} - {{ c.title[:30] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 700; font-size: 0.85rem; color: #334155;">رقم طلب التنفيذ <span style="color: red;">*</span></label>
+                        <input type="text" id="fExecNum" required placeholder="مثال: 4410294" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 700; font-size: 0.85rem; color: #334155;">نوع التنفيذ</label>
+                        <select id="fExecType" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
+                            <option value="financial">تنفيذ مالي (مطالبة مالية)</option>
+                            <option value="eviction">إخلاء عقار</option>
+                            <option value="delivery">تسليم منقول أو عين</option>
+                            <option value="attachment">حجز تحفظي / تنفيذي</option>
+                            <option value="family">أحوال شخصية وزيارة</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 700; font-size: 0.85rem; color: #334155;">المنفذ ضده (المدين / الخصم)</label>
+                    <input type="text" id="fDebtor" placeholder="اسم الشخص أو الشركة المنفذ ضدها..." style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 700; font-size: 0.85rem; color: #334155;">الجهة / محكمة التنفيذ</label>
+                    <input type="text" id="fAuth" placeholder="مثال: محكمة التنفيذ بالرياض - الدائرة الخامسة" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 700; font-size: 0.85rem; color: #334155;">المبلغ المطالب به (ر.س)</label>
+                        <input type="number" step="0.01" id="fClaimed" placeholder="0.00" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 700; font-size: 0.85rem; color: #334155;">المبلغ المحصل فعلياً (ر.س)</label>
+                        <input type="number" step="0.01" id="fCollected" placeholder="0.00" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 700; font-size: 0.85rem; color: #334155;">رقم القرار (34 / 46)</label>
+                        <input type="text" id="fDecNum" placeholder="مثال: قرار 46 حجز" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 700; font-size: 0.85rem; color: #334155;">تاريخ القرار</label>
+                        <input type="date" id="fDecDate" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 700; font-size: 0.85rem; color: #334155;">الحالة</label>
+                        <select id="fStatus" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
+                            <option value="قيد الدراسة">قيد الدراسة</option>
+                            <option value="جاري التنفيذ" selected>جاري التنفيذ</option>
+                            <option value="تم التنفيذ">تم التنفيذ والإغلاق</option>
+                            <option value="موقوف">موقوف</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 700; font-size: 0.85rem; color: #334155;">تاريخ تقديم الطلب</label>
+                        <input type="date" id="fDate" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 700; font-size: 0.85rem; color: #334155;">ملاحظات وإجراءات التتبع</label>
+                    <textarea id="fNotes" rows="2" placeholder="أية قرارات إفصاح، حجز حسابات، منع سفر..." style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit; resize: vertical;"></textarea>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 0.85rem; color: #334155; cursor: pointer;">
+                        <input type="checkbox" id="fCreateTask" style="width: 17px; height: 17px; accent-color: #6366f1;">
+                        <span>توليد مهمة متابعة تلقائية في جدول المهام</span>
+                    </label>
+                </div>
+
+                <div style="display: flex; gap: 8px;">
+                    <button type="submit" class="btn-primary" style="flex: 1; background: #6366f1;">
+                        <i class="fa-solid fa-floppy-disk"></i> حفظ الإجراء
+                    </button>
+                    <button type="button" id="btnDelete" onclick="deleteRecord()" class="cancel-btn" style="display: none; color: #dc2626; border-color: #fecaca;">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Left Column: Records Table Card -->
+        <div class="card" style="padding: 0; overflow: hidden; border-radius: 14px;">
+            <div style="overflow-x: auto;">
+                <table class="data-table" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; text-align: right;">
+                            <th style="padding: 14px 16px;">رقم التنفيذ / النوع</th>
+                            <th style="padding: 14px 16px;">القضية والمنفذ ضده</th>
+                            <th style="padding: 14px 16px;">الجهة المنفذة</th>
+                            <th style="padding: 14px 16px;">المطالبة والتحصيل</th>
+                            <th style="padding: 14px 16px;">القرارات الصادرة</th>
+                            <th style="padding: 14px 16px;">الحالة</th>
+                            <th style="padding: 14px 16px; text-align: center;">إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recordsTbody">
+                        {% for r in records %}
+                        <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.15s;" id="row-{{ r.id }}" onclick="loadRecordIntoForm({{ r.id }})">
+                            <!-- Execution Number & Type -->
+                            <td style="padding: 14px 16px;">
+                                <strong style="color: #1e293b; font-size: 0.95rem; display: block;">{{ r.execution_number }}</strong>
+                                <span class="badge" style="background: #e0e7ff; color: #4338ca; margin-top: 4px; font-size: 0.75rem;">
+                                    {% if r.execution_type == 'financial' %}مالي
+                                    {% elif r.execution_type == 'eviction' %}إخلاء عقار
+                                    {% elif r.execution_type == 'delivery' %}تسليم
+                                    {% elif r.execution_type == 'attachment' %}حجز
+                                    {% else %}عام{% endif %}
+                                </span>
+                            </td>
+
+                            <!-- Case & Debtor -->
+                            <td style="padding: 14px 16px;">
+                                {% if r.law_case %}
+                                <a href="/cases/{{ r.case_id }}" style="color: var(--primary-color); font-weight: 700; text-decoration: none;" onclick="event.stopPropagation()">
+                                    {{ r.law_case.title }}
+                                </a>
+                                {% else %}
+                                <span style="color: #94a3b8;">-</span>
+                                {% endif %}
+                                {% if r.debtor_name %}
+                                <div style="font-size: 0.8rem; color: #64748b; margin-top: 3px;">
+                                    <i class="fa-solid fa-user-xmark" style="color: #ef4444;"></i> ضده: {{ r.debtor_name }}
+                                </div>
+                                {% endif %}
+                            </td>
+
+                            <!-- Authority -->
+                            <td style="padding: 14px 16px; font-size: 0.88rem; color: #334155;">
+                                {{ r.authority_name or 'محكمة التنفيذ' }}
+                                {% if r.request_date %}
+                                <small style="display: block; color: #94a3b8; font-size: 0.75rem;">تقديم: {{ r.request_date }}</small>
+                                {% endif %}
+                            </td>
+
+                            <!-- Financial Claim & Collected -->
+                            <td style="padding: 14px 16px;">
+                                <div style="font-size: 0.9rem; font-weight: 700; color: #1e293b;">
+                                    {{ "{:,.0f}".format(r.claimed_amount or 0) }} <small style="font-size: 0.75rem; color: #64748b;">ر.س</small>
+                                </div>
+                                {% if r.collected_amount and r.collected_amount > 0 %}
+                                <div style="font-size: 0.8rem; font-weight: 700; color: #059669; margin-top: 2px;">
+                                    محصل: {{ "{:,.0f}".format(r.collected_amount) }} ر.س
+                                </div>
+                                {% endif %}
+                            </td>
+
+                            <!-- Decision -->
+                            <td style="padding: 14px 16px; font-size: 0.85rem;">
+                                {% if r.decision_number %}
+                                <span class="badge" style="background: #fef3c7; color: #b45309; font-weight: 700;">
+                                    {{ r.decision_number }}
+                                </span>
+                                {% if r.decision_date %}
+                                <small style="display: block; color: #94a3b8; font-size: 0.75rem; margin-top: 2px;">{{ r.decision_date }}</small>
+                                {% endif %}
+                                {% else %}
+                                <span style="color: #94a3b8;">-</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Status -->
+                            <td style="padding: 14px 16px;">
+                                {% if r.status_key in ['completed', 'تم التنفيذ'] %}
+                                <span class="badge" style="background: #dcfce7; color: #15803d; font-weight: 700;">تم التنفيذ ✅</span>
+                                {% elif r.status_key in ['active', 'جاري التنفيذ'] %}
+                                <span class="badge" style="background: #dbeafe; color: #1d4ed8; font-weight: 700;">جاري التنفيذ ⏳</span>
+                                {% elif r.status_key in ['موقوف', 'stopped'] %}
+                                <span class="badge" style="background: #fee2e2; color: #b91c1c; font-weight: 700;">موقوف ⛔</span>
+                                {% else %}
+                                <span class="badge" style="background: #f1f5f9; color: #64748b; font-weight: 600;">{{ r.status_key }}</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Actions -->
+                            <td style="padding: 14px 16px; text-align: center;">
+                                <div style="display: inline-flex; gap: 6px;">
+                                    <button type="button" class="action-btn" style="color: #6366f1; background: #e0e7ff;" title="تعديل" onclick="event.stopPropagation(); loadRecordIntoForm({{ r.id }})">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: 50px 20px; color: #94a3b8;">
+                                <i class="fa-solid fa-gavel" style="font-size: 3rem; margin-bottom: 12px; opacity: 0.3;"></i>
+                                <h3 style="margin: 0; color: #475569;">لا توجد إجراءات تنفيذ مسجلة</h3>
+                                <p style="margin: 5px 0 15px; font-size: 0.9rem;">يمكنك تسجيل طلب تنفيذ صك أو سند لأمر وتتبع تحصيل المبالغ.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
-.page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
-.grid-layout { display: grid; grid-template-columns: 360px 1fr; gap: 24px; align-items: start; }
-.form-card { background: var(--card-bg); border-radius: 14px; padding: 22px; border: 1px solid var(--border-color); box-shadow: 0 2px 8px rgba(0,0,0,.05); }
-.form-card h3 { font-size: 1.05rem; font-weight: 800; color: var(--secondary-color); margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
-.form-group { margin-bottom: 14px; display: flex; flex-direction: column; gap: 6px; }
-.form-group label { font-size: .85rem; font-weight: 700; color: var(--text-muted); }
-.form-group input, .form-group select { padding: 10px 12px; border: 1.5px solid var(--border-color); border-radius: 9px; font-family: 'Cairo', sans-serif; font-size: .88rem; background: var(--card-bg); color: var(--secondary-color); outline: none; }
-.form-group input:focus, .form-group select:focus { border-color: var(--primary-color); }
-.btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
-.data-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
-.data-table th { background: #f8fafc; color: var(--text-muted); font-weight: 700; padding: 12px 14px; text-align: right; border-bottom: 2px solid var(--border-color); }
-.data-table td { padding: 12px 14px; border-bottom: 1px solid var(--border-color); color: var(--secondary-color); vertical-align: middle; }
-.data-table tr { cursor: pointer; transition: background .15s; }
-.data-table tr:hover td { background: #f0f4ff; }
-.data-table tr.selected td { background: #eff6ff; }
-.empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
-.empty-state i { font-size: 3rem; opacity: .2; display: block; margin-bottom: 12px; }
-.alert-box { padding: 12px 16px; border-radius: 10px; font-size: .88rem; font-weight: 600; margin-bottom: 16px; display: none; }
-.alert-success { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
-.alert-error   { background: #fee2e2; color: #7f1d1d; border: 1px solid #fecaca; }
-.status-badge { padding: 4px 12px; border-radius: 50px; font-size: .75rem; font-weight: 700; }
-.s-pending { background: #fef3c7; color: #d97706; }
-.s-active { background: #dbeafe; color: #1d4ed8; }
-.s-completed { background: #d1fae5; color: #047857; }
-.s-stopped { background: #fee2e2; color: #dc2626; }
+.filter-pill {
+    padding: 6px 14px;
+    border-radius: 20px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.15s ease;
+    border: 1px solid transparent;
+}
+.filter-pill:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+.filter-pill.active {
+    background: #0f172a;
+    color: white;
+}
+.badge {
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
 </style>
 {% endblock %}
 
-{% block content %}
-<div class="page-header">
-  <div>
-    <h1 style="font-size:1.8rem;font-weight:800;color:var(--secondary-color);margin-bottom:4px;">
-      <i class="fa-solid fa-gavel" style="color:#6366f1;margin-left:10px;"></i>إجراءات التنفيذ
-    </h1>
-    <p style="color:var(--text-muted);font-size:.95rem;">متابعة تنفيذ الأحكام القضائية وإجراءاتها.</p>
-  </div>
-</div>
-
-<div class="grid-layout">
-  <div class="form-card">
-    <h3><i class="fa-solid fa-pen-to-square" style="color:#6366f1;"></i> إضافة / تعديل إجراء تنفيذ</h3>
-    <div id="alertBox" class="alert-box"></div>
-    <form onsubmit="saveRecord(event)">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
-      <input type="hidden" id="recId">
-      <div class="form-group">
-        <label>القضية <span style="color:#ef4444;">*</span></label>
-        <select id="fCaseId" required>
-          <option value="">-- اختر القضية --</option>
-          {% for c in cases %}
-          <option value="{{ c.id }}">{{ c.case_number }} - {{ c.title[:30] }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="form-group">
-        <label>رقم التنفيذ / الملف <span style="color:#ef4444;">*</span></label>
-        <input type="text" id="fExecNum" required placeholder="رقم ملف التنفيذ...">
-      </div>
-      <div class="form-group">
-        <label>الجهة المنفذة / المحكمة</label>
-        <input type="text" id="fAuth" placeholder="مثال: محكمة التنفيذ بجدة...">
-      </div>
-      <div class="form-group" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        <div>
-          <label>الحالة</label>
-          <select id="fStatus">
-            <option value="قيد الدراسة">قيد الدراسة</option>
-            <option value="جاري التنفيذ">جاري التنفيذ</option>
-            <option value="تم التنفيذ">تم التنفيذ</option>
-            <option value="موقوف">موقوف</option>
-          </select>
-        </div>
-        <div>
-          <label>تاريخ الطلب</label>
-          <input type="date" id="fDate">
-        </div>
-      </div>
-      <div class="btn-row">
-        <button type="submit" class="action-btn" style="background:linear-gradient(135deg,#10b981,#047857);">
-          <i class="fa-solid fa-floppy-disk"></i> حفظ
-        </button>
-        <button type="button" class="action-btn" style="background:linear-gradient(135deg,#6366f1,#4f46e5);" onclick="clearForm()">
-          <i class="fa-solid fa-plus"></i> جديد
-        </button>
-        <button type="button" class="action-btn" style="background:linear-gradient(135deg,#ef4444,#dc2626);" onclick="deleteRecord()">
-          <i class="fa-solid fa-trash"></i> حذف
-        </button>
-      </div>
-    </form>
-  </div>
-
-  <div class="form-card" style="padding:0;overflow:hidden;">
-    <div style="padding:18px 22px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;">
-      <h3 style="margin:0;"><i class="fa-solid fa-list" style="color:#6366f1;margin-left:8px;"></i> الإجراءات المسجلة</h3>
-      <input type="text" id="filterSearch" placeholder="بحث برقم التنفيذ..." style="padding:6px 12px;border:1px solid var(--border-color);border-radius:6px;outline:none;" oninput="filterTable()">
-    </div>
-    <div style="overflow-x:auto;">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>القضية</th>
-            <th>رقم التنفيذ</th>
-            <th>الجهة المنفذة</th>
-            <th>تاريخ الطلب</th>
-            <th>الحالة</th>
-          </tr>
-        </thead>
-        <tbody id="refTbody">
-          {% for r in records %}
-          <tr onclick="selectRecord({{ r.id }}, this)" data-search="{{ r.execution_number | lower }} {{ r.law_case.case_number if r.law_case else '' }}">
-            <td><strong>{{ r.law_case.case_number if r.law_case else '—' }}</strong></td>
-            <td style="font-weight:700;">{{ r.execution_number }}</td>
-            <td>{{ r.authority_name or '—' }}</td>
-            <td style="direction:ltr;text-align:right;">{{ r.request_date or '—' }}</td>
-            <td>
-              {% if r.status_key == 'قيد الدراسة' %}<span class="status-badge s-pending">{{ r.status_key }}</span>
-              {% elif r.status_key == 'جاري التنفيذ' %}<span class="status-badge s-active">{{ r.status_key }}</span>
-              {% elif r.status_key == 'تم التنفيذ' %}<span class="status-badge s-completed">{{ r.status_key }}</span>
-              {% else %}<span class="status-badge s-stopped">{{ r.status_key }}</span>{% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% if not records %}
-      <div class="empty-state">
-        <i class="fa-solid fa-gavel"></i>
-        <p style="font-weight:600;">لا توجد إجراءات تنفيذ بعد.</p>
-      </div>
-      {% endif %}
-    </div>
-  </div>
-</div>
-{% endblock %}
-
 {% block scripts %}
-<div id="execution-data-store" data-records="{{ records_json | forceescape }}" style="display: none;"></div>
 <script>
-const allRecords = JSON.parse(document.getElementById('execution-data-store').getAttribute('data-records'));
-let selectedId = null;
+    const csrfToken = "{{ request.cookies.get('csrf_token', '') }}";
+    const allRecords = {{ records_json|safe }};
 
-function showAlert(msg, type='success') {
-  const el = document.getElementById('alertBox');
-  el.className = 'alert-box alert-' + type;
-  el.textContent = msg;
-  el.style.display = 'block';
-  setTimeout(() => el.style.display = 'none', 3000);
-}
+    function showAlert(msg, isSuccess) {
+        const box = document.getElementById('alertBox');
+        box.style.display = 'block';
+        box.style.background = isSuccess ? '#dcfce7' : '#fee2e2';
+        box.style.color = isSuccess ? '#15803d' : '#b91c1c';
+        box.textContent = msg;
+        setTimeout(() => { box.style.display = 'none'; }, 4000);
+    }
 
-function filterTable() {
-  const s = document.getElementById('filterSearch').value.toLowerCase();
-  document.querySelectorAll('#refTbody tr').forEach(r => {
-    r.style.display = (r.dataset.search.includes(s)) ? '' : 'none';
-  });
-}
+    function clearForm() {
+        document.getElementById('recId').value = '';
+        document.getElementById('execForm').reset();
+        document.getElementById('formTitle').innerHTML = '<i class="fa-solid fa-pen-to-square" style="color: #6366f1;"></i> إضافة طلب تنفيذ';
+        document.getElementById('btnDelete').style.display = 'none';
+    }
 
-function selectRecord(id, row) {
-  selectedId = id;
-  document.querySelectorAll('#refTbody tr').forEach(r => r.classList.remove('selected'));
-  row.classList.add('selected');
-  const rec = allRecords.find(r => r.id === id);
-  if (!rec) return;
-  document.getElementById('recId').value = rec.id;
-  document.getElementById('fCaseId').value = rec.case_id || '';
-  document.getElementById('fExecNum').value = rec.execution_number || '';
-  document.getElementById('fAuth').value = rec.authority_name || '';
-  document.getElementById('fStatus').value = rec.status_key || 'قيد الدراسة';
-  document.getElementById('fDate').value = rec.request_date || '';
-}
+    function openNewRecordForm() {
+        clearForm();
+        document.getElementById('fCaseId').focus();
+    }
 
-function clearForm() {
-  selectedId = null;
-  document.getElementById('recId').value = '';
-  document.getElementById('fCaseId').value = '';
-  document.getElementById('fExecNum').value = '';
-  document.getElementById('fAuth').value = '';
-  document.getElementById('fStatus').value = 'قيد الدراسة';
-  document.getElementById('fDate').value = '';
-  document.querySelectorAll('#refTbody tr').forEach(r => r.classList.remove('selected'));
-}
+    function loadRecordIntoForm(recId) {
+        const r = allRecords.find(item => item.id === recId);
+        if (!r) return;
 
-async function saveRecord(e) {
-  e.preventDefault();
-  const payload = {
-    id: document.getElementById('recId').value || null,
-    case_id: document.getElementById('fCaseId').value,
-    execution_number: document.getElementById('fExecNum').value.trim(),
-    authority_name: document.getElementById('fAuth').value.trim(),
-    status_key: document.getElementById('fStatus').value,
-    request_date: document.getElementById('fDate').value || null
-  };
-  const res = await fetch('/api/executions/save', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-  const data = await res.json();
-  if (data.ok) { showAlert(data.message); setTimeout(() => location.reload(), 900); }
-  else showAlert(data.message, 'error');
-}
+        document.getElementById('recId').value = r.id;
+        document.getElementById('fCaseId').value = r.case_id || '';
+        document.getElementById('fExecNum').value = r.execution_number || '';
+        document.getElementById('fExecType').value = r.execution_type || 'financial';
+        document.getElementById('fDebtor').value = r.debtor_name || '';
+        document.getElementById('fAuth').value = r.authority_name || '';
+        document.getElementById('fClaimed').value = r.claimed_amount || 0;
+        document.getElementById('fCollected').value = r.collected_amount || 0;
+        document.getElementById('fDecNum').value = r.decision_number || '';
+        document.getElementById('fDecDate').value = r.decision_date || '';
+        document.getElementById('fStatus').value = r.status_key || 'جاري التنفيذ';
+        document.getElementById('fDate').value = r.request_date || '';
+        document.getElementById('fNotes').value = r.notes || '';
 
-async function deleteRecord() {
-  if (!selectedId) { showAlert('اختر سجلاً أولاً', 'error'); return; }
-  if (!confirm('تأكيد الحذف؟')) return;
-  const res = await fetch(`/api/executions/delete/${selectedId}`, { method: 'DELETE' });
-  const data = await res.json();
-  if (data.ok) { showAlert(data.message); setTimeout(() => location.reload(), 900); }
-  else showAlert(data.message, 'error');
-}
+        document.getElementById('formTitle').innerHTML = '<i class="fa-solid fa-pen" style="color: #6366f1;"></i> تعديل طلب التنفيذ #' + r.execution_number;
+        document.getElementById('btnDelete').style.display = 'inline-block';
+    }
+
+    async function saveRecord(e) {
+        e.preventDefault();
+        const payload = {
+            id: document.getElementById('recId').value || null,
+            case_id: document.getElementById('fCaseId').value,
+            execution_number: document.getElementById('fExecNum').value,
+            execution_type: document.getElementById('fExecType').value,
+            debtor_name: document.getElementById('fDebtor').value,
+            authority_name: document.getElementById('fAuth').value,
+            claimed_amount: parseFloat(document.getElementById('fClaimed').value) || 0,
+            collected_amount: parseFloat(document.getElementById('fCollected').value) || 0,
+            decision_number: document.getElementById('fDecNum').value,
+            decision_date: document.getElementById('fDecDate').value,
+            status_key: document.getElementById('fStatus').value,
+            request_date: document.getElementById('fDate').value,
+            notes: document.getElementById('fNotes').value,
+            create_task: document.getElementById('fCreateTask').checked
+        };
+
+        try {
+            const res = await fetch('/api/executions/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (data.ok) {
+                showAlert(data.message, true);
+                setTimeout(() => location.reload(), 800);
+            } else {
+                showAlert(data.message || 'فشل في حفظ البيانات', false);
+            }
+        } catch (err) {
+            showAlert('حدث خطأ في الاتصال بالخادم', false);
+        }
+    }
+
+    async function deleteRecord() {
+        const recId = document.getElementById('recId').value;
+        if (!recId) return;
+        if (!confirm('هل أنت متأكد من حذف إجراء التنفيذ هذا نهائياً؟')) return;
+
+        try {
+            const res = await fetch('/api/executions/delete/' + recId, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-Token': csrfToken
+                }
+            });
+            const data = await res.json();
+            if (data.ok) {
+                location.reload();
+            } else {
+                showAlert(data.message || 'فشل الحذف', false);
+            }
+        } catch (err) {
+            showAlert('حدث خطأ في الاتصال', false);
+        }
+    }
 </script>
 {% endblock %}

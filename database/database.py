@@ -415,6 +415,92 @@ def init_db():
         except Exception:
             pass
 
+    # Migrations for law_tasks
+    task_cols = [
+        ("task_type", "TEXT DEFAULT 'general'"),
+        ("estimated_hours", "REAL DEFAULT 0.0"),
+        ("actual_hours", "REAL DEFAULT 0.0"),
+        ("is_billable", "INTEGER DEFAULT 0"),
+        ("checklist_json", "TEXT"),
+        ("completed_at", "TEXT")
+    ]
+    for col_name, col_type in task_cols:
+        try:
+            from sqlalchemy import text
+            with engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE law_tasks ADD COLUMN {col_name} {col_type};"))
+        except Exception:
+            pass
+
+    # Migrations for law_executions
+    exec_cols = [
+        ("execution_type", "TEXT DEFAULT 'financial'"),
+        ("debtor_name", "TEXT"),
+        ("claimed_amount", "REAL DEFAULT 0.0"),
+        ("collected_amount", "REAL DEFAULT 0.0"),
+        ("decision_number", "TEXT"),
+        ("decision_date", "TEXT"),
+        ("notes", "TEXT"),
+        ("attachment_path", "TEXT")
+    ]
+    for col_name, col_type in exec_cols:
+        try:
+            from sqlalchemy import text
+            with engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE law_executions ADD COLUMN {col_name} {col_type};"))
+        except Exception:
+            pass
+
+    # Migrations for law_power_of_attorney
+    poa_cols = [
+        ("agent_name", "TEXT"),
+        ("poa_type", "TEXT DEFAULT 'litigation'"),
+        ("issuing_authority", "TEXT"),
+        ("scope_of_powers", "TEXT"),
+        ("status", "TEXT DEFAULT 'active'"),
+        ("attachment_path", "TEXT")
+    ]
+    for col_name, col_type in poa_cols:
+        try:
+            from sqlalchemy import text
+            with engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE law_power_of_attorney ADD COLUMN {col_name} {col_type};"))
+        except Exception:
+            pass
+
+    # Migrations for law_limitations
+    lim_cols = [
+        ("days_count", "INTEGER"),
+        ("action_required", "TEXT"),
+        ("alert_days_before", "INTEGER DEFAULT 7"),
+        ("law_reference", "TEXT"),
+        ("is_critical", "INTEGER DEFAULT 1")
+    ]
+    for col_name, col_type in lim_cols:
+        try:
+            from sqlalchemy import text
+            with engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE law_limitations ADD COLUMN {col_name} {col_type};"))
+        except Exception:
+            pass
+
+    # Migrations for law_legal_references
+    ref_cols = [
+        ("category", "TEXT DEFAULT 'regulation'"),
+        ("article_number", "TEXT"),
+        ("content", "TEXT"),
+        ("keywords", "TEXT"),
+        ("source", "TEXT")
+    ]
+    for col_name, col_type in ref_cols:
+        try:
+            from sqlalchemy import text
+            with engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE law_legal_references ADD COLUMN {col_name} {col_type};"))
+        except Exception:
+            pass
+
     # Never log DATABASE_URL: it may contain a username and password.
     print(f"[Database] Connected using dialect: {engine.dialect.name}")
     print(f"[Database] Tables initialized successfully.")
+
