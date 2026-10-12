@@ -334,6 +334,28 @@ def init_db():
     except Exception:
         pass
 
+    # Migrations for LawJudgments
+    judgment_cols = [
+        ("decree_number", "TEXT"),
+        ("chamber_name", "TEXT"),
+        ("litigation_degree", "TEXT DEFAULT 'ابتدائي'"),
+        ("judgment_type", "TEXT DEFAULT 'موضوعي'"),
+        ("notification_date", "TEXT"),
+        ("appeal_deadline_days", "INTEGER DEFAULT 30"),
+        ("appeal_deadline_date", "TEXT"),
+        ("awarded_amount", "REAL DEFAULT 0.0"),
+        ("legal_fees_awarded", "REAL DEFAULT 0.0"),
+        ("is_final", "INTEGER DEFAULT 0"),
+        ("attachment_path", "TEXT")
+    ]
+    for col_name, col_type in judgment_cols:
+        try:
+            from sqlalchemy import text
+            with engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE law_judgments ADD COLUMN {col_name} {col_type};"))
+        except Exception:
+            pass
+
     # Never log DATABASE_URL: it may contain a username and password.
     print(f"[Database] Connected using dialect: {engine.dialect.name}")
     print(f"[Database] Tables initialized successfully.")

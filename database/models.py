@@ -1,5 +1,5 @@
 from typing import Optional, List
-from sqlalchemy import Column, CheckConstraint, ForeignKey, Index, Integer, REAL, Table, Text, UniqueConstraint, text
+from sqlalchemy import Column, CheckConstraint, ForeignKey, Index, Integer, REAL, Table, Text, UniqueConstraint, text, Float
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 class Base(DeclarativeBase):
@@ -329,9 +329,20 @@ class LawJudgments(Base):
     office_id: Mapped[int] = mapped_column(ForeignKey('law_offices.id'), index=True)
     judgment_date: Mapped[str] = mapped_column(Text, nullable=False)
     court_name: Mapped[Optional[str]] = mapped_column(Text)
+    chamber_name: Mapped[Optional[str]] = mapped_column(Text)
     judge_name: Mapped[Optional[str]] = mapped_column(Text)
+    decree_number: Mapped[Optional[str]] = mapped_column(Text)
+    litigation_degree: Mapped[Optional[str]] = mapped_column(Text, server_default=text("'ابتدائي'"))
+    judgment_type: Mapped[Optional[str]] = mapped_column(Text, server_default=text("'موضوعي'"))
     status_key: Mapped[Optional[str]] = mapped_column(Text)
     judgment_text: Mapped[Optional[str]] = mapped_column(Text)
+    notification_date: Mapped[Optional[str]] = mapped_column(Text)
+    appeal_deadline_days: Mapped[int] = mapped_column(Integer, server_default=text('30'))
+    appeal_deadline_date: Mapped[Optional[str]] = mapped_column(Text)
+    awarded_amount: Mapped[float] = mapped_column(Float, server_default=text('0.0'))
+    legal_fees_awarded: Mapped[float] = mapped_column(Float, server_default=text('0.0'))
+    is_final: Mapped[int] = mapped_column(Integer, server_default=text('0'))
+    attachment_path: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
     updated_at: Mapped[Optional[str]] = mapped_column(Text)
     is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)

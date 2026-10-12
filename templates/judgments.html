@@ -1,245 +1,859 @@
 {% extends "base.html" %}
-{% block title %}الأحكام | LawSaaS{% endblock %}
+{% block title %}الأحكام والقرارات القضائية | LawSaaS{% endblock %}
+
 {% block content %}
-<div class="page-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:30px;">
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 25px;">
     <div>
-        <h1><i class="fa-solid fa-gavel" style="color:var(--primary-color);"></i> سجل الأحكام القضائية</h1>
-        <p>تسجيل ومتابعة أحكام المحكمة الصادرة في القضايا مع نص الحكم وبيانات القاضي والمحكمة.</p>
+        <h1 style="font-size: 1.6rem; color: #1e293b; margin: 0 0 6px 0; font-weight: 800;">
+            <i class="fa-solid fa-gavel text-primary me-2"></i> سجل الأحكام والقرارات القضائية
+        </h1>
+        <p style="color: #64748b; margin: 0; font-size: 0.95rem;">
+            توثيق منطوق الأحكام القضائية، متابعة مدد الطعن والاستئناف، والربط الفوري بالتنفيذ الجبري.
+        </p>
     </div>
-    <button class="btn-primary" onclick="document.getElementById('addJudgmentModal').style.display='flex'">
-        <i class="fa-solid fa-plus"></i> تسجيل حكم جديد
-    </button>
-</div>
-
-<!-- Stats -->
-<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-bottom:25px;">
-    {% set won = judgments|selectattr('status_key','equalto','صدر لصالحنا')|list|length %}
-    {% set lost = judgments|selectattr('status_key','equalto','صدر ضدنا')|list|length %}
-    {% set appeal = judgments|selectattr('status_key','equalto','قيد الاستئناف')|list|length %}
-    <div class="card" style="padding:18px;text-align:center;">
-        <i class="fa-solid fa-scale-balanced" style="font-size:1.8rem;color:var(--primary-color);margin-bottom:8px;"></i>
-        <p style="font-size:1.8rem;font-weight:800;margin:0;">{{ judgments|length }}</p>
-        <p style="color:var(--text-muted);font-size:.9rem;margin:0;">إجمالي الأحكام</p>
-    </div>
-    <div class="card" style="padding:18px;text-align:center;">
-        <i class="fa-solid fa-trophy" style="font-size:1.8rem;color:#10b981;margin-bottom:8px;"></i>
-        <p style="font-size:1.8rem;font-weight:800;margin:0;color:#10b981;">{{ won }}</p>
-        <p style="color:var(--text-muted);font-size:.9rem;margin:0;">صدر لصالحنا</p>
-    </div>
-    <div class="card" style="padding:18px;text-align:center;">
-        <i class="fa-solid fa-circle-xmark" style="font-size:1.8rem;color:#ef4444;margin-bottom:8px;"></i>
-        <p style="font-size:1.8rem;font-weight:800;margin:0;color:#ef4444;">{{ lost }}</p>
-        <p style="color:var(--text-muted);font-size:.9rem;margin:0;">صدر ضدنا</p>
-    </div>
-    <div class="card" style="padding:18px;text-align:center;">
-        <i class="fa-solid fa-rotate" style="font-size:1.8rem;color:#f59e0b;margin-bottom:8px;"></i>
-        <p style="font-size:1.8rem;font-weight:800;margin:0;color:#f59e0b;">{{ appeal }}</p>
-        <p style="color:var(--text-muted);font-size:.9rem;margin:0;">قيد الاستئناف</p>
+    <div style="display:flex; gap:10px; flex-wrap: wrap; align-items: center;">
+        <button class="btn" style="background:#f1f5f9; color:#334155; border:1px solid #cbd5e1; padding:10px 18px; border-radius:8px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:8px;" onclick="exportJudgmentsTable()">
+            <i class="fa-solid fa-download"></i> تصدير الكشف
+        </button>
+        {% if has_perm(user, 'judgments', 'add') %}
+        <button class="btn-primary" style="padding: 10px 20px; font-family: 'Cairo', sans-serif; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; border-radius: 8px; cursor: pointer;" onclick="openAddJudgmentModal()">
+            <i class="fa-solid fa-plus-circle"></i> تسجيل حكم جديد
+        </button>
+        {% endif %}
     </div>
 </div>
 
-<div class="card">
+<!-- Stats Ribbon -->
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:15px; margin-bottom:25px;">
+    <div class="card" style="padding:18px; border-radius:12px; border:1px solid #e2e8f0; background:white; display:flex; align-items:center; gap:16px;">
+        <div style="width:52px; height:52px; border-radius:12px; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:1.5rem;">
+            <i class="fa-solid fa-scale-balanced"></i>
+        </div>
+        <div>
+            <span style="display:block; font-size:1.6rem; font-weight:800; color:#1e293b; line-height:1.2;">{{ total_judgments }}</span>
+            <span style="color:#64748b; font-size:0.85rem; font-weight:600;">إجمالي الأحكام الصادرة</span>
+        </div>
+    </div>
+    
+    <div class="card" style="padding:18px; border-radius:12px; border:1px solid #e2e8f0; background:white; display:flex; align-items:center; gap:16px;">
+        <div style="width:52px; height:52px; border-radius:12px; background:#ecfdf5; color:#059669; display:flex; align-items:center; justify-content:center; font-size:1.5rem;">
+            <i class="fa-solid fa-trophy"></i>
+        </div>
+        <div>
+            <div style="display:flex; align-items:baseline; gap:8px;">
+                <span style="font-size:1.6rem; font-weight:800; color:#059669; line-height:1.2;">{{ won_judgments }}</span>
+                <span style="font-size:0.8rem; color:#059669; font-weight:700;">({{ "{:,.0f}".format(total_awarded_amount) }} ر.س)</span>
+            </div>
+            <span style="color:#64748b; font-size:0.85rem; font-weight:600;">لصالح موكلينا (المبالغ المحكوم بها)</span>
+        </div>
+    </div>
+
+    <div class="card" style="padding:18px; border-radius:12px; border:1px solid #e2e8f0; background:white; display:flex; align-items:center; gap:16px;">
+        <div style="width:52px; height:52px; border-radius:12px; background:#fef3c7; color:#d97706; display:flex; align-items:center; justify-content:center; font-size:1.5rem;">
+            <i class="fa-solid fa-stopwatch"></i>
+        </div>
+        <div>
+            <span style="display:block; font-size:1.6rem; font-weight:800; color:#b45309; line-height:1.2;">{{ under_appeal_count }}</span>
+            <span style="color:#64748b; font-size:0.85rem; font-weight:600;">قيد مهلة الاستئناف الحالية</span>
+        </div>
+    </div>
+
+    <div class="card" style="padding:18px; border-radius:12px; border:1px solid #e2e8f0; background:white; display:flex; align-items:center; gap:16px;">
+        <div style="width:52px; height:52px; border-radius:12px; background:#f3e8ff; color:#7e22ce; display:flex; align-items:center; justify-content:center; font-size:1.5rem;">
+            <i class="fa-solid fa-stamp"></i>
+        </div>
+        <div>
+            <span style="display:block; font-size:1.6rem; font-weight:800; color:#7e22ce; line-height:1.2;">{{ final_count }}</span>
+            <span style="color:#64748b; font-size:0.85rem; font-weight:600;">أحكام قطعية / جاهزة للتنفيذ</span>
+        </div>
+    </div>
+</div>
+
+<!-- Search & Filtering Toolbar -->
+<div class="card" style="padding:16px; border-radius:12px; border:1px solid #e2e8f0; background:white; margin-bottom:20px;">
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px; align-items:center;">
+        <div>
+            <div style="position:relative;">
+                <i class="fa-solid fa-magnifying-glass" style="position:absolute; right:12px; top:12px; color:#94a3b8;"></i>
+                <input type="text" id="judgmentSearchInput" placeholder="بحث بالقضية، الصك، القاضي..." 
+                       style="width:100%; padding:9px 36px 9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;"
+                       onkeyup="filterJudgmentsTable()">
+            </div>
+        </div>
+
+        <div>
+            <select id="outcomeFilterSelect" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;" onchange="filterJudgmentsTable()">
+                <option value="">جميع نتائج الأحكام</option>
+                <option value="صدر لصالحنا">صدر لصالحنا</option>
+                <option value="لصالح الموكل">لصالح الموكل</option>
+                <option value="صدر ضدنا">صدر ضدنا</option>
+                <option value="ضد الموكل">ضد الموكل</option>
+                <option value="جزئي">حكم جزئي</option>
+                <option value="حكم تمهيدي">حكم تمهيدي</option>
+                <option value="انتهى بصلح">انتهى بصلح</option>
+            </select>
+        </div>
+
+        <div>
+            <select id="deadlineFilterSelect" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;" onchange="filterJudgmentsTable()">
+                <option value="">جميع حالات الاستئناف والمهل</option>
+                <option value="active">قيد مهلة الاستئناف (سارية)</option>
+                <option value="urgent">عاجل (أقل من 7 أيام)</option>
+                <option value="expired">انتهت مهلة الاستئناف</option>
+                <option value="final">اكتسب الحكم القطعية</option>
+            </select>
+        </div>
+
+        <div style="text-align:left;">
+            <button class="btn" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; padding:9px 16px; border-radius:8px; font-weight:600; cursor:pointer;" onclick="resetJudgmentFilters()">
+                <i class="fa-solid fa-filter-circle-xmark me-1"></i> إعادة ضبط
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Judgments Table matching Mockup -->
+<div class="card" style="border-radius:12px; border:1px solid #e2e8f0; background:white; overflow:hidden;">
     <div style="overflow-x:auto;">
-        <table class="data-table">
+        <table class="data-table" id="judgmentsTable" style="width:100%; border-collapse:collapse; text-align:right;">
             <thead>
-                <tr>
-                    <th>#</th>
-                    <th>القضية</th>
-                    <th>المحكمة</th>
-                    <th>اسم القاضي</th>
-                    <th>تاريخ الحكم</th>
-                    <th>نتيجة الحكم</th>
-                    <th>ملخص الحكم</th>
-                    <th>إجراءات</th>
+                <tr style="background:#f8fafc; border-bottom:2px solid #e2e8f0;">
+                    <th style="padding:14px 16px; width:45px;">#</th>
+                    <th style="padding:14px 16px;">القضية والموكل</th>
+                    <th style="padding:14px 16px;">المحكمة والدائرة</th>
+                    <th style="padding:14px 16px;">القاضي</th>
+                    <th style="padding:14px 16px;">تاريخ الحكم والصك</th>
+                    <th style="padding:14px 16px;">نتيجة الحكم</th>
+                    <th style="padding:14px 16px;">المبلغ المحكوم به</th>
+                    <th style="padding:14px 16px;">مهلة الاستئناف المتبقية</th>
+                    <th style="padding:14px 16px; text-align:center;">إجراءات</th>
                 </tr>
             </thead>
             <tbody>
                 {% for j in judgments %}
-                <tr>
-                    <td>{{ loop.index }}</td>
-                    <td>
+                <tr class="judgment-row"
+                    data-case="{{ j.law_case.title if j.law_case else '' }} {{ j.law_case.case_number if j.law_case else '' }}"
+                    data-court="{{ j.court_name or '' }}"
+                    data-judge="{{ j.judge_name or '' }}"
+                    data-decree="{{ j.decree_number or '' }}"
+                    data-outcome="{{ j.status_key or '' }}"
+                    data-deadline-status="{{ j.deadline_status }}"
+                    style="border-bottom:1px solid #f1f5f9; transition: background 0.15s ease;">
+                    <td style="padding:14px 16px; color:#64748b; font-weight:600;">{{ loop.index }}</td>
+                    <td style="padding:14px 16px;">
                         {% if j.law_case %}
-                        <a href="/cases/{{ j.case_id }}" style="color:var(--primary-color);text-decoration:none;font-weight:600;">
-                            <i class="fa-solid fa-gavel"></i> {{ j.law_case.case_number }}<br>
-                            <small style="color:var(--text-muted);">{{ j.law_case.title[:30] }}</small>
+                        <a href="/cases/{{ j.case_id }}" style="color:#1d4ed8; text-decoration:none; font-weight:700; font-size:0.95rem; display:block;">
+                            {{ j.law_case.title }}
                         </a>
-                        {% else %}-{% endif %}
+                        <div style="display:flex; gap:8px; font-size:0.78rem; color:#64748b; margin-top:2px;">
+                            <span style="font-family:monospace;">رقم: {{ j.law_case.case_number }}</span>
+                            <span>•</span>
+                            <span>الموكل: {{ j.law_case.law_clients[0].name if j.law_case.law_clients else '-' }}</span>
+                        </div>
+                        {% else %}
+                        <span style="color:#94a3b8;">-</span>
+                        {% endif %}
                     </td>
-                    <td>{{ j.court_name or '-' }}</td>
-                    <td>{{ j.judge_name or '-' }}</td>
-                    <td dir="ltr" style="font-size:.9rem;font-weight:600;">{{ j.judgment_date }}</td>
-                    <td>
-                        {% if j.status_key == 'صدر لصالحنا' %}
-                        <span style="background:#dcfce7;color:#166534;padding:5px 12px;border-radius:20px;font-size:.85rem;font-weight:700;">✔ صدر لصالحنا</span>
-                        {% elif j.status_key == 'صدر ضدنا' %}
-                        <span style="background:#fee2e2;color:#b91c1c;padding:5px 12px;border-radius:20px;font-size:.85rem;font-weight:700;">✖ صدر ضدنا</span>
-                        {% elif j.status_key == 'قيد الاستئناف' %}
-                        <span style="background:#fef3c7;color:#d97706;padding:5px 12px;border-radius:20px;font-size:.85rem;font-weight:700;">⟳ قيد الاستئناف</span>
+                    <td style="padding:14px 16px;">
+                        <strong style="color:#1e293b; font-size:0.9rem; display:block;">{{ j.court_name or 'المحكمة المختصة' }}</strong>
+                        {% if j.chamber_name %}
+                        <span style="font-size:0.8rem; color:#64748b;">{{ j.chamber_name }}</span>
+                        {% endif %}
+                        {% if j.litigation_degree %}
+                        <span style="display:inline-block; font-size:0.72rem; background:#f1f5f9; color:#475569; padding:1px 6px; border-radius:4px; margin-top:3px;">{{ j.litigation_degree }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding:14px 16px; color:#334155; font-size:0.9rem;">
+                        {{ j.judge_name or '-' }}
+                    </td>
+                    <td style="padding:14px 16px;">
+                        <div style="font-size:0.88rem; font-weight:700; color:#0f172a; font-family:monospace;">{{ j.judgment_date }}</div>
+                        {% if j.decree_number %}
+                        <div style="font-size:0.78rem; color:#64748b; font-family:monospace;">صك: {{ j.decree_number }}</div>
+                        {% endif %}
+                    </td>
+                    <td style="padding:14px 16px;">
+                        {% if j.status_key in ['صدر لصالحنا', 'لصالح الموكل'] %}
+                        <span style="background:#dcfce7; color:#15803d; padding:4px 12px; border-radius:20px; font-size:0.82rem; font-weight:700; border:1px solid #a7f3d0; display:inline-flex; align-items:center; gap:4px;">
+                            <i class="fa-solid fa-circle-check"></i> لصالح الموكل
+                        </span>
+                        {% elif j.status_key in ['صدر ضدنا', 'ضد الموكل'] %}
+                        <span style="background:#fee2e2; color:#b91c1c; padding:4px 12px; border-radius:20px; font-size:0.82rem; font-weight:700; border:1px solid #fecaca; display:inline-flex; align-items:center; gap:4px;">
+                            <i class="fa-solid fa-circle-xmark"></i> ضد الموكل
+                        </span>
+                        {% elif j.status_key in ['حكم تمهيدي', 'تمهيدي'] %}
+                        <span style="background:#fef3c7; color:#b45309; padding:4px 12px; border-radius:20px; font-size:0.82rem; font-weight:700; border:1px solid #fde68a; display:inline-flex; align-items:center; gap:4px;">
+                            <i class="fa-solid fa-hourglass-half"></i> حكم تمهيدي
+                        </span>
                         {% elif j.status_key == 'جزئي' %}
-                        <span style="background:#e0e7ff;color:#3730a3;padding:5px 12px;border-radius:20px;font-size:.85rem;font-weight:700;">⚖ جزئي</span>
+                        <span style="background:#e0e7ff; color:#3730a3; padding:4px 12px; border-radius:20px; font-size:0.82rem; font-weight:700; border:1px solid #c7d2fe; display:inline-flex; align-items:center; gap:4px;">
+                            <i class="fa-solid fa-scale-balanced"></i> جزئي
+                        </span>
                         {% else %}
-                        <span style="background:#e2e8f0;color:#475569;padding:5px 12px;border-radius:20px;font-size:.85rem;">{{ j.status_key or 'غير محدد' }}</span>
+                        <span style="background:#f1f5f9; color:#475569; padding:4px 12px; border-radius:20px; font-size:0.82rem; font-weight:600;">
+                            {{ j.status_key or 'صدر الحكم' }}
+                        </span>
                         {% endif %}
                     </td>
-                    <td style="max-width:200px;">
-                        {% if j.judgment_text %}
-                        <span style="font-size:.85rem;color:var(--text-muted);">{{ j.judgment_text[:70] }}{% if j.judgment_text|length > 70 %}...{% endif %}</span>
-                        <button onclick="showJudgmentText({{ (j.law_case.case_number if j.law_case else '')|tojson|forceescape }}, {{ j.judgment_text|tojson|forceescape }})" style="background:none;border:none;color:var(--primary-color);cursor:pointer;font-size:.8rem;font-weight:600;">عرض</button>
+                    <td style="padding:14px 16px; font-weight:800; font-size:0.95rem; color:#0f172a; font-family:monospace;">
+                        {% if j.awarded_amount and j.awarded_amount > 0 %}
+                        {{ "{:,.0f}".format(j.awarded_amount) }} <span style="font-size:0.75rem; color:#64748b; font-family:'Cairo';">ر.س</span>
                         {% else %}
-                        <span style="color:var(--text-muted);font-size:.85rem;">-</span>
+                        <span style="color:#94a3b8; font-weight:400;">-</span>
                         {% endif %}
                     </td>
-                    <td>
-                        <button class="action-btn" style="color:var(--primary-color);" title="تعديل"
-                            onclick="openEditJudgment({{ j.id|tojson|forceescape }},{{ j.case_id|tojson|forceescape }},{{ j.judgment_date|tojson|forceescape }},{{ (j.court_name or '')|tojson|forceescape }},{{ (j.judge_name or '')|tojson|forceescape }},{{ (j.status_key or '')|tojson|forceescape }})">
-                            <i class="fa-solid fa-pen"></i>
-                        </button>
+                    <td style="padding:14px 16px;">
+                        {% if j.is_final == 1 %}
+                        <span style="background:#f1f5f9; color:#334155; padding:4px 10px; border-radius:8px; font-size:0.8rem; font-weight:700; border:1px solid #cbd5e1;">
+                            <i class="fa-solid fa-shield-halved text-success me-1"></i> مكتسب القطعية
+                        </span>
+                        {% elif j.deadline_status == 'active_safe' %}
+                        <span style="background:#ecfdf5; color:#065f46; padding:4px 10px; border-radius:8px; font-size:0.82rem; font-weight:700; border:1px solid #a7f3d0;">
+                            <i class="fa-solid fa-clock me-1"></i> متبقي {{ j.days_left }} يوماً
+                        </span>
+                        {% elif j.deadline_status == 'active_warning' %}
+                        <span style="background:#fffbeb; color:#92400e; padding:4px 10px; border-radius:8px; font-size:0.82rem; font-weight:700; border:1px solid #fde68a;">
+                            <i class="fa-solid fa-triangle-exclamation me-1"></i> متبقي {{ j.days_left }} يوماً
+                        </span>
+                        {% elif j.deadline_status == 'active_urgent' %}
+                        <span style="background:#fef2f2; color:#991b1b; padding:4px 10px; border-radius:8px; font-size:0.82rem; font-weight:800; border:1px solid #fecaca; animation: pulse 2s infinite;">
+                            <i class="fa-solid fa-fire text-danger me-1"></i> عاجل: {{ j.days_left }} أيام
+                        </span>
+                        {% elif j.deadline_status == 'expired' %}
+                        <span style="background:#f8fafc; color:#64748b; padding:4px 10px; border-radius:8px; font-size:0.8rem; font-weight:600;">
+                            انتهت المهلة
+                        </span>
+                        {% else %}
+                        <span style="color:#94a3b8; font-size:0.85rem;">-</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding:14px 16px; text-align:center;">
+                        <div class="btn-group" style="display:inline-flex; gap:6px;">
+                            <button type="button" class="action-btn" style="color:#2563eb; background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; padding:6px 10px; cursor:pointer;" title="عرض تفاصيل الحكم"
+                                    data-id="{{ j.id }}"
+                                    data-case-title="{{ j.law_case.title if j.law_case else '' }}"
+                                    data-case-number="{{ j.law_case.case_number if j.law_case else '' }}"
+                                    data-client-name="{{ j.law_case.law_clients[0].name if j.law_case and j.law_case.law_clients else '-' }}"
+                                    data-court="{{ j.court_name or '' }}"
+                                    data-chamber="{{ j.chamber_name or '' }}"
+                                    data-judge="{{ j.judge_name or '' }}"
+                                    data-decree="{{ j.decree_number or '' }}"
+                                    data-degree="{{ j.litigation_degree or '' }}"
+                                    data-type="{{ j.judgment_type or '' }}"
+                                    data-status="{{ j.status_key or '' }}"
+                                    data-date="{{ j.judgment_date }}"
+                                    data-notif-date="{{ j.notification_date or '' }}"
+                                    data-deadline-date="{{ j.appeal_deadline_date or '' }}"
+                                    data-amount="{{ j.awarded_amount or 0 }}"
+                                    data-fees="{{ j.legal_fees_awarded or 0 }}"
+                                    data-text="{{ j.judgment_text or '' }}"
+                                    data-attachment="{{ j.attachment_path or '' }}"
+                                    data-is-final="{{ j.is_final }}"
+                                    onclick="openViewJudgmentModal(this)">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                            
+                            {% if j.status_key in ['صدر لصالحنا', 'لصالح الموكل'] or j.is_final == 1 %}
+                            <button type="button" class="action-btn" style="color:#059669; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:6px; padding:6px 10px; cursor:pointer;" title="تحويل لمحكمة التنفيذ"
+                                    onclick="convertToExecution({{ j.id }}, '{{ j.decree_number or j.id }}')">
+                                <i class="fa-solid fa-stamp"></i>
+                            </button>
+                            {% endif %}
+
+                            {% if has_perm(user, 'judgments', 'edit') %}
+                            <button type="button" class="action-btn" style="color:#d97706; background:#fffbeb; border:1px solid #fde68a; border-radius:6px; padding:6px 10px; cursor:pointer;" title="تعديل الحكم"
+                                    data-id="{{ j.id }}"
+                                    data-case-id="{{ j.case_id }}"
+                                    data-court="{{ j.court_name or '' }}"
+                                    data-chamber="{{ j.chamber_name or '' }}"
+                                    data-judge="{{ j.judge_name or '' }}"
+                                    data-decree="{{ j.decree_number or '' }}"
+                                    data-degree="{{ j.litigation_degree or 'ابتدائي' }}"
+                                    data-type="{{ j.judgment_type or 'موضوعي' }}"
+                                    data-status="{{ j.status_key or '' }}"
+                                    data-date="{{ j.judgment_date }}"
+                                    data-notif-date="{{ j.notification_date or '' }}"
+                                    data-deadline-days="{{ j.appeal_deadline_days or 30 }}"
+                                    data-amount="{{ j.awarded_amount or 0 }}"
+                                    data-fees="{{ j.legal_fees_awarded or 0 }}"
+                                    data-text="{{ j.judgment_text or '' }}"
+                                    data-is-final="{{ j.is_final }}"
+                                    onclick="openEditJudgmentFromBtn(this)">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                            {% endif %}
+
+                            {% if has_perm(user, 'judgments', 'delete') %}
+                            <button type="button" class="action-btn" style="color:#dc2626; background:#fef2f2; border:1px solid #fecaca; border-radius:6px; padding:6px 10px; cursor:pointer;" title="حذف الحكم"
+                                    onclick="confirmDeleteJudgment({{ j.id }}, '{{ j.decree_number or j.id }}')">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                            {% endif %}
+                        </div>
                     </td>
                 </tr>
                 {% else %}
-                <tr><td colspan="8" style="text-align:center;padding:50px;color:var(--text-muted);">
-                    <i class="fa-solid fa-scale-balanced" style="font-size:3rem;opacity:.4;display:block;margin-bottom:10px;"></i>
-                    <p>لا توجد أحكام مسجلة بعد.</p>
-                </td></tr>
+                <tr id="noJudgmentsRow">
+                    <td colspan="9" style="text-align:center; padding:60px 20px; color:#64748b;">
+                        <i class="fa-solid fa-gavel display-4" style="color:#cbd5e1; margin-bottom:15px; display:block;"></i>
+                        <h4 style="color:#334155; font-weight:700;">لا توجد أحكام قضائية مسجلة حتى الآن</h4>
+                        <p style="font-size:0.9rem;">اضغط على "تسجيل حكم جديد" بالأعلى لتوثيق منطوق الأحكام القضائية ومتابعة مهل الطعن.</p>
+                    </td>
+                </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
 
-<!-- Add Judgment Modal -->
-<div id="addJudgmentModal" class="modal-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:1000;">
-    <div style="background:white;padding:30px;border-radius:12px;width:620px;max-width:95%;max-height:90vh;overflow-y:auto;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-            <h2 style="margin:0;color:var(--secondary-color);">تسجيل حكم قضائي جديد</h2>
-            <button onclick="document.getElementById('addJudgmentModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+<!-- Add Judgment Modal matching Mockup -->
+<div id="addJudgmentModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.6); backdrop-filter:blur(3px); align-items:center; justify-content:center; z-index:1050;">
+    <div style="background:white; border-radius:16px; width:880px; max-width:96%; max-height:92vh; overflow-y:auto; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); border:1px solid #e2e8f0;">
+        <div style="padding:20px 25px; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border-top-left-radius:16px; border-top-right-radius:16px;">
+            <h3 style="margin:0; color:#1e293b; font-size:1.25rem; font-weight:800; display:flex; align-items:center; gap:8px;">
+                <i class="fa-solid fa-gavel text-primary"></i> تسجيل حكم قضائي جديد
+            </h3>
+            <button onclick="closeAddJudgmentModal()" style="background:none; border:none; font-size:1.5rem; color:#64748b; cursor:pointer;">&times;</button>
         </div>
-        <form action="/judgments/add" method="post">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
+
+        <form action="/judgments/add" method="post" enctype="multipart/form-data" style="padding:25px;">
+            <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+
+            <!-- Case selector with dynamic autofill -->
+            <div style="margin-bottom:16px;">
+                <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">القضية المرتبطة <span style="color:#ef4444;">*</span></label>
+                <select name="case_id" id="addCaseSelect" required style="width:100%; padding:11px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.95rem;" onchange="onAddCaseSelected(this.value)">
+                    <option value="">-- اختر القضية لتحميل بيانات المحكمة تلقائياً --</option>
+                    {% for case in cases %}
+                    <option value="{{ case.id }}">{{ case.case_number }} - {{ case.title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Court and Decree metadata -->
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:16px; margin-bottom:16px;">
                 <div>
-                    <label style="display:block;margin-bottom:6px;font-weight:600;">القضية <span style="color:red">*</span></label>
-                    <select name="case_id" required style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
-                        <option value="">-- اختر القضية --</option>
-                        {% for case in cases %}
-                        <option value="{{ case.id }}">{{ case.case_number }} - {{ case.title }}</option>
-                        {% endfor %}
+                    <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">المحكمة</label>
+                    <input type="text" name="court_name" id="addCourtName" placeholder="مثال: المحكمة التجارية بالرياض" 
+                           style="width:100%; padding:11px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                </div>
+                <div>
+                    <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">الدائرة القضائية</label>
+                    <input type="text" name="chamber_name" placeholder="مثال: الدائرة التجارية الثالثة" 
+                           style="width:100%; padding:11px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                </div>
+                <div>
+                    <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">اسم القاضي / رئيس الدائرة</label>
+                    <input type="text" name="judge_name" placeholder="فضيلة الشيخ..." 
+                           style="width:100%; padding:11px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:16px; margin-bottom:16px;">
+                <div>
+                    <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">رقم الصك / الحكم</label>
+                    <input type="text" name="decree_number" placeholder="مثال: 45109823" 
+                           style="width:100%; padding:11px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                </div>
+                <div>
+                    <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">درجة التقاضي</label>
+                    <select name="litigation_degree" style="width:100%; padding:11px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                        <option value="ابتدائي">درجة أولى (ابتدائي)</option>
+                        <option value="استئناف">محكمة الاستئناف</option>
+                        <option value="عليا">المحكمة العليا</option>
                     </select>
                 </div>
                 <div>
-                    <label style="display:block;margin-bottom:6px;font-weight:600;">تاريخ الحكم <span style="color:red">*</span></label>
-                    <input type="date" name="judgment_date" required style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+                    <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">نوع الحكم</label>
+                    <select name="judgment_type" style="width:100%; padding:11px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                        <option value="موضوعي">موضوعي قطعي</option>
+                        <option value="تمهيدي">تمهيدي (ندب خبير/معاينة)</option>
+                        <option value="شكلي">شكلي (عدم قبول/عدم اختصاص)</option>
+                        <option value="صلح">إثبات صلح</option>
+                    </select>
                 </div>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
+
+            <!-- Dates and Appeals Engine -->
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px; margin-bottom:16px;">
+                <div style="font-weight:800; color:#1e293b; font-size:0.95rem; margin-bottom:12px; display:flex; align-items:center; gap:6px;">
+                    <i class="fa-solid fa-stopwatch text-primary"></i> مواعيد الحكم وحاسبة ميعاد الاستئناف والطعن
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:16px;">
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.85rem;">تاريخ النطق بالحكم <span style="color:#ef4444;">*</span></label>
+                        <input type="date" name="judgment_date" id="addJudgmentDate" required style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                    </div>
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.85rem;">تاريخ التبليغ الرسمي بالصك</label>
+                        <input type="date" name="notification_date" id="addNotifDate" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;" onchange="calculateAddAppealDeadline()">
+                    </div>
+                    <div>
+                        <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.85rem;">مهلة الاستئناف (أيام)</label>
+                        <select name="appeal_deadline_days" id="addDeadlineDays" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;" onchange="calculateAddAppealDeadline()">
+                            <option value="30">30 يوماً (أحكام عادية عامة)</option>
+                            <option value="10">10 أيام (أحكام وقضايا مستعجلة)</option>
+                            <option value="60">60 يوماً (طعن أمام العليا)</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="addDeadlineCalcPreview" style="margin-top:10px; font-size:0.85rem; color:#4338ca; font-weight:700; display:none;">
+                    <i class="fa-solid fa-calendar-check me-1"></i> تنتهي مهلة الاعتراض في: <span id="addDeadlineCalculatedDateText"></span>
+                </div>
+            </div>
+
+            <!-- Financials & Outcome -->
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:16px; margin-bottom:16px;">
                 <div>
-                    <label style="display:block;margin-bottom:6px;font-weight:600;">اسم المحكمة</label>
-                    <input type="text" name="court_name" placeholder="مثال: المحكمة التجارية بالرياض" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+                    <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">نتيجة الحكم <span style="color:#ef4444;">*</span></label>
+                    <select name="status_key" required style="width:100%; padding:11px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                        <option value="صدر لصالحنا">صدر لصالحنا ✔</option>
+                        <option value="لصالح الموكل">لصالح الموكل</option>
+                        <option value="صدر ضدنا">صدر ضدنا ✖</option>
+                        <option value="ضد الموكل">ضد الموكل</option>
+                        <option value="جزئي">حكم جزئي ⚖</option>
+                        <option value="حكم تمهيدي">حكم تمهيدي</option>
+                        <option value="انتهى بصلح">انتهى بصلح</option>
+                    </select>
                 </div>
                 <div>
-                    <label style="display:block;margin-bottom:6px;font-weight:600;">اسم القاضي</label>
-                    <input type="text" name="judge_name" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+                    <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">المبلغ المحكوم به (ر.س)</label>
+                    <input type="number" step="0.01" name="awarded_amount" value="0.0" 
+                           style="width:100%; padding:11px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                </div>
+                <div>
+                    <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">أتعاب المحاماة المحكوم بها (ر.س)</label>
+                    <input type="number" step="0.01" name="legal_fees_awarded" value="0.0" 
+                           style="width:100%; padding:11px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
                 </div>
             </div>
-            <div style="margin-bottom:15px;">
-                <label style="display:block;margin-bottom:6px;font-weight:600;">نتيجة الحكم</label>
-                <select name="status_key" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
-                    <option value="صدر الحكم">صدر الحكم</option>
-                    <option value="صدر لصالحنا">صدر لصالحنا ✔</option>
-                    <option value="صدر ضدنا">صدر ضدنا ✖</option>
-                    <option value="جزئي">جزئي ⚖</option>
-                    <option value="قيد الاستئناف">قيد الاستئناف ⟳</option>
-                    <option value="انتهى بصلح">انتهى بصلح</option>
-                </select>
+
+            <!-- Ruling text -->
+            <div style="margin-bottom:16px;">
+                <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">منطوق الحكم / ملخص الأسباب</label>
+                <textarea name="judgment_text" rows="5" placeholder="حكمت الدائرة بالآتي: إلزام المدعى عليه بأن يدفع للمدعي مبلغ وقدره..." 
+                          style="width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem; line-height:1.8; resize:vertical;"></textarea>
             </div>
-            <div style="margin-bottom:20px;">
-                <label style="display:block;margin-bottom:6px;font-weight:600;">نص الحكم / الملخص</label>
-                <textarea name="judgment_text" rows="5" placeholder="اكتب هنا نص الحكم أو ملخصه..." style="width:100%;padding:12px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;resize:vertical;line-height:1.8;"></textarea>
+
+            <!-- PDF Attachment -->
+            <div style="margin-bottom:18px;">
+                <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">
+                    <i class="fa-solid fa-file-pdf text-danger me-1"></i> إرفاق صك الحكم الرقمي (PDF)
+                </label>
+                <input type="file" name="attachment" accept=".pdf,.doc,.docx" 
+                       style="width:100%; padding:9px; border:1px dashed #cbd5e1; border-radius:8px; background:#f8fafc;">
             </div>
-            <div style="display:flex;gap:10px;justify-content:flex-end;">
-                <button type="button" onclick="document.getElementById('addJudgmentModal').style.display='none'" style="padding:11px 20px;background:#e2e8f0;color:#475569;border:none;border-radius:8px;cursor:pointer;font-family:'Cairo',sans-serif;font-weight:600;">إلغاء</button>
-                <button type="submit" class="btn-primary" style="padding:11px 20px;font-family:'Cairo',sans-serif;">حفظ الحكم</button>
+
+            <!-- Automated Task and Finality Options -->
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:12px 16px; margin-bottom:20px;">
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:700; color:#1e40af; font-size:0.9rem;">
+                    <input type="checkbox" name="generate_appeal_task" value="1" checked style="width:18px; height:18px;">
+                    توليد مهمة عمل تلقائية في إدارة المهام والتقويم قبل انتهاء مهلة الاستئناف
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:700; color:#334155; font-size:0.9rem;">
+                    <input type="checkbox" name="is_final" value="1" style="width:18px; height:18px;">
+                    اكتسب الحكم القطعية
+                </label>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid #e2e8f0; padding-top:18px;">
+                <button type="button" onclick="closeAddJudgmentModal()" style="padding:10px 22px; background:#e2e8f0; color:#475569; border:none; border-radius:8px; font-weight:700; cursor:pointer;">إلغاء</button>
+                <button type="submit" class="btn-primary" style="padding:10px 25px; font-weight:700; border-radius:8px;">حفظ الحكم وتوليد المهام</button>
             </div>
         </form>
     </div>
 </div>
 
 <!-- Edit Judgment Modal -->
-<div id="editJudgmentModal" class="modal-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:1000;">
-    <div style="background:white;padding:30px;border-radius:12px;width:560px;max-width:95%;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-            <h2 style="margin:0;color:var(--secondary-color);">تعديل الحكم</h2>
-            <button onclick="document.getElementById('editJudgmentModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+<div id="editJudgmentModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.6); backdrop-filter:blur(3px); align-items:center; justify-content:center; z-index:1050;">
+    <div style="background:white; border-radius:16px; width:880px; max-width:96%; max-height:92vh; overflow-y:auto; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); border:1px solid #e2e8f0;">
+        <div style="padding:20px 25px; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border-top-left-radius:16px; border-top-right-radius:16px;">
+            <h3 style="margin:0; color:#1e293b; font-size:1.25rem; font-weight:800; display:flex; align-items:center; gap:8px;">
+                <i class="fa-solid fa-pen text-primary"></i> تعديل بيانات الحكم القضائي
+            </h3>
+            <button onclick="closeEditJudgmentModal()" style="background:none; border:none; font-size:1.5rem; color:#64748b; cursor:pointer;">&times;</button>
         </div>
-        <form action="/judgments/edit" method="post">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
-            <input type="hidden" name="judgment_id" id="ej_id">
-            <input type="hidden" name="case_id" id="ej_case_id">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
+
+        <form action="/judgments/edit" method="post" enctype="multipart/form-data" style="padding:25px;">
+            <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+            <input type="hidden" name="judgment_id" id="edit_judgment_id">
+
+            <div style="margin-bottom:16px;">
+                <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">القضية <span style="color:#ef4444;">*</span></label>
+                <select name="case_id" id="edit_case_id" required style="width:100%; padding:11px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.95rem;">
+                    {% for case in cases %}
+                    <option value="{{ case.id }}">{{ case.case_number }} - {{ case.title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:16px; margin-bottom:16px;">
                 <div>
-                    <label style="display:block;margin-bottom:6px;font-weight:600;">تاريخ الحكم</label>
-                    <input type="date" name="judgment_date" id="ej_date" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+                    <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">المحكمة</label>
+                    <input type="text" name="court_name" id="edit_court_name" style="width:100%; padding:11px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
                 </div>
                 <div>
-                    <label style="display:block;margin-bottom:6px;font-weight:600;">نتيجة الحكم</label>
-                    <select name="status_key" id="ej_status" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
-                        <option value="صدر الحكم">صدر الحكم</option>
-                        <option value="صدر لصالحنا">صدر لصالحنا ✔</option>
-                        <option value="صدر ضدنا">صدر ضدنا ✖</option>
-                        <option value="جزئي">جزئي ⚖</option>
-                        <option value="قيد الاستئناف">قيد الاستئناف ⟳</option>
-                        <option value="انتهى بصلح">انتهى بصلح</option>
+                    <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">الدائرة القضائية</label>
+                    <input type="text" name="chamber_name" id="edit_chamber_name" style="width:100%; padding:11px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                </div>
+                <div>
+                    <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">القاضي</label>
+                    <input type="text" name="judge_name" id="edit_judge_name" style="width:100%; padding:11px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:16px; margin-bottom:16px;">
+                <div>
+                    <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">رقم الصك</label>
+                    <input type="text" name="decree_number" id="edit_decree_number" style="width:100%; padding:11px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                </div>
+                <div>
+                    <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">درجة التقاضي</label>
+                    <select name="litigation_degree" id="edit_litigation_degree" style="width:100%; padding:11px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                        <option value="ابتدائي">درجة أولى (ابتدائي)</option>
+                        <option value="استئناف">محكمة الاستئناف</option>
+                        <option value="عليا">المحكمة العليا</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">نوع الحكم</label>
+                    <select name="judgment_type" id="edit_judgment_type" style="width:100%; padding:11px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                        <option value="موضوعي">موضوعي قطعي</option>
+                        <option value="تمهيدي">تمهيدي</option>
+                        <option value="شكلي">شكلي</option>
+                        <option value="صلح">إثبات صلح</option>
                     </select>
                 </div>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:16px; margin-bottom:16px;">
                 <div>
-                    <label style="display:block;margin-bottom:6px;font-weight:600;">المحكمة</label>
-                    <input type="text" name="court_name" id="ej_court" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+                    <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">تاريخ النطق بالحكم <span style="color:#ef4444;">*</span></label>
+                    <input type="date" name="judgment_date" id="edit_judgment_date" required style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
                 </div>
                 <div>
-                    <label style="display:block;margin-bottom:6px;font-weight:600;">القاضي</label>
-                    <input type="text" name="judge_name" id="ej_judge" style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;">
+                    <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">تاريخ التبليغ الرسمي</label>
+                    <input type="date" name="notification_date" id="edit_notification_date" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                </div>
+                <div>
+                    <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">مهلة الاستئناف (أيام)</label>
+                    <select name="appeal_deadline_days" id="edit_appeal_deadline_days" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                        <option value="30">30 يوماً</option>
+                        <option value="10">10 أيام</option>
+                        <option value="60">60 يوماً</option>
+                    </select>
                 </div>
             </div>
-            <div style="margin-bottom:20px;">
-                <label style="display:block;margin-bottom:6px;font-weight:600;">نص الحكم</label>
-                <textarea name="judgment_text" id="ej_text" rows="4" style="width:100%;padding:12px;border:1px solid var(--border-color);border-radius:8px;font-family:'Cairo',sans-serif;resize:vertical;"></textarea>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:16px; margin-bottom:16px;">
+                <div>
+                    <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">نتيجة الحكم</label>
+                    <select name="status_key" id="edit_status_key" style="width:100%; padding:11px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                        <option value="صدر لصالحنا">صدر لصالحنا ✔</option>
+                        <option value="لصالح الموكل">لصالح الموكل</option>
+                        <option value="صدر ضدنا">صدر ضدنا ✖</option>
+                        <option value="ضد الموكل">ضد الموكل</option>
+                        <option value="جزئي">حكم جزئي ⚖</option>
+                        <option value="حكم تمهيدي">حكم تمهيدي</option>
+                        <option value="انتهى بصلح">انتهى بصلح</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">المبلغ المحكوم به (ر.س)</label>
+                    <input type="number" step="0.01" name="awarded_amount" id="edit_awarded_amount" 
+                           style="width:100%; padding:11px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                </div>
+                <div>
+                    <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">أتعاب المحاماة (ر.س)</label>
+                    <input type="number" step="0.01" name="legal_fees_awarded" id="edit_legal_fees_awarded" 
+                           style="width:100%; padding:11px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem;">
+                </div>
             </div>
-            <div style="display:flex;gap:10px;justify-content:flex-end;">
-                <button type="button" onclick="document.getElementById('editJudgmentModal').style.display='none'" style="padding:11px 20px;background:#e2e8f0;color:#475569;border:none;border-radius:8px;cursor:pointer;font-family:'Cairo',sans-serif;font-weight:600;">إلغاء</button>
-                <button type="submit" class="btn-primary" style="padding:11px 20px;font-family:'Cairo',sans-serif;">حفظ</button>
+
+            <div style="margin-bottom:16px;">
+                <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">منطوق الحكم / الملخص</label>
+                <textarea name="judgment_text" id="edit_judgment_text" rows="5" 
+                          style="width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:8px; font-family:'Cairo',sans-serif; font-size:0.9rem; line-height:1.8; resize:vertical;"></textarea>
+            </div>
+
+            <div style="margin-bottom:18px;">
+                <label style="display:block; margin-bottom:6px; font-weight:700; color:#1e293b; font-size:0.9rem;">تحديث صك الحكم (PDF)</label>
+                <input type="file" name="attachment" accept=".pdf,.doc,.docx" 
+                       style="width:100%; padding:9px; border:1px dashed #cbd5e1; border-radius:8px; background:#f8fafc;">
+            </div>
+
+            <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:12px 16px; margin-bottom:20px;">
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:700; color:#1e40af; font-size:0.9rem;">
+                    <input type="checkbox" name="is_final" id="edit_is_final" value="1" style="width:18px; height:18px;">
+                    اكتسب الحكم القطعية رسمياً (لا يقبل الطعن / جاهز للتنفيذ)
+                </label>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid #e2e8f0; padding-top:18px;">
+                <button type="button" onclick="closeEditJudgmentModal()" style="padding:10px 22px; background:#e2e8f0; color:#475569; border:none; border-radius:8px; font-weight:700; cursor:pointer;">إلغاء</button>
+                <button type="submit" class="btn-primary" style="padding:10px 25px; font-weight:700; border-radius:8px;">حفظ التعديلات</button>
             </div>
         </form>
     </div>
 </div>
 
-<!-- Full Text Modal -->
-<div id="textModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:1000;">
-    <div style="background:white;padding:30px;border-radius:12px;width:680px;max-width:95%;max-height:85vh;overflow-y:auto;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
-            <h3 id="textModalTitle" style="margin:0;color:var(--secondary-color);"></h3>
-            <button onclick="document.getElementById('textModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+<!-- View Judgment Details Modal -->
+<div id="viewJudgmentModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.6); backdrop-filter:blur(3px); align-items:center; justify-content:center; z-index:1050;">
+    <div style="background:white; border-radius:16px; width:800px; max-width:96%; max-height:90vh; overflow-y:auto; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); border:1px solid #e2e8f0;">
+        <div style="padding:20px 25px; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border-top-left-radius:16px; border-top-right-radius:16px;">
+            <div>
+                <span id="viewStatusBadge" style="display:inline-block; font-size:0.8rem; font-weight:700; padding:2px 10px; border-radius:12px; margin-bottom:4px;"></span>
+                <h3 id="viewDecreeTitle" style="margin:0; color:#1e293b; font-size:1.25rem; font-weight:800;"></h3>
+            </div>
+            <button onclick="closeViewJudgmentModal()" style="background:none; border:none; font-size:1.5rem; color:#64748b; cursor:pointer;">&times;</button>
         </div>
-        <div id="textModalBody" style="white-space:pre-wrap;line-height:2;border:1px solid var(--border-color);padding:20px;border-radius:8px;background:#f8fafc;"></div>
+
+        <div style="padding:25px;">
+            <!-- Metadata Grid -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:16px; margin-bottom:20px; font-size:0.9rem;">
+                <div><span style="color:#64748b;">القضية:</span> <strong id="viewCaseTitle"></strong></div>
+                <div><span style="color:#64748b;">الموكل:</span> <strong id="viewClientName"></strong></div>
+                <div><span style="color:#64748b;">المحكمة:</span> <strong id="viewCourt"></strong></div>
+                <div><span style="color:#64748b;">الدائرة والقاضي:</span> <strong id="viewJudgeChamber"></strong></div>
+                <div><span style="color:#64748b;">تاريخ النطق:</span> <strong id="viewDate"></strong></div>
+                <div><span style="color:#64748b;">تاريخ التبليغ بالصك:</span> <strong id="viewNotifDate"></strong></div>
+                <div><span style="color:#64748b;">انتهاء مهلة الاستئناف:</span> <strong id="viewDeadlineDate"></strong></div>
+                <div><span style="color:#64748b;">المبلغ المحكوم به:</span> <strong id="viewAmount"></strong></div>
+            </div>
+
+            <!-- Ruling text -->
+            <div style="margin-bottom:20px;">
+                <h4 style="margin:0 0 8px 0; color:#1e293b; font-size:1rem; font-weight:800;">منطوق الحكم الصادر:</h4>
+                <div id="viewJudgmentText" style="white-space:pre-wrap; line-height:2; font-size:0.95rem; color:#1e293b; border:1px solid #e2e8f0; padding:20px; border-radius:10px; background:#ffffff; min-height:120px; font-family:'Cairo',serif;"></div>
+            </div>
+
+            <!-- Attachment link if available -->
+            <div id="viewAttachmentSection" style="margin-bottom:20px; display:none;">
+                <a id="viewAttachmentLink" href="#" target="_blank" class="btn" style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; padding:8px 16px; border-radius:8px; font-weight:700; display:inline-flex; align-items:center; gap:8px;">
+                    <i class="fa-solid fa-file-pdf text-danger"></i> فتح صك الحكم المرفق (PDF)
+                </a>
+            </div>
+
+            <!-- Modal footer actions -->
+            <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #e2e8f0; padding-top:18px;">
+                <button type="button" id="viewConvertBtn" class="btn" style="background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; padding:9px 18px; border-radius:8px; font-weight:700; cursor:pointer;" onclick="convertFromViewModal()">
+                    <i class="fa-solid fa-stamp me-1"></i> تحويل إلى طلب تنفيذ
+                </button>
+                <button type="button" onclick="closeViewJudgmentModal()" style="padding:9px 22px; background:#e2e8f0; color:#475569; border:none; border-radius:8px; font-weight:700; cursor:pointer;">إغلاق</button>
+            </div>
+        </div>
     </div>
 </div>
+
+<!-- Hidden Delete Form -->
+<form id="deleteJudgmentForm" action="/judgments/delete" method="post" style="display:none;">
+    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+    <input type="hidden" name="judgment_id" id="delete_judgment_id">
+</form>
+
 {% endblock %}
+
 {% block scripts %}
 <script>
-function openEditJudgment(id, caseId, date, court, judge, status) {
-    document.getElementById('ej_id').value = id;
-    document.getElementById('ej_case_id').value = caseId;
-    document.getElementById('ej_date').value = date;
-    document.getElementById('ej_court').value = court;
-    document.getElementById('ej_judge').value = judge;
-    document.getElementById('ej_status').value = status;
+const registeredCases = {{ (cases_json or [])|tojson }};
+let currentViewingJudgmentId = null;
+
+// --- Modal Controls ---
+function openAddJudgmentModal() {
+    document.getElementById('addJudgmentModal').style.display = 'flex';
+}
+function closeAddJudgmentModal() {
+    document.getElementById('addJudgmentModal').style.display = 'none';
+}
+
+function openEditJudgmentModal() {
     document.getElementById('editJudgmentModal').style.display = 'flex';
 }
-function showJudgmentText(caseNum, text) {
-    document.getElementById('textModalTitle').textContent = 'نص الحكم — القضية ' + caseNum;
-    document.getElementById('textModalBody').textContent = text;
-    document.getElementById('textModal').style.display = 'flex';
+function closeEditJudgmentModal() {
+    document.getElementById('editJudgmentModal').style.display = 'none';
+}
+
+function openViewJudgmentModal(btn) {
+    const d = btn.dataset;
+    currentViewingJudgmentId = d.id;
+    document.getElementById('viewDecreeTitle').textContent = d.decree ? `صك حكم رقم: ${d.decree}` : `حكم قضائي #${d.id}`;
+    document.getElementById('viewCaseTitle').textContent = `${d.caseTitle} (${d.caseNumber})`;
+    document.getElementById('viewClientName').textContent = d.clientName || '-';
+    document.getElementById('viewCourt').textContent = d.court || '-';
+    document.getElementById('viewJudgeChamber').textContent = `${d.chamber || ''} ${d.judge ? '• ' + d.judge : ''}`.trim() || '-';
+    document.getElementById('viewDate').textContent = d.date || '-';
+    document.getElementById('viewNotifDate').textContent = d.notifDate || 'غير مسجل';
+    document.getElementById('viewDeadlineDate').textContent = d.deadlineDate || 'غير محدد';
+    document.getElementById('viewAmount').textContent = Number(d.amount) > 0 ? `${Number(d.amount).toLocaleString()} ر.س` : 'لا يوجد مبلغ محكوم به';
+    document.getElementById('viewJudgmentText').textContent = d.text || 'لا يوجد نص مسجل للحكم.';
+
+    const statusBadge = document.getElementById('viewStatusBadge');
+    statusBadge.textContent = d.status || 'صدر الحكم';
+    if (d.status.includes('لصالح')) {
+        statusBadge.style.background = '#dcfce7'; statusBadge.style.color = '#15803d';
+    } else if (d.status.includes('ضد')) {
+        statusBadge.style.background = '#fee2e2'; statusBadge.style.color = '#b91c1c';
+    } else {
+        statusBadge.style.background = '#fef3c7'; statusBadge.style.color = '#b45309';
+    }
+
+    const attachSec = document.getElementById('viewAttachmentSection');
+    const attachLink = document.getElementById('viewAttachmentLink');
+    if (d.attachment) {
+        attachLink.href = d.attachment;
+        attachSec.style.display = 'block';
+    } else {
+        attachSec.style.display = 'none';
+    }
+
+    document.getElementById('viewJudgmentModal').style.display = 'flex';
+}
+function closeViewJudgmentModal() {
+    document.getElementById('viewJudgmentModal').style.display = 'none';
+}
+
+// --- Case Selection Autofill ---
+function onAddCaseSelected(caseId) {
+    if (!caseId) return;
+    const found = registeredCases.find(c => String(c.id) === String(caseId));
+    if (found && found.court_name) {
+        document.getElementById('addCourtName').value = found.court_name;
+    }
+}
+
+// --- Dynamic Appeal Deadline Calculator ---
+function calculateAddAppealDeadline() {
+    const notifVal = document.getElementById('addNotifDate').value;
+    const days = parseInt(document.getElementById('addDeadlineDays').value) || 30;
+    const previewBox = document.getElementById('addDeadlineCalcPreview');
+    const dateText = document.getElementById('addDeadlineCalculatedDateText');
+
+    if (!notifVal) {
+        previewBox.style.display = 'none';
+        return;
+    }
+
+    const notifDate = new Date(notifVal);
+    notifDate.setDate(notifDate.getDate() + days);
+    const deadlineStr = notifDate.toISOString().split('T')[0];
+    dateText.textContent = deadlineStr;
+    previewBox.style.display = 'block';
+}
+
+// --- Edit Button Population via Dataset ---
+function openEditJudgmentFromBtn(btn) {
+    const d = btn.dataset;
+    document.getElementById('edit_judgment_id').value = d.id;
+    document.getElementById('edit_case_id').value = d.caseId;
+    document.getElementById('edit_court_name').value = d.court || '';
+    document.getElementById('edit_chamber_name').value = d.chamber || '';
+    document.getElementById('edit_judge_name').value = d.judge || '';
+    document.getElementById('edit_decree_number').value = d.decree || '';
+    document.getElementById('edit_litigation_degree').value = d.degree || 'ابتدائي';
+    document.getElementById('edit_judgment_type').value = d.type || 'موضوعي';
+    document.getElementById('edit_status_key').value = d.status || 'صدر لصالحنا';
+    document.getElementById('edit_judgment_date').value = d.date || '';
+    document.getElementById('edit_notification_date').value = d.notifDate || '';
+    document.getElementById('edit_appeal_deadline_days').value = d.deadlineDays || 30;
+    document.getElementById('edit_awarded_amount').value = d.amount || 0;
+    document.getElementById('edit_legal_fees_awarded').value = d.fees || 0;
+    document.getElementById('edit_judgment_text').value = d.text || '';
+    document.getElementById('edit_is_final').checked = d.isFinal === '1';
+
+    openEditJudgmentModal();
+}
+
+// --- Delete Confirmation ---
+function confirmDeleteJudgment(id, decree) {
+    if (confirm(`هل أنت متأكد من حذف الحكم القضائي (${decree})؟`)) {
+        document.getElementById('delete_judgment_id').value = id;
+        document.getElementById('deleteJudgmentForm').submit();
+    }
+}
+
+// --- Convert to Execution Workflow ---
+async function convertToExecution(judgmentId, decree) {
+    if (!confirm(`هل ترغب في تحويل الحكم (${decree}) مباشرة إلى ملف وسند تنفيذي بمحكمة التنفيذ؟`)) {
+        return;
+    }
+    try {
+        const resp = await fetch(`/judgments/${judgmentId}/convert-to-execution`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await resp.json();
+        if (data.success) {
+            alert(data.message);
+            window.location.reload();
+        } else {
+            alert('تعذر التحويل للتنفيذ.');
+        }
+    } catch (err) {
+        console.error(err);
+        alert('حدث خطأ في الاتصال بالسيرفر.');
+    }
+}
+
+function convertFromViewModal() {
+    if (currentViewingJudgmentId) {
+        convertToExecution(currentViewingJudgmentId, 'المحدد');
+    }
+}
+
+// --- Search and Filtering ---
+function filterJudgmentsTable() {
+    const searchVal = document.getElementById('judgmentSearchInput').value.toLowerCase().trim();
+    const outcomeVal = document.getElementById('outcomeFilterSelect').value.trim();
+    const deadlineVal = document.getElementById('deadlineFilterSelect').value.trim();
+
+    const rows = document.querySelectorAll('.judgment-row');
+    let visibleCount = 0;
+
+    rows.forEach(row => {
+        const caseText = (row.dataset.case || '').toLowerCase();
+        const court = (row.dataset.court || '').toLowerCase();
+        const judge = (row.dataset.judge || '').toLowerCase();
+        const decree = (row.dataset.decree || '').toLowerCase();
+        const outcome = (row.dataset.outcome || '').trim();
+        const deadlineStatus = (row.dataset.deadlineStatus || '').trim();
+
+        const matchSearch = !searchVal || caseText.includes(searchVal) || court.includes(searchVal) || judge.includes(searchVal) || decree.includes(searchVal);
+        const matchOutcome = !outcomeVal || outcome.includes(outcomeVal);
+        
+        let matchDeadline = true;
+        if (deadlineVal === 'active') {
+            matchDeadline = ['active_safe', 'active_warning', 'active_urgent'].includes(deadlineStatus);
+        } else if (deadlineVal === 'urgent') {
+            matchDeadline = deadlineStatus === 'active_urgent';
+        } else if (deadlineVal === 'expired') {
+            matchDeadline = deadlineStatus === 'expired';
+        } else if (deadlineVal === 'final') {
+            matchDeadline = deadlineStatus === 'final';
+        }
+
+        if (matchSearch && matchOutcome && matchDeadline) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+
+    const noRow = document.getElementById('noJudgmentsRow');
+    if (noRow) {
+        noRow.style.display = visibleCount === 0 ? '' : 'none';
+    }
+}
+
+function resetJudgmentFilters() {
+    document.getElementById('judgmentSearchInput').value = '';
+    document.getElementById('outcomeFilterSelect').value = '';
+    document.getElementById('deadlineFilterSelect').value = '';
+    filterJudgmentsTable();
+}
+
+function exportJudgmentsTable() {
+    window.print();
 }
 </script>
 {% endblock %}
