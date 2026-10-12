@@ -690,9 +690,13 @@ class LawWorkflowRules(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     office_id: Mapped[int] = mapped_column(ForeignKey('law_offices.id', ondelete='CASCADE'), index=True)
     name: Mapped[str] = mapped_column(Text, nullable=False)
-    trigger_key: Mapped[str] = mapped_column(Text, nullable=False)  # 'on_hearing_created' | 'on_case_limitation_warning'
-    action_type: Mapped[str] = mapped_column(Text, nullable=False)  # 'create_task'
+    category: Mapped[Optional[str]] = mapped_column(Text, server_default=text("'general'"))
+    description: Mapped[Optional[str]] = mapped_column(Text)
+    trigger_key: Mapped[str] = mapped_column(Text, nullable=False)  # 'on_hearing_created' | 'on_judgment_issued' | 'on_correspondence_needs_reply' | 'on_hearing_postponed' | 'on_case_limitation_warning'
+    action_type: Mapped[str] = mapped_column(Text, nullable=False)  # 'create_task' | 'send_notification'
     action_config: Mapped[str] = mapped_column(Text, nullable=False)  # JSON configuration
+    execution_count: Mapped[int] = mapped_column(Integer, server_default=text('0'))
+    last_triggered_at: Mapped[Optional[str]] = mapped_column(Text)
     is_active: Mapped[int] = mapped_column(Integer, CheckConstraint('is_active IN (0, 1)'), nullable=False, server_default=text('1'))
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
     updated_at: Mapped[Optional[str]] = mapped_column(Text)

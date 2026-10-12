@@ -400,6 +400,21 @@ def init_db():
         except Exception:
             pass
 
+    # Migrations for LawWorkflowRules (Smart Automation Engine)
+    workflow_cols = [
+        ("category", "TEXT DEFAULT 'general'"),
+        ("description", "TEXT"),
+        ("execution_count", "INTEGER DEFAULT 0"),
+        ("last_triggered_at", "TEXT")
+    ]
+    for col_name, col_type in workflow_cols:
+        try:
+            from sqlalchemy import text
+            with engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE law_workflow_rules ADD COLUMN {col_name} {col_type};"))
+        except Exception:
+            pass
+
     # Never log DATABASE_URL: it may contain a username and password.
     print(f"[Database] Connected using dialect: {engine.dialect.name}")
     print(f"[Database] Tables initialized successfully.")
