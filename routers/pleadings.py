@@ -1,26 +1,92 @@
+import json
+from datetime import datetime
+from typing import Optional
+
 from fastapi import APIRouter, Request, Depends, HTTPException, Form
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
-import traceback
+
 from core.error_handler import safe_error_html
-
 from database.database import get_db
-from database.models import AccessProfiles, LawCases, LawPleadings
-from dependencies import get_current_user, templates
+from database.models import AccessProfiles, LawCases, LawPleadings, LawOffices
+from dependencies import get_current_user, templates, check_user_permission
 
-router = APIRouter()
+router = APIRouter(tags=["Pleadings & Legal Memos"])
 
 
 @router.get("/pleadings", response_class=HTMLResponse)
-async def pleadings_page(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
-    if not user: return RedirectResponse(url="/", status_code=303)
+async def pleadings_page(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    if not user:
+        return RedirectResponse(url="/", status_code=303)
     try:
-        pleadings = db.query(LawPleadings).filter(LawPleadings.office_id == user.office_id).order_by(LawPleadings.id.desc()).all()
-        cases = db.query(LawCases).filter(LawCases.office_id == user.office_id, LawCases.is_deleted == 0).all()
-        return templates.TemplateResponse(request=request, name="pleadings.html",
-            context={"user": user, "pleadings": pleadings, "cases": cases, "active_page": "pleadings"})
+        office_id = user.office_id
+
+        # 1. Fetch pleadings for office
+        pleadings = db.query(LawPleadings).filter(
+            LawPleadings.office_id == office_id,
+            LawPleadings.is_deleted == 0
+        ).order_by(LawPleadings.id.desc()).all()
+
+        # 2. Fetch active cases for office
+        cases = db.query(LawCases).filter(
+            LawCases.office_id == office_id,
+            LawCases.is_deleted == 0
+        ).order_by(LawCases.id.desc()).all()
+
+        # 3. Fetch lawyers / team members
+        lawyers = db.query(AccessProfiles).filter(
+            AccessProfiles.office_id == office_id,
+            AccessProfiles.is_active == 1
+        ).order_by(AccessProfiles.name.asc()).all()
+
+        # 4. Office info
+        office = db.query(LawOffices).filter(LawOffices.id == office_id).first()
+
+        # 5. Serialized cases for dynamic client-side autofill
+        cases_json = []
+        for c in cases:
+            client_name = c.law_clients[0].name if c.law_clients else "غير محدد"
+            cases_json.append({
+                "id": c.id,
+                "case_number": c.case_number or "",
+                "title": c.title or "",
+                "court_name": c.court_name or "",
+                "case_type": getattr(c, 'case_type_key', '') or "",
+                "client_name": client_name
+            })
+
+        # 6. Advanced stats
+        total_pleadings = len(pleadings)
+        drafts_count = sum(1 for p in pleadings if p.status_key in ['draft', 'مسودة'])
+        in_review_count = sum(1 for p in pleadings if p.status_key in ['in_review', 'قيد المراجعة'])
+        submitted_count = sum(1 for p in pleadings if p.status_key in ['submitted', 'تم التقديم للمحكمة', 'final', 'نهائية'])
+        approved_count = sum(1 for p in pleadings if p.status_key in ['approved', 'معتمدة'])
+
+        return templates.TemplateResponse(
+            request=request,
+            name="pleadings.html",
+            context={
+                "user": user,
+                "office": office,
+                "pleadings": pleadings,
+                "cases": cases,
+                "cases_json": cases_json,
+                "lawyers": lawyers,
+                "total_pleadings": total_pleadings,
+                "drafts_count": drafts_count,
+                "in_review_count": in_review_count,
+                "submitted_count": submitted_count,
+                "approved_count": approved_count,
+                "active_page": "pleadings"
+            }
+        )
     except Exception as exc:
         return safe_error_html(exc, context="pleadings.py")
+
 
 @router.post("/pleadings/add")
 async def add_pleading(
@@ -30,21 +96,46 @@ async def add_pleading(
     pleading_type_key: str = Form(...),
     content_html: str = Form(None),
     issue_date: str = Form(None),
-    status_key: str = Form('draft'),
+    status_key: str = Form("draft"),
+    lead_lawyer_id: Optional[int] = Form(None),
+    redirect_to: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     user: AccessProfiles = Depends(get_current_user)
 ):
-    if not user: return RedirectResponse(url="/", status_code=303)
+    if not user:
+        return RedirectResponse(url="/", status_code=303)
+    if not check_user_permission(user, "pleadings", "add"):
+        raise HTTPException(status_code=403, detail="غير مصرح لك بإضافة مذكرات")
+
     office_id = user.office_id
-    case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
-    if not case: raise HTTPException(status_code=403, detail="غير مصرح")
-    
-    pleading = LawPleadings(case_id=case_id, office_id=office_id,
-        title=title, pleading_type_key=pleading_type_key,
-        content_html=content_html, issue_date=issue_date,
-        status_key=status_key, lead_lawyer_id=user.id)
-    db.add(pleading); db.commit()
-    return RedirectResponse(url=f"/cases/{case_id}", status_code=303)
+    case = db.query(LawCases).filter(
+        LawCases.id == case_id,
+        LawCases.office_id == office_id,
+        LawCases.is_deleted == 0
+    ).first()
+    if not case:
+        raise HTTPException(status_code=404, detail="القضية غير موجودة أو غير تابعة لمكتبك")
+
+    effective_lawyer_id = lead_lawyer_id if lead_lawyer_id else user.id
+
+    new_pleading = LawPleadings(
+        case_id=case_id,
+        office_id=office_id,
+        title=title.strip(),
+        pleading_type_key=pleading_type_key.strip(),
+        content_html=content_html.strip() if content_html else "",
+        issue_date=issue_date.strip() if issue_date else datetime.now().strftime("%Y-%m-%d"),
+        status_key=status_key.strip() if status_key else "draft",
+        lead_lawyer_id=effective_lawyer_id,
+        version_no=1,
+        is_deleted=0
+    )
+    db.add(new_pleading)
+    db.commit()
+
+    target = redirect_to if redirect_to else "/pleadings"
+    return RedirectResponse(url=target, status_code=303)
+
 
 @router.post("/pleadings/edit")
 async def edit_pleading(
@@ -55,16 +146,259 @@ async def edit_pleading(
     pleading_type_key: str = Form(...),
     content_html: str = Form(None),
     issue_date: str = Form(None),
-    status_key: str = Form('draft'),
+    status_key: str = Form("draft"),
+    lead_lawyer_id: Optional[int] = Form(None),
+    redirect_to: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     user: AccessProfiles = Depends(get_current_user)
 ):
-    if not user: return RedirectResponse(url="/", status_code=303)
-    p = db.query(LawPleadings).filter(LawPleadings.id == pleading_id, LawPleadings.office_id == user.office_id).first()
-    if p:
-        p.title = title; p.pleading_type_key = pleading_type_key
-        p.content_html = content_html; p.issue_date = issue_date
-        p.status_key = status_key
-        db.commit()
-    return RedirectResponse(url=f"/cases/{case_id}", status_code=303)
+    if not user:
+        return RedirectResponse(url="/", status_code=303)
+    if not check_user_permission(user, "pleadings", "edit"):
+        raise HTTPException(status_code=403, detail="غير مصرح لك بتعديل المذكرات")
 
+    office_id = user.office_id
+    pleading = db.query(LawPleadings).filter(
+        LawPleadings.id == pleading_id,
+        LawPleadings.office_id == office_id,
+        LawPleadings.is_deleted == 0
+    ).first()
+    if not pleading:
+        raise HTTPException(status_code=404, detail="المذكرة غير موجودة")
+
+    pleading.case_id = case_id
+    pleading.title = title.strip()
+    pleading.pleading_type_key = pleading_type_key.strip()
+    pleading.content_html = content_html.strip() if content_html else ""
+    pleading.issue_date = issue_date.strip() if issue_date else pleading.issue_date
+    pleading.status_key = status_key.strip() if status_key else pleading.status_key
+    if lead_lawyer_id:
+        pleading.lead_lawyer_id = lead_lawyer_id
+    pleading.version_no = (pleading.version_no or 1) + 1
+    pleading.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    db.commit()
+
+    target = redirect_to if redirect_to else "/pleadings"
+    return RedirectResponse(url=target, status_code=303)
+
+
+@router.post("/pleadings/delete")
+async def delete_pleading(
+    request: Request,
+    pleading_id: int = Form(...),
+    redirect_to: Optional[str] = Form(None),
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    if not user:
+        return RedirectResponse(url="/", status_code=303)
+    if not check_user_permission(user, "pleadings", "delete"):
+        raise HTTPException(status_code=403, detail="غير مصرح لك بحذف المذكرات")
+
+    office_id = user.office_id
+    pleading = db.query(LawPleadings).filter(
+        LawPleadings.id == pleading_id,
+        LawPleadings.office_id == office_id,
+        LawPleadings.is_deleted == 0
+    ).first()
+    if pleading:
+        pleading.is_deleted = 1
+        db.commit()
+
+    target = redirect_to if redirect_to else "/pleadings"
+    return RedirectResponse(url=target, status_code=303)
+
+
+@router.get("/api/pleadings/{pleading_id}")
+async def get_pleading_json(
+    pleading_id: int,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    if not user:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+
+    pleading = db.query(LawPleadings).filter(
+        LawPleadings.id == pleading_id,
+        LawPleadings.office_id == user.office_id,
+        LawPleadings.is_deleted == 0
+    ).first()
+    if not pleading:
+        raise HTTPException(status_code=404, detail="المذكرة غير موجودة")
+
+    case = pleading.law_case
+    lawyer = pleading.lead_lawyer
+    client_name = case.law_clients[0].name if case and case.law_clients else "غير محدد"
+
+    return JSONResponse({
+        "id": pleading.id,
+        "case_id": pleading.case_id,
+        "case_title": case.title if case else "",
+        "case_number": case.case_number if case else "",
+        "court_name": case.court_name if case else "",
+        "client_name": client_name,
+        "title": pleading.title,
+        "pleading_type_key": pleading_type_key_label(pleading.pleading_type_key),
+        "raw_type_key": pleading.pleading_type_key,
+        "content_html": pleading.content_html or "",
+        "issue_date": pleading.issue_date or "",
+        "status_key": pleading.status_key,
+        "status_label": pleading_status_label(pleading.status_key),
+        "lead_lawyer_id": pleading.lead_lawyer_id,
+        "lawyer_name": lawyer.name if lawyer else "غير محدد",
+        "version_no": pleading.version_no or 1
+    })
+
+
+@router.post("/api/pleadings/ai-draft")
+async def ai_draft_pleading(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    """صياغة مسودة مرافعة ذكية وفق الأصول القضائية السعودية والعربية"""
+    if not user:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+
+    body = await request.json()
+    case_id = body.get("case_id")
+    pleading_type = body.get("pleading_type", "defense")
+    key_points = body.get("key_points", "")
+    additional_notes = body.get("notes", "")
+
+    case = None
+    if case_id:
+        case = db.query(LawCases).filter(
+            LawCases.id == int(case_id),
+            LawCases.office_id == user.office_id
+        ).first()
+
+    court_name = case.court_name if case and case.court_name else "المحكمة المختصة"
+    case_number = case.case_number if case and case.case_number else "القضية رقم [.....]"
+    case_title = case.title if case and case.title else "موضوع الدعوى"
+    client_name = case.law_clients[0].name if case and case.law_clients else "الموكل"
+
+    type_titles = {
+        "claim": "لائحة دعوى افتتاحية",
+        "defense": "مذكرة جوابية ودفاع موضوعي",
+        "reply": "مذكرة رد وتعقيب",
+        "appeal": "لائحة اعتراضية (استئناف)",
+        "petition": "التماس إعادة نظر",
+        "cassation": "لائحة طعن أمام المحكمة العليا",
+        "counter_claim": "لائحة دعوى متقابلة"
+    }
+    selected_type_title = type_titles.get(pleading_type, "مذكرة قانونية ومرافعة")
+
+    today_str = datetime.now().strftime("%Y-%m-%d")
+
+    # Generate professional legal structure
+    draft_content = f"""بسم الله الرحمن الرحيم
+
+لدى {court_name} الموقرة
+الدائرة القضائية المختصة
+
+مقدمة من: {client_name} (بصفته في الدعوى)
+وكيله الشرعي: المحامي / {user.name}
+بموجب وكالة رقم: [.....] وتاريخ: [.....]
+
+ضد: [اسم الطرف الآخر / المدعى عليه / المستأنف ضده]
+
+في الدعوى رقم: ({case_number}) وتاريخ قيدها: {today_str}م
+الموضوع: {selected_type_title} بشأن ({case_title})
+
+--------------------------------------------------------------------------------
+فضيلة رئيس الدائرة وأصحاب الفضيلة القضاة حفظكم الله ورعاكم،،،
+السلام عليكم ورحمة الله وبركاته، أما بعد:
+
+بصفتنا وكيلاً شرعياً عن {client_name}، نتشرف بالرد وتقديم هذه المذكرة بياناً للحق ودفعاً للباطل على النحو الآتي:
+
+أولاً: الديباجة والوقائع:
+{key_points or '1. تتلخص وقائع الدعوى في قيام علاقة تعاقدية بين طرفي النزاع، حيث أوفى موكلنا بكامل التزاماته وفقاً للأصول النظامية.\n2. امتنع الطرف الآخر دون مسوغ شرعي أو نظامي عن أداء ما عليه، مما ألحق بموكلنا ضرراً مادياً ومعنوياً بالغاً.'}
+
+ثانياً: الأسانيد الشرعية والنظامية:
+1. استناداً إلى القاعدة الشرعية المستقرة: (لا ضرر ولا ضرار) و(المسلمون على شروطهم إلا شرطاً أحل حراماً أو حرّم حلالاً).
+2. استناداً إلى نصوص نظام المعاملات المدنية المنظم للقوة الملزمة للعقد ومبدأ حسن النية في تنفيذ الالتزامات.
+3. استناداً إلى نظام المرافعات الشرعية ونظام الإثبات بشأن حجية المحررات والبيّنات المقدمة في ملف القضية.
+{f'4. الملاحظات الإضافية: {additional_notes}' if additional_notes else ''}
+
+ثالثاً: الطلبات الختامية:
+بناءً على ما تقدم من وقائع وأسانيد، نلتمس من فضيلتكم بكل احترام الحكم بالآتي:
+1. قبول هذه المذكرة شكلاً وموضوعاً.
+2. الحكم بإلزام الطرف الآخر بالطلبات موضوع الدعوى.
+3. تحميل الطرف الآخر أتعاب المحاماة والمخاسير القضائية.
+
+وتفضلوا بقبول فائق التقدير والاحترام،،،
+
+مقدمه لوجه الحق:
+المحامي الوكيل / {user.name}
+التاريخ: {today_str}م
+"""
+
+    return JSONResponse({
+        "success": True,
+        "title": f"{selected_type_title} - قضية {case_number}",
+        "draft": draft_content
+    })
+
+
+@router.get("/pleadings/{pleading_id}/print", response_class=HTMLResponse)
+async def print_pleading(
+    pleading_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    """صفحة الطباعة الرسمية للمذكرة القانونية بترويسة مكتب المحاماة"""
+    if not user:
+        return RedirectResponse(url="/", status_code=303)
+
+    pleading = db.query(LawPleadings).filter(
+        LawPleadings.id == pleading_id,
+        LawPleadings.office_id == user.office_id,
+        LawPleadings.is_deleted == 0
+    ).first()
+    if not pleading:
+        raise HTTPException(status_code=404, detail="المذكرة غير موجودة")
+
+    office = db.query(LawOffices).filter(LawOffices.id == user.office_id).first()
+    case = pleading.law_case
+    lawyer = pleading.lead_lawyer
+
+    return templates.TemplateResponse(
+        request=request,
+        name="pleadings_print.html",
+        context={
+            "user": user,
+            "office": office,
+            "pleading": pleading,
+            "case": case,
+            "lawyer": lawyer
+        }
+    )
+
+
+def pleading_type_key_label(key: str) -> str:
+    labels = {
+        "claim": "لائحة دعوى",
+        "defense": "مذكرة دفاع",
+        "reply": "مذكرة رد وتعقيب",
+        "appeal": "لائحة اعتراضية / استئناف",
+        "petition": "التماس إعادة نظر",
+        "cassation": "طعن بالنقض",
+        "counter_claim": "دعوى متقابلة",
+        "urgent": "طلب عاجل / وقتي",
+        "other": "مذكرة أخرى"
+    }
+    return labels.get(key, key)
+
+
+def pleading_status_label(key: str) -> str:
+    labels = {
+        "draft": "مسودة",
+        "in_review": "قيد المراجعة",
+        "submitted": "تم التقديم للمحكمة",
+        "final": "نسخة نهائية",
+        "approved": "معتمدة"
+    }
+    return labels.get(key, key)

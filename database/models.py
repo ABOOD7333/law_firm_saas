@@ -320,6 +320,7 @@ class LawPleadings(Base):
     is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
 
     law_case: Mapped['LawCases'] = relationship('LawCases', back_populates='law_pleadings')
+    lead_lawyer: Mapped[Optional['AccessProfiles']] = relationship('AccessProfiles', foreign_keys=[lead_lawyer_id])
 
 class LawJudgments(Base):
     __tablename__ = 'law_judgments'
