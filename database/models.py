@@ -364,6 +364,9 @@ class LawTransactions(Base):
     is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
     currency: Mapped[str] = mapped_column(Text, server_default=text("'SAR'"), nullable=False)
     exchange_rate: Mapped[float] = mapped_column(REAL, server_default=text('1.0'), nullable=False)
+    payment_method: Mapped[Optional[str]] = mapped_column(Text, server_default=text("'تحويل بنكي'"))
+    reference_number: Mapped[Optional[str]] = mapped_column(Text)
+    client_id: Mapped[Optional[int]] = mapped_column(ForeignKey('law_clients.id', ondelete='SET NULL'), nullable=True)
 
     law_case: Mapped['LawCases'] = relationship('LawCases', back_populates='law_transactions')
 
@@ -580,6 +583,11 @@ class LawExpenses(Base):
     is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
     currency: Mapped[str] = mapped_column(Text, server_default=text("'SAR'"), nullable=False)
     exchange_rate: Mapped[float] = mapped_column(REAL, server_default=text('1.0'), nullable=False)
+    expense_category: Mapped[Optional[str]] = mapped_column(Text, server_default=text("'رسوم قضائية'"))
+    is_billable: Mapped[int] = mapped_column(Integer, server_default=text('1'))
+    payment_method: Mapped[Optional[str]] = mapped_column(Text, server_default=text("'تحويل بنكي'"))
+    receipt_path: Mapped[Optional[str]] = mapped_column(Text)
+    notes: Mapped[Optional[str]] = mapped_column(Text)
 
     law_case: Mapped['LawCases'] = relationship('LawCases', back_populates='law_expenses')
 
@@ -595,6 +603,10 @@ class LawTimesheets(Base):
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
     updated_at: Mapped[Optional[str]] = mapped_column(Text)
     is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
+    is_billed: Mapped[int] = mapped_column(Integer, server_default=text('0'))
+    invoice_id: Mapped[Optional[int]] = mapped_column(ForeignKey('invoices.id', ondelete='SET NULL'), nullable=True)
+    work_date: Mapped[Optional[str]] = mapped_column(Text)
+    notes: Mapped[Optional[str]] = mapped_column(Text)
 
     law_case: Mapped['LawCases'] = relationship('LawCases', back_populates='law_timesheets')
 
@@ -877,6 +889,7 @@ class Invoices(Base):
     
     created_at: Mapped[str] = mapped_column(Text, server_default=text('CURRENT_TIMESTAMP'))
     created_by: Mapped[Optional[int]] = mapped_column(ForeignKey('access_profiles.id', ondelete='SET NULL'), nullable=True)
+    is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
 
 class InvoiceItems(Base):
     __tablename__ = 'invoice_items'

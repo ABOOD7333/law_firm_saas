@@ -1,211 +1,539 @@
 {% extends "base.html" %}
 {% block title %}سجل الساعات والتكاليف | LawSaaS{% endblock %}
 
-{% block head %}
-<style>
-.page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
-.grid-layout { display: grid; grid-template-columns: 360px 1fr; gap: 24px; align-items: start; }
-.form-card { background: var(--card-bg); border-radius: 14px; padding: 22px; border: 1px solid var(--border-color); box-shadow: 0 2px 8px rgba(0,0,0,.05); }
-.form-card h3 { font-size: 1.05rem; font-weight: 800; color: var(--secondary-color); margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
-.form-group { margin-bottom: 14px; display: flex; flex-direction: column; gap: 6px; }
-.form-group label { font-size: .85rem; font-weight: 700; color: var(--text-muted); }
-.form-group input, .form-group select { padding: 10px 12px; border: 1.5px solid var(--border-color); border-radius: 9px; font-family: 'Cairo', sans-serif; font-size: .88rem; background: var(--card-bg); color: var(--secondary-color); outline: none; }
-.form-group input:focus, .form-group select:focus { border-color: var(--primary-color); }
-.btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
-.data-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
-.data-table th { background: #f8fafc; color: var(--text-muted); font-weight: 700; padding: 12px 14px; text-align: right; border-bottom: 2px solid var(--border-color); }
-.data-table td { padding: 12px 14px; border-bottom: 1px solid var(--border-color); color: var(--secondary-color); vertical-align: middle; }
-.data-table tr { cursor: pointer; transition: background .15s; }
-.data-table tr:hover td { background: #f0f4ff; }
-.data-table tr.selected td { background: #eff6ff; }
-.empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
-.empty-state i { font-size: 3rem; opacity: .2; display: block; margin-bottom: 12px; }
-.alert-box { padding: 12px 16px; border-radius: 10px; font-size: .88rem; font-weight: 600; margin-bottom: 16px; display: none; }
-.alert-success { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
-.alert-error   { background: #fee2e2; color: #7f1d1d; border: 1px solid #fecaca; }
-.stat-pill { background: #f1f5f9; padding: 6px 12px; border-radius: 50px; font-weight: 700; font-size: .85rem; display: inline-flex; align-items: center; gap: 6px; }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="page-header">
-  <div>
-    <h1 style="font-size:1.8rem;font-weight:800;color:var(--secondary-color);margin-bottom:4px;">
-      <i class="fa-solid fa-clock" style="color:#6366f1;margin-left:10px;"></i>سجل الساعات والتكاليف
-    </h1>
-    <p style="color:var(--text-muted);font-size:.95rem;">تتبع ساعات العمل والتكاليف القابلة للفوترة لكل قضية.</p>
-  </div>
-  <div style="display:flex;gap:10px;">
-    {% set total_h = records | map(attribute='duration_hours') | sum %}
-    <span class="stat-pill"><i class="fa-solid fa-hourglass-half" style="color:#f59e0b;"></i> إجمالي الساعات: {{ "%.2f"|format(total_h) }} ساعة</span>
-  </div>
+<div class="timesheet-container" dir="rtl" style="margin-bottom: 40px;">
+    <!-- Page Header -->
+    <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px;">
+        <div>
+            <h1 style="margin: 0; font-size: 1.8rem; font-weight: 800; color: var(--secondary-color);">
+                <i class="fa-solid fa-clock" style="color: #6366f1; margin-left: 10px;"></i>
+                سجل الساعات وتكاليف العمل القانوني
+            </h1>
+            <p style="margin: 5px 0 0; color: var(--text-muted); font-size: 0.95rem;">
+                تتبع ساعات عمل المحامين والمستشارين، احتساب الأتعاب الزمنية، وتجهيزها للفوترة.
+            </p>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <button class="btn-primary" onclick="clearForm()" style="background: linear-gradient(135deg, #6366f1, #4f46e5); border: none; padding: 10px 18px; border-radius: 10px; color: white; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-plus"></i> إضافة سجل ساعات جديد
+            </button>
+        </div>
+    </div>
+
+    <!-- Live KPI Ribbon -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 15px; margin-bottom: 25px;">
+        <div class="card" style="padding: 16px; border-radius: 12px; border-right: 4px solid #6366f1; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">إجمالي الساعات</span>
+                <h3 style="margin: 5px 0 0; font-size: 1.6rem; color: #1e293b;">
+                    {{ stats.total_hours }} <small style="font-size: 0.8rem; color: #64748b;">ساعة</small>
+                </h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #e0e7ff; color: #6366f1; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fa-solid fa-hourglass-half"></i>
+            </div>
+        </div>
+
+        <div class="card" style="padding: 16px; border-radius: 12px; border-right: 4px solid #10b981; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">القيمة المالية التقديرية</span>
+                <h3 style="margin: 5px 0 0; font-size: 1.5rem; color: #059669;">
+                    {{ "{:,.2f}".format(stats.total_value) }} <small style="font-size: 0.8rem;">ر.س</small>
+                </h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #ecfdf5; color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fa-solid fa-coins"></i>
+            </div>
+        </div>
+
+        <div class="card" style="padding: 16px; border-radius: 12px; border-right: 4px solid #f59e0b; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">ساعات جاهزة للفوترة</span>
+                <h3 style="margin: 5px 0 0; font-size: 1.5rem; color: #d97706;">
+                    {{ stats.unbilled_hours }} <small style="font-size: 0.8rem; color: #64748b;">ساعة</small>
+                </h3>
+                <small style="color: #d97706; font-weight: 700; font-size: 0.75rem;">بقيمة: {{ "{:,.0f}".format(stats.unbilled_value) }} ر.س</small>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #fef3c7; color: #f59e0b; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fa-solid fa-file-invoice"></i>
+            </div>
+        </div>
+
+        <div class="card" style="padding: 16px; border-radius: 12px; border-right: 4px solid #3b82f6; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">ساعات تم فوترتها</span>
+                <h3 style="margin: 5px 0 0; font-size: 1.6rem; color: #1d4ed8;">
+                    {{ stats.billed_count }} <small style="font-size: 0.8rem; color: #64748b;">سجل</small>
+                </h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #eff6ff; color: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stopwatch & Filters Bar -->
+    <div style="display: grid; grid-template-columns: auto 1fr; gap: 15px; margin-bottom: 25px; flex-wrap: wrap;">
+        <!-- Stopwatch Widget -->
+        <div class="card" style="padding: 12px 18px; border-radius: 12px; display: flex; align-items: center; gap: 12px; background: #0f172a; color: white;">
+            <i class="fa-solid fa-stopwatch" style="color: #38bdf8; font-size: 1.4rem;"></i>
+            <div>
+                <div id="timerDisplay" style="font-family: monospace; font-size: 1.25rem; font-weight: 800; color: #38bdf8;">00:00:00</div>
+                <small style="color: #94a3b8; font-size: 0.72rem;">المؤقت التفاعلي للمهمة</small>
+            </div>
+            <div style="display: flex; gap: 6px;">
+                <button type="button" id="btnTimerToggle" onclick="toggleTimer()"
+                        style="padding: 5px 12px; border-radius: 6px; border: none; background: #10b981; color: white; font-weight: 700; font-size: 0.8rem; cursor: pointer;">
+                    بدء
+                </button>
+                <button type="button" onclick="applyTimerToForm()"
+                        style="padding: 5px 10px; border-radius: 6px; border: 1px solid #475569; background: #1e293b; color: #e2e8f0; font-weight: 700; font-size: 0.8rem; cursor: pointer;">
+                    تطبيق
+                </button>
+                <button type="button" onclick="resetTimer()"
+                        style="padding: 5px 8px; border-radius: 6px; border: none; background: #334155; color: #94a3b8; font-size: 0.8rem; cursor: pointer;">
+                    <i class="fa-solid fa-rotate-left"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Filter Pills & Search -->
+        <div class="card" style="padding: 12px 16px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="pill-btn active" onclick="setQuickFilter('all', this)">الكل ({{ stats.total_count }})</button>
+                <button class="pill-btn pill-warning" onclick="setQuickFilter('unbilled', this)">جاهزة للفوترة ({{ stats.unbilled_count }})</button>
+                <button class="pill-btn pill-success" onclick="setQuickFilter('billed', this)">مفوترة ({{ stats.billed_count }})</button>
+            </div>
+            <div style="position: relative; min-width: 240px;">
+                <i class="fa-solid fa-magnifying-glass" style="position: absolute; right: 12px; top: 10px; color: #94a3b8;"></i>
+                <input type="text" id="filterSearch" placeholder="بحث بالبيان، المحامي، القضية..." oninput="filterTimesheets()"
+                       style="width: 100%; padding: 7px 34px 7px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.85rem;">
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Grid Layout (Form + Data Table) -->
+    <div style="display: grid; grid-template-columns: 380px 1fr; gap: 24px; align-items: start;">
+        <!-- Form Card (Add / Edit) -->
+        <div class="card" style="padding: 22px; border-radius: 14px; background: var(--card-bg); border: 1px solid var(--border-color); box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
+                <h3 id="formTitle" style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--secondary-color); display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-pen-to-square" style="color: #6366f1;"></i> تسجيل ساعات عمل
+                </h3>
+                <span id="editBadge" style="display:none; background: #e0e7ff; color: #4338ca; font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 20px;">تعديل السجل</span>
+            </div>
+
+            <div id="alertBox" style="display:none; padding: 10px 14px; border-radius: 8px; margin-bottom: 15px; font-size: 0.85rem; font-weight: 600;"></div>
+
+            <form id="timesheetForm" onsubmit="saveTimesheet(event)">
+                <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+                <input type="hidden" id="recId">
+
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">
+                        القضية المرتبطة <span style="color: #ef4444;">*</span>
+                    </label>
+                    <select id="fCaseId" required style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.88rem;">
+                        <option value="">-- اختر القضية --</option>
+                        {% for c in cases %}
+                        <option value="{{ c.id }}">{{ c.case_number }} - {{ c.title[:30] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">
+                        المهمة / العمل القانوني المنجز <span style="color: #ef4444;">*</span>
+                    </label>
+                    <input type="text" id="fTitle" required placeholder="مثال: صياغة مذكرة دفاع ومراجعة الأدلة..."
+                           style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.88rem;">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">المحامي القائم بالعمل</label>
+                    <select id="fUserId" style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.88rem;">
+                        {% for u in users %}
+                        <option value="{{ u.id }}" {% if u.id == user.id %}selected{% endif %}>{{ u.name }} ({{ u.role }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">
+                            الساعات المستغرقة <span style="color: #ef4444;">*</span>
+                        </label>
+                        <input type="number" id="fHours" step="0.25" min="0.1" required placeholder="مثال: 2.5"
+                               style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.95rem; font-weight: 700;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">معدل الأجر (ر.س/ساعة)</label>
+                        <input type="number" id="fRate" step="10" min="0" placeholder="مثال: 500"
+                               style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.95rem;">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">تاريخ إنجاز العمل</label>
+                    <input type="date" id="fWorkDate" style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.88rem;">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 12px; display: flex; align-items: center; gap: 8px; background: #f8fafc; padding: 10px 12px; border-radius: 8px;">
+                    <input type="checkbox" id="fIsBilled" style="width: 18px; height: 18px; accent-color: #10b981; cursor: pointer;">
+                    <label for="fIsBilled" style="font-size: 0.85rem; font-weight: 700; color: #0f172a; cursor: pointer;">
+                        تمت فوترة هذه الساعات على الموكل
+                    </label>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 18px;">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">ملاحظات العمل</label>
+                    <textarea id="fNotes" rows="2" placeholder="تفاصيل إضافية عن العمل..."
+                              style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.88rem;"></textarea>
+                </div>
+
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button type="submit" id="btnSave" style="flex: 1; padding: 10px; border-radius: 8px; background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; border: none; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                        <i class="fa-solid fa-floppy-disk"></i> حفظ الساعات
+                    </button>
+                    <button type="button" onclick="clearForm()" style="padding: 10px 14px; border-radius: 8px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; font-weight: 700; cursor: pointer;">
+                        إلغاء
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Table Card -->
+        <div class="card" style="padding: 0; border-radius: 14px; overflow: hidden; background: var(--card-bg); border: 1px solid var(--border-color); box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+            <div style="padding: 18px 22px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--secondary-color); display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-table-list" style="color: #6366f1;"></i> جدول ساعات العمل والتكاليف
+                </h3>
+                <span style="font-size: 0.8rem; font-weight: 700; background: #e0e7ff; color: #4338ca; padding: 4px 12px; border-radius: 50px;">
+                    {{ records|length }} سجل
+                </span>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.88rem;">
+                    <thead>
+                        <tr style="background: #f8fafc; color: #64748b; border-bottom: 2px solid var(--border-color); text-align: right;">
+                            <th style="padding: 12px 14px;">القضية</th>
+                            <th style="padding: 12px 14px;">البيان والمحامي</th>
+                            <th style="padding: 12px 14px;">الساعات والمعدل</th>
+                            <th style="padding: 12px 14px;">القيمة المالية</th>
+                            <th style="padding: 12px 14px;">حالة الفوترة</th>
+                            <th style="padding: 12px 14px;">التاريخ</th>
+                            <th style="padding: 12px 14px; text-align: center;">إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="timesheetsTbody">
+                        {% for r in records %}
+                        {% set total_line = (r.duration_hours or 0.0) * (r.billable_rate or 0.0) %}
+                        <tr id="ts-row-{{ r.id }}" class="ts-row"
+                            data-search="{{ r.title | lower }} {{ (r.notes or '') | lower }} {{ (r.law_case.case_number if r.law_case else '') | lower }} {{ (users_map.get(r.user_id, '') | lower) }}"
+                            data-billed="{{ 1 if r.is_billed else 0 }}"
+                            style="border-bottom: 1px solid var(--border-color); transition: background 0.15s; cursor: pointer;"
+                            onclick="selectTimesheet({{ r.id }})">
+                            
+                            <!-- Case -->
+                            <td style="padding: 12px 14px;">
+                                {% if r.law_case %}
+                                <strong style="color: #1e293b; display: block;">{{ r.law_case.case_number }}</strong>
+                                <small style="color: #64748b;">{{ r.law_case.title[:25] }}</small>
+                                {% else %}
+                                <span style="color: #94a3b8;">—</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Title & Lawyer -->
+                            <td style="padding: 12px 14px;">
+                                <strong style="color: #0f172a; display: block;">{{ r.title }}</strong>
+                                <small style="color: #6366f1; font-weight: 600;">
+                                    <i class="fa-solid fa-user-tie" style="font-size: 0.75rem;"></i> {{ users_map.get(r.user_id, 'غير محدد') }}
+                                </small>
+                            </td>
+
+                            <!-- Hours & Rate -->
+                            <td style="padding: 12px 14px;">
+                                <strong style="color: #0f172a; font-size: 0.95rem;">{{ r.duration_hours }} س</strong>
+                                <small style="color: #64748b; display: block;">@ {{ "{:,.0f}".format(r.billable_rate or 0) }} ر.س/س</small>
+                            </td>
+
+                            <!-- Value -->
+                            <td style="padding: 12px 14px;">
+                                <strong style="color: #059669; font-size: 0.95rem;">{{ "{:,.2f}".format(total_line) }}</strong>
+                                <small style="color: #64748b;">ر.س</small>
+                            </td>
+
+                            <!-- Billing Status Toggle -->
+                            <td style="padding: 12px 14px;">
+                                <button onclick="toggleBilled({{ r.id }}, event)" title="انقر لتغيير حالة الفوترة"
+                                        style="border: none; background: none; cursor: pointer; padding: 0;">
+                                    {% if r.is_billed %}
+                                    <span style="padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; background: #ecfdf5; color: #059669; display: inline-flex; align-items: center; gap: 4px;">
+                                        <i class="fa-solid fa-check"></i> مفوتر
+                                    </span>
+                                    {% else %}
+                                    <span style="padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; background: #fef3c7; color: #d97706; display: inline-flex; align-items: center; gap: 4px;">
+                                        <i class="fa-solid fa-clock"></i> جاهز للفوترة
+                                    </span>
+                                    {% endif %}
+                                </button>
+                            </td>
+
+                            <!-- Date -->
+                            <td style="padding: 12px 14px; font-size: 0.82rem; color: #475569; direction: ltr; text-align: right;">
+                                {{ r.work_date or (r.created_at or '')[:10] }}
+                            </td>
+
+                            <!-- Actions -->
+                            <td style="padding: 12px 14px; text-align: center;">
+                                <div style="display: flex; gap: 5px; justify-content: center;" onclick="event.stopPropagation()">
+                                    <button onclick="selectTimesheet({{ r.id }})" title="تعديل"
+                                            style="width: 32px; height: 32px; border-radius: 6px; border: none; background: #e2e8f0; color: #334155; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    <button onclick="deleteTimesheet({{ r.id }})" title="حذف"
+                                            style="width: 32px; height: 32px; border-radius: 6px; border: none; background: #fee2e2; color: #dc2626; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                {% if not records %}
+                <div style="text-align: center; padding: 60px 20px; color: #94a3b8;">
+                    <i class="fa-solid fa-clock" style="font-size: 3.5rem; opacity: 0.3; margin-bottom: 15px; display: block;"></i>
+                    <h4 style="margin: 0 0 5px; color: #64748b;">لا توجد ساعات عمل مسجلة حالياً</h4>
+                    <p style="margin: 0; font-size: 0.88rem;">سجّل وقت الاستشارات والمرافعات لحساب أتعاب القضايا بدقة.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
 </div>
 
-<div class="grid-layout">
-  <div class="form-card">
-    <h3><i class="fa-solid fa-pen-to-square" style="color:#6366f1;"></i> إضافة / تعديل سجل ساعات</h3>
-    <div id="alertBox" class="alert-box"></div>
-    <form onsubmit="saveRecord(event)">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
-      <input type="hidden" id="recId">
-      <div class="form-group">
-        <label>القضية <span style="color:#ef4444;">*</span></label>
-        <select id="fCaseId" required>
-          <option value="">-- اختر القضية --</option>
-          {% for c in cases %}
-          <option value="{{ c.id }}">{{ c.case_number }} - {{ c.title[:30] }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="form-group">
-        <label>المهمة / الوصف <span style="color:#ef4444;">*</span></label>
-        <input type="text" id="fTitle" required placeholder="مثال: كتابة مذكرة دفاع...">
-      </div>
-      <div class="form-group" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        <div>
-          <label>الساعات المستغرقة <span style="color:#ef4444;">*</span></label>
-          <input type="number" id="fHours" step="0.25" min="0" required placeholder="مثال: 2.5">
-        </div>
-        <div>
-          <label>معدل الأجر / الساعة</label>
-          <input type="number" id="fRate" step="1" min="0" placeholder="مثال: 500">
-        </div>
-      </div>
-      <div class="form-group">
-        <label>المحامي المنفذ</label>
-        <select id="fUserId">
-          <option value="">-- المستخدم الحالي --</option>
-          {% for u in users %}
-          <option value="{{ u.id }}">{{ u.name }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="btn-row">
-        {% if has_perm(user, 'timesheet', 'add') or has_perm(user, 'timesheet', 'edit') %}
-        <button type="submit" class="action-btn" style="background:linear-gradient(135deg,#10b981,#047857);">
-          <i class="fa-solid fa-floppy-disk"></i> حفظ
-        </button>
-        {% endif %}
-        <button type="button" class="action-btn" style="background:linear-gradient(135deg,#6366f1,#4f46e5);" onclick="clearForm()">
-          <i class="fa-solid fa-plus"></i> جديد
-        </button>
-        {% if has_perm(user, 'timesheet', 'delete') %}
-        <button type="button" class="action-btn" style="background:linear-gradient(135deg,#ef4444,#dc2626);" onclick="deleteRecord()">
-          <i class="fa-solid fa-trash"></i> حذف
-        </button>
-        {% endif %}
-      </div>
-    </form>
-  </div>
-
-  <div class="form-card" style="padding:0;overflow:hidden;">
-    <div style="padding:18px 22px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;">
-      <h3 style="margin:0;"><i class="fa-solid fa-list" style="color:#6366f1;margin-left:8px;"></i> السجلات المسجلة</h3>
-      <input type="text" id="filterSearch" placeholder="بحث..." style="padding:6px 12px;border:1px solid var(--border-color);border-radius:6px;outline:none;" oninput="filterTable()">
-    </div>
-    <div style="overflow-x:auto;">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>القضية</th>
-            <th>المهمة</th>
-            <th>الساعات</th>
-            <th>الإجمالي</th>
-            <th>المنفذ</th>
-          </tr>
-        </thead>
-        <tbody id="refTbody">
-          {% for r in records %}
-          <tr onclick="selectRecord({{ r.id }}, this)" data-search="{{ r.title | lower }} {{ r.law_case.case_number if r.law_case else '' }}">
-            <td><strong>{{ r.law_case.case_number if r.law_case else '—' }}</strong></td>
-            <td>{{ r.title }}</td>
-            <td style="font-weight:700;color:#f59e0b;">{{ r.duration_hours }} س</td>
-            <td style="font-weight:700;color:#10b981;">{{ "%.2f"|format(r.duration_hours * r.billable_rate) }}</td>
-            <td style="font-size:.8rem;color:var(--text-muted);">{{ r.user_id }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% if not records %}
-      <div class="empty-state">
-        <i class="fa-solid fa-clock"></i>
-        <p style="font-weight:600;">لا توجد سجلات ساعات بعد.</p>
-      </div>
-      {% endif %}
-    </div>
-  </div>
-</div>
+<style>
+.pill-btn {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.pill-btn:hover { background: #e2e8f0; }
+.pill-btn.active { background: #1e293b; color: white; border-color: #1e293b; }
+.pill-success.active { background: #059669 !important; border-color: #059669 !important; }
+.pill-warning.active { background: #d97706 !important; border-color: #d97706 !important; }
+.ts-row:hover td { background: #f8fafc; }
+.ts-row.selected td { background: #eff6ff !important; }
+</style>
 {% endblock %}
 
 {% block scripts %}
 <div id="timesheet-data-store" data-records="{{ records_json | forceescape }}" style="display: none;"></div>
 <script>
-const allRecords = JSON.parse(document.getElementById('timesheet-data-store').getAttribute('data-records'));
-let selectedId = null;
+const allRecords = JSON.parse(document.getElementById('timesheet-data-store').getAttribute('data-records') || '[]');
+let currentQuickFilter = 'all';
 
-function showAlert(msg, type='success') {
-  const el = document.getElementById('alertBox');
-  el.className = 'alert-box alert-' + type;
-  el.textContent = msg;
-  el.style.display = 'block';
-  setTimeout(() => el.style.display = 'none', 3000);
+// Stopwatch state
+let timerInterval = null;
+let timerSeconds = 0;
+
+function toggleTimer() {
+    const btn = document.getElementById('btnTimerToggle');
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        btn.textContent = 'استئناف';
+        btn.style.background = '#3b82f6';
+    } else {
+        timerInterval = setInterval(() => {
+            timerSeconds++;
+            updateTimerDisplay();
+        }, 1000);
+        btn.textContent = 'إيقاف';
+        btn.style.background = '#ef4444';
+    }
 }
 
-function filterTable() {
-  const s = document.getElementById('filterSearch').value.toLowerCase();
-  document.querySelectorAll('#refTbody tr').forEach(r => {
-    r.style.display = (r.dataset.search.includes(s)) ? '' : 'none';
-  });
+function updateTimerDisplay() {
+    const hrs = String(Math.floor(timerSeconds / 3600)).padStart(2, '0');
+    const mins = String(Math.floor((timerSeconds % 3600) / 60)).padStart(2, '0');
+    const secs = String(timerSeconds % 60).padStart(2, '0');
+    document.getElementById('timerDisplay').textContent = `${hrs}:${mins}:${secs}`;
 }
 
-function selectRecord(id, row) {
-  selectedId = id;
-  document.querySelectorAll('#refTbody tr').forEach(r => r.classList.remove('selected'));
-  row.classList.add('selected');
-  const rec = allRecords.find(r => r.id === id);
-  if (!rec) return;
-  document.getElementById('recId').value = rec.id;
-  document.getElementById('fCaseId').value = rec.case_id || '';
-  document.getElementById('fTitle').value = rec.title || '';
-  document.getElementById('fHours').value = rec.duration_hours || 0;
-  document.getElementById('fRate').value = rec.billable_rate || 0;
-  document.getElementById('fUserId').value = rec.user_id || '';
+function resetTimer() {
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+    timerSeconds = 0;
+    updateTimerDisplay();
+    const btn = document.getElementById('btnTimerToggle');
+    btn.textContent = 'بدء';
+    btn.style.background = '#10b981';
+}
+
+function applyTimerToForm() {
+    const decimalHours = (timerSeconds / 3600).toFixed(2);
+    document.getElementById('fHours').value = decimalHours > 0 ? decimalHours : '0.25';
+    showAlert(`تم تطبيق الوقت: ${decimalHours} ساعة على حقل الساعات المستغرقة بنجاح!`);
+}
+
+function showAlert(msg, isSuccess=true) {
+    const el = document.getElementById('alertBox');
+    el.style.display = 'block';
+    el.style.background = isSuccess ? '#dcfce7' : '#fee2e2';
+    el.style.color = isSuccess ? '#15803d' : '#b91c1c';
+    el.style.border = isSuccess ? '1px solid #86efac' : '1px solid #fca5a5';
+    el.textContent = msg;
+    setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+function setQuickFilter(type, btn) {
+    currentQuickFilter = type;
+    document.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    filterTimesheets();
+}
+
+function filterTimesheets() {
+    const search = (document.getElementById('filterSearch').value || '').toLowerCase().trim();
+
+    document.querySelectorAll('.ts-row').forEach(row => {
+        const text = row.dataset.search || '';
+        const isBilled = row.dataset.billed === '1';
+
+        let matchFilter = true;
+        if (currentQuickFilter === 'unbilled') matchFilter = !isBilled;
+        else if (currentQuickFilter === 'billed') matchFilter = isBilled;
+
+        const matchSearch = !search || text.includes(search);
+        row.style.display = (matchFilter && matchSearch) ? '' : 'none';
+    });
+}
+
+function selectTimesheet(id) {
+    const rec = allRecords.find(r => r.id === id);
+    if (!rec) return;
+
+    document.querySelectorAll('.ts-row').forEach(r => r.classList.remove('selected'));
+    const selectedRow = document.getElementById('ts-row-' + id);
+    if (selectedRow) selectedRow.classList.add('selected');
+
+    document.getElementById('formTitle').innerHTML = '<i class="fa-solid fa-pen-to-square" style="color:#6366f1;"></i> تعديل سجل الساعات';
+    document.getElementById('editBadge').style.display = 'inline-block';
+    document.getElementById('recId').value = rec.id;
+    document.getElementById('fCaseId').value = rec.case_id || '';
+    document.getElementById('fTitle').value = rec.title || '';
+    document.getElementById('fUserId').value = rec.user_id || '';
+    document.getElementById('fHours').value = rec.duration_hours || '';
+    document.getElementById('fRate').value = rec.billable_rate || '';
+    document.getElementById('fWorkDate').value = rec.work_date || '';
+    document.getElementById('fIsBilled').checked = (rec.is_billed === 1);
+    document.getElementById('fNotes').value = rec.notes || '';
+
+    document.getElementById('timesheetForm').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function clearForm() {
-  selectedId = null;
-  document.getElementById('recId').value = '';
-  document.getElementById('fCaseId').value = '';
-  document.getElementById('fTitle').value = '';
-  document.getElementById('fHours').value = '';
-  document.getElementById('fRate').value = '';
-  document.getElementById('fUserId').value = '';
-  document.querySelectorAll('#refTbody tr').forEach(r => r.classList.remove('selected'));
+    document.querySelectorAll('.ts-row').forEach(r => r.classList.remove('selected'));
+    document.getElementById('formTitle').innerHTML = '<i class="fa-solid fa-pen-to-square" style="color:#6366f1;"></i> تسجيل ساعات عمل';
+    document.getElementById('editBadge').style.display = 'none';
+    document.getElementById('timesheetForm').reset();
+    document.getElementById('recId').value = '';
+    document.getElementById('fWorkDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('fIsBilled').checked = false;
 }
 
-async function saveRecord(e) {
-  e.preventDefault();
-  const payload = {
-    id: document.getElementById('recId').value || null,
-    case_id: document.getElementById('fCaseId').value,
-    title: document.getElementById('fTitle').value.trim(),
-    duration_hours: parseFloat(document.getElementById('fHours').value || 0),
-    billable_rate: parseFloat(document.getElementById('fRate').value || 0),
-    user_id: document.getElementById('fUserId').value || null
-  };
-  const res = await fetch('/api/timesheets/save', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-  const data = await res.json();
-  if (data.ok) { showAlert(data.message); setTimeout(() => location.reload(), 900); }
-  else showAlert(data.message, 'error');
+async function saveTimesheet(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btnSave');
+    btn.disabled = true;
+
+    const payload = {
+        id: document.getElementById('recId').value ? parseInt(document.getElementById('recId').value) : null,
+        case_id: document.getElementById('fCaseId').value,
+        title: document.getElementById('fTitle').value.trim(),
+        user_id: document.getElementById('fUserId').value,
+        duration_hours: parseFloat(document.getElementById('fHours').value),
+        billable_rate: parseFloat(document.getElementById('fRate').value || 0),
+        work_date: document.getElementById('fWorkDate').value,
+        is_billed: document.getElementById('fIsBilled').checked ? 1 : 0,
+        notes: document.getElementById('fNotes').value.trim() || null
+    };
+
+    try {
+        const res = await fetch('/api/timesheets/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.ok) {
+            showAlert(data.message, true);
+            setTimeout(() => location.reload(), 800);
+        } else {
+            showAlert(data.message, false);
+            btn.disabled = false;
+        }
+    } catch (err) {
+        showAlert('فشل الاتصال بالخادم', false);
+        btn.disabled = false;
+    }
 }
 
-async function deleteRecord() {
-  if (!selectedId) { showAlert('اختر سجلاً أولاً', 'error'); return; }
-  if (!confirm('تأكيد الحذف؟')) return;
-  const res = await fetch(`/api/timesheets/delete/${selectedId}`, { method: 'DELETE' });
-  const data = await res.json();
-  if (data.ok) { showAlert(data.message); setTimeout(() => location.reload(), 900); }
-  else showAlert(data.message, 'error');
+async function toggleBilled(id, event) {
+    event.stopPropagation();
+    try {
+        const res = await fetch(`/api/timesheets/${id}/toggle-billed`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (data.ok) {
+            location.reload();
+        } else {
+            alert(data.message);
+        }
+    } catch (e) {
+        alert('فشل تحديث الحالة');
+    }
 }
+
+async function deleteTimesheet(id) {
+    if (!confirm('هل أنت متأكد من حذف سجل الساعات هذا؟')) return;
+
+    try {
+        const res = await fetch(`/api/timesheets/delete/${id}`, {
+            method: 'DELETE'
+        });
+        const data = await res.json();
+        if (data.ok) {
+            showAlert(data.message, true);
+            setTimeout(() => location.reload(), 700);
+        } else {
+            showAlert(data.message, false);
+        }
+    } catch (e) {
+        showAlert('فشل الحذف', false);
+    }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    if (!document.getElementById('fWorkDate').value) {
+        document.getElementById('fWorkDate').value = new Date().toISOString().split('T')[0];
+    }
+});
 </script>
 {% endblock %}

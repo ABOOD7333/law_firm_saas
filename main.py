@@ -2346,9 +2346,23 @@ async def finance_page(
         raise HTTPException(status_code=403, detail="غير مصرح لك بدخول قسم المالية")
     try:
         office_id = user.office_id
-        transactions = db.query(LawTransactions).filter(LawTransactions.office_id == office_id).order_by(LawTransactions.transaction_at.desc()).all()
-        expenses = db.query(LawExpenses).filter(LawExpenses.office_id == office_id).order_by(LawExpenses.expense_at.desc()).all()
-        cases = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0).all()
+        transactions = db.query(LawTransactions).filter(
+            LawTransactions.office_id == office_id,
+            LawTransactions.is_deleted == 0
+        ).order_by(LawTransactions.transaction_at.desc(), LawTransactions.id.desc()).all()
+
+        expenses = db.query(LawExpenses).filter(
+            LawExpenses.office_id == office_id,
+            LawExpenses.is_deleted == 0
+        ).order_by(LawExpenses.expense_at.desc(), LawExpenses.id.desc()).all()
+
+        cases = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0).order_by(LawCases.case_number.asc()).all()
+        clients = db.query(LawClients).filter(LawClients.office_id == office_id, LawClients.is_deleted == 0).order_by(LawClients.name.asc()).all()
+        clients_map = {c.id: c.name for c in clients}
+
+        # Attach client_name to transactions
+        for t in transactions:
+            t.client_name = clients_map.get(t.client_id, None) if t.client_id else None
 
         target_currency = currency.upper() if currency.upper() in ["SAR", "YER", "USD"] else "SAR"
         
@@ -2361,6 +2375,16 @@ async def finance_page(
         total_income = sum((t.amount * (t.exchange_rate or 1.0)) for t in transactions) * sar_to_target
         total_expenses = sum((e.amount * (e.exchange_rate or 1.0)) for e in expenses) * sar_to_target
         net_profit = total_income - total_expenses
+        profit_margin = round((net_profit / total_income * 100), 1) if total_income > 0 else 0.0
+
+        stats = {
+            "total_income": total_income,
+            "total_expenses": total_expenses,
+            "net_profit": net_profit,
+            "profit_margin": profit_margin,
+            "transactions_count": len(transactions),
+            "expenses_count": len(expenses)
+        }
 
         return templates.TemplateResponse(
             request=request,
@@ -2370,7 +2394,9 @@ async def finance_page(
                 "transactions": transactions,
                 "expenses": expenses,
                 "cases": cases,
+                "clients": clients,
                 "active_page": "finance",
+                "stats": stats,
                 "total_income": total_income,
                 "total_expenses": total_expenses,
                 "net_profit": net_profit,
@@ -2400,15 +2426,20 @@ async def export_invoice_pdf(
     case_title = "عام"
     client_name = "عميل عام"
     client_phone = "-"
+    if trans.client_id:
+        client = db.query(LawClients).filter(LawClients.id == trans.client_id, LawClients.office_id == office_id).first()
+        if client:
+            client_name = getattr(client, 'name', 'عميل عام')
+            client_phone = getattr(client, 'phone', '-') or "-"
     if trans.case_id:
-        case = db.query(LawCases).filter(LawCases.id == trans.case_id).first()
+        case = db.query(LawCases).filter(LawCases.id == trans.case_id, LawCases.office_id == office_id).first()
         if case:
             case_title = case.title
-            if case.client_id:
-                client = db.query(LawClients).filter(LawClients.id == case.client_id).first()
+            if client_name == "عميل عام" and getattr(case, 'client_id', None):
+                client = db.query(LawClients).filter(LawClients.id == case.client_id, LawClients.office_id == office_id).first()
                 if client:
-                    client_name = client.full_name
-                    client_phone = client.phone_number or "-"
+                    client_name = getattr(client, 'name', 'عميل عام')
+                    client_phone = getattr(client, 'phone', '-') or "-"
 
     temp_dir = tempfile.gettempdir()
     pdf_path = os.path.join(temp_dir, f"invoice_{transaction_id}.pdf")
@@ -2462,8 +2493,8 @@ async def export_invoice_pdf(
     c.drawRightString(W - 40, y, ar("بيانات الطرف الأول (المكتب):"))
     c.setFillColorRGB(0.2, 0.2, 0.2)
     c.setFont(font_name, 10.5)
-    c.drawRightString(W - 50, y - 20, ar(f"المكتب: مكتبنا الرئيسي"))
-    c.drawRightString(W - 50, y - 35, ar(f"المحامي المستلم: {user.full_name}"))
+    lawyer_name_val = getattr(user, 'name', '') or getattr(user, 'lawyer_name', '') or "المحامي المسؤول"
+    c.drawRightString(W - 50, y - 35, ar(f"المحامي المستلم: {lawyer_name_val}"))
 
     c.setFont(font_name, 12)
     c.setFillColorRGB(0.05, 0.1, 0.2)
@@ -2546,7 +2577,6 @@ async def export_invoice_pdf(
 
 
 @app.post("/finance/add_transaction")
-
 async def add_transaction(
     request: Request,
     title: str = Form(...),
@@ -2554,7 +2584,11 @@ async def add_transaction(
     transaction_at: str = Form(...),
     currency: str = Form("SAR"),
     exchange_rate: float = Form(1.0),
-    case_id: int = Form(None),
+    case_id: Optional[int] = Form(None),
+    client_id: Optional[int] = Form(None),
+    payment_method: Optional[str] = Form("تحويل بنكي"),
+    reference_number: Optional[str] = Form(None),
+    notes: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     user: AccessProfiles = Depends(get_current_user)
 ):
@@ -2562,14 +2596,21 @@ async def add_transaction(
         return RedirectResponse(url="/", status_code=303)
 
     if not check_user_permission(user, 'finance', 'add'):
-
         raise HTTPException(status_code=403, detail="غير مصرح لك بإضافة إيرادات")
 
     office_id = user.office_id
 
-    if case_id:
-        case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
-        if not case: raise HTTPException(status_code=403, detail="غير مصرح")
+    if case_id and case_id > 0:
+        case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id, LawCases.is_deleted == 0).first()
+        if not case: raise HTTPException(status_code=403, detail="القضية غير موجودة")
+    else:
+        case_id = None
+
+    if client_id and client_id > 0:
+        client = db.query(LawClients).filter(LawClients.id == client_id, LawClients.office_id == office_id, LawClients.is_deleted == 0).first()
+        if not client: client_id = None
+    else:
+        client_id = None
 
     # Calculate stored exchange rate relative to SAR base
     stored_rate = 1.0
@@ -2583,20 +2624,24 @@ async def add_transaction(
 
     new_trans = LawTransactions(
         case_id=case_id,
+        client_id=client_id,
         office_id=office_id,
-        title=title,
+        title=title.strip(),
         amount=amount,
         currency=currency,
         exchange_rate=stored_rate,
         transaction_at=transaction_at,
-        status_key="completed"
+        payment_method=payment_method or "تحويل بنكي",
+        reference_number=reference_number or None,
+        notes=notes or None,
+        status_key="completed",
+        is_deleted=0
     )
     db.add(new_trans)
     db.commit()
     return RedirectResponse(url="/finance", status_code=303)
 
 @app.post("/finance/add_expense")
-
 async def add_expense(
     request: Request,
     title: str = Form(...),
@@ -2604,7 +2649,11 @@ async def add_expense(
     expense_at: str = Form(...),
     currency: str = Form("SAR"),
     exchange_rate: float = Form(1.0),
-    case_id: int = Form(None),
+    case_id: Optional[int] = Form(None),
+    expense_category: Optional[str] = Form("رسوم قضائية"),
+    is_billable: Optional[int] = Form(1),
+    payment_method: Optional[str] = Form("تحويل بنكي"),
+    notes: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     user: AccessProfiles = Depends(get_current_user)
 ):
@@ -2612,14 +2661,15 @@ async def add_expense(
         return RedirectResponse(url="/", status_code=303)
 
     if not check_user_permission(user, 'finance', 'add'):
-
         raise HTTPException(status_code=403, detail="غير مصرح لك بإضافة مصروفات")
 
     office_id = user.office_id
 
-    if case_id:
-        case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
-        if not case: raise HTTPException(status_code=403, detail="غير مصرح")
+    if case_id and case_id > 0:
+        case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id, LawCases.is_deleted == 0).first()
+        if not case: raise HTTPException(status_code=403, detail="القضية غير موجودة")
+    else:
+        case_id = None
 
     # Calculate stored exchange rate relative to SAR base
     stored_rate = 1.0
@@ -2634,14 +2684,41 @@ async def add_expense(
     new_expense = LawExpenses(
         case_id=case_id,
         office_id=office_id,
-        title=title,
+        title=title.strip(),
         amount=amount,
         currency=currency,
         exchange_rate=stored_rate,
-        expense_at=expense_at
+        expense_at=expense_at,
+        expense_category=expense_category or "رسوم قضائية",
+        is_billable=1 if is_billable else 0,
+        payment_method=payment_method or "تحويل بنكي",
+        notes=notes or None,
+        is_deleted=0
     )
     db.add(new_expense)
     db.commit()
+    return RedirectResponse(url="/finance", status_code=303)
+
+@app.post("/finance/delete_transaction/{id}")
+async def delete_transaction(id: int, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
+    if not user: return RedirectResponse(url="/", status_code=303)
+    if not check_user_permission(user, 'finance', 'delete'):
+        raise HTTPException(status_code=403, detail="غير مصرح")
+    t = db.query(LawTransactions).filter(LawTransactions.id == id, LawTransactions.office_id == user.office_id).first()
+    if t:
+        t.is_deleted = 1
+        db.commit()
+    return RedirectResponse(url="/finance", status_code=303)
+
+@app.post("/finance/delete_expense/{id}")
+async def delete_expense_finance(id: int, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
+    if not user: return RedirectResponse(url="/", status_code=303)
+    if not check_user_permission(user, 'finance', 'delete'):
+        raise HTTPException(status_code=403, detail="غير مصرح")
+    e = db.query(LawExpenses).filter(LawExpenses.id == id, LawExpenses.office_id == user.office_id).first()
+    if e:
+        e.is_deleted = 1
+        db.commit()
     return RedirectResponse(url="/finance", status_code=303)
 
 @app.get("/settings", response_class=HTMLResponse)

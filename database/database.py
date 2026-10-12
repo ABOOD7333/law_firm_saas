@@ -500,6 +500,59 @@ def init_db():
         except Exception:
             pass
 
+    # Migrations for law_expenses
+    exp_cols = [
+        ("expense_category", "TEXT DEFAULT 'رسوم قضائية'"),
+        ("is_billable", "INTEGER DEFAULT 1"),
+        ("payment_method", "TEXT DEFAULT 'تحويل بنكي'"),
+        ("receipt_path", "TEXT"),
+        ("notes", "TEXT")
+    ]
+    for col_name, col_type in exp_cols:
+        try:
+            from sqlalchemy import text
+            with engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE law_expenses ADD COLUMN {col_name} {col_type};"))
+        except Exception:
+            pass
+
+    # Migrations for law_timesheets
+    ts_cols = [
+        ("is_billed", "INTEGER DEFAULT 0"),
+        ("invoice_id", "INTEGER"),
+        ("work_date", "TEXT"),
+        ("notes", "TEXT")
+    ]
+    for col_name, col_type in ts_cols:
+        try:
+            from sqlalchemy import text
+            with engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE law_timesheets ADD COLUMN {col_name} {col_type};"))
+        except Exception:
+            pass
+
+    # Migrations for law_transactions
+    trx_cols = [
+        ("payment_method", "TEXT DEFAULT 'تحويل بنكي'"),
+        ("reference_number", "TEXT"),
+        ("client_id", "INTEGER")
+    ]
+    for col_name, col_type in trx_cols:
+        try:
+            from sqlalchemy import text
+            with engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE law_transactions ADD COLUMN {col_name} {col_type};"))
+        except Exception:
+            pass
+
+    # Migrations for invoices
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE invoices ADD COLUMN is_deleted INTEGER DEFAULT 0;"))
+    except Exception:
+        pass
+
     # Never log DATABASE_URL: it may contain a username and password.
     print(f"[Database] Connected using dialect: {engine.dialect.name}")
     print(f"[Database] Tables initialized successfully.")

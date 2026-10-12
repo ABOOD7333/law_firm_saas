@@ -1,209 +1,476 @@
 {% extends "base.html" %}
-{% block title %}مصاريف القضية | LawSaaS{% endblock %}
-
-{% block head %}
-<style>
-.page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
-.grid-layout { display: grid; grid-template-columns: 360px 1fr; gap: 24px; align-items: start; }
-.form-card { background: var(--card-bg); border-radius: 14px; padding: 22px; border: 1px solid var(--border-color); box-shadow: 0 2px 8px rgba(0,0,0,.05); }
-.form-card h3 { font-size: 1.05rem; font-weight: 800; color: var(--secondary-color); margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
-.form-group { margin-bottom: 14px; display: flex; flex-direction: column; gap: 6px; }
-.form-group label { font-size: .85rem; font-weight: 700; color: var(--text-muted); }
-.form-group input, .form-group select { padding: 10px 12px; border: 1.5px solid var(--border-color); border-radius: 9px; font-family: 'Cairo', sans-serif; font-size: .88rem; background: var(--card-bg); color: var(--secondary-color); outline: none; }
-.form-group input:focus, .form-group select:focus { border-color: var(--primary-color); }
-.btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
-.data-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
-.data-table th { background: #f8fafc; color: var(--text-muted); font-weight: 700; padding: 12px 14px; text-align: right; border-bottom: 2px solid var(--border-color); }
-.data-table td { padding: 12px 14px; border-bottom: 1px solid var(--border-color); color: var(--secondary-color); vertical-align: middle; }
-.data-table tr { cursor: pointer; transition: background .15s; }
-.data-table tr:hover td { background: #f0f4ff; }
-.data-table tr.selected td { background: #eff6ff; }
-.empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
-.empty-state i { font-size: 3rem; opacity: .2; display: block; margin-bottom: 12px; }
-.alert-box { padding: 12px 16px; border-radius: 10px; font-size: .88rem; font-weight: 600; margin-bottom: 16px; display: none; }
-.alert-success { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
-.alert-error   { background: #fee2e2; color: #7f1d1d; border: 1px solid #fecaca; }
-.stat-pill { background: #fee2e2; color: #b91c1c; padding: 6px 12px; border-radius: 50px; font-weight: 800; font-size: .85rem; display: inline-flex; align-items: center; gap: 6px; }
-</style>
-{% endblock %}
+{% block title %}مصاريف القضية والنفقات | LawSaaS{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <div>
-    <h1 style="font-size:1.8rem;font-weight:800;color:var(--secondary-color);margin-bottom:4px;">
-      <i class="fa-solid fa-money-bill-wave" style="color:#ef4444;margin-left:10px;"></i>مصاريف القضية
-    </h1>
-    <p style="color:var(--text-muted);font-size:.95rem;">تسجيل المصروفات النثرية والرسوم الخاصة بكل قضية.</p>
-  </div>
-  <div style="display:flex;gap:10px;">
-    {% set total_exp = records | map(attribute='amount') | sum %}
-    <span class="stat-pill"><i class="fa-solid fa-arrow-down"></i> إجمالي المصاريف: {{ "%.2f"|format(total_exp) }}</span>
-  </div>
+<div class="expenses-container" dir="rtl" style="margin-bottom: 40px;">
+    <!-- Page Header -->
+    <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px;">
+        <div>
+            <h1 style="margin: 0; font-size: 1.8rem; font-weight: 800; color: var(--secondary-color);">
+                <i class="fa-solid fa-money-bill-wave" style="color: #ef4444; margin-left: 10px;"></i>
+                مصاريف القضية والنفقات القضائية
+            </h1>
+            <p style="margin: 5px 0 0; color: var(--text-muted); font-size: 0.95rem;">
+                تسجيل وتتبع الرسوم القضائية، أتعاب الخبراء، والنفقات وتحديد المسترد منها من الموكل.
+            </p>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <button class="btn-primary" onclick="clearForm()" style="background: linear-gradient(135deg, #ef4444, #dc2626); border: none; padding: 10px 18px; border-radius: 10px; color: white; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-plus"></i> إضافة مصروف جديد
+            </button>
+        </div>
+    </div>
+
+    <!-- Live KPI Ribbon -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 15px; margin-bottom: 25px;">
+        <div class="card" style="padding: 16px; border-radius: 12px; border-right: 4px solid #ef4444; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">إجمالي المصروفات</span>
+                <h3 style="margin: 5px 0 0; font-size: 1.5rem; color: #dc2626;">
+                    {{ "{:,.2f}".format(stats.total_expenses) }} <small style="font-size: 0.8rem;">ر.س</small>
+                </h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #fee2e2; color: #ef4444; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fa-solid fa-receipt"></i>
+            </div>
+        </div>
+
+        <div class="card" style="padding: 16px; border-radius: 12px; border-right: 4px solid #10b981; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">قابلة للتحصيل من الموكل</span>
+                <h3 style="margin: 5px 0 0; font-size: 1.5rem; color: #059669;">
+                    {{ "{:,.2f}".format(stats.billable_expenses) }} <small style="font-size: 0.8rem;">ر.س</small>
+                </h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #ecfdf5; color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fa-solid fa-hand-holding-dollar"></i>
+            </div>
+        </div>
+
+        <div class="card" style="padding: 16px; border-radius: 12px; border-right: 4px solid #f59e0b; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">مصاريف المكتب العامة</span>
+                <h3 style="margin: 5px 0 0; font-size: 1.5rem; color: #d97706;">
+                    {{ "{:,.2f}".format(stats.non_billable_expenses) }} <small style="font-size: 0.8rem;">ر.س</small>
+                </h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #fef3c7; color: #f59e0b; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fa-solid fa-building-columns"></i>
+            </div>
+        </div>
+
+        <div class="card" style="padding: 16px; border-radius: 12px; border-right: 4px solid #3b82f6; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">مصروفات هذا الشهر</span>
+                <h3 style="margin: 5px 0 0; font-size: 1.5rem; color: #1d4ed8;">
+                    {{ "{:,.2f}".format(stats.this_month_expenses) }} <small style="font-size: 0.8rem;">ر.س</small>
+                </h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #eff6ff; color: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fa-solid fa-calendar-days"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters Bar -->
+    <div class="card" style="padding: 16px; border-radius: 12px; margin-bottom: 25px;">
+        <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
+            <!-- Filter Pills -->
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="pill-btn active" onclick="setQuickFilter('all', this)">الكل ({{ stats.count }})</button>
+                <button class="pill-btn pill-success" onclick="setQuickFilter('billable', this)">قابلة للفوترة</button>
+                <button class="pill-btn pill-warning" onclick="setQuickFilter('non-billable', this)">مصاريف مكتب</button>
+                <button class="pill-btn pill-danger" onclick="setQuickFilter('رسوم قضائية', this)">رسوم قضائية</button>
+                <button class="pill-btn pill-info" onclick="setQuickFilter('أتعاب خبير / محاسب', this)">أتعاب خبراء</button>
+            </div>
+
+            <!-- Search Field -->
+            <div style="position: relative; min-width: 280px;">
+                <i class="fa-solid fa-magnifying-glass" style="position: absolute; right: 12px; top: 11px; color: #94a3b8;"></i>
+                <input type="text" id="filterSearch" placeholder="بحث بالوصف، القضية، التصنيف..." oninput="filterExpenses()"
+                       style="width: 100%; padding: 8px 36px 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.88rem;">
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Grid Layout (Form + Data Table) -->
+    <div style="display: grid; grid-template-columns: 380px 1fr; gap: 24px; align-items: start;">
+        <!-- Form Card (Add / Edit) -->
+        <div class="card" style="padding: 22px; border-radius: 14px; background: var(--card-bg); border: 1px solid var(--border-color); box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
+                <h3 id="formTitle" style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--secondary-color); display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-pen-to-square" style="color: #ef4444;"></i> إضافة مصروف جديد
+                </h3>
+                <span id="editBadge" style="display:none; background: #fee2e2; color: #dc2626; font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 20px;">تعديل مصروف</span>
+            </div>
+
+            <div id="alertBox" style="display:none; padding: 10px 14px; border-radius: 8px; margin-bottom: 15px; font-size: 0.85rem; font-weight: 600;"></div>
+
+            <form id="expenseForm" onsubmit="saveExpense(event)">
+                <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+                <input type="hidden" id="recId">
+
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">
+                        القضية المرتبطة <span style="color: #ef4444;">*</span>
+                    </label>
+                    <select id="fCaseId" required style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.88rem;">
+                        <option value="">-- اختر القضية --</option>
+                        {% for c in cases %}
+                        <option value="{{ c.id }}">{{ c.case_number }} - {{ c.title[:30] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">
+                        بيان / وصف المصروف <span style="color: #ef4444;">*</span>
+                    </label>
+                    <input type="text" id="fTitle" required placeholder="مثال: رسوم قيد صحيفة الدعوى لدى المحكمة التجارية"
+                           style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.88rem;">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">تصنيف المصروف</label>
+                        <select id="fCategory" style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.85rem;">
+                            <option value="رسوم قضائية">رسوم قضائية</option>
+                            <option value="أتعاب خبير / محاسب">أتعاب خبير / محاسب</option>
+                            <option value="انتقال وتنقلات">انتقال وتنقلات</option>
+                            <option value="نشر وإعلان">نشر وإعلان</option>
+                            <option value="استخراج صكوك ومستندات">استخراج صكوك ومستندات</option>
+                            <option value="أخرى">أخرى</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">طريقة السداد</label>
+                        <select id="fPaymentMethod" style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.85rem;">
+                            <option value="تحويل بنكي">تحويل بنكي</option>
+                            <option value="سداد حكومي">سداد حكومي</option>
+                            <option value="بطاقة مدى / ائتمان">بطاقة مدى / ائتمان</option>
+                            <option value="نقدي">نقدي</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 12px;">
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">
+                            المبلغ <span style="color: #ef4444;">*</span>
+                        </label>
+                        <input type="number" id="fAmount" step="0.01" min="0.01" required placeholder="0.00"
+                               style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.95rem; font-weight: 700;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">العملة</label>
+                        <select id="fCurrency" style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.88rem;">
+                            <option value="SAR">SAR (ر.س)</option>
+                            <option value="USD">USD ($)</option>
+                            <option value="YER">YER (ر.ي)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">تاريخ الصرف</label>
+                    <input type="date" id="fExpenseAt" style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.88rem;">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 12px; display: flex; align-items: center; gap: 8px; background: #f8fafc; padding: 10px 12px; border-radius: 8px;">
+                    <input type="checkbox" id="fIsBillable" checked style="width: 18px; height: 18px; accent-color: #10b981; cursor: pointer;">
+                    <label for="fIsBillable" style="font-size: 0.85rem; font-weight: 700; color: #0f172a; cursor: pointer;">
+                        قابل للتحصيل والفوترة على الموكل
+                    </label>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 18px;">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 5px;">ملاحظات إضافية</label>
+                    <textarea id="fNotes" rows="2" placeholder="رقم الإيصال أو تفاصيل السداد..."
+                              style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 0.88rem;"></textarea>
+                </div>
+
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button type="submit" id="btnSave" style="flex: 1; padding: 10px; border-radius: 8px; background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                        <i class="fa-solid fa-floppy-disk"></i> حفظ المصروف
+                    </button>
+                    <button type="button" onclick="clearForm()" style="padding: 10px 14px; border-radius: 8px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; font-weight: 700; cursor: pointer;">
+                        إلغاء
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Table Card -->
+        <div class="card" style="padding: 0; border-radius: 14px; overflow: hidden; background: var(--card-bg); border: 1px solid var(--border-color); box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+            <div style="padding: 18px 22px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--secondary-color); display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-table-list" style="color: #ef4444;"></i> جدول المصروفات والرسوم
+                </h3>
+                <span style="font-size: 0.8rem; font-weight: 700; background: #fee2e2; color: #dc2626; padding: 4px 12px; border-radius: 50px;">
+                    {{ records|length }} مصروف مسجل
+                </span>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.88rem;">
+                    <thead>
+                        <tr style="background: #f8fafc; color: #64748b; border-bottom: 2px solid var(--border-color); text-align: right;">
+                            <th style="padding: 12px 14px;">القضية</th>
+                            <th style="padding: 12px 14px;">البيان والتصنيف</th>
+                            <th style="padding: 12px 14px;">المبلغ والعملة</th>
+                            <th style="padding: 12px 14px;">طريقة السداد</th>
+                            <th style="padding: 12px 14px;">الفوترة على العميل</th>
+                            <th style="padding: 12px 14px;">التاريخ</th>
+                            <th style="padding: 12px 14px; text-align: center;">إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="expensesTbody">
+                        {% for r in records %}
+                        <tr id="exp-row-{{ r.id }}" class="expense-row"
+                            data-search="{{ r.title | lower }} {{ (r.notes or '') | lower }} {{ (r.expense_category or '') | lower }} {{ (r.law_case.case_number if r.law_case else '') | lower }}"
+                            data-category="{{ r.expense_category or 'رسوم قضائية' }}"
+                            data-billable="{{ 1 if r.is_billable else 0 }}"
+                            style="border-bottom: 1px solid var(--border-color); transition: background 0.15s; cursor: pointer;"
+                            onclick="selectExpense({{ r.id }})">
+                            
+                            <!-- Case -->
+                            <td style="padding: 12px 14px;">
+                                {% if r.law_case %}
+                                <strong style="color: #1e293b; display: block;">{{ r.law_case.case_number }}</strong>
+                                <small style="color: #64748b;">{{ r.law_case.title[:25] }}</small>
+                                {% else %}
+                                <span style="color: #94a3b8;">—</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Title & Category -->
+                            <td style="padding: 12px 14px;">
+                                <strong style="color: #0f172a; display: block;">{{ r.title }}</strong>
+                                <span style="font-size: 0.72rem; padding: 2px 7px; border-radius: 4px; background: #f1f5f9; color: #475569; font-weight: 600;">
+                                    {{ r.expense_category or 'رسوم قضائية' }}
+                                </span>
+                            </td>
+
+                            <!-- Amount -->
+                            <td style="padding: 12px 14px;">
+                                <strong style="color: #dc2626; font-size: 0.95rem;">
+                                    {{ "{:,.2f}".format(r.amount) }}
+                                </strong>
+                                <small style="color: #64748b;">{{ r.currency or 'SAR' }}</small>
+                            </td>
+
+                            <!-- Payment Method -->
+                            <td style="padding: 12px 14px;">
+                                <span style="font-size: 0.8rem; color: #475569;">{{ r.payment_method or 'تحويل بنكي' }}</span>
+                            </td>
+
+                            <!-- Billable -->
+                            <td style="padding: 12px 14px;">
+                                {% if r.is_billable %}
+                                <span style="padding: 3px 9px; border-radius: 20px; font-size: 0.74rem; font-weight: 700; background: #ecfdf5; color: #059669;">
+                                    <i class="fa-solid fa-check"></i> نعم (مسترد)
+                                </span>
+                                {% else %}
+                                <span style="padding: 3px 9px; border-radius: 20px; font-size: 0.74rem; font-weight: 700; background: #f1f5f9; color: #64748b;">
+                                    مصروف مكتب
+                                </span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Date -->
+                            <td style="padding: 12px 14px; font-size: 0.82rem; color: #475569; direction: ltr; text-align: right;">
+                                {{ r.expense_at }}
+                            </td>
+
+                            <!-- Actions -->
+                            <td style="padding: 12px 14px; text-align: center;">
+                                <div style="display: flex; gap: 5px; justify-content: center;" onclick="event.stopPropagation()">
+                                    <button onclick="selectExpense({{ r.id }})" title="تعديل"
+                                            style="width: 32px; height: 32px; border-radius: 6px; border: none; background: #e2e8f0; color: #334155; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    <button onclick="deleteExpense({{ r.id }})" title="حذف"
+                                            style="width: 32px; height: 32px; border-radius: 6px; border: none; background: #fee2e2; color: #dc2626; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                {% if not records %}
+                <div style="text-align: center; padding: 60px 20px; color: #94a3b8;">
+                    <i class="fa-solid fa-money-bill-wave" style="font-size: 3.5rem; opacity: 0.3; margin-bottom: 15px; display: block;"></i>
+                    <h4 style="margin: 0 0 5px; color: #64748b;">لا توجد مصاريف مسجلة حالياً</h4>
+                    <p style="margin: 0; font-size: 0.88rem;">سجّل الرسوم القضائية والمصروفات من النموذج الجانبي لتتبعها وفوترتها.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
 </div>
 
-<div class="grid-layout">
-  <div class="form-card">
-    <h3><i class="fa-solid fa-pen-to-square" style="color:#ef4444;"></i> إضافة / تعديل مصروف</h3>
-    <div id="alertBox" class="alert-box"></div>
-    <form onsubmit="saveRecord(event)">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
-      <input type="hidden" id="recId">
-      <div class="form-group">
-        <label>القضية <span style="color:#ef4444;">*</span></label>
-        <select id="fCaseId" required>
-          <option value="">-- اختر القضية --</option>
-          {% for c in cases %}
-          <option value="{{ c.id }}">{{ c.case_number }} - {{ c.title[:30] }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="form-group">
-        <label>نوع المصروف / الوصف <span style="color:#ef4444;">*</span></label>
-        <input type="text" id="fTitle" list="expList" required placeholder="مثال: رسوم محكمة...">
-        <datalist id="expList">
-          <option value="رسوم محكمة">
-          <option value="طوابع">
-          <option value="خبير">
-          <option value="تنقل">
-          <option value="تصوير">
-          <option value="أخرى">
-        </datalist>
-      </div>
-      <div class="form-group" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        <div>
-          <label>المبلغ <span style="color:#ef4444;">*</span></label>
-          <input type="number" id="fAmount" step="0.01" min="0" required placeholder="0.00">
-        </div>
-        <div>
-          <label>تاريخ المصروف <span style="color:#ef4444;">*</span></label>
-          <input type="date" id="fDate" required>
-        </div>
-      </div>
-      <div class="btn-row">
-        {% if has_perm(user, 'expenses', 'add') or has_perm(user, 'expenses', 'edit') %}
-        <button type="submit" class="action-btn" style="background:linear-gradient(135deg,#10b981,#047857);">
-          <i class="fa-solid fa-floppy-disk"></i> حفظ
-        </button>
-        {% endif %}
-        <button type="button" class="action-btn" style="background:linear-gradient(135deg,#6366f1,#4f46e5);" onclick="clearForm()">
-          <i class="fa-solid fa-plus"></i> جديد
-        </button>
-        {% if has_perm(user, 'expenses', 'delete') %}
-        <button type="button" class="action-btn" style="background:linear-gradient(135deg,#ef4444,#dc2626);" onclick="deleteRecord()">
-          <i class="fa-solid fa-trash"></i> حذف
-        </button>
-        {% endif %}
-      </div>
-    </form>
-  </div>
-
-  <div class="form-card" style="padding:0;overflow:hidden;">
-    <div style="padding:18px 22px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;">
-      <h3 style="margin:0;"><i class="fa-solid fa-list" style="color:#ef4444;margin-left:8px;"></i> المصروفات المسجلة</h3>
-      <input type="text" id="filterSearch" placeholder="بحث..." style="padding:6px 12px;border:1px solid var(--border-color);border-radius:6px;outline:none;" oninput="filterTable()">
-    </div>
-    <div style="overflow-x:auto;">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>القضية</th>
-            <th>النوع / الوصف</th>
-            <th>المبلغ</th>
-            <th>التاريخ</th>
-          </tr>
-        </thead>
-        <tbody id="refTbody">
-          {% for r in records %}
-          <tr onclick="selectRecord({{ r.id }}, this)" data-search="{{ r.title | lower }} {{ r.law_case.case_number if r.law_case else '' }}">
-            <td><strong>{{ r.law_case.case_number if r.law_case else '—' }}</strong></td>
-            <td>{{ r.title }}</td>
-            <td style="font-weight:800;color:#ef4444;">{{ "%.2f"|format(r.amount) }}</td>
-            <td style="direction:ltr;text-align:right;">{{ r.expense_at }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% if not records %}
-      <div class="empty-state">
-        <i class="fa-solid fa-money-bill-wave"></i>
-        <p style="font-weight:600;">لا توجد مصاريف مسجلة بعد.</p>
-      </div>
-      {% endif %}
-    </div>
-  </div>
-</div>
+<style>
+.pill-btn {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.pill-btn:hover { background: #e2e8f0; }
+.pill-btn.active { background: #1e293b; color: white; border-color: #1e293b; }
+.pill-success.active { background: #059669 !important; border-color: #059669 !important; }
+.pill-warning.active { background: #d97706 !important; border-color: #d97706 !important; }
+.pill-danger.active { background: #dc2626 !important; border-color: #dc2626 !important; }
+.pill-info.active { background: #0284c7 !important; border-color: #0284c7 !important; }
+.expense-row:hover td { background: #f8fafc; }
+.expense-row.selected td { background: #eff6ff !important; }
+</style>
 {% endblock %}
 
 {% block scripts %}
 <div id="expenses-data-store" data-records="{{ records_json | forceescape }}" style="display: none;"></div>
 <script>
-const allRecords = JSON.parse(document.getElementById('expenses-data-store').getAttribute('data-records'));
-let selectedId = null;
+const allRecords = JSON.parse(document.getElementById('expenses-data-store').getAttribute('data-records') || '[]');
+let currentQuickFilter = 'all';
 
-function showAlert(msg, type='success') {
-  const el = document.getElementById('alertBox');
-  el.className = 'alert-box alert-' + type;
-  el.textContent = msg;
-  el.style.display = 'block';
-  setTimeout(() => el.style.display = 'none', 3000);
+function showAlert(msg, isSuccess=true) {
+    const el = document.getElementById('alertBox');
+    el.style.display = 'block';
+    el.style.background = isSuccess ? '#dcfce7' : '#fee2e2';
+    el.style.color = isSuccess ? '#15803d' : '#b91c1c';
+    el.style.border = isSuccess ? '1px solid #86efac' : '1px solid #fca5a5';
+    el.textContent = msg;
+    setTimeout(() => { el.style.display = 'none'; }, 4000);
 }
 
-function filterTable() {
-  const s = document.getElementById('filterSearch').value.toLowerCase();
-  document.querySelectorAll('#refTbody tr').forEach(r => {
-    r.style.display = (r.dataset.search.includes(s)) ? '' : 'none';
-  });
+function setQuickFilter(type, btn) {
+    currentQuickFilter = type;
+    document.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    filterExpenses();
 }
 
-function selectRecord(id, row) {
-  selectedId = id;
-  document.querySelectorAll('#refTbody tr').forEach(r => r.classList.remove('selected'));
-  row.classList.add('selected');
-  const rec = allRecords.find(r => r.id === id);
-  if (!rec) return;
-  document.getElementById('recId').value = rec.id;
-  document.getElementById('fCaseId').value = rec.case_id || '';
-  document.getElementById('fTitle').value = rec.title || '';
-  document.getElementById('fAmount').value = rec.amount || 0;
-  document.getElementById('fDate').value = rec.expense_at || '';
+function filterExpenses() {
+    const search = (document.getElementById('filterSearch').value || '').toLowerCase().trim();
+
+    document.querySelectorAll('.expense-row').forEach(row => {
+        const text = row.dataset.search || '';
+        const category = row.dataset.category || '';
+        const isBillable = row.dataset.billable === '1';
+
+        let matchFilter = true;
+        if (currentQuickFilter === 'billable') matchFilter = isBillable;
+        else if (currentQuickFilter === 'non-billable') matchFilter = !isBillable;
+        else if (currentQuickFilter !== 'all') matchFilter = (category === currentQuickFilter);
+
+        const matchSearch = !search || text.includes(search);
+        row.style.display = (matchFilter && matchSearch) ? '' : 'none';
+    });
+}
+
+function selectExpense(id) {
+    const rec = allRecords.find(r => r.id === id);
+    if (!rec) return;
+
+    document.querySelectorAll('.expense-row').forEach(r => r.classList.remove('selected'));
+    const selectedRow = document.getElementById('exp-row-' + id);
+    if (selectedRow) selectedRow.classList.add('selected');
+
+    document.getElementById('formTitle').innerHTML = '<i class="fa-solid fa-pen-to-square" style="color:#ef4444;"></i> تعديل المصروف';
+    document.getElementById('editBadge').style.display = 'inline-block';
+    document.getElementById('recId').value = rec.id;
+    document.getElementById('fCaseId').value = rec.case_id || '';
+    document.getElementById('fTitle').value = rec.title || '';
+    document.getElementById('fCategory').value = rec.expense_category || 'رسوم قضائية';
+    document.getElementById('fPaymentMethod').value = rec.payment_method || 'تحويل بنكي';
+    document.getElementById('fAmount').value = rec.amount || '';
+    document.getElementById('fCurrency').value = rec.currency || 'SAR';
+    document.getElementById('fExpenseAt').value = rec.expense_at || '';
+    document.getElementById('fIsBillable').checked = (rec.is_billable === 1);
+    document.getElementById('fNotes').value = rec.notes || '';
+
+    document.getElementById('expenseForm').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function clearForm() {
-  selectedId = null;
-  document.getElementById('recId').value = '';
-  document.getElementById('fCaseId').value = '';
-  document.getElementById('fTitle').value = '';
-  document.getElementById('fAmount').value = '';
-  document.getElementById('fDate').value = new Date().toISOString().split('T')[0];
-  document.querySelectorAll('#refTbody tr').forEach(r => r.classList.remove('selected'));
+    document.querySelectorAll('.expense-row').forEach(r => r.classList.remove('selected'));
+    document.getElementById('formTitle').innerHTML = '<i class="fa-solid fa-pen-to-square" style="color:#ef4444;"></i> إضافة مصروف جديد';
+    document.getElementById('editBadge').style.display = 'none';
+    document.getElementById('expenseForm').reset();
+    document.getElementById('recId').value = '';
+    document.getElementById('fExpenseAt').value = new Date().toISOString().split('T')[0];
+    document.getElementById('fIsBillable').checked = true;
 }
 
-async function saveRecord(e) {
-  e.preventDefault();
-  const payload = {
-    id: document.getElementById('recId').value || null,
-    case_id: document.getElementById('fCaseId').value,
-    title: document.getElementById('fTitle').value.trim(),
-    amount: parseFloat(document.getElementById('fAmount').value || 0),
-    expense_at: document.getElementById('fDate').value
-  };
-  const res = await fetch('/api/expenses/save', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-  const data = await res.json();
-  if (data.ok) { showAlert(data.message); setTimeout(() => location.reload(), 900); }
-  else showAlert(data.message, 'error');
+async function saveExpense(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btnSave');
+    btn.disabled = true;
+
+    const payload = {
+        id: document.getElementById('recId').value ? parseInt(document.getElementById('recId').value) : null,
+        case_id: document.getElementById('fCaseId').value,
+        title: document.getElementById('fTitle').value.trim(),
+        expense_category: document.getElementById('fCategory').value,
+        payment_method: document.getElementById('fPaymentMethod').value,
+        amount: parseFloat(document.getElementById('fAmount').value),
+        currency: document.getElementById('fCurrency').value,
+        expense_at: document.getElementById('fExpenseAt').value,
+        is_billable: document.getElementById('fIsBillable').checked ? 1 : 0,
+        notes: document.getElementById('fNotes').value.trim() || null
+    };
+
+    try {
+        const res = await fetch('/api/expenses/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.ok) {
+            showAlert(data.message, true);
+            setTimeout(() => location.reload(), 800);
+        } else {
+            showAlert(data.message, false);
+            btn.disabled = false;
+        }
+    } catch (err) {
+        showAlert('فشل الاتصال بالخادم', false);
+        btn.disabled = false;
+    }
 }
 
-async function deleteRecord() {
-  if (!selectedId) { showAlert('اختر سجلاً أولاً', 'error'); return; }
-  if (!confirm('تأكيد الحذف؟')) return;
-  const res = await fetch(`/api/expenses/delete/${selectedId}`, { method: 'DELETE' });
-  const data = await res.json();
-  if (data.ok) { showAlert(data.message); setTimeout(() => location.reload(), 900); }
-  else showAlert(data.message, 'error');
+async function deleteExpense(id) {
+    if (!confirm('هل أنت متأكد من حذف هذا المصروف؟')) return;
+
+    try {
+        const res = await fetch(`/api/expenses/delete/${id}`, {
+            method: 'DELETE'
+        });
+        const data = await res.json();
+        if (data.ok) {
+            showAlert(data.message, true);
+            setTimeout(() => location.reload(), 700);
+        } else {
+            showAlert(data.message, false);
+        }
+    } catch (e) {
+        showAlert('فشل الحذف', false);
+    }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  if(!document.getElementById('fDate').value) document.getElementById('fDate').value = new Date().toISOString().split('T')[0];
+window.addEventListener('DOMContentLoaded', () => {
+    if (!document.getElementById('fExpenseAt').value) {
+        document.getElementById('fExpenseAt').value = new Date().toISOString().split('T')[0];
+    }
 });
 </script>
 {% endblock %}
