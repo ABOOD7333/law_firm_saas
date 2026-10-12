@@ -51,61 +51,75 @@ async def reports_page(
         open_cases = cases_base.filter(LawCases.status_key.in_(['ongoing', 'new', 'مفتوحة', 'قيد المتابعة', 'جديدة', 'draft', 'active'])).count()
         closed_cases = cases_base.filter(LawCases.status_key.in_(['closed', 'مغلقة', 'منتهية'])).count()
 
-        # Cases by type
-        cases_by_type_q = db.query(LawCases.case_type_key, func.count(LawCases.id).label('cnt'))\
-            .filter(LawCases.office_id == office_id, LawCases.is_deleted == 0, LawCases.case_type_key.isnot(None))
-        if start_date:
-            cases_by_type_q = cases_by_type_q.filter(LawCases.created_at >= start_date)
-        cases_by_type_rows = cases_by_type_q.group_by(LawCases.case_type_key).order_by(func.count(LawCases.id).desc()).limit(8).all()
-        cases_by_type = [{"case_type_key": r[0] or "عام", "cnt": int(r[1])} for r in cases_by_type_rows]
-
-        # Cases by status
-        cases_by_status_q = db.query(LawCases.status_key, func.count(LawCases.id).label('cnt'))\
+        # Cases by type (Safe cross-database aggregation)
+        cases_type_rows = db.query(LawCases.case_type_key)\
             .filter(LawCases.office_id == office_id, LawCases.is_deleted == 0)
         if start_date:
-            cases_by_status_q = cases_by_status_q.filter(LawCases.created_at >= start_date)
-        cases_by_status_rows = cases_by_status_q.group_by(LawCases.status_key).all()
-        cases_by_status = [{"status_key": r[0] or "غير محدد", "cnt": int(r[1])} for r in cases_by_status_rows]
+            cases_type_rows = cases_type_rows.filter(LawCases.created_at >= start_date)
+        type_counter = {}
+        for (ct,) in cases_type_rows.all():
+            k = ct or "عام"
+            type_counter[k] = type_counter.get(k, 0) + 1
+        sorted_types = sorted(type_counter.items(), key=lambda x: x[1], reverse=True)[:8]
+        cases_by_type = [{"case_type_key": k, "cnt": v} for k, v in sorted_types]
 
-        # --- Financials (Strictly multi-tenant & soft-delete safe) ---
-        trans_q = db.query(LawTransactions).filter(
-            LawTransactions.office_id == office_id,
-            LawTransactions.is_deleted == 0
-        )
-        exp_q = db.query(LawExpenses).filter(
-            LawExpenses.office_id == office_id,
-            LawExpenses.is_deleted == 0
-        )
+        # Cases by status (Safe cross-database aggregation)
+        cases_status_rows = db.query(LawCases.status_key)\
+            .filter(LawCases.office_id == office_id, LawCases.is_deleted == 0)
         if start_date:
-            trans_q = trans_q.filter(LawTransactions.transaction_at >= start_date)
-            exp_q = exp_q.filter(LawExpenses.expense_at >= start_date)
+            cases_status_rows = cases_status_rows.filter(LawCases.created_at >= start_date)
+        status_counter = {}
+        for (st,) in cases_status_rows.all():
+            k = st or "غير محدد"
+            status_counter[k] = status_counter.get(k, 0) + 1
+        cases_by_status = [{"status_key": k, "cnt": v} for k, v in status_counter.items()]
 
-        income_rows = db.query(
-            func.substr(LawTransactions.transaction_at, 1, 7).label('month'),
-            func.coalesce(func.sum(LawTransactions.amount * func.coalesce(LawTransactions.exchange_rate, 1.0)), 0).label('total')
+        # --- Financials (Safe cross-database aggregation for PostgreSQL & SQLite) ---
+        trans_rows = db.query(
+            LawTransactions.transaction_at,
+            LawTransactions.amount,
+            LawTransactions.exchange_rate
         ).filter(
             LawTransactions.office_id == office_id,
             LawTransactions.is_deleted == 0
-        ).group_by(func.substr(LawTransactions.transaction_at, 1, 7))\
-         .order_by(func.substr(LawTransactions.transaction_at, 1, 7).desc()).limit(6).all()
-        income_data = [{"month": r[0], "total": float(r[1])} for r in reversed(income_rows)]
+        ).all()
 
-        total_income = db.query(func.coalesce(func.sum(LawTransactions.amount * func.coalesce(LawTransactions.exchange_rate, 1.0)), 0))\
-            .filter(LawTransactions.office_id == office_id, LawTransactions.is_deleted == 0)
-        if start_date:
-            total_income = total_income.filter(LawTransactions.transaction_at >= start_date)
-        total_income = total_income.scalar() or 0.0
+        monthly_totals = {}
+        total_income = 0.0
+        for t in trans_rows:
+            d_str = str(t.transaction_at or '')
+            rate = float(t.exchange_rate) if t.exchange_rate is not None else 1.0
+            amt = (float(t.amount) if t.amount is not None else 0.0) * rate
+            if not start_date or d_str >= start_date:
+                total_income += amt
+            m_key = d_str[:7]
+            if len(m_key) == 7:
+                monthly_totals[m_key] = monthly_totals.get(m_key, 0.0) + amt
 
-        total_expenses = db.query(func.coalesce(func.sum(LawExpenses.amount * func.coalesce(LawExpenses.exchange_rate, 1.0)), 0))\
-            .filter(LawExpenses.office_id == office_id, LawExpenses.is_deleted == 0)
-        if start_date:
-            total_expenses = total_expenses.filter(LawExpenses.expense_at >= start_date)
-        total_expenses = total_expenses.scalar() or 0.0
+        sorted_months = sorted(monthly_totals.keys())[-6:]
+        income_data = [{"month": m, "total": round(monthly_totals[m], 2)} for m in sorted_months]
+
+        exp_rows = db.query(
+            LawExpenses.expense_at,
+            LawExpenses.amount,
+            LawExpenses.exchange_rate
+        ).filter(
+            LawExpenses.office_id == office_id,
+            LawExpenses.is_deleted == 0
+        ).all()
+
+        total_expenses = 0.0
+        for e in exp_rows:
+            d_str = str(e.expense_at or '')
+            rate = float(e.exchange_rate) if e.exchange_rate is not None else 1.0
+            amt = (float(e.amount) if e.amount is not None else 0.0) * rate
+            if not start_date or d_str >= start_date:
+                total_expenses += amt
 
         net_profit = total_income - total_expenses
         profit_margin = round((net_profit / total_income * 100), 1) if total_income > 0 else 0.0
 
-        # --- Invoices (ZATCA & e-Invoicing Stats) ---
+        # --- Invoices (e-Invoicing Stats) ---
         inv_q = db.query(Invoices).filter(Invoices.office_id == office_id, Invoices.is_deleted == 0)
         if start_date:
             inv_q = inv_q.filter(Invoices.issue_date >= start_date)
@@ -133,7 +147,7 @@ async def reports_page(
         lawyers = db.query(AccessProfiles).filter(
             AccessProfiles.office_id == office_id,
             AccessProfiles.is_deleted == 0,
-            AccessProfiles.role.in_(['محامٍ', 'محامي', 'مدير المكتب', 'صاحب المكتب', 'مدير']),
+            AccessProfiles.role.in_(['محامٍ', 'محامي', 'مدير المكتب', 'صاحب المكتب', 'مدير', 'مدير النظام', 'مستشار', 'admin', 'owner']),
             AccessProfiles.is_active == 1
         ).all()
         lawyer_ids = [l.id for l in lawyers]

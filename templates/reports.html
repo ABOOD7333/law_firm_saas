@@ -4,6 +4,11 @@
 
 {% block head %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+if (typeof Chart === 'undefined') {
+    document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"><\/script>');
+}
+</script>
 <style>
     .reports-container {
         animation: fadeIn 0.4s ease-out;
@@ -471,10 +476,10 @@
                         <td>
                             <div style="display:flex; align-items:center; gap:12px;">
                                 <div style="width:38px; height:38px; background:rgba(30, 58, 138, 0.08); border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; color:var(--primary-color, #1e3a8a);">
-                                    {{ lawyer.name[0] }}
+                                    {{ (lawyer.name or lawyer.role or 'م')[0] }}
                                 </div>
                                 <div>
-                                    <strong style="color:var(--text-color, #0f172a);">{{ lawyer.name }}</strong>
+                                    <strong style="color:var(--text-color, #0f172a);">{{ lawyer.name or lawyer.role or 'محامٍ' }}</strong>
                                 </div>
                             </div>
                         </td>
@@ -512,9 +517,13 @@
 {% endblock %}
 
 {% block scripts %}
-<!-- بيانات JavaScript الآمنة لتفادي أخطاء محرر القوالب -->
-<div style="display:none;" id="incomeData" data-income="{{ income_data | tojson | forceescape }}"></div>
-<div style="display:none;" id="typeData" data-type="{{ cases_by_type | tojson | forceescape }}"></div>
+<!-- بيانات JavaScript الآمنة المضمنة بصيغة JSON القياسية -->
+<script type="application/json" id="incomeDataJson">
+{{ income_data | tojson | safe }}
+</script>
+<script type="application/json" id="typeDataJson">
+{{ cases_by_type | tojson | safe }}
+</script>
 <div style="display:none;" id="wonJudgments">{{ won_judgments }}</div>
 <div style="display:none;" id="lostJudgments">{{ lost_judgments }}</div>
 <div style="display:none;" id="doneTasks">{{ done_tasks_all }}</div>
@@ -529,12 +538,24 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }, 300);
 
+    // فحص توفر مكتبة الرسم البياني
+    if (typeof Chart === 'undefined') {
+        console.warn("Chart.js library is not loaded.");
+        return;
+    }
+
     // إعدادات خط Chart.js العامة
     Chart.defaults.font.family = "'Tajawal', 'Cairo', sans-serif";
     Chart.defaults.color = "#64748b";
 
     // 1. رسم منحنى الإيرادات
-    const incomeRaw = JSON.parse(document.getElementById('incomeData').getAttribute('data-income') || '[]');
+    let incomeRaw = [];
+    try {
+        const el = document.getElementById('incomeDataJson');
+        if (el && el.textContent.trim()) incomeRaw = JSON.parse(el.textContent.trim());
+    } catch(e) {
+        console.warn("Income JSON parse error:", e);
+    }
     const incomeLabels = incomeRaw.map(d => Array.isArray(d) ? d[0] : (d.month || ''));
     const incomeData = incomeRaw.map(d => Array.isArray(d) ? d[1] : (d.total || 0));
     
@@ -574,7 +595,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // 2. رسم تصنيف القضايا (Doughnut)
-    const typeRaw = JSON.parse(document.getElementById('typeData').getAttribute('data-type') || '[]');
+    let typeRaw = [];
+    try {
+        const el = document.getElementById('typeDataJson');
+        if (el && el.textContent.trim()) typeRaw = JSON.parse(el.textContent.trim());
+    } catch(e) {
+        console.warn("Type JSON parse error:", e);
+    }
     const typeLabels = typeRaw.map(d => Array.isArray(d) ? (d[0] || 'عام') : (d.case_type_key || 'عام'));
     const typeData = typeRaw.map(d => Array.isArray(d) ? d[1] : (d.cnt || 0));
     const colors = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#64748b'];
@@ -609,8 +636,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // 3. رسم نسبة نجاح الأحكام القضائية
-    const won = Number(document.getElementById('wonJudgments').textContent || '0');
-    const lost = Number(document.getElementById('lostJudgments').textContent || '0');
+    const won = Number(document.getElementById('wonJudgments')?.textContent || '0');
+    const lost = Number(document.getElementById('lostJudgments')?.textContent || '0');
     
     if (document.getElementById('judgmentsChart')) {
         new Chart(document.getElementById('judgmentsChart').getContext('2d'), {
@@ -638,8 +665,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // 4. رسم حالة إنجاز المهام
-    const tasksDone = Number(document.getElementById('doneTasks').textContent || '0');
-    const tasksTotal = Number(document.getElementById('totalTasks').textContent || '0');
+    const tasksDone = Number(document.getElementById('doneTasks')?.textContent || '0');
+    const tasksTotal = Number(document.getElementById('totalTasks')?.textContent || '0');
     const tasksPending = Math.max(0, tasksTotal - tasksDone);
     
     if (document.getElementById('tasksChart')) {
