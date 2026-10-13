@@ -13,7 +13,7 @@ import re
 from core.error_handler import safe_error_html
 from database.database import get_db
 from database.models import AccessProfiles, LawCases, LawDocuments, LawClients, LawAuditLog
-from dependencies import get_current_user, templates, check_user_permission
+from dependencies import get_current_user, templates, check_user_permission, user_can_access_case
 
 router = APIRouter()
 
@@ -77,6 +77,8 @@ async def documents_page(
 ):
     if not user:
         return RedirectResponse(url="/", status_code=303)
+    if not check_user_permission(user, "documents", "view"):
+        raise HTTPException(status_code=403, detail="غير مصرح بعرض المستندات")
     try:
         if not user.office_id:
             raise HTTPException(status_code=403, detail="الحساب غير مرتبط بمكتب")
@@ -238,13 +240,21 @@ async def add_document(
     # If case specified, check authorization
     if case_id:
         case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
-        if not case:
+        if not case or not user_can_access_case(db, user, case_id):
             raise HTTPException(status_code=403, detail="غير مصرح لك بإضافة مستندات لهذه القضية")
         if user.role in ['محامي', 'محامٍ'] and getattr(user, 'can_view_all_cases', 1) == 0 and case.lead_lawyer_id != user.id:
             raise HTTPException(status_code=403, detail="غير مصرح لك بإضافة مستندات لهذه القضية")
         # Auto-link client if empty
         if not client_id and case.law_clients:
             client_id = case.law_clients[0].id
+    if client_id:
+        linked_client = db.query(LawClients).filter(
+            LawClients.id == client_id,
+            LawClients.office_id == office_id,
+            LawClients.is_deleted == 0,
+        ).first()
+        if not linked_client or (case_id and linked_client.case_id and linked_client.case_id != case_id):
+            raise HTTPException(status_code=403, detail="الموكل المحدد لا يتبع لمكتبك أو للقضية")
 
     # Generate or validate unique doc_code
     if not doc_code or not doc_code.strip():
@@ -351,12 +361,29 @@ async def edit_document(
     ).first()
     if not d:
         raise HTTPException(status_code=404, detail="المستند غير موجود")
+    if not check_user_permission(user, "documents", "edit"):
+        raise HTTPException(status_code=403, detail="غير مصرح بتعديل المستندات")
 
     # RBAC Check: Ensure user has access
-    if d.case_id and user.role in ['محامي', 'محامٍ'] and getattr(user, 'can_view_all_cases', 1) == 0:
-        c = db.query(LawCases).filter(LawCases.id == d.case_id).first()
-        if c and c.lead_lawyer_id != user.id:
-            raise HTTPException(status_code=403, detail="غير مصرح لك بتعديل هذا المستند")
+    if d.case_id and not user_can_access_case(db, user, d.case_id):
+        raise HTTPException(status_code=403, detail="غير مصرح لك بتعديل هذا المستند")
+
+    if case_id:
+        destination_case = db.query(LawCases).filter(
+            LawCases.id == case_id,
+            LawCases.office_id == office_id,
+            LawCases.is_deleted == 0,
+        ).first()
+        if not destination_case or not user_can_access_case(db, user, case_id):
+            raise HTTPException(status_code=403, detail="القضية المحددة غير موجودة أو غير مصرح بها")
+    if client_id:
+        linked_client = db.query(LawClients).filter(
+            LawClients.id == client_id,
+            LawClients.office_id == office_id,
+            LawClients.is_deleted == 0,
+        ).first()
+        if not linked_client or (case_id and linked_client.case_id and linked_client.case_id != case_id):
+            raise HTTPException(status_code=403, detail="الموكل المحدد لا يتبع لمكتبك أو للقضية")
 
     if not name.strip() or len(name) > 250:
         raise HTTPException(status_code=400, detail="اسم المستند غير صالح")
@@ -428,6 +455,11 @@ async def archive_document(
     ).first()
     if not d:
         raise HTTPException(status_code=404, detail="المستند غير موجود")
+    required_action = "edit" if action == "restore" else "delete"
+    if not check_user_permission(user, "documents", required_action):
+        raise HTTPException(status_code=403, detail="غير مصرح بهذا الإجراء")
+    if d.case_id and not user_can_access_case(db, user, d.case_id):
+        raise HTTPException(status_code=403, detail="غير مصرح بهذه القضية")
 
     if action == "restore":
         d.is_archived = 0
@@ -461,6 +493,10 @@ async def get_document_details(
     ).first()
     if not d:
         raise HTTPException(status_code=404, detail="المستند غير موجود")
+    if not check_user_permission(user, "documents", "view"):
+        raise HTTPException(status_code=403, detail="غير مصرح بعرض هذا المستند")
+    if d.case_id and not user_can_access_case(db, user, d.case_id):
+        raise HTTPException(status_code=403, detail="غير مصرح بهذه القضية")
 
     # Authorize internal notes
     can_view_internal = (user.role in ['مدير المكتب', 'المسؤول', 'أدمن', 'محامي', 'محامٍ'])
@@ -487,7 +523,7 @@ async def get_document_details(
         "keywords": d.keywords or "",
         "notes": d.notes or "",
         "internal_notes": (d.internal_notes or "") if can_view_internal else "",
-        "file_path": d.file_path or "",
+        "file_path": (f"/documents/download/{os.path.basename(d.file_path)}" if d.file_path else ""),
         "file_size": d.file_size or 0,
         "file_size_formatted": file_size_formatted,
         "file_type": d.file_type or "",
@@ -507,11 +543,16 @@ async def download_document(
 ):
     if not user:
         raise HTTPException(status_code=401, detail="غير مصرح")
+    if not re.fullmatch(r"[A-Za-z0-9_-]+\.[A-Za-z0-9]{1,10}", filename):
+        raise HTTPException(status_code=404, detail="الملف غير موجود")
+    if not check_user_permission(user, "documents", "view"):
+        raise HTTPException(status_code=403, detail="غير مصرح بتنزيل المستندات")
 
     # Find the document by path
     doc = db.query(LawDocuments).filter(
-        (LawDocuments.file_path == f"private_uploads/documents/{filename}") |
-        (LawDocuments.file_path == f"static/uploads/documents/{filename}")
+        ((LawDocuments.file_path == f"private_uploads/documents/{filename}") |
+         (LawDocuments.file_path == f"static/uploads/documents/{filename}")),
+        LawDocuments.is_deleted == 0,
     ).first()
 
     if not doc:
@@ -519,20 +560,20 @@ async def download_document(
 
     if doc.office_id != user.office_id:
         raise HTTPException(status_code=403, detail="غير مصرح لك بالوصول لهذا المستند")
+    if doc.case_id and not user_can_access_case(db, user, doc.case_id):
+        raise HTTPException(status_code=403, detail="غير مصرح لك بالوصول لمستندات هذه القضية")
 
-    if doc.case_id and user.role in ['محامي', 'محامٍ'] and getattr(user, 'can_view_all_cases', 1) == 0:
-        c = db.query(LawCases).filter(LawCases.id == doc.case_id).first()
-        if c and c.lead_lawyer_id != user.id:
-            raise HTTPException(status_code=403, detail="غير مصرح لك بالوصول لمستندات هذه القضية")
-
-    path = os.path.join(DOCUMENTS_UPLOAD_DIR, filename)
-    if not os.path.exists(path):
-        path = os.path.join("static", "uploads", "documents", filename)
-
-    if not os.path.exists(path):
+    path = os.path.realpath(doc.file_path or "")
+    allowed_roots = [
+        os.path.realpath(DOCUMENTS_UPLOAD_DIR),
+        os.path.realpath(os.path.join("static", "uploads", "documents")),
+    ]
+    if os.path.basename(path) != filename or not any(
+        os.path.commonpath([root, path]) == root for root in allowed_roots
+    ) or not os.path.isfile(path):
         raise HTTPException(status_code=404, detail="الملف غير موجود على الخادم")
 
     # Log download in audit
     log_document_audit(db, user.office_id, user, "تنزيل مستند", doc, f"الملف: {filename}")
 
-    return FileResponse(path, filename=f"{doc.name}.{doc.file_type or 'pdf'}")
+    return FileResponse(path, filename=f"{doc.name}.{doc.file_type or 'pdf'}", headers={"Cache-Control": "private, no-store"})

@@ -1,4 +1,5 @@
 import json
+import nh3
 from datetime import datetime
 from typing import Optional
 
@@ -9,9 +10,20 @@ from sqlalchemy.orm import Session
 from core.error_handler import safe_error_html
 from database.database import get_db
 from database.models import AccessProfiles, LawCases, LawPleadings, LawOffices
-from dependencies import get_current_user, templates, check_user_permission
+from dependencies import get_current_user, templates, check_user_permission, user_can_access_case
 
 router = APIRouter(tags=["Pleadings & Legal Memos"])
+
+
+def sanitize_pleading_html(value: str) -> str:
+    return nh3.clean(
+        value,
+        tags={"a", "abbr", "b", "blockquote", "br", "code", "div", "em", "h1", "h2", "h3", "hr", "i", "li", "ol", "p", "span", "strong", "sub", "sup", "table", "tbody", "td", "th", "thead", "tr", "u", "ul"},
+        attributes={"a": {"href", "title"}, "td": {"colspan", "rowspan"}, "th": {"colspan", "rowspan"}},
+        url_schemes={"http", "https", "mailto"},
+        strip_comments=True,
+        link_rel="noopener noreferrer",
+    )
 
 
 @router.get("/pleadings", response_class=HTMLResponse)
@@ -22,20 +34,30 @@ async def pleadings_page(
 ):
     if not user:
         return RedirectResponse(url="/", status_code=303)
+    if not check_user_permission(user, "pleadings", "view"):
+        raise HTTPException(status_code=403, detail="غير مصرح بعرض المذكرات")
     try:
         office_id = user.office_id
 
         # 1. Fetch pleadings for office
-        pleadings = db.query(LawPleadings).filter(
+        pleadings_query = db.query(LawPleadings).filter(
             LawPleadings.office_id == office_id,
             LawPleadings.is_deleted == 0
-        ).order_by(LawPleadings.id.desc()).all()
+        )
+        if user.role in {"محامي", "محامٍ"} and not getattr(user, "can_view_all_cases", 0):
+            pleadings_query = pleadings_query.filter(LawPleadings.case_id.in_(
+                db.query(LawCases.id).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0, LawCases.lead_lawyer_id == user.id)
+            ))
+        pleadings = pleadings_query.order_by(LawPleadings.id.desc()).all()
 
         # 2. Fetch active cases for office
-        cases = db.query(LawCases).filter(
+        cases_query = db.query(LawCases).filter(
             LawCases.office_id == office_id,
             LawCases.is_deleted == 0
-        ).order_by(LawCases.id.desc()).all()
+        )
+        if user.role in {"محامي", "محامٍ"} and not getattr(user, "can_view_all_cases", 0):
+            cases_query = cases_query.filter(LawCases.lead_lawyer_id == user.id)
+        cases = cases_query.order_by(LawCases.id.desc()).all()
 
         # 3. Fetch lawyers / team members
         lawyers = db.query(AccessProfiles).filter(
@@ -113,17 +135,25 @@ async def add_pleading(
         LawCases.office_id == office_id,
         LawCases.is_deleted == 0
     ).first()
-    if not case:
-        raise HTTPException(status_code=404, detail="القضية غير موجودة أو غير تابعة لمكتبك")
+    if not case or not user_can_access_case(db, user, case_id):
+        raise HTTPException(status_code=404, detail="القضية غير موجودة أو غير مصرح بها")
 
     effective_lawyer_id = lead_lawyer_id if lead_lawyer_id else user.id
+    lawyer = db.query(AccessProfiles).filter(
+        AccessProfiles.id == effective_lawyer_id,
+        AccessProfiles.office_id == office_id,
+        AccessProfiles.is_active == 1,
+        AccessProfiles.is_deleted == 0,
+    ).first()
+    if not lawyer:
+        raise HTTPException(status_code=403, detail="المحامي المحدد غير تابع لهذا المكتب")
 
     new_pleading = LawPleadings(
         case_id=case_id,
         office_id=office_id,
         title=title.strip(),
         pleading_type_key=pleading_type_key.strip(),
-        content_html=content_html.strip() if content_html else "",
+        content_html=sanitize_pleading_html(content_html or ""),
         issue_date=issue_date.strip() if issue_date else datetime.now().strftime("%Y-%m-%d"),
         status_key=status_key.strip() if status_key else "draft",
         lead_lawyer_id=effective_lawyer_id,
@@ -133,7 +163,7 @@ async def add_pleading(
     db.add(new_pleading)
     db.commit()
 
-    target = redirect_to if redirect_to else "/pleadings"
+    target = f"/cases/{case_id}" if redirect_to == "case" else "/pleadings"
     return RedirectResponse(url=target, status_code=303)
 
 
@@ -165,11 +195,15 @@ async def edit_pleading(
     ).first()
     if not pleading:
         raise HTTPException(status_code=404, detail="المذكرة غير موجودة")
+    if not user_can_access_case(db, user, pleading.case_id):
+        raise HTTPException(status_code=403, detail="غير مصرح بهذه القضية")
+    if not user_can_access_case(db, user, case_id):
+        raise HTTPException(status_code=403, detail="القضية المحددة غير موجودة أو غير مصرح بها")
 
     pleading.case_id = case_id
     pleading.title = title.strip()
     pleading.pleading_type_key = pleading_type_key.strip()
-    pleading.content_html = content_html.strip() if content_html else ""
+    pleading.content_html = sanitize_pleading_html(content_html or "")
     pleading.issue_date = issue_date.strip() if issue_date else pleading.issue_date
     pleading.status_key = status_key.strip() if status_key else pleading.status_key
     if lead_lawyer_id:
@@ -179,7 +213,7 @@ async def edit_pleading(
 
     db.commit()
 
-    target = redirect_to if redirect_to else "/pleadings"
+    target = f"/cases/{case_id}" if redirect_to == "case" else "/pleadings"
     return RedirectResponse(url=target, status_code=303)
 
 
@@ -202,11 +236,13 @@ async def delete_pleading(
         LawPleadings.office_id == office_id,
         LawPleadings.is_deleted == 0
     ).first()
+    if pleading and not user_can_access_case(db, user, pleading.case_id):
+        raise HTTPException(status_code=403, detail="غير مصرح بهذه القضية")
     if pleading:
         pleading.is_deleted = 1
         db.commit()
 
-    target = redirect_to if redirect_to else "/pleadings"
+    target = f"/cases/{pleading.case_id}" if redirect_to == "case" and pleading else "/pleadings"
     return RedirectResponse(url=target, status_code=303)
 
 
@@ -226,6 +262,8 @@ async def get_pleading_json(
     ).first()
     if not pleading:
         raise HTTPException(status_code=404, detail="المذكرة غير موجودة")
+    if not check_user_permission(user, "pleadings", "view") or not user_can_access_case(db, user, pleading.case_id):
+        raise HTTPException(status_code=403, detail="غير مصرح بهذه القضية")
 
     case = pleading.law_case
     lawyer = pleading.lead_lawyer
@@ -241,7 +279,7 @@ async def get_pleading_json(
         "title": pleading.title,
         "pleading_type_key": pleading_type_key_label(pleading.pleading_type_key),
         "raw_type_key": pleading.pleading_type_key,
-        "content_html": pleading.content_html or "",
+        "content_html": sanitize_pleading_html(pleading.content_html or ""),
         "issue_date": pleading.issue_date or "",
         "status_key": pleading.status_key,
         "status_label": pleading_status_label(pleading.status_key),
@@ -269,6 +307,8 @@ async def print_pleading(
     ).first()
     if not pleading:
         raise HTTPException(status_code=404, detail="المذكرة غير موجودة")
+    if not check_user_permission(user, "pleadings", "view") or not user_can_access_case(db, user, pleading.case_id):
+        raise HTTPException(status_code=403, detail="غير مصرح بهذه القضية")
 
     office = db.query(LawOffices).filter(LawOffices.id == user.office_id).first()
     case = pleading.law_case
@@ -281,6 +321,7 @@ async def print_pleading(
             "user": user,
             "office": office,
             "pleading": pleading,
+            "pleading_html": sanitize_pleading_html(pleading.content_html or ""),
             "case": case,
             "lawyer": lawyer
         }

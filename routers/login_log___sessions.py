@@ -74,6 +74,8 @@ async def session_revoke(session_id: int, db: Session = Depends(get_db), user: A
 async def session_revoke_all(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     from fastapi.responses import JSONResponse
     if not user: return JSONResponse({"ok": False, "message": "غير مصرح"}, status_code=401)
+    if not (getattr(user, "is_superadmin", 0) == 1 or user.role in {"صاحب المكتب", "صاحب مكتب", "مدير المكتب", "مدير مكتب", "مدير", "مدير النظام", "admin", "owner"}):
+        return JSONResponse({"ok": False, "message": "إنهاء جلسات المكتب متاح لمدير المكتب فقط"}, status_code=403)
     token = request.cookies.get("session_token")
     if not token:
         auth_header = request.headers.get("Authorization", "")

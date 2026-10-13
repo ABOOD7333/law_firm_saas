@@ -12,7 +12,7 @@ from database.models import (
     LawJudgments, LawDocuments, LawNotes, LawCorrespondences,
     LawExecutions, LawPowerOfAttorney
 )
-from dependencies import get_current_user, templates
+from dependencies import get_current_user, templates, check_user_permission, user_can_access_case
 
 router = APIRouter()
 
@@ -29,16 +29,23 @@ async def timeline_page(
         return RedirectResponse(url="/", status_code=303)
     if not user.office_id:
         raise HTTPException(status_code=403, detail="حسابك غير مرتبط بمكتب")
+    if user.role == "موكل" or not check_user_permission(user, "timeline", "view"):
+        raise HTTPException(status_code=403, detail="غير مصرح بعرض الخط الزمني")
+    if case_id and not user_can_access_case(db, user, case_id):
+        raise HTTPException(status_code=403, detail="غير مصرح بهذه القضية")
 
     try:
         today_str = str(date.today())
         office_id = user.office_id
 
         # 1. Fetch available cases for office (Fixed multi-tenant isolation!)
-        cases = db.query(LawCases).filter(
+        cases_query = db.query(LawCases).filter(
             LawCases.office_id == office_id,
             LawCases.is_deleted == 0
-        ).order_by(LawCases.title.asc()).all()
+        )
+        if user.role in {"محامي", "محامٍ"} and not getattr(user, "can_view_all_cases", 0):
+            cases_query = cases_query.filter(LawCases.lead_lawyer_id == user.id)
+        cases = cases_query.order_by(LawCases.title.asc()).all()
         cases_map = {c.id: c for c in cases}
 
         # 2. Build queries with optional case_id filtering
@@ -50,6 +57,17 @@ async def timeline_page(
         correspondences_q = db.query(LawCorrespondences).filter(LawCorrespondences.office_id == office_id, LawCorrespondences.is_deleted == 0)
         executions_q = db.query(LawExecutions).filter(LawExecutions.office_id == office_id, LawExecutions.is_deleted == 0)
         poa_q = db.query(LawPowerOfAttorney).filter(LawPowerOfAttorney.office_id == office_id, LawPowerOfAttorney.is_deleted == 0)
+
+        if user.role in {"محامي", "محامٍ"} and not getattr(user, "can_view_all_cases", 0):
+            scoped_case_ids = [case.id for case in cases]
+            hearings_q = hearings_q.filter(LawHearings.case_id.in_(scoped_case_ids) if scoped_case_ids else LawHearings.case_id == -1)
+            tasks_q = tasks_q.filter(LawTasks.case_id.in_(scoped_case_ids) if scoped_case_ids else LawTasks.case_id == -1)
+            judgments_q = judgments_q.filter(LawJudgments.case_id.in_(scoped_case_ids) if scoped_case_ids else LawJudgments.case_id == -1)
+            documents_q = documents_q.filter(LawDocuments.case_id.in_(scoped_case_ids) if scoped_case_ids else LawDocuments.case_id == -1)
+            notes_q = notes_q.filter(LawNotes.case_id.in_(scoped_case_ids) if scoped_case_ids else LawNotes.case_id == -1)
+            correspondences_q = correspondences_q.filter(LawCorrespondences.case_id.in_(scoped_case_ids) if scoped_case_ids else LawCorrespondences.case_id == -1)
+            executions_q = executions_q.filter(LawExecutions.case_id.in_(scoped_case_ids) if scoped_case_ids else LawExecutions.case_id == -1)
+            poa_q = poa_q.filter(LawPowerOfAttorney.case_id.in_(scoped_case_ids) if scoped_case_ids else LawPowerOfAttorney.case_id == -1)
 
         if case_id:
             hearings_q = hearings_q.filter(LawHearings.case_id == case_id)
@@ -286,12 +304,25 @@ async def timeline_api(
 ):
     if not user or not user.office_id:
         return JSONResponse({"ok": False, "error": "unauthorized"}, status_code=401)
+    if user.role == "موكل" or not check_user_permission(user, "timeline", "view"):
+        return JSONResponse({"ok": False, "error": "forbidden"}, status_code=403)
+    if case_id and not user_can_access_case(db, user, case_id):
+        return JSONResponse({"ok": False, "error": "forbidden"}, status_code=403)
 
     office_id = user.office_id
     hearings_q = db.query(LawHearings).filter(LawHearings.office_id == office_id, LawHearings.is_deleted == 0)
     tasks_q = db.query(LawTasks).filter(LawTasks.office_id == office_id, LawTasks.is_deleted == 0)
     judgments_q = db.query(LawJudgments).filter(LawJudgments.office_id == office_id, LawJudgments.is_deleted == 0)
 
+    if user.role in {"محامي", "محامٍ"} and not getattr(user, "can_view_all_cases", 0):
+        accessible_ids = db.query(LawCases.id).filter(
+            LawCases.office_id == office_id,
+            LawCases.is_deleted == 0,
+            LawCases.lead_lawyer_id == user.id,
+        )
+        hearings_q = hearings_q.filter(LawHearings.case_id.in_(accessible_ids))
+        tasks_q = tasks_q.filter(LawTasks.case_id.in_(accessible_ids))
+        judgments_q = judgments_q.filter(LawJudgments.case_id.in_(accessible_ids))
     if case_id:
         hearings_q = hearings_q.filter(LawHearings.case_id == case_id)
         tasks_q = tasks_q.filter(LawTasks.case_id == case_id)

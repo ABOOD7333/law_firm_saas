@@ -71,6 +71,8 @@ async def pull_sync(req: SyncRequest, db: Session = Depends(get_db), user: Acces
     }
 
     def model_to_dict(obj):
+        if user.role == "موكل" and type(obj) not in client_fields:
+            return {}
         allowed = client_fields.get(type(obj)) if user.role == "موكل" else None
         return {
             column.name: getattr(obj, column.name)
@@ -134,14 +136,17 @@ async def pull_sync(req: SyncRequest, db: Session = Depends(get_db), user: Acces
             LawHearings.is_deleted == 0,
             LawHearings.case_id.in_(case_ids),
         )
+        if user.role == "موكل":
+            hearings_query = hearings_query.filter(LawHearings.show_in_client_portal == 1)
         response_data["hearings"] = [model_to_dict(c) for c in get_delta(hearings_query, last_sync)]
 
         # 5. Documents
-        docs_query = db.query(LawDocuments).filter(
-            LawDocuments.office_id == office_id,
-            LawDocuments.is_deleted == 0,
-            LawDocuments.case_id.in_(case_ids),
-        )
-        response_data["documents"] = [model_to_dict(c) for c in get_delta(docs_query, last_sync)]
+        if user.role != "موكل":
+            docs_query = db.query(LawDocuments).filter(
+                LawDocuments.office_id == office_id,
+                LawDocuments.is_deleted == 0,
+                LawDocuments.case_id.in_(case_ids),
+            )
+            response_data["documents"] = [model_to_dict(c) for c in get_delta(docs_query, last_sync)]
 
     return response_data

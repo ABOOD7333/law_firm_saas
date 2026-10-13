@@ -1,9 +1,10 @@
 # ——— Logging ——————————————————————————————————————————————————————
 from core.logger import app_logger
 from core.audit import write_audit
-from core.security import hash_session_token, login_lockout_active, record_login_failure
+from core.security import hash_session_token, login_lockout_active, record_login_failure, client_records_for_user
 
 import hashlib
+import json
 import uuid
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta, timezone
@@ -17,7 +18,7 @@ import os
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from database.database import get_db, init_db
-from database.models import (AccessProfiles, AuthSessions, AuthVerificationTokens, LawClients, LawCases, LawOffices,
+from database.models import (AccessProfiles, AuthSessions, AuthVerificationTokens, PendingRegistrations, LawClients, LawCases, LawOffices,
     LawHearings, LawTransactions, LawExpenses, LawDocuments, LawTasks, PaymentRequest, LawTimesheets)
 import shutil
 
@@ -105,8 +106,33 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.exceptions import RequestValidationError
 from core.error_handler import render_error_page, safe_error_html, safe_error_json
 
+MAX_REQUEST_BODY_BYTES = 30 * 1024 * 1024
+
 class CSRFMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        normalized_path = os.path.normpath(request.url.path.replace("\\", "/"))
+        if normalized_path == "/static/uploads" or normalized_path.startswith("/static/uploads/"):
+            return JSONResponse({"detail": "Not Found"}, status_code=404, headers={"Cache-Control": "no-store"})
+        if request.method in {"POST", "PUT", "PATCH", "DELETE"}:
+            raw_length = request.headers.get("content-length")
+            if raw_length:
+                try:
+                    if int(raw_length) > MAX_REQUEST_BODY_BYTES:
+                        return JSONResponse({"success": False, "error": "حجم الطلب يتجاوز الحد المسموح"}, status_code=413)
+                except ValueError:
+                    return JSONResponse({"success": False, "error": "حجم الطلب غير صالح"}, status_code=400)
+            else:
+                chunks = []
+                received = 0
+                async for chunk in request.stream():
+                    received += len(chunk)
+                    if received > MAX_REQUEST_BODY_BYTES:
+                        return JSONResponse({"success": False, "error": "حجم الطلب يتجاوز الحد المسموح"}, status_code=413)
+                    chunks.append(chunk)
+                request._body = b"".join(chunks)
+                async def replay_bounded_body():
+                    return {"type": "http.request", "body": request._body, "more_body": False}
+                request._receive = replay_bounded_body
         if request.url.path.startswith("/api/mobile") and (
             request.url.path in {"/api/mobile/login", "/api/mobile/login-2fa"}
             or request.headers.get("Authorization", "").startswith("Bearer ")
@@ -507,7 +533,7 @@ async def api_forgot_send_otp(request: Request, db: Session = Depends(get_db)):
 
     code = generate_otp(6)
 
-    store_otp(email, code)
+    store_otp(email, code, purpose="forgot_password")
 
     sent = send_otp_email(email, code, "forgot_password")
 
@@ -529,7 +555,7 @@ async def api_forgot_verify_otp(request: Request, db: Session = Depends(get_db))
 
     code = data.get("code", "").strip()
 
-    if verify_otp(identifier, code):
+    if verify_otp(identifier, code, purpose="forgot_password"):
 
         user = db.query(AccessProfiles).filter(AccessProfiles.email == identifier).first()
         if not user:
@@ -694,6 +720,7 @@ def _hash_pin(pin: str) -> str:
 
     import hashlib, os, base64
 
+    pin = pin.translate(str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", "01234567890123456789")).strip()
     salt = os.urandom(16)
 
     iterations = 260000
@@ -834,7 +861,7 @@ async def login_submit(
                 db.commit()
 
                 otp_code = generate_otp(6)
-                store_otp(user.email, otp_code)
+                store_otp(user.email, otp_code, purpose="2fa")
                 send_otp_email(user.email, otp_code, purpose="2fa")
 
                 app_logger.info(f"LOGIN_2FA_TRIGGERED | user={user.id} | email={user.email}")
@@ -1032,7 +1059,7 @@ async def login_2fa_submit(
 
         return RedirectResponse(url="/", status_code=303)
 
-    if verify_otp(user.email, code.strip()):
+    if verify_otp(user.email, code.strip(), purpose="2fa"):
 
         # OTP is valid! Clean up temp session in DB
         db_token.consumed_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
@@ -1122,6 +1149,8 @@ async def toggle_2fa(
 
     enabled: int = Form(...),
 
+    current_password: str = Form(None),
+
     db: Session = Depends(get_db),
 
     user: AccessProfiles = Depends(get_current_user)
@@ -1131,6 +1160,8 @@ async def toggle_2fa(
     if not user:
 
         return RedirectResponse(url="/", status_code=303)
+    if not current_password or not _verify_pin(current_password, user.access_pin_hash):
+        raise HTTPException(status_code=403, detail="أدخل كلمة المرور الحالية لتأكيد تغيير التحقق الثنائي")
 
     user.is_2fa_enabled = 1 if enabled == 1 else 0
 
@@ -1145,13 +1176,16 @@ async def dashboard_page(request: Request, db: Session = Depends(get_db), user: 
     try:
         # ── بوابة الموكلين (Client Portal) ──
         if user.role == 'موكل':
-            client_records = db.query(LawClients).filter(
-                (LawClients.phone == user.phone) | (LawClients.email == user.email)
+            client_records = client_records_for_user(db, user)
+            case_ids = list({c.case_id for c in client_records if c.case_id})
+            my_cases = db.query(LawCases).filter(
+                LawCases.office_id == user.office_id,
+                LawCases.id.in_(case_ids) if case_ids else LawCases.id == -1,
+                LawCases.is_deleted == 0,
             ).all()
-            case_ids = [c.case_id for c in client_records if c.case_id]
-            my_cases = db.query(LawCases).filter(LawCases.id.in_(case_ids), LawCases.is_deleted == 0).all() if case_ids else []
             my_hearings = db.query(LawHearings).filter(
-                LawHearings.case_id.in_(case_ids),
+                LawHearings.office_id == user.office_id,
+                LawHearings.case_id.in_(case_ids) if case_ids else LawHearings.case_id == -1,
                 LawHearings.show_in_client_portal == 1,
                 LawHearings.is_deleted == 0
             ).order_by(LawHearings.hearing_at.asc()).limit(5).all() if case_ids else []
@@ -1842,8 +1876,10 @@ async def case_details_page(case_id: int, request: Request, db: Session = Depend
     try:
 
         office_id = user.office_id
+        if not check_user_permission(user, "cases", "view"):
+            raise HTTPException(status_code=403, detail="غير مصرح بعرض القضايا")
 
-        case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
+        case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id, LawCases.is_deleted == 0).first()
 
         if not case:
 
@@ -1851,7 +1887,7 @@ async def case_details_page(case_id: int, request: Request, db: Session = Depend
 
         # منع المحامي من دخول قضية غير تابعة له
 
-        if user.role in ['محامي', 'محامٍ'] and case.lead_lawyer_id != user.id:
+        if user.role in ['محامي', 'محامٍ'] and not getattr(user, "can_view_all_cases", 0) and case.lead_lawyer_id != user.id:
 
             raise HTTPException(status_code=403, detail="غير مصرح لك بالدخول لهذه القضية")
 
@@ -2909,6 +2945,30 @@ async def edit_client(
     return RedirectResponse(url="/clients", status_code=303)
 
 
+@app.get("/hearings/{hearing_id}/attachment")
+async def download_hearing_attachment(hearing_id: int, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
+    if not user or not user.office_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    hearing = db.query(LawHearings).filter(
+        LawHearings.id == hearing_id,
+        LawHearings.office_id == user.office_id,
+        LawHearings.is_deleted == 0,
+    ).first()
+    if not hearing or not hearing.attachment_path:
+        raise HTTPException(status_code=404, detail="ملف الجلسة غير موجود")
+    if user.role == "موكل":
+        linked_case_ids = {row.case_id for row in client_records_for_user(db, user) if row.case_id}
+        if not hearing.show_in_client_portal or hearing.case_id not in linked_case_ids:
+            raise HTTPException(status_code=403, detail="غير مصرح بهذا الملف")
+    elif not check_user_permission(user, "cases", "view") or (hearing.case_id and not user_can_access_case(db, user, hearing.case_id)):
+        raise HTTPException(status_code=403, detail="غير مصرح بهذه القضية")
+    root = os.path.realpath(os.path.join("static", "uploads", "hearings"))
+    path = os.path.realpath(hearing.attachment_path.lstrip("/"))
+    if os.path.commonpath([root, path]) != root or not os.path.isfile(path):
+        raise HTTPException(status_code=404, detail="الملف غير موجود")
+    return FileResponse(path, filename=os.path.basename(path), headers={"Cache-Control": "private, no-store"})
+
+
 @app.get("/api/hearings/{hearing_id}")
 async def get_hearing_details(
     hearing_id: int,
@@ -2918,9 +2978,13 @@ async def get_hearing_details(
     if not user:
         raise HTTPException(status_code=401, detail="غير مصرح")
     office_id = user.office_id
-    hearing = db.query(LawHearings).filter(LawHearings.id == hearing_id, LawHearings.office_id == office_id).first()
+    if user.role == "موكل" or not check_user_permission(user, "cases", "view"):
+        raise HTTPException(status_code=403, detail="غير مصرح بعرض تفاصيل الجلسة")
+    hearing = db.query(LawHearings).filter(LawHearings.id == hearing_id, LawHearings.office_id == office_id, LawHearings.is_deleted == 0).first()
     if not hearing:
         raise HTTPException(status_code=404, detail="المحضر غير موجود")
+    if hearing.case_id and not user_can_access_case(db, user, hearing.case_id):
+        raise HTTPException(status_code=403, detail="غير مصرح بهذه القضية")
     
     # Hide internal notes from non-authorized users (only admin and lawyers)
     can_view_internal = (user.role in ['صاحب المكتب', 'صاحب مكتب', 'مدير المكتب', 'مدير', 'محامي', 'محامٍ'])
@@ -2960,7 +3024,7 @@ async def get_hearing_details(
         "postponement_reason": hearing.postponement_reason or "",
         "next_hearing_requirements": hearing.next_hearing_requirements or "",
         "attachments_json": hearing.attachments_json or "[]",
-        "attachment_path": hearing.attachment_path or ""
+        "attachment_path": f"/hearings/{hearing.id}/attachment" if hearing.attachment_path else ""
     }
 
 @app.post("/hearings/edit")
@@ -3179,9 +3243,7 @@ async def edit_user(
 
     return RedirectResponse(url="/settings", status_code=303)
 
-_pending_registrations = {}
 _PENDING_REGISTRATION_TTL = 15 * 60
-_MAX_PENDING_REGISTRATIONS = 1000
 
 @app.post("/api/register-secure")
 
@@ -3195,13 +3257,11 @@ async def api_register_secure(request: Request, db: Session = Depends(get_db)):
         if is_rate_limited(client_ip, "register_secure", max_attempts=5, window_seconds=3600):
             return _J({"success": False, "error": "تجاوزت عدد محاولات التسجيل. حاول لاحقاً."}, status_code=429)
         record_attempt(client_ip, "register_secure")
-        now = time.time()
-        for pending_email, pending in list(_pending_registrations.items()):
-            if pending.get("expires_at", 0) <= now:
-                _pending_registrations.pop(pending_email, None)
-        if len(_pending_registrations) >= _MAX_PENDING_REGISTRATIONS:
-            oldest_email = min(_pending_registrations, key=lambda key: _pending_registrations[key].get("expires_at", 0))
-            _pending_registrations.pop(oldest_email, None)
+        now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        db.query(PendingRegistrations).filter(PendingRegistrations.expires_at <= now).delete(synchronize_session=False)
+        if db.query(PendingRegistrations).count() >= 1000:
+            db.commit()
+            return _J({"success": False, "error": "تعذر بدء تسجيل جديد الآن. حاول لاحقاً."}, status_code=503)
 
         data = await request.json()
 
@@ -3242,7 +3302,7 @@ async def api_register_secure(request: Request, db: Session = Depends(get_db)):
 
         code = generate_otp(6)
 
-        store_otp(email, code)
+        store_otp(email, code, purpose="register")
 
         is_sent = send_otp_email(email, code, "register")
 
@@ -3250,28 +3310,23 @@ async def api_register_secure(request: Request, db: Session = Depends(get_db)):
 
             return _J({"success": False, "error": "فشل إرسال البريد الإلكتروني. تأكد من صحة الإعدادات."}, status_code=500)
 
-        # حفظ البيانات مؤقتاً في الذاكرة حتى يتم التحقق
-
-        _pending_registrations[email] = {
-
-            "name": name,
-
-            "username": username,
-
-            "email": email,
-
-            "phone": phone,
-
-            "birth_date": birth_date,
-
-            "lawyer_name": lawyer_name,
-
-        "access_pin_hash": _hash_pin(access_pin),
-
-            "role": role,
-            "expires_at": time.time() + _PENDING_REGISTRATION_TTL,
-
-        }
+        expires = (datetime.utcnow() + timedelta(seconds=_PENDING_REGISTRATION_TTL)).strftime("%Y-%m-%d %H:%M:%S")
+        db.query(PendingRegistrations).filter(PendingRegistrations.email == email).delete(synchronize_session=False)
+        db.add(PendingRegistrations(
+            email=email,
+            payload=json.dumps({
+                "name": name,
+                "username": username,
+                "email": email,
+                "phone": phone,
+                "birth_date": birth_date,
+                "lawyer_name": lawyer_name,
+                "access_pin_hash": _hash_pin(access_pin),
+                "role": role,
+            }, ensure_ascii=False),
+            expires_at=expires,
+        ))
+        db.commit()
 
         app_logger.info(f"REGISTER_OTP_SENT | {email}")
 
@@ -3306,18 +3361,18 @@ async def api_verify_register_otp(request: Request, db: Session = Depends(get_db
 
             return _J({"success": False, "error": "البيانات غير مكتملة"}, status_code=400)
 
-        if not verify_otp(email, code):
+        now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        pending_record = db.query(PendingRegistrations).filter(
+            PendingRegistrations.email == email,
+            PendingRegistrations.expires_at > now,
+        ).with_for_update().first()
+        if not pending_record:
+            return _J({"success": False, "error": "انتهت صلاحية جلسة التسجيل، يرجى إعادة تعبئة البيانات"}, status_code=400)
 
+        if not verify_otp(email, code, purpose="register"):
             return _J({"success": False, "error": "رمز التحقق غير صحيح أو منتهي الصلاحية"}, status_code=400)
 
-        # استرجاع البيانات المؤقتة
-
-        pending_user = _pending_registrations.get(email)
-
-        if not pending_user or pending_user.get("expires_at", 0) <= time.time():
-            _pending_registrations.pop(email, None)
-
-            return _J({"success": False, "error": "انتهت صلاحية جلسة التسجيل أو أنك تستخدم نافذة مختلفة، يرجى إعادة تعبئة البيانات"}, status_code=400)
+        pending_user = json.loads(pending_record.payload)
 
         # إنشاء مكتب جديد (مساحة عمل معزولة) لكل مستخدم يسجل من الخارج
 
@@ -3377,11 +3432,8 @@ async def api_verify_register_otp(request: Request, db: Session = Depends(get_db
 
         )
 
+        db.delete(pending_record)
         db.commit()
-
-        # تنظيف الذاكرة
-
-        del _pending_registrations[email]
 
         app_logger.info(f"EMAIL_VERIFIED_AND_REGISTERED | user={new_user.id} | {email}")
 

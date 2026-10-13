@@ -2,7 +2,7 @@ import os
 from datetime import datetime
 from typing import Optional
 from fastapi import APIRouter, Request, Depends, HTTPException, Form, UploadFile, File
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 import traceback
@@ -14,6 +14,36 @@ from dependencies import get_current_user, templates, require_user_permission, u
 from core.upload_security import save_upload
 
 router = APIRouter()
+
+async def _download_correspondence_file(corr_id: int, field_name: str, db: Session, user: AccessProfiles):
+    if not user or not user.office_id or user.role == "موكل":
+        raise HTTPException(status_code=403, detail="غير مصرح بتنزيل هذا الملف")
+    require_user_permission(user, "correspondences", "view")
+    corr = db.query(LawCorrespondences).filter(
+        LawCorrespondences.id == corr_id,
+        LawCorrespondences.office_id == user.office_id,
+        LawCorrespondences.is_deleted == 0,
+    ).first()
+    if not corr:
+        raise HTTPException(status_code=404, detail="المراسلة غير موجودة")
+    if corr.case_id and not user_can_access_case(db, user, corr.case_id):
+        raise HTTPException(status_code=403, detail="غير مصرح بهذه القضية")
+    stored_path = getattr(corr, field_name, None)
+    if not stored_path:
+        raise HTTPException(status_code=404, detail="لا يوجد ملف مرفق")
+    root = os.path.realpath(UPLOAD_DIR)
+    path = os.path.realpath(stored_path.lstrip("/"))
+    if os.path.commonpath([root, path]) != root or not os.path.isfile(path):
+        raise HTTPException(status_code=404, detail="الملف غير موجود")
+    return FileResponse(path, filename=os.path.basename(path), headers={"Cache-Control": "private, no-store"})
+
+@router.get("/correspondences/{corr_id}/attachment")
+async def download_correspondence_attachment(corr_id: int, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
+    return await _download_correspondence_file(corr_id, "attachment_path", db, user)
+
+@router.get("/correspondences/{corr_id}/proof")
+async def download_correspondence_proof(corr_id: int, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
+    return await _download_correspondence_file(corr_id, "proof_of_delivery_path", db, user)
 
 UPLOAD_DIR = os.path.join("static", "uploads", "correspondences")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -349,8 +379,8 @@ async def get_correspondence_api(
         "needs_reply": c.needs_reply,
         "reply_due_date": c.reply_due_date,
         "response_status": c.response_status,
-        "attachment_path": c.attachment_path,
-        "proof_of_delivery_path": c.proof_of_delivery_path,
+        "attachment_path": f"/correspondences/{c.id}/attachment" if c.attachment_path else "",
+        "proof_of_delivery_path": f"/correspondences/{c.id}/proof" if c.proof_of_delivery_path else "",
         "created_at": c.created_at,
         "created_by": (c.created_by.name or c.created_by.username) if c.created_by else ""
     }

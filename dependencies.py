@@ -79,7 +79,7 @@ def user_can_access_case(db: Session, user, case_id: int) -> bool:
     """Return whether a user may access a live case within their own office."""
     from database.models import LawCases
 
-    if not user or not user.office_id:
+    if not user or not user.office_id or user.role == "موكل":
         return False
     query = db.query(LawCases.id).filter(
         LawCases.id == case_id,
@@ -204,8 +204,8 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
             "timesheet": ["/timesheet", "/api/timesheets"],
             "kanban": ["/kanban", "/api/kanban"],
             "intake": ["/intake", "/api/intake"],
-            "automation": ["/automation", "/api/automation"],
-            "timeline": ["/timeline", "/api/timeline"],
+            "automation": ["/automation", "/api/automation", "/api/workflows", "/api/conflict-check", "/api/case", "/api/templates", "/api/doc-generator"],
+            "timeline": ["/timeline", "/api/timeline", "/api/case"],
             "execution": ["/execution", "/api/execution"],
             "power_of_attorney": ["/power_of_attorney", "/api/poa"],
             "advanced_operations": ["/advanced_operations", "/api/advanced"],

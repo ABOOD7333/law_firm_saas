@@ -287,7 +287,7 @@ def safe_error_html(exc: Exception, context: str = "", status_code: int = 500) -
     return render_error_page(
         status_code=status_code,
         title="حدث خطأ في معالجة طلب الصفحة",
-        message=f"واجه النظام خطأ أثناء تنفيذ العملية: {str(exc)[:120]}",
+        message="تعذر إكمال الطلب بسبب خطأ داخلي. يرجى المحاولة لاحقاً.",
         detail=detail_msg,
         context=context
     )
@@ -301,7 +301,7 @@ def safe_error_json(exc: Exception, context: str = "", status_code: int = 500) -
     app_logger.error(f"[API ERROR] {context}: {exc}\n{tb_str}")
 
     catalog = ERROR_CATALOG.get(status_code, ERROR_CATALOG[500])
-    error_msg = str(exc) if str(exc) else catalog["description"]
+    error_msg = catalog["description"]
 
     return JSONResponse(
         {

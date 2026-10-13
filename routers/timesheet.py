@@ -8,7 +8,7 @@ from core.error_handler import safe_error_html
 
 from database.database import get_db
 from database.models import AccessProfiles, LawCases, LawTimesheets
-from dependencies import get_current_user, templates, check_user_permission
+from dependencies import get_current_user, templates, check_user_permission, user_can_access_case
 
 router = APIRouter()
 
@@ -20,12 +20,18 @@ async def timesheet_page(request: Request, db: Session = Depends(get_db), user: 
         raise HTTPException(status_code=403, detail="غير مصرح لك بدخول قسم سجل الساعات")
     try:
         office_id = user.office_id
-        cases = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0).order_by(LawCases.case_number.asc()).all()
+        cases_query = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0)
+        if user.role in {"محامي", "محامٍ"} and not getattr(user, "can_view_all_cases", 0):
+            cases_query = cases_query.filter(LawCases.lead_lawyer_id == user.id)
+        cases = cases_query.order_by(LawCases.case_number.asc()).all()
         users = db.query(AccessProfiles).filter(AccessProfiles.office_id == office_id, AccessProfiles.is_active == 1).order_by(AccessProfiles.name.asc()).all()
-        records = db.query(LawTimesheets).filter(
+        records_query = db.query(LawTimesheets).filter(
             LawTimesheets.office_id == office_id,
             LawTimesheets.is_deleted == 0
-        ).order_by(LawTimesheets.created_at.desc(), LawTimesheets.id.desc()).all()
+        )
+        if user.role in {"محامي", "محامٍ"} and not getattr(user, "can_view_all_cases", 0):
+            records_query = records_query.filter(LawTimesheets.case_id.in_([case.id for case in cases]))
+        records = records_query.order_by(LawTimesheets.created_at.desc(), LawTimesheets.id.desc()).all()
 
         # Users mapping for display
         users_map = {u.id: u.name for u in users}
@@ -81,6 +87,8 @@ async def timesheet_page(request: Request, db: Session = Depends(get_db), user: 
 async def timesheets_get(rec_id: int, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     if not user:
         return JSONResponse({"ok": False, "message": "غير مصرح"}, status_code=401)
+    if user.role == "موكل" or not check_user_permission(user, "timesheet", "view"):
+        return JSONResponse({"ok": False, "message": "غير مصرح بعرض سجل الساعات"}, status_code=403)
     office_id = user.office_id
     r = db.query(LawTimesheets).filter(
         LawTimesheets.id == rec_id,
@@ -89,6 +97,10 @@ async def timesheets_get(rec_id: int, db: Session = Depends(get_db), user: Acces
     ).first()
     if not r:
         return JSONResponse({"ok": False, "message": "السجل غير موجود"}, status_code=404)
+    if r.case_id:
+        case = db.query(LawCases).filter(LawCases.id == r.case_id, LawCases.office_id == office_id, LawCases.is_deleted == 0).first()
+        if not case or not user_can_access_case(db, user, r.case_id):
+            return JSONResponse({"ok": False, "message": "غير مصرح بهذه القضية"}, status_code=403)
 
     return JSONResponse({
         "ok": True,
@@ -133,6 +145,8 @@ async def timesheets_save(request: Request, db: Session = Depends(get_db), user:
         else:
             return JSONResponse({"ok": False, "message": "يجب تحديد قضية مرتبطة بسجل الساعات"})
 
+        if user.role not in {"صاحب المكتب", "صاحب مكتب", "مدير المكتب", "مدير مكتب", "مدير", "مدير النظام", "admin", "owner"} and int(target_user_id) != user.id:
+            return JSONResponse({"ok": False, "message": "لا يمكن تعديل سجل ساعات مستخدم آخر"}, status_code=403)
         assigned_user = db.query(AccessProfiles).filter(AccessProfiles.id == int(target_user_id), AccessProfiles.office_id == office_id).first()
         if not assigned_user:
             return JSONResponse({"ok": False, "message": "المستخدم المعين غير موجود في هذا المكتب"})
@@ -197,6 +211,8 @@ async def timesheets_save(request: Request, db: Session = Depends(get_db), user:
 async def timesheets_toggle_billed(rec_id: int, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     if not user:
         return JSONResponse({"ok": False, "message": "غير مصرح"}, status_code=401)
+    if not check_user_permission(user, "timesheet", "edit"):
+        return JSONResponse({"ok": False, "message": "غير مصرح بتعديل سجل الساعات"}, status_code=403)
     r = db.query(LawTimesheets).filter(
         LawTimesheets.id == rec_id,
         LawTimesheets.office_id == user.office_id,
@@ -204,6 +220,9 @@ async def timesheets_toggle_billed(rec_id: int, db: Session = Depends(get_db), u
     ).first()
     if not r:
         return JSONResponse({"ok": False, "message": "السجل غير موجود"}, status_code=404)
+    case = db.query(LawCases).filter(LawCases.id == r.case_id, LawCases.office_id == user.office_id, LawCases.is_deleted == 0).first()
+    if not case or not user_can_access_case(db, user, r.case_id):
+        return JSONResponse({"ok": False, "message": "غير مصرح بهذه القضية"}, status_code=403)
 
     current_val = getattr(r, 'is_billed', 0) or 0
     new_val = 0 if current_val == 1 else 1

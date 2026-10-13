@@ -288,6 +288,10 @@ async def edit_party(
     ).first()
     if not party:
         raise HTTPException(status_code=404, detail="الطرف القضائي غير موجود")
+    if not check_user_permission(user, "cases", "edit"):
+        raise HTTPException(status_code=403, detail="غير مصرح بتعديل الأطراف")
+    if party.case_id and not user_can_access_case(db, user, party.case_id):
+        raise HTTPException(status_code=403, detail="غير مصرح بهذه القضية")
 
     # IDOR Check: Ensure destination case belongs to the tenant's office
     case = db.query(LawCases).filter(
@@ -295,7 +299,7 @@ async def edit_party(
         LawCases.office_id == office_id,
         LawCases.is_deleted == 0
     ).first()
-    if not case:
+    if not case or not user_can_access_case(db, user, case_id):
         raise HTTPException(status_code=403, detail="غير مصرح بتعديل هذا الطرف")
 
     # RBAC Check: Ensure assigned lawyer if restricted
@@ -361,11 +365,13 @@ async def delete_party(
     ).first()
     if not party:
         raise HTTPException(status_code=404, detail="الطرف غير موجود")
+    if not check_user_permission(user, "cases", "edit"):
+        raise HTTPException(status_code=403, detail="غير مصرح بحذف الأطراف")
 
     # RBAC Check: Ensure assigned lawyer if restricted
-    if party.case_id and user.role in ['محامي', 'محامٍ'] and getattr(user, 'can_view_all_cases', 1) == 0:
-        c = db.query(LawCases).filter(LawCases.id == party.case_id).first()
-        if c and c.lead_lawyer_id != user.id:
+    if party.case_id:
+        c = db.query(LawCases).filter(LawCases.id == party.case_id, LawCases.office_id == office_id, LawCases.is_deleted == 0).first()
+        if not c or not user_can_access_case(db, user, party.case_id):
             raise HTTPException(status_code=403, detail="غير مصرح لك بحذف أطراف هذه القضية")
 
     party.is_deleted = 1
