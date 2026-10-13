@@ -166,8 +166,8 @@
                     data-reply-due="{{ c.reply_due_date or '' }}"
                     data-status="{{ c.response_status or '' }}"
                     data-is-overdue="{{ '1' if is_overdue else '0' }}"
-                    data-attachment="{{ c.attachment_path or '' }}"
-                    data-proof="{{ c.proof_of_delivery_path or '' }}"
+                    data-attachment="{{ ('/correspondences/' ~ c.id ~ '/attachment') if c.attachment_path else '' }}"
+                    data-proof="{{ ('/correspondences/' ~ c.id ~ '/proof') if c.proof_of_delivery_path else '' }}"
                     style="border-bottom:1px solid #f1f5f9; transition:background 0.15s; {% if is_overdue %}background:#fff5f5;{% endif %}">
                     
                     <td style="padding:14px 16px; font-size:0.85rem; color:#64748b;">{{ loop.index }}</td>
@@ -294,12 +294,12 @@
                     <td style="padding:14px 16px;">
                         <div style="display:flex; gap:6px; flex-wrap:wrap;">
                             {% if c.attachment_path %}
-                            <a href="{{ c.attachment_path }}" target="_blank" title="أصل الخطاب" style="width:30px; height:30px; border-radius:6px; background:#eff6ff; color:#2563eb; display:inline-flex; align-items:center; justify-content:center; text-decoration:none;">
+                            <a href="/correspondences/{{ c.id }}/attachment" target="_blank" title="أصل الخطاب" style="width:30px; height:30px; border-radius:6px; background:#eff6ff; color:#2563eb; display:inline-flex; align-items:center; justify-content:center; text-decoration:none;">
                                 <i class="fa-solid fa-file-pdf"></i>
                             </a>
                             {% endif %}
                             {% if c.proof_of_delivery_path %}
-                            <a href="{{ c.proof_of_delivery_path }}" target="_blank" title="إثبات التسليم / كعب الاستلام" style="width:30px; height:30px; border-radius:6px; background:#ecfdf5; color:#059669; display:inline-flex; align-items:center; justify-content:center; text-decoration:none;">
+                            <a href="/correspondences/{{ c.id }}/proof" target="_blank" title="إثبات التسليم / كعب الاستلام" style="width:30px; height:30px; border-radius:6px; background:#ecfdf5; color:#059669; display:inline-flex; align-items:center; justify-content:center; text-decoration:none;">
                                 <i class="fa-solid fa-signature"></i>
                             </a>
                             {% endif %}

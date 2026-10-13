@@ -247,7 +247,7 @@
                                     data-amount="{{ j.awarded_amount or 0 }}"
                                     data-fees="{{ j.legal_fees_awarded or 0 }}"
                                     data-text="{{ j.judgment_text or '' }}"
-                                    data-attachment="{{ j.attachment_path or '' }}"
+                                    data-attachment="{{ ('/judgments/' ~ j.id ~ '/attachment') if j.attachment_path else '' }}"
                                     data-is-final="{{ j.is_final }}"
                                     onclick="openViewJudgmentModal(this)">
                                 <i class="fa-solid fa-eye"></i>

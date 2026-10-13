@@ -7,7 +7,7 @@ from core.error_handler import safe_error_html
 
 from database.database import get_db
 from database.models import AccessProfiles, LawCases, LawExecutions, LawTasks
-from dependencies import get_current_user, templates
+from dependencies import get_current_user, templates, check_user_permission, user_can_access_case
 
 router = APIRouter()
 
@@ -23,16 +23,23 @@ async def execution_page(
         return RedirectResponse(url="/", status_code=303)
     if not user.office_id:
         raise HTTPException(status_code=403, detail="حسابك غير مرتبط بمكتب")
+    if not check_user_permission(user, "execution", "view"):
+        raise HTTPException(status_code=403, detail="غير مصرح بعرض السجلات")
 
     try:
         import json
         office_id = user.office_id
-        cases = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0).order_by(LawCases.title.asc()).all()
+        cases_query = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0)
+        if user.role in {"محامي", "محامٍ"} and not getattr(user, "can_view_all_cases", 0):
+            cases_query = cases_query.filter(LawCases.lead_lawyer_id == user.id)
+        cases = cases_query.order_by(LawCases.title.asc()).all()
 
         base_query = db.query(LawExecutions).filter(
             LawExecutions.office_id == office_id,
             LawExecutions.is_deleted == 0
         )
+        if user.role in {"محامي", "محامٍ"} and not getattr(user, "can_view_all_cases", 0):
+            base_query = base_query.filter(LawExecutions.case_id.in_([case.id for case in cases]))
         all_records = base_query.order_by(LawExecutions.id.desc()).all()
 
         # Stats calculations
@@ -61,7 +68,7 @@ async def execution_page(
                 or (r.authority_name and q_lower in r.authority_name.lower())
             ]
 
-        records_json = json.dumps([{
+        records_json = [{
             "id": r.id,
             "case_id": r.case_id,
             "execution_number": r.execution_number,
@@ -75,7 +82,7 @@ async def execution_page(
             "status_key": r.status_key,
             "request_date": r.request_date or "",
             "notes": getattr(r, 'notes', '') or ""
-        } for r in all_records], ensure_ascii=False)
+        } for r in all_records]
 
         return templates.TemplateResponse(
             request=request, name="execution.html",
@@ -115,6 +122,8 @@ async def execution_get_api(
     ).first()
     if not r:
         return JSONResponse({"ok": False, "error": "not found"}, status_code=404)
+    if not check_user_permission(user, "execution", "view") or (r.case_id and not user_can_access_case(db, user, r.case_id)):
+        return JSONResponse({"ok": False, "error": "forbidden"}, status_code=403)
     return JSONResponse({
         "ok": True,
         "id": r.id,
@@ -142,11 +151,17 @@ async def executions_save(
         return JSONResponse({"ok": False, "message": "غير مصرح"}, status_code=401)
     try:
         data = await request.json()
-        rec_id = data.get("id")
-        case_id = data.get("case_id")
+    except Exception:
+        return JSONResponse({"ok": False, "message": "بيانات الطلب غير صالحة"}, status_code=400)
+    data_permission = "edit" if data.get("id") else "add"
+    if not check_user_permission(user, "execution", data_permission):
+        return JSONResponse({"ok": False, "message": "غير مصرح بهذا الإجراء"}, status_code=403)
+    rec_id = data.get("id")
+    case_id = data.get("case_id")
+    try:
         if case_id:
-            case = db.query(LawCases).filter(LawCases.id == int(case_id), LawCases.office_id == user.office_id).first()
-            if not case:
+            case = db.query(LawCases).filter(LawCases.id == int(case_id), LawCases.office_id == user.office_id, LawCases.is_deleted == 0).first()
+            if not case or not user_can_access_case(db, user, int(case_id)):
                 return JSONResponse({"ok": False, "message": "القضية المحددة غير موجودة أو غير مصرح بها"}, status_code=403)
 
         if rec_id:
@@ -157,6 +172,8 @@ async def executions_save(
             ).first()
             if not r:
                 return JSONResponse({"ok": False, "message": "السجل غير موجود"}, status_code=404)
+            if r.case_id and not user_can_access_case(db, user, r.case_id):
+                return JSONResponse({"ok": False, "message": "غير مصرح بهذه القضية"}, status_code=403)
             r.case_id = int(case_id) if case_id else r.case_id
             r.execution_number = data.get("execution_number") or r.execution_number
             r.authority_name = data.get("authority_name")
@@ -219,11 +236,15 @@ async def executions_delete(
 ):
     if not user or not user.office_id:
         return JSONResponse({"ok": False, "message": "غير مصرح"}, status_code=401)
+    if not check_user_permission(user, "execution", "delete"):
+        return JSONResponse({"ok": False, "message": "غير مصرح بالحذف"}, status_code=403)
     r = db.query(LawExecutions).filter(
         LawExecutions.id == rec_id,
         LawExecutions.office_id == user.office_id,
         LawExecutions.is_deleted == 0
     ).first()
+    if r and r.case_id and not user_can_access_case(db, user, r.case_id):
+        return JSONResponse({"ok": False, "message": "غير مصرح بهذه القضية"}, status_code=403)
     if r:
         r.is_deleted = 1
         db.commit()

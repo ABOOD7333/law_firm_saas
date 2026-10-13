@@ -3,13 +3,13 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Request, Depends, HTTPException, Form, UploadFile, File
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, FileResponse
 from sqlalchemy.orm import Session
 
 from core.error_handler import safe_error_html
 from database.database import get_db
 from database.models import AccessProfiles, LawCases, LawJudgments, LawTasks, LawExecutions, LawOffices
-from dependencies import get_current_user, templates, check_user_permission
+from dependencies import get_current_user, templates, check_user_permission, user_can_access_case
 from core.upload_security import save_upload
 
 router = APIRouter(tags=["Judgments & Court Decrees"])
@@ -23,20 +23,30 @@ async def judgments_page(
 ):
     if not user:
         return RedirectResponse(url="/", status_code=303)
+    if not check_user_permission(user, "judgments", "view"):
+        raise HTTPException(status_code=403, detail="غير مصرح بعرض الأحكام")
     try:
         office_id = user.office_id
 
         # 1. Fetch judgments for office (exclude soft-deleted)
-        raw_judgments = db.query(LawJudgments).filter(
-            LawJudgments.office_id == office_id,
-            LawJudgments.is_deleted == 0
-        ).order_by(LawJudgments.judgment_date.desc()).all()
-
-        # 2. Fetch active cases for office
-        cases = db.query(LawCases).filter(
+        case_query = db.query(LawCases).filter(
             LawCases.office_id == office_id,
             LawCases.is_deleted == 0
-        ).order_by(LawCases.id.desc()).all()
+        )
+        if user.role in {"محامي", "محامٍ"} and not getattr(user, "can_view_all_cases", 0):
+            case_query = case_query.filter(LawCases.lead_lawyer_id == user.id)
+        cases = case_query.order_by(LawCases.id.desc()).all()
+        visible_case_ids = [case.id for case in cases]
+
+        judgment_query = db.query(LawJudgments).filter(
+            LawJudgments.office_id == office_id,
+            LawJudgments.is_deleted == 0
+        )
+        if user.role in {"محامي", "محامٍ"} and not getattr(user, "can_view_all_cases", 0):
+            judgment_query = judgment_query.filter(
+                LawJudgments.case_id.in_(visible_case_ids) if visible_case_ids else LawJudgments.case_id == -1
+            )
+        raw_judgments = judgment_query.order_by(LawJudgments.judgment_date.desc()).all()
 
         # 3. Serialized cases for quick dynamic autofill in modals
         cases_json = []
@@ -147,8 +157,8 @@ async def add_judgment(
         LawCases.office_id == office_id,
         LawCases.is_deleted == 0
     ).first()
-    if not case:
-        raise HTTPException(status_code=404, detail="القضية غير موجودة أو غير تابعة لمكتبك")
+    if not case or not user_can_access_case(db, user, case_id):
+        raise HTTPException(status_code=404, detail="القضية غير موجودة أو غير مصرح بها")
 
     # Compute appeal deadline date
     appeal_deadline_date = None
@@ -209,7 +219,7 @@ async def add_judgment(
 
     db.commit()
 
-    target = redirect_to if redirect_to else "/judgments"
+    target = f"/cases/{case_id}" if redirect_to == "case" else "/judgments"
     return RedirectResponse(url=target, status_code=303)
 
 
@@ -250,6 +260,15 @@ async def edit_judgment(
     ).first()
     if not j:
         raise HTTPException(status_code=404, detail="الحكم غير موجود")
+    if not user_can_access_case(db, user, j.case_id):
+        raise HTTPException(status_code=403, detail="غير مصرح بهذا الحكم")
+    case = db.query(LawCases).filter(
+        LawCases.id == case_id,
+        LawCases.office_id == office_id,
+        LawCases.is_deleted == 0,
+    ).first()
+    if not case or not user_can_access_case(db, user, case_id):
+        raise HTTPException(status_code=403, detail="القضية المحددة غير موجودة أو غير مصرح بها")
 
     # Recompute appeal deadline date
     appeal_deadline_date = None
@@ -310,10 +329,12 @@ async def delete_judgment(
         LawJudgments.is_deleted == 0
     ).first()
     if j:
+        if not user_can_access_case(db, user, j.case_id):
+            raise HTTPException(status_code=403, detail="غير مصرح بهذا الحكم")
         j.is_deleted = 1
         db.commit()
 
-    target = redirect_to if redirect_to else "/judgments"
+    target = f"/cases/{j.case_id}" if redirect_to == "case" and j else "/judgments"
     return RedirectResponse(url=target, status_code=303)
 
 
@@ -326,6 +347,8 @@ async def convert_judgment_to_execution(
     """تحويل الحكم القطعي الصادر لصالح الموكل مباشرة إلى ملف وسند تنفيذي"""
     if not user:
         raise HTTPException(status_code=401, detail="غير مصرح")
+    if not check_user_permission(user, "judgments", "edit") or not check_user_permission(user, "execution", "add"):
+        raise HTTPException(status_code=403, detail="غير مصرح بإنشاء ملف التنفيذ")
 
     office_id = user.office_id
     j = db.query(LawJudgments).filter(
@@ -335,6 +358,8 @@ async def convert_judgment_to_execution(
     ).first()
     if not j:
         raise HTTPException(status_code=404, detail="الحكم غير موجود")
+    if not user_can_access_case(db, user, j.case_id):
+        raise HTTPException(status_code=403, detail="غير مصرح بهذا الحكم")
 
     today_str = datetime.now().strftime("%Y-%m-%d")
     exec_num = f"EXEC-{j.decree_number or j.id}-{int(datetime.now().timestamp()) % 10000}"
@@ -359,6 +384,32 @@ async def convert_judgment_to_execution(
     })
 
 
+@router.get("/judgments/{judgment_id}/attachment")
+async def download_judgment_attachment(
+    judgment_id: int,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user),
+):
+    if not user or not user.office_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    if not check_user_permission(user, "judgments", "view"):
+        raise HTTPException(status_code=403, detail="غير مصرح بتنزيل الحكم")
+    judgment = db.query(LawJudgments).filter(
+        LawJudgments.id == judgment_id,
+        LawJudgments.office_id == user.office_id,
+        LawJudgments.is_deleted == 0,
+    ).first()
+    if not judgment or not judgment.attachment_path:
+        raise HTTPException(status_code=404, detail="ملف الحكم غير موجود")
+    if not user_can_access_case(db, user, judgment.case_id):
+        raise HTTPException(status_code=403, detail="غير مصرح بهذا الحكم")
+    root = os.path.realpath(os.path.join("static", "uploads", "judgments"))
+    path = os.path.realpath(judgment.attachment_path.lstrip("/"))
+    if os.path.commonpath([root, path]) != root or not os.path.isfile(path):
+        raise HTTPException(status_code=404, detail="الملف غير موجود")
+    return FileResponse(path, filename=os.path.basename(path), headers={"Cache-Control": "private, no-store"})
+
+
 @router.get("/api/judgments/{judgment_id}")
 async def get_judgment_json(
     judgment_id: int,
@@ -368,6 +419,8 @@ async def get_judgment_json(
     if not user:
         raise HTTPException(status_code=401, detail="غير مصرح")
 
+    if not check_user_permission(user, "judgments", "view"):
+        raise HTTPException(status_code=403, detail="غير مصرح بعرض الأحكام")
     j = db.query(LawJudgments).filter(
         LawJudgments.id == judgment_id,
         LawJudgments.office_id == user.office_id,
@@ -375,6 +428,8 @@ async def get_judgment_json(
     ).first()
     if not j:
         raise HTTPException(status_code=404, detail="الحكم غير موجود")
+    if not user_can_access_case(db, user, j.case_id):
+        raise HTTPException(status_code=403, detail="غير مصرح بهذا الحكم")
 
     case = j.law_case
     client_name = case.law_clients[0].name if case and case.law_clients else "غير محدد"
@@ -400,5 +455,5 @@ async def get_judgment_json(
         "awarded_amount": float(j.awarded_amount or 0.0),
         "legal_fees_awarded": float(j.legal_fees_awarded or 0.0),
         "is_final": j.is_final or 0,
-        "attachment_path": j.attachment_path or ""
+        "attachment_path": f"/judgments/{j.id}/attachment" if j.attachment_path else ""
     })

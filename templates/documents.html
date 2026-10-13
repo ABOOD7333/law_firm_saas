@@ -256,7 +256,7 @@
 
                             <!-- تنزيل الملف -->
                             {% if d.file_path and has_perm(user, 'documents', 'view') %}
-                            <a href="/{{ d.file_path }}" target="_blank" class="action-btn" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; border-radius: 6px; padding: 6px 10px; text-decoration: none;" title="تنزيل الملف المرفق">
+                            <a href="/documents/download/{{ d.file_path.split('/')[-1] }}" target="_blank" class="action-btn" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; border-radius: 6px; padding: 6px 10px; text-decoration: none;" title="تنزيل الملف المرفق">
                                 <i class="fa-solid fa-download"></i>
                             </a>
                             {% endif %}
@@ -689,7 +689,7 @@
                             <strong style="color: #166534; font-size: 0.95rem;"><i class="fa-solid fa-file-circle-check"></i> الملف المرفق متاح وجاهز</strong>
                             <div style="color: #64748b; font-size: 0.82rem; margin-top: 2px;">الصيغة: ${escapeHtml(data.file_type || '')} | الحجم: ${escapeHtml(data.file_size_formatted || '')}</div>
                         </div>
-                        <a href="/${data.file_path}" target="_blank" style="padding: 8px 16px; background: #059669; color: #fff; border-radius: 6px; text-decoration: none; font-weight: 700; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 6px;">
+                        <a href="${data.file_path}" target="_blank" style="padding: 8px 16px; background: #059669; color: #fff; border-radius: 6px; text-decoration: none; font-weight: 700; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 6px;">
                             <i class="fa-solid fa-download"></i> تنزيل / معاينة الملف
                         </a>
                     </div>` : ''}

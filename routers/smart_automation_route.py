@@ -13,7 +13,7 @@ from database.models import (
     AccessProfiles, LawCases, LawParties, LawClients,
     LawHearings, LawTasks, LawTemplates, LawWorkflowRules, LawAuditLog
 )
-from dependencies import get_current_user, templates
+from dependencies import get_current_user, templates, check_user_permission, user_can_access_case
 
 router = APIRouter()
 
@@ -106,6 +106,8 @@ async def automation_page(
 ):
     if not user:
         return RedirectResponse(url="/", status_code=303)
+    if not check_user_permission(user, "automation", "view"):
+        raise HTTPException(status_code=403, detail="غير مصرح بعرض الأتمتة")
     try:
         office_id = user.office_id
         ensure_default_workflow_rules(db, office_id)
@@ -134,10 +136,13 @@ async def automation_page(
         ).order_by(LawAuditLog.created_at.desc()).limit(15).all()
 
         # Available cases for document generation and testing
-        cases = db.query(LawCases).filter(
+        cases_query = db.query(LawCases).filter(
             LawCases.office_id == office_id,
             LawCases.is_deleted == 0
-        ).order_by(LawCases.id.desc()).all()
+        )
+        if user.role in {"محامي", "محامٍ"} and not getattr(user, "can_view_all_cases", 0):
+            cases_query = cases_query.filter(LawCases.lead_lawyer_id == user.id)
+        cases = cases_query.order_by(LawCases.id.desc()).all()
 
         return templates.TemplateResponse(
             request=request,
@@ -160,8 +165,10 @@ async def get_workflows(
     db: Session = Depends(get_db),
     user: AccessProfiles = Depends(get_current_user)
 ):
-    if not user:
+    if not user or not user.office_id:
         return JSONResponse({"error": "unauthorized"}, status_code=401)
+    if not check_user_permission(user, "automation", "view"):
+        return JSONResponse({"error": "forbidden"}, status_code=403)
     office_id = user.office_id
     ensure_default_workflow_rules(db, office_id)
 
@@ -206,8 +213,10 @@ async def add_workflow_rule(
     db: Session = Depends(get_db),
     user: AccessProfiles = Depends(get_current_user)
 ):
-    if not user:
+    if not user or not user.office_id:
         return JSONResponse({"error": "unauthorized"}, status_code=401)
+    if not check_user_permission(user, "automation", "add"):
+        return JSONResponse({"error": "forbidden"}, status_code=403)
     office_id = user.office_id
     data = await request.json()
 
@@ -253,8 +262,10 @@ async def toggle_workflow(
     db: Session = Depends(get_db),
     user: AccessProfiles = Depends(get_current_user)
 ):
-    if not user:
+    if not user or not user.office_id:
         return JSONResponse({"error": "unauthorized"}, status_code=401)
+    if not check_user_permission(user, "automation", "edit"):
+        return JSONResponse({"error": "forbidden"}, status_code=403)
     office_id = user.office_id
 
     data = await request.json()
@@ -282,8 +293,10 @@ async def save_workflow_config(
     db: Session = Depends(get_db),
     user: AccessProfiles = Depends(get_current_user)
 ):
-    if not user:
+    if not user or not user.office_id:
         return JSONResponse({"error": "unauthorized"}, status_code=401)
+    if not check_user_permission(user, "automation", "edit"):
+        return JSONResponse({"error": "forbidden"}, status_code=403)
     office_id = user.office_id
 
     data = await request.json()
@@ -335,8 +348,10 @@ async def delete_workflow_rule(
     db: Session = Depends(get_db),
     user: AccessProfiles = Depends(get_current_user)
 ):
-    if not user:
+    if not user or not user.office_id:
         return JSONResponse({"error": "unauthorized"}, status_code=401)
+    if not check_user_permission(user, "automation", "delete"):
+        return JSONResponse({"error": "forbidden"}, status_code=403)
     office_id = user.office_id
     data = await request.json()
     rule_id = data.get("rule_id")
@@ -361,8 +376,10 @@ async def test_run_workflow(
     user: AccessProfiles = Depends(get_current_user)
 ):
     """Executes a workflow rule manually on a chosen case to simulate and verify automated action."""
-    if not user:
+    if not user or not user.office_id:
         return JSONResponse({"error": "unauthorized"}, status_code=401)
+    if not check_user_permission(user, "automation", "edit"):
+        return JSONResponse({"error": "forbidden"}, status_code=403)
     office_id = user.office_id
 
     data = await request.json()
@@ -380,8 +397,11 @@ async def test_run_workflow(
     if case_id:
         case = db.query(LawCases).filter(
             LawCases.id == case_id,
-            LawCases.office_id == office_id
+            LawCases.office_id == office_id,
+            LawCases.is_deleted == 0,
         ).first()
+        if not case or not user_can_access_case(db, user, case_id):
+            return JSONResponse({"error": "case not found"}, status_code=404)
 
     # Parse config
     config = {}
@@ -441,13 +461,21 @@ async def conflict_check(
     db: Session = Depends(get_db),
     user: AccessProfiles = Depends(get_current_user)
 ):
-    if not user:
+    if not user or not user.office_id:
         return JSONResponse({"error": "unauthorized"}, status_code=401)
+    if not check_user_permission(user, "automation", "view"):
+        return JSONResponse({"error": "forbidden"}, status_code=403)
     office_id = user.office_id
+    visible_case_ids = db.query(LawCases.id).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0)
+    if user.role in {"محامي", "محامٍ"} and not getattr(user, "can_view_all_cases", 0):
+        visible_case_ids = visible_case_ids.filter(LawCases.lead_lawyer_id == user.id)
+    visible_case_ids = visible_case_ids.subquery()
     results = []
     # Check in parties
     parties = db.query(LawParties).filter(
         LawParties.office_id == office_id,
+        LawParties.case_id.in_(visible_case_ids),
+        LawParties.is_deleted == 0,
         LawParties.name.ilike(f"%{name}%")
     ).all()
     for p in parties:
@@ -462,6 +490,8 @@ async def conflict_check(
     # Check in clients
     clients = db.query(LawClients).filter(
         LawClients.office_id == office_id,
+        LawClients.case_id.in_(visible_case_ids),
+        LawClients.is_deleted == 0,
         LawClients.name.ilike(f"%{name}%")
     ).all()
     for c in clients:
@@ -482,19 +512,29 @@ async def case_timeline(
     db: Session = Depends(get_db),
     user: AccessProfiles = Depends(get_current_user)
 ):
-    if not user:
+    if not user or not user.office_id:
         return JSONResponse({"error": "unauthorized"}, status_code=401)
+    if not check_user_permission(user, "automation", "view"):
+        return JSONResponse({"error": "forbidden"}, status_code=403)
     office_id = user.office_id
-    case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
-    if not case:
+    case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id, LawCases.is_deleted == 0).first()
+    if not case or not user_can_access_case(db, user, case_id):
         return JSONResponse({"error": "not found"}, status_code=404)
 
     events = []
-    hearings = db.query(LawHearings).filter(LawHearings.case_id == case_id).order_by(LawHearings.hearing_at).all()
+    hearings = db.query(LawHearings).filter(
+        LawHearings.case_id == case_id,
+        LawHearings.office_id == office_id,
+        LawHearings.is_deleted == 0,
+    ).order_by(LawHearings.hearing_at).all()
     for h in hearings:
         events.append({"date": str(h.hearing_at or "")[:10], "type": "جلسة", "title": h.title or "جلسة", "status": h.status_key or ""})
 
-    tasks = db.query(LawTasks).filter(LawTasks.case_id == case_id).order_by(LawTasks.due_at).all()
+    tasks = db.query(LawTasks).filter(
+        LawTasks.case_id == case_id,
+        LawTasks.office_id == office_id,
+        LawTasks.is_deleted == 0,
+    ).order_by(LawTasks.due_at).all()
     for t in tasks:
         events.append({"date": str(t.due_at or "")[:10], "type": "مهمة", "title": t.title or "مهمة", "status": t.status_key or ""})
 
@@ -508,8 +548,10 @@ async def get_template(
     db: Session = Depends(get_db),
     user: AccessProfiles = Depends(get_current_user)
 ):
-    if not user:
+    if not user or not user.office_id:
         return JSONResponse({"error": "unauthorized"}, status_code=401)
+    if not check_user_permission(user, "automation", "view"):
+        return JSONResponse({"error": "forbidden"}, status_code=403)
     office_id = user.office_id
     tmpl = db.query(LawTemplates).filter(
         LawTemplates.office_id == office_id,
@@ -525,8 +567,10 @@ async def update_template(
     db: Session = Depends(get_db),
     user: AccessProfiles = Depends(get_current_user)
 ):
-    if not user:
+    if not user or not user.office_id:
         return JSONResponse({"error": "unauthorized"}, status_code=401)
+    if not check_user_permission(user, "automation", "edit"):
+        return JSONResponse({"error": "forbidden"}, status_code=403)
     office_id = user.office_id
     data = await request.json()
     template_key = data.get("template_key")

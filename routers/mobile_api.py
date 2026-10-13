@@ -48,6 +48,21 @@ class Verify2faRequest(BaseModel):
     temp_token: str
     code: str
 
+class ToggleTwoFactorRequest(BaseModel):
+    current_password: str
+    enabled: Optional[bool] = None
+
+def _hash_pin(pin: str) -> str:
+    import os, base64
+    normalized = pin.translate(str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", "01234567890123456789")).strip()
+    salt = os.urandom(16)
+    iterations = 260000
+    actual = hashlib.pbkdf2_hmac("sha256", normalized.encode("utf-8"), salt, iterations)
+    salt_b64 = base64.b64encode(salt).decode("utf-8").rstrip("=")
+    hash_b64 = base64.b64encode(actual).decode("utf-8").rstrip("=")
+    return f"pbkdf2:sha256:{iterations}${salt_b64}${hash_b64}"
+
+
 def _verify_pin(pin: str, stored_hash: str) -> bool:
     import hmac, base64
     if not stored_hash or not pin:
@@ -106,6 +121,8 @@ async def login(req: LoginRequest, db: Session = Depends(get_db)):
             raise HTTPException(status_code=400, detail="رقم القضية غير مطابق للبيانات.")
             
     if _verify_pin(req.password, user.access_pin_hash):
+        if user.access_pin_hash and len(user.access_pin_hash) == 64 and all(ch in "0123456789abcdef" for ch in user.access_pin_hash.lower()):
+            user.access_pin_hash = _hash_pin(req.password)
         user.failed_attempts = 0
         user.locked_until = None
         db.commit()
@@ -126,7 +143,7 @@ async def login(req: LoginRequest, db: Session = Depends(get_db)):
             db.commit()
             
             otp_code = generate_otp(6)
-            store_otp(user.email, otp_code)
+            store_otp(user.email, otp_code, purpose="2fa")
             send_otp_email(user.email, otp_code, purpose="2fa")
             
             return {
@@ -195,7 +212,7 @@ async def verify_2fa(req: Verify2faRequest, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=400, detail="المستخدم غير موجود.")
         
-    if verify_otp(user.email, req.code.strip()):
+    if verify_otp(user.email, req.code.strip(), purpose="2fa"):
         # OTP Valid! Clean temp session
         db_token.consumed_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
         db.commit()
@@ -273,8 +290,15 @@ async def get_dashboard_stats(db: Session = Depends(get_db), user: AccessProfile
         open_cases = db.query(LawCases).filter(LawCases.id.in_(case_ids), LawCases.status_key == 'نشط', LawCases.is_deleted == 0).count() if case_ids else 0
         closed_cases = total_cases - open_cases
         total_clients = 0
-        upcoming_hearings = db.query(LawHearings).filter(LawHearings.case_id.in_(case_ids), LawHearings.status_key == 'pending', LawHearings.is_deleted == 0).count() if case_ids else 0
-        pending_tasks = db.query(LawTasks).filter(LawTasks.case_id.in_(case_ids), LawTasks.status_key.in_(['pending', 'in_progress']), LawTasks.is_deleted == 0).count() if case_ids else 0
+        upcoming_hearings = db.query(LawHearings).filter(
+            LawHearings.office_id == office_id,
+            LawHearings.case_id.in_(case_ids),
+            LawHearings.status_key == 'pending',
+            LawHearings.show_in_client_portal == 1,
+            LawHearings.is_deleted == 0,
+        ).count() if case_ids else 0
+        # Internal staff tasks are not part of the client portal.
+        pending_tasks = 0
     else:
         cases_query = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0)
         if user.role in ['محامي', 'محامٍ'] and getattr(user, "can_view_all_cases", 0) == 0:
@@ -357,17 +381,20 @@ async def get_cases(
         
     cases = query.order_by(LawCases.created_at.desc()).all()
     
-    return [{
-        "id": c.id,
-        "case_number": c.case_number,
-        "title": c.title,
-        "status_key": c.status_key,
-        "case_type_key": c.case_type_key,
-        "summary": c.summary,
-        "estimated_fee": c.estimated_fee,
-        "created_at": c.created_at[:10] if c.created_at else None,
-        "updated_at": c.updated_at
-    } for c in cases]
+    def serialize_case(c):
+        result = {
+            "id": c.id,
+            "case_number": c.case_number,
+            "title": c.title,
+            "status_key": c.status_key,
+            "case_type_key": c.case_type_key,
+            "created_at": c.created_at[:10] if c.created_at else None,
+            "updated_at": c.updated_at,
+        }
+        if user.role != "موكل":
+            result.update({"summary": c.summary, "estimated_fee": c.estimated_fee})
+        return result
+    return [serialize_case(c) for c in cases]
 
 class MobileCaseCreate(BaseModel):
     title: str
@@ -454,6 +481,11 @@ async def get_documents(db: Session = Depends(get_db), user: AccessProfiles = De
     office_id = user.office_id
     if not office_id:
         raise HTTPException(status_code=403, detail="الحساب غير مرتبط بمكتب")
+    if user.role == "موكل":
+        # No client-visibility flag exists for documents; fail closed until one is added.
+        return []
+    if not check_user_permission(user, "documents", "view"):
+        raise HTTPException(status_code=403, detail="غير مصرح بعرض المستندات")
     
     # Fetch cases accessible by this user to filter documents
     cases_query = db.query(LawCases).filter(LawCases.office_id == office_id)
@@ -473,6 +505,7 @@ async def get_documents(db: Session = Depends(get_db), user: AccessProfiles = De
     
     documents = db.query(LawDocuments).filter(
         LawDocuments.office_id == office_id,
+        LawDocuments.is_deleted == 0,
         LawDocuments.case_id.in_(accessible_case_ids)
     ).order_by(LawDocuments.created_at.desc()).all()
     
@@ -487,12 +520,15 @@ async def get_documents(db: Session = Depends(get_db), user: AccessProfiles = De
     } for doc in documents]
 
 @router.post("/settings/toggle-2fa")
-async def toggle_2fa(db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
+async def toggle_2fa(req: ToggleTwoFactorRequest, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     if not user:
         raise HTTPException(status_code=401, detail="غير مصرح")
-        
-    # Toggle 2FA flag
-    user.is_2fa_enabled = 0 if getattr(user, "is_2fa_enabled", 0) == 1 else 1
+    if not req.current_password or not _verify_pin(req.current_password, user.access_pin_hash):
+        raise HTTPException(status_code=403, detail="كلمة المرور الحالية غير صحيحة")
+    next_value = int(req.enabled) if req.enabled is not None else (0 if getattr(user, "is_2fa_enabled", 0) == 1 else 1)
+    if next_value not in (0, 1):
+        raise HTTPException(status_code=400, detail="قيمة إعداد التحقق الثنائي غير صالحة")
+    user.is_2fa_enabled = next_value
     db.commit()
     
     return {

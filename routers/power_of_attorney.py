@@ -7,7 +7,7 @@ from core.error_handler import safe_error_html
 
 from database.database import get_db
 from database.models import AccessProfiles, LawCases, LawPowerOfAttorney, LawTasks
-from dependencies import get_current_user, templates
+from dependencies import get_current_user, templates, check_user_permission, user_can_access_case
 
 router = APIRouter()
 
@@ -23,6 +23,8 @@ async def poa_page(
         return RedirectResponse(url="/", status_code=303)
     if not user.office_id:
         raise HTTPException(status_code=403, detail="حسابك غير مرتبط بمكتب")
+    if not check_user_permission(user, "power_of_attorney", "view"):
+        raise HTTPException(status_code=403, detail="غير مصرح بعرض السجلات")
 
     try:
         import json
@@ -30,11 +32,17 @@ async def poa_page(
         in_30_days = str(date.today() + timedelta(days=30))
         office_id = user.office_id
 
-        cases = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0).order_by(LawCases.title.asc()).all()
-        all_records = db.query(LawPowerOfAttorney).filter(
+        cases_query = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0)
+        if user.role in {"محامي", "محامٍ"} and not getattr(user, "can_view_all_cases", 0):
+            cases_query = cases_query.filter(LawCases.lead_lawyer_id == user.id)
+        cases = cases_query.order_by(LawCases.title.asc()).all()
+        records_query = db.query(LawPowerOfAttorney).filter(
             LawPowerOfAttorney.office_id == office_id,
             LawPowerOfAttorney.is_deleted == 0
-        ).order_by(LawPowerOfAttorney.id.desc()).all()
+        )
+        if user.role in {"محامي", "محامٍ"} and not getattr(user, "can_view_all_cases", 0):
+            records_query = records_query.filter(LawPowerOfAttorney.case_id.in_([case.id for case in cases]))
+        all_records = records_query.order_by(LawPowerOfAttorney.id.desc()).all()
 
         # Stats calculations
         total_count = len(all_records)
@@ -62,7 +70,7 @@ async def poa_page(
                 or (getattr(r, 'agent_name', None) and q_lower in r.agent_name.lower())
             ]
 
-        records_json = json.dumps([{
+        records_json = [{
             "id": r.id,
             "case_id": r.case_id,
             "principal_name": r.principal_name,
@@ -75,7 +83,7 @@ async def poa_page(
             "scope_of_powers": getattr(r, 'scope_of_powers', '') or '',
             "status": getattr(r, 'status', 'active') or 'active',
             "notes": r.notes or ""
-        } for r in all_records], ensure_ascii=False)
+        } for r in all_records]
 
         return templates.TemplateResponse(
             request=request, name="power_of_attorney.html",
@@ -114,6 +122,8 @@ async def poa_get_api(
     ).first()
     if not r:
         return JSONResponse({"ok": False, "error": "not found"}, status_code=404)
+    if not check_user_permission(user, "power_of_attorney", "view") or (r.case_id and not user_can_access_case(db, user, r.case_id)):
+        return JSONResponse({"ok": False, "error": "forbidden"}, status_code=403)
     return JSONResponse({
         "ok": True,
         "id": r.id,
@@ -140,11 +150,17 @@ async def poa_save(
         return JSONResponse({"ok": False, "message": "غير مصرح"}, status_code=401)
     try:
         data = await request.json()
-        rec_id = data.get("id")
-        case_id = data.get("case_id")
+    except Exception:
+        return JSONResponse({"ok": False, "message": "بيانات الطلب غير صالحة"}, status_code=400)
+    data_permission = "edit" if data.get("id") else "add"
+    if not check_user_permission(user, "power_of_attorney", data_permission):
+        return JSONResponse({"ok": False, "message": "غير مصرح بهذا الإجراء"}, status_code=403)
+    rec_id = data.get("id")
+    case_id = data.get("case_id")
+    try:
         if case_id:
-            case = db.query(LawCases).filter(LawCases.id == int(case_id), LawCases.office_id == user.office_id).first()
-            if not case:
+            case = db.query(LawCases).filter(LawCases.id == int(case_id), LawCases.office_id == user.office_id, LawCases.is_deleted == 0).first()
+            if not case or not user_can_access_case(db, user, int(case_id)):
                 return JSONResponse({"ok": False, "message": "القضية المحددة غير موجودة أو غير مصرح بها"}, status_code=403)
 
         if rec_id:
@@ -155,6 +171,8 @@ async def poa_save(
             ).first()
             if not r:
                 return JSONResponse({"ok": False, "message": "السجل غير موجود"}, status_code=404)
+            if r.case_id and not user_can_access_case(db, user, r.case_id):
+                return JSONResponse({"ok": False, "message": "غير مصرح بهذه القضية"}, status_code=403)
             r.case_id = int(case_id) if case_id else r.case_id
             r.principal_name = data.get("principal_name") or r.principal_name
             r.agent_name = data.get("agent_name")
@@ -214,11 +232,15 @@ async def poa_delete(
 ):
     if not user or not user.office_id:
         return JSONResponse({"ok": False, "message": "غير مصرح"}, status_code=401)
+    if not check_user_permission(user, "power_of_attorney", "delete"):
+        return JSONResponse({"ok": False, "message": "غير مصرح بالحذف"}, status_code=403)
     r = db.query(LawPowerOfAttorney).filter(
         LawPowerOfAttorney.id == rec_id,
         LawPowerOfAttorney.office_id == user.office_id,
         LawPowerOfAttorney.is_deleted == 0
     ).first()
+    if r and r.case_id and not user_can_access_case(db, user, r.case_id):
+        return JSONResponse({"ok": False, "message": "غير مصرح بهذه القضية"}, status_code=403)
     if r:
         r.is_deleted = 1
         db.commit()

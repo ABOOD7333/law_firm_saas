@@ -80,12 +80,21 @@ def generate_otp(length: int = 6) -> str:
     return f"{secrets.randbelow(10 ** length):0{length}d}"
 
 
-def store_otp(identifier: str, code: str, ttl_minutes: int = 10):
-    """يحفظ رمز OTP في قاعدة البيانات لمعرف معين (email/phone) لمدة ttl_minutes."""
+def _otp_scoped_identifier(identifier: str, purpose: str = "default") -> str:
+    allowed = {"default", "forgot_password", "2fa", "register", "email_verification"}
+    normalized_purpose = (purpose or "default").strip().lower()
+    normalized_identifier = (identifier or "").lower().strip()
+    if normalized_purpose not in allowed or not normalized_identifier or len(normalized_identifier) > 320:
+        raise ValueError("OTP identifier or purpose is invalid")
+    return f"{normalized_purpose}:{normalized_identifier}"
+
+
+def store_otp(identifier: str, code: str, ttl_minutes: int = 10, purpose: str = "default"):
+    """يحفظ رمز OTP مرتبطاً بمعرفه والغرض منه."""
     from database.models import AuthOtpTokens
     db = _get_db()
     try:
-        ident = identifier.lower().strip()
+        ident = _otp_scoped_identifier(identifier, purpose)
         expires = (datetime.now() + timedelta(minutes=ttl_minutes)).strftime("%Y-%m-%d %H:%M:%S")
         # حذف الرموز القديمة غير المستهلكة لنفس المعرف
         old_tokens = db.query(AuthOtpTokens).filter(AuthOtpTokens.identifier == ident).all()
@@ -107,12 +116,12 @@ def store_otp(identifier: str, code: str, ttl_minutes: int = 10):
         db.close()
 
 
-def verify_otp(identifier: str, code: str) -> bool:
-    """يتحقق من صحة رمز OTP وصلاحيته الزمنية من قاعدة البيانات."""
+def verify_otp(identifier: str, code: str, purpose: str = "default") -> bool:
+    """يتحقق من صحة رمز OTP والغرض المرتبط به وصلاحيته."""
     from database.models import AuthOtpTokens
     db = _get_db()
     try:
-        ident = identifier.lower().strip()
+        ident = _otp_scoped_identifier(identifier, purpose)
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         entry = db.query(AuthOtpTokens).filter(
             AuthOtpTokens.identifier == ident,

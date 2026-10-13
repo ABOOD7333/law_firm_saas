@@ -77,6 +77,15 @@ class AuthOtpTokens(Base):
     consumed_at: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
 
+class PendingRegistrations(Base):
+    __tablename__ = 'pending_registrations'
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    email: Mapped[str] = mapped_column(Text, nullable=False, unique=True, index=True)
+    payload: Mapped[str] = mapped_column(Text, nullable=False)
+    expires_at: Mapped[str] = mapped_column(Text, nullable=False, index=True)
+    created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+
+
 class AuthSessions(Base):
     __tablename__ = 'auth_sessions'
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

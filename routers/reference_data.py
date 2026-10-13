@@ -6,7 +6,7 @@ from core.error_handler import safe_error_html
 
 from database.database import get_db
 from database.models import AccessProfiles, LawReferenceData
-from dependencies import get_current_user, templates
+from dependencies import get_current_user, templates, check_user_permission
 
 router = APIRouter()
 
@@ -14,6 +14,8 @@ router = APIRouter()
 @router.get("/reference_data", response_class=HTMLResponse)
 async def reference_data_page(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     if not user: return RedirectResponse(url="/", status_code=303)
+    if not check_user_permission(user, "reference_data", "view"):
+        raise HTTPException(status_code=403, detail="غير مصرح بعرض البيانات المرجعية")
     try:
         import json
         office_id = user.office_id
@@ -33,6 +35,9 @@ async def refdata_save(request: Request, db: Session = Depends(get_db), user: Ac
     if not user: return JSONResponse({"ok": False, "message": "غير مصرح"}, status_code=401)
     try:
         data = await request.json()
+        action = "edit" if data.get("id") else "add"
+        if not user.office_id or not check_user_permission(user, "reference_data", action):
+            return JSONResponse({"ok": False, "message": "غير مصرح بهذا الإجراء"}, status_code=403)
         office_id = user.office_id
         rec_id = data.get("id")
         if rec_id:
@@ -60,6 +65,8 @@ async def refdata_save(request: Request, db: Session = Depends(get_db), user: Ac
 async def refdata_delete(rec_id: int, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     from fastapi.responses import JSONResponse
     if not user: return JSONResponse({"ok": False, "message": "غير مصرح"}, status_code=401)
+    if not check_user_permission(user, "reference_data", "delete"):
+        return JSONResponse({"ok": False, "message": "غير مصرح بالحذف"}, status_code=403)
     r = db.query(LawReferenceData).filter(LawReferenceData.id == rec_id, LawReferenceData.office_id == user.office_id).first()
     if not r: return JSONResponse({"ok": False, "message": "السجل غير موجود أو غير مصرح"})
     db.delete(r); db.commit()
@@ -69,6 +76,8 @@ async def refdata_delete(rec_id: int, db: Session = Depends(get_db), user: Acces
 async def refdata_list(ref_type: str, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     from fastapi.responses import JSONResponse
     if not user: return JSONResponse([], status_code=401)
+    if not check_user_permission(user, "reference_data", "view"):
+        return JSONResponse({"ok": False, "message": "غير مصرح"}, status_code=403)
     office_id = user.office_id
     records = db.query(LawReferenceData).filter(LawReferenceData.office_id == office_id, LawReferenceData.ref_type == ref_type).all()
     return JSONResponse([r.ref_name for r in records])

@@ -328,7 +328,7 @@
 {% block scripts %}
 <script>
     const csrfToken = "{{ request.cookies.get('csrf_token', '') }}";
-    const allRecords = {{ records_json|safe }};
+    const allRecords = {{ records_json|tojson }};
 
     function showAlert(msg, isSuccess) {
         const box = document.getElementById('alertBox');

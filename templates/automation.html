@@ -572,6 +572,12 @@ input:checked + .wf-slider:before {
 
 {% block scripts %}
 <script>
+function escapeHtml(value) {
+    return String(value == null ? "" : value).replace(/[&<>"']/g, function(ch) {
+        const entities = {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"};
+        return entities[ch];
+    });
+}
 // Case Selector Change
 function onCaseChange() {
     const sel = document.getElementById('caseSelect');
@@ -727,12 +733,12 @@ async function runConflictSearch() {
             let html = `<div style="padding:10px; background:#fef2f2; border:1px solid #fecaca; border-radius:8px; margin-bottom:10px; color:#991b1b; font-weight:700;"><i class="fa-solid fa-triangle-exclamation"></i> تم العثور على ${data.count} نتيجة قد تشكل تعارض مصالح:</div>`;
             data.results.forEach(r => {
                 html += `<div style="padding:8px 12px; background:white; border-radius:6px; border:1px solid #cbd5e1; margin-bottom:6px; font-size:0.85rem;">
-                    <strong>${r.name}</strong> (${r.type}) — القضية: <strong>${r.case_number}</strong> (${r.case_title})
+                    <strong>${escapeHtml(r.name)}</strong> (${escapeHtml(r.type)}) — القضية: <strong>${escapeHtml(r.case_number)}</strong> (${escapeHtml(r.case_title)})
                 </div>`;
             });
             box.innerHTML = html;
         } else {
-            box.innerHTML = `<div style="padding:15px; text-align:center; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; color:#166534; font-weight:700;"><i class="fa-solid fa-circle-check"></i> لا يوجد أي تعارض مصالح مسجل للاسم: "${name}"</div>`;
+            box.innerHTML = `<div style="padding:15px; text-align:center; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; color:#166534; font-weight:700;"><i class="fa-solid fa-circle-check"></i> لا يوجد أي تعارض مصالح مسجل للاسم: "${escapeHtml(name)}"</div>`;
         }
     } catch (e) {
         box.innerHTML = '<p style="color:red; text-align:center;">حدث خطأ أثناء فحص التعارض.</p>';
@@ -759,8 +765,8 @@ function showTimeline() {
                 data.events.forEach(ev => {
                     html += `<div style="margin-bottom:18px; position:relative;">
                         <span style="position:absolute; right:-27px; top:4px; width:12px; height:12px; border-radius:50%; background:#2563eb;"></span>
-                        <div style="font-size:0.8rem; color:#64748b;" dir="ltr">${ev.date}</div>
-                        <div style="font-weight:700; color:#1e293b; font-size:0.95rem;">${ev.title} <span style="font-size:0.75rem; background:#eff6ff; color:#2563eb; padding:2px 8px; border-radius:10px;">${ev.type}</span></div>
+                        <div style="font-size:0.8rem; color:#64748b;" dir="ltr">${escapeHtml(ev.date)}</div>
+                        <div style="font-weight:700; color:#1e293b; font-size:0.95rem;">${escapeHtml(ev.title)} <span style="font-size:0.75rem; background:#eff6ff; color:#2563eb; padding:2px 8px; border-radius:10px;">${escapeHtml(ev.type)}</span></div>
                     </div>`;
                 });
                 html += '</div>';
@@ -800,8 +806,8 @@ function generateDoc(type) {
             <h2 style="margin-top:15px; color:#2563eb;">${type === 'توكيل' ? 'عقد توكيل وتمثيل قضائي' : (type === 'فاتورة' ? 'فاتورة أتعاب قانونية رسمية' : (type === 'صحيفة' ? 'صحيفة افتتاح دعوى' : (type === 'استئناف' ? 'لائحة اعتراضية واستئناف' : (type === 'مذكرة' ? 'مذكرة رد ومرافعة' : 'تقرير إنجاز دوري'))))}</h2>
         </div>
         <div class="doc-body">
-            <p><strong>رقم القضية:</strong> ${caseNumber} &nbsp;|&nbsp; <strong>الموضوع:</strong> ${caseTitle}</p>
-            <p><strong>المحكمة المختصة:</strong> ${courtName} &nbsp;|&nbsp; <strong>الطرف الموكل:</strong> ${clientName}</p>
+            <p><strong>رقم القضية:</strong> ${escapeHtml(caseNumber)} &nbsp;|&nbsp; <strong>الموضوع:</strong> ${escapeHtml(caseTitle)}</p>
+            <p><strong>المحكمة المختصة:</strong> ${escapeHtml(courtName)} &nbsp;|&nbsp; <strong>الطرف الموكل:</strong> ${escapeHtml(clientName)}</p>
             <hr style="border:0; border-top:1px solid #e2e8f0; margin:16px 0;">
             <p>بعون الله وتوفيقه، تم إعداد هذا المحرر الرسمي وفقاً للأنظمة واللوائح القضائية المعتمدة في المملكة العربية السعودية، بناءً على الوقائع والأسانيد النظامية الثابتة في ملف الدعوى المشار إليه أعلاه.</p>
             <p>يقر الطرفان بصحة البيانات، ويؤكدان التزامهما التام بكافة الحقوق والالتزامات المترتبة نظاماً وشرعاً وفق ما تقتضيه المصلحة القضائية والعدلية.</p>

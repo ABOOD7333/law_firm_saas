@@ -70,11 +70,12 @@ async def client_dashboard(request: Request, db: Session = Depends(get_db), user
 
     # Total documents count
     case_ids = [c.id for c in cases_query.with_entities(LawCases.id).all()]
-    total_docs = db.query(func.count(LawDocuments.id)).filter(
+    # Documents have no explicit client-visibility field; keep them private by default.
+    total_docs = 0 if user.role == "موكل" else (db.query(func.count(LawDocuments.id)).filter(
         LawDocuments.office_id == user.office_id,
         LawDocuments.is_deleted == 0,
         LawDocuments.case_id.in_(case_ids) if case_ids else False
-    ).scalar() or 0
+    ).scalar() or 0)
 
     # Upcoming hearings
     upcoming_hearings = db.query(LawHearings).filter(
@@ -149,7 +150,7 @@ async def client_documents(request: Request, db: Session = Depends(get_db), user
     case_ids = [case.id for case in _client_case_query(db, user).with_entities(LawCases.id).all()]
     documents = []
 
-    if case_ids or user.role != "موكل":
+    if user.role != "موكل":
         doc_filter = [
             LawDocuments.office_id == user.office_id,
             LawDocuments.is_deleted == 0

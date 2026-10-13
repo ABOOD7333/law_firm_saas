@@ -2,7 +2,7 @@ import os
 from datetime import datetime
 from typing import Optional
 from fastapi import APIRouter, Request, Depends, HTTPException, Form, UploadFile, File
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 import traceback
@@ -14,6 +14,30 @@ from dependencies import get_current_user, templates, require_user_permission, u
 from core.upload_security import save_upload
 
 router = APIRouter()
+
+@router.get("/notes/{note_id}/attachment")
+async def download_note_attachment(note_id: int, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
+    if not user or not user.office_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    if user.role == "موكل":
+        raise HTTPException(status_code=403, detail="غير مصرح بتنزيل هذا الملف")
+    require_user_permission(user, "notes", "view")
+    note = db.query(LawNotes).filter(
+        LawNotes.id == note_id,
+        LawNotes.office_id == user.office_id,
+        LawNotes.is_deleted == 0,
+    ).first()
+    if not note:
+        raise HTTPException(status_code=404, detail="الملاحظة غير موجودة")
+    if note.case_id and not user_can_access_case(db, user, note.case_id):
+        raise HTTPException(status_code=403, detail="غير مصرح بهذه القضية")
+    if not note.attachment_path:
+        raise HTTPException(status_code=404, detail="لا يوجد ملف مرفق")
+    root = os.path.realpath(UPLOAD_DIR)
+    path = os.path.realpath(note.attachment_path.lstrip("/"))
+    if os.path.commonpath([root, path]) != root or not os.path.isfile(path):
+        raise HTTPException(status_code=404, detail="الملف غير موجود")
+    return FileResponse(path, filename=os.path.basename(path), headers={"Cache-Control": "private, no-store"})
 
 UPLOAD_DIR = os.path.join("static", "uploads", "notes")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -346,7 +370,7 @@ async def get_note_api(
         "is_client_visible": n.is_client_visible,
         "priority_level": n.priority_level,
         "author_name": (n.author.name or n.author.username) if n.author else "",
-        "attachment_path": n.attachment_path,
+        "attachment_path": f"/notes/{n.id}/attachment" if n.attachment_path else "",
         "content": n.content,
         "created_at": n.created_at
     }
