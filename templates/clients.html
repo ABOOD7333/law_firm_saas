@@ -682,7 +682,7 @@
         </div>
 
         <form id="addClientForm" method="POST" action="/clients/add" style="display: flex; flex-direction: column; flex: 1; overflow: hidden; margin: 0;">
-            <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token or request.cookies.get('csrf_token', '') }}">
 
             <div class="modal-body-content">
                 <!-- Tab 1: الهوية والكيان -->
@@ -859,7 +859,7 @@
         </div>
 
         <form id="editClientForm" method="POST" action="/clients/edit" style="display: flex; flex-direction: column; flex: 1; overflow: hidden; margin: 0;">
-            <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token or request.cookies.get('csrf_token', '') }}">
             <input type="hidden" name="client_id" id="edit_client_id">
 
             <div class="modal-body-content">
@@ -977,7 +977,7 @@
 
 <!-- Delete Form (Hidden) -->
 <form id="deleteClientForm" method="POST" action="/clients/delete" style="display:none;">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token or request.cookies.get('csrf_token', '') }}">
     <input type="hidden" name="client_id" id="delete_client_id">
 </form>
 
@@ -1007,6 +1007,12 @@ function stepAddTab(step) {
 
 function openAddClientModal() {
     switchAddTab(1);
+    const m = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
+    const token = m ? decodeURIComponent(m[1]) : '';
+    const input = document.querySelector('#addClientForm input[name="csrf_token"]');
+    if (input && (!input.value || input.value.trim() === '') && token) {
+        input.value = token;
+    }
     document.getElementById('addClientModal').classList.add('active');
 }
 

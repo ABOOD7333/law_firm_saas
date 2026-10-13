@@ -778,5 +778,60 @@
     ??<div class="ai-float-badge"></div>
 </a>
 
+<script>
+// 🛡️ Global CSRF Auto-Protection for All Forms & Requests
+(function() {
+    function getCsrfCookie() {
+        const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
+        return match ? decodeURIComponent(match[1]) : '';
+    }
+
+    function syncFormCsrfTokens() {
+        const token = getCsrfCookie();
+        if (!token) return;
+        document.querySelectorAll('form').forEach(function(form) {
+            const method = (form.getAttribute('method') || 'GET').toUpperCase();
+            if (method === 'POST') {
+                let input = form.querySelector('input[name="csrf_token"]');
+                if (!input) {
+                    input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'csrf_token';
+                    form.appendChild(input);
+                }
+                if (!input.value) {
+                    input.value = token;
+                }
+            }
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', syncFormCsrfTokens);
+    } else {
+        syncFormCsrfTokens();
+    }
+
+    document.addEventListener('submit', function(e) {
+        const form = e.target;
+        if (form && form.tagName === 'FORM') {
+            const method = (form.getAttribute('method') || 'GET').toUpperCase();
+            if (method === 'POST') {
+                const token = getCsrfCookie();
+                let input = form.querySelector('input[name="csrf_token"]');
+                if (!input) {
+                    input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'csrf_token';
+                    form.appendChild(input);
+                }
+                if (token && (!input.value || input.value.trim() === '')) {
+                    input.value = token;
+                }
+            }
+        }
+    }, true);
+})();
+</script>
 </body>
 </html>

@@ -22,11 +22,21 @@ def _safe_template_response(*args, **kwargs):
         request = kwargs.get("request")
         if not request and isinstance(context, dict):
             request = context.get("request")
+        if isinstance(context, dict) and request:
+            if not context.get("csrf_token"):
+                context["csrf_token"] = getattr(request.state, "csrf_token", None) or request.cookies.get("csrf_token", "")
         clean_kwargs = {k: v for k, v in kwargs.items() if k not in ("request", "name", "context")}
         return _orig_template_response(request=request, name=name, context=context, **clean_kwargs)
+    elif kwargs.get("request") and isinstance(kwargs.get("context"), dict):
+        ctx = kwargs["context"]
+        req = kwargs["request"]
+        if not ctx.get("csrf_token"):
+            ctx["csrf_token"] = getattr(req.state, "csrf_token", None) or req.cookies.get("csrf_token", "")
     return _orig_template_response(*args, **kwargs)
 
 templates.TemplateResponse = _safe_template_response
+templates.env.globals["get_csrf_token"] = lambda req: (getattr(req.state, "csrf_token", None) or req.cookies.get("csrf_token", "")) if req else ""
+
 
 def check_user_permission(user, module: str, action: str = "view") -> bool:
     if not user:

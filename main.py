@@ -118,25 +118,26 @@ from fastapi.responses import JSONResponse
 
 import uuid
 
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.exceptions import RequestValidationError
+from core.error_handler import render_error_page, safe_error_html, safe_error_json
+
 class CSRFMiddleware(BaseHTTPMiddleware):
-
     async def dispatch(self, request: Request, call_next):
-
         if request.url.path.startswith("/api/mobile") and (
             request.url.path in {"/api/mobile/login", "/api/mobile/login-2fa"}
             or request.headers.get("Authorization", "").startswith("Bearer ")
         ):
-
             return await call_next(request)
 
         csrf_cookie = request.cookies.get("csrf_token")
-
         if not csrf_cookie:
-
             csrf_cookie = str(uuid.uuid4())
 
+        # حفظ الرمز في حالة الطلب ليكون متاحاً لجميع القوالب والموجهات
+        request.state.csrf_token = csrf_cookie
+
         # إعفاء مسارات تسجيل الدخول وما قبل المصادقة من CSRF
-        # (محمية بواسطة Rate Limiting ولا توجد جلسة نشطة لاختطافها)
         PRE_AUTH_PATHS = {
             "/",
             "/login",
@@ -147,119 +148,135 @@ class CSRFMiddleware(BaseHTTPMiddleware):
             "/api/register-send-otp",
             "/api/verify-register-otp",
         }
+        is_secure = (request.url.scheme == "https") or (request.headers.get("x-forwarded-proto") == "https")
+
         if request.url.path in PRE_AUTH_PATHS:
             response = await call_next(request)
             if not request.cookies.get("csrf_token"):
-                is_secure = not (request.url.hostname in ["127.0.0.1", "localhost"])
                 response.set_cookie("csrf_token", csrf_cookie, httponly=False, secure=is_secure, samesite="Lax")
             return response
 
         if request.method in ["POST", "PUT", "DELETE", "PATCH"]:
+            csrf_header = request.headers.get("X-CSRF-Token")
+            form_token = None
+            content_type = request.headers.get("Content-Type", "")
 
-                # Security Fix: Only check the CSRF token in the form body (or header), avoid URL query parameters.
+            if "application/x-www-form-urlencoded" in content_type or "multipart/form-data" in content_type:
+                try:
+                    body_bytes = await request.body()
+                    async def receive():
+                        return {"type": "http.request", "body": body_bytes}
+                    request._receive = receive
+                    form = await request.form()
+                    form_token = form.get("csrf_token")
+                    async def receive_again():
+                        return {"type": "http.request", "body": body_bytes}
+                    request._receive = receive_again
+                except:
+                    pass
 
-                csrf_header = request.headers.get("X-CSRF-Token")
+            submitted_token = csrf_header or form_token
 
-                # For Form Submissions
-
-                form_token = None
-
-                content_type = request.headers.get("Content-Type", "")
-
-                if "application/x-www-form-urlencoded" in content_type or "multipart/form-data" in content_type:
-
-                    try:
-
-                        # Replay body trick to avoid exhausting the stream for FastAPI
-
-                        body_bytes = await request.body()
-
-                        # Mock receive function
-
-                        async def receive():
-
-                            return {"type": "http.request", "body": body_bytes}
-
-                        request._receive = receive
-
-                        form = await request.form()
-
-                        form_token = form.get("csrf_token")
-
-                        # Reset again so the endpoint can read it
-
-                        async def receive_again():
-
-                            return {"type": "http.request", "body": body_bytes}
-
-                        request._receive = receive_again
-
-                    except:
-
-                        pass
-
-                submitted_token = csrf_header or form_token
-
-                if not submitted_token or submitted_token != csrf_cookie:
-
-                    return JSONResponse({"error": "CSRF token missing or invalid", "status": 403}, status_code=403)
+            # التحقق من تطابق رمز CSRF
+            if not submitted_token or submitted_token != csrf_cookie:
+                accept = request.headers.get("accept", "")
+                app_logger.warning(
+                    f"[CSRF_REJECTED] Path: {request.url.path} | HasCookie: {bool(request.cookies.get('csrf_token'))} "
+                    f"| HasToken: {bool(submitted_token)}"
+                )
+                is_html_request = ("text/html" in accept) or ("application/x-www-form-urlencoded" in content_type and "application/json" not in accept)
+                if is_html_request:
+                    return render_error_page(
+                        status_code=403,
+                        title="تنبيه أمان: انتهاء صلاحية رمز التحقق (CSRF Token)",
+                        message="انتهت صلاحية رمز الأمان المؤقت للنموذج أو تم فتح الصفحة في أكثر من نافذة. لحماية بياناتك من الإرسال غير الموثوق، تم إيقاف العملية مؤقتاً.",
+                        detail="السبب: رمز الأمان (CSRF) مفقود أو غير متطابق مع جلسة المتصفح. اضغط على الزر أدناه لتحديث الصفحة ثم أعد الإرسال بأمان.",
+                        can_retry=True
+                    )
+                return JSONResponse(
+                    {
+                        "success": False,
+                        "status": 403,
+                        "error": "رمز التحقق الأمني (CSRF) مفقود أو غير صالح. يرجى تحديث الصفحة والمحاولة مجدداً."
+                    },
+                    status_code=403
+                )
 
         response = await call_next(request)
 
         if not request.cookies.get("csrf_token"):
-
-            is_secure = not (request.url.hostname in ["127.0.0.1", "localhost"])
-
             response.set_cookie(
-
                 "csrf_token",
-
                 csrf_cookie,
-
                 httponly=False,
-
                 secure=is_secure,
-
                 samesite="Lax"
-
             )
 
         return response
 
 app.add_middleware(CSRFMiddleware)
 
-# ─── Safe Error Handler ───────────────────────────────────────────────────────
+# ─── Centralized Error Handlers ───────────────────────────────────────────────
 
 def _safe_error(tb_str: str = "") -> HTMLResponse:
-
-    """يعرض تفاصيل الخطأ في التطوير فقط — يخفيها في الإنتاج ويسجلها في السجلات."""
-
+    """يعرض صفحة خطأ عربية احترافية للمستخدم ويسجل التفاصيل في السجلات."""
     if tb_str:
         app_logger.error(f"[SERVER_ERROR_TRACEBACK]\n{tb_str}")
-
-    if True: # SECURITY FIX: Never expose tracebacks
-
-        return HTMLResponse(
-
-            content="<div style='font-family:sans-serif;padding:40px;text-align:center;direction:rtl'>"
-
-                    "<h2 style='color:#dc2626'>⚠️ حدث خطأ داخلي</h2>"
-
-                    "<p style='color:#64748b'>يرجى المحاولة مرة أخرى أو التواصل مع الدعم الفني.</p>"
-
-                    "</div>",
-
-            status_code=500
-
-        )
-
-    return HTMLResponse(
-
-        content=f"<pre dir='ltr' style='background:#1e1e1e;color:#f8f8f2;padding:20px;font-size:13px;overflow:auto'>{tb_str}</pre>",
-
-        status_code=500
-
+    return render_error_page(
+        status_code=500,
+        title="حدث خطأ داخلي في معالجة الطلب",
+        message="واجه الخادم مشكلة تقنية غير متوقعة. تم تسجيل تفاصيل الحادثة فوراً لدى فريق الدعم الفني.",
+        detail=tb_str if SHOW_DEBUG_ERRORS else ""
     )
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    accept = request.headers.get("accept", "")
+    app_logger.warning(f"[HTTP_{exc.status_code}] Path: {request.url.path} | Detail: {exc.detail}")
+    if "text/html" in accept:
+        return render_error_page(
+            status_code=exc.status_code,
+            message=str(exc.detail) if exc.detail else None,
+            detail=f"المسار: {request.url.path}"
+        )
+    return JSONResponse(
+        {"success": False, "status": exc.status_code, "error": str(exc.detail)},
+        status_code=exc.status_code
+    )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    accept = request.headers.get("accept", "")
+    error_details = []
+    for err in exc.errors():
+        loc = " -> ".join([str(l) for l in err.get("loc", []) if l != "body"])
+        msg = err.get("msg", "قيمة غير صالحة")
+        error_details.append(f"الحقل [{loc}]: {msg}")
+    combined_detail = " | ".join(error_details) if error_details else "بيانات غير متوافقة"
+    app_logger.warning(f"[VALIDATION_ERROR] Path: {request.url.path} | Detail: {combined_detail}")
+    if "text/html" in accept:
+        return render_error_page(
+            status_code=422,
+            title="خطأ في مدخلات النموذج (Validation Error)",
+            message="يرجى مراجعة الحقول التي قمت بإدخالها، حيث توجد بيانات غير مكتملة أو غير مطابقة للصيغة المطلوبة.",
+            detail=combined_detail
+        )
+    return JSONResponse(
+        {"success": False, "status": 422, "error": combined_detail, "errors": exc.errors()},
+        status_code=422
+    )
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    import traceback
+    tb = traceback.format_exc()
+    app_logger.error(f"[UNHANDLED_EXCEPTION] Path: {request.url.path} | Error: {exc}\n{tb}")
+    accept = request.headers.get("accept", "")
+    if "text/html" in accept:
+        return safe_error_html(exc, context=f"Path: {request.url.path}", status_code=500)
+    return safe_error_json(exc, context=f"Path: {request.url.path}", status_code=500)
+
 
 import time
 
