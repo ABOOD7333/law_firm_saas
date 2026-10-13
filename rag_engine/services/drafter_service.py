@@ -2,8 +2,8 @@
 Legal Drafter Service
 خدمة الصياغة القانونية تعتمد إما على القوالب الثابتة (مثلما بنينا سابقاً) أو LLM المحلي
 """
-import requests
-from ..config import USE_LOCAL_LLM, OLLAMA_API_URL, OLLAMA_MODEL
+from ai_engine.local_model import generate_local
+from ..config import USE_LOCAL_LLM
 
 class LegalDrafter:
     
@@ -23,20 +23,10 @@ class LegalDrafter:
 الرجاء كتابة المستند بالصيغة القانونية اليمنية الصحيحة، وبشكل رسمي:"""
         
         try:
-            response = requests.post(
-                OLLAMA_API_URL,
-                json={
-                    "model": OLLAMA_MODEL,
-                    "prompt": prompt,
-                    "stream": False
-                },
-                timeout=180
-            )
-            if response.status_code == 200:
-                return response.json().get('response', '')
-            return f"حدث خطأ: {response.text}"
-        except Exception as e:
-            return f"تعذر الاتصال بالـ LLM: {str(e)}"
+            result = generate_local(prompt, timeout=180)
+            return result or self._draft_fallback(doc_type, details)
+        except Exception:
+            return self._draft_fallback(doc_type, details)
 
     def _draft_fallback(self, doc_type: str, details: dict) -> str:
         """يستخدم القوالب القديمة (الموجودة في ai_engine) إذا لم يكن هناك LLM"""

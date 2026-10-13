@@ -1168,7 +1168,7 @@
             const res = await fetch('/api/ai/quota');
             const data = await res.json();
             if (data.success) {
-                updateQuotaBadge(data.remaining_points, data.daily_limit, data.has_advanced_ai ? 'gemini' : 'local');
+                updateQuotaBadge(data.remaining_points, data.daily_limit, data.has_local_model_quota ? 'private' : 'rules');
             }
         } catch (e) {
             console.error('Failed to fetch AI quota:', e);
@@ -1186,18 +1186,18 @@
         remEl.textContent = remaining;
         limEl.textContent = limit;
 
-        if (remaining <= 0 || usedModel === 'local') {
+        if (remaining <= 0 || usedModel === 'rules') {
             pillEl.style.background = '#fef2f2';
             pillEl.style.color = '#b91c1c';
             pillEl.style.borderColor = '#fecaca';
             if (iconEl) iconEl.textContent = '⚡';
-            pillEl.title = 'تم استهلاك رصيد الذكاء المتقدم لليوم. يعمل المساعد حالياً بالمحرك القانوني الداخلي.';
+            pillEl.title = 'تم استهلاك رصيد النموذج المحلي لهذا اليوم. يعمل المساعد حالياً بإجابات النظام الأساسية.';
         } else {
             pillEl.style.background = '#eef2ff';
             pillEl.style.color = '#4338ca';
             pillEl.style.borderColor = '#c7d2fe';
             if (iconEl) iconEl.textContent = '💎';
-            pillEl.title = 'الرصيد اليومي المتاح لاستعلامات الذكاء الاصطناعي المتقدمة.';
+            pillEl.title = 'الرصيد اليومي المتاح للمساعد الذكي الخاص بالموقع.';
         }
     }
 

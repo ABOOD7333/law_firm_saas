@@ -812,7 +812,8 @@ class AIUserQuota(Base):
     office_id: Mapped[int] = mapped_column(ForeignKey('law_offices.id', ondelete='CASCADE'), nullable=False, index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey('access_profiles.id', ondelete='CASCADE'), nullable=False, index=True)
     usage_date: Mapped[str] = mapped_column(Text, nullable=False, index=True)  # 'YYYY-MM-DD'
-    gemini_used: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text('0'))
+    # Keep the existing physical column name for deployed database compatibility.
+    local_model_used: Mapped[int] = mapped_column('gemini_used', Integer, nullable=False, server_default=text('0'))
     local_used: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text('0'))
     daily_limit: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text('50'))
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))

@@ -285,7 +285,7 @@
         <div class="ca-header-icon">📄</div>
         <div>
             <h1>محلل العقود الذكي</h1>
-            <p>تحليل كامل + كشف المخاطر + مقارنة النسخ — مدعوم بـ Gemini AI</p>
+            <p>تحليل كامل + كشف المخاطر + مقارنة النسخ — يعالج داخل بيئة الموقع</p>
         </div>
     </div>
 
@@ -363,7 +363,7 @@
         <!-- Loading -->
         <div class="loading-overlay" id="analyzeLoading">
             <div class="loading-spinner"></div>
-            <div class="loading-text">Gemini يحلل العقد...</div>
+            <div class="loading-text">المساعد المحلي يحلل العقد...</div>
             <div style="color:#64748b; font-size:13px; margin-top:8px;">قد يستغرق 10-20 ثانية</div>
         </div>
 
@@ -439,7 +439,7 @@
         <div class="empty-state" id="analyzeEmpty">
             <div class="empty-state-icon">📄</div>
             <h3>ارفع عقداً أو الصق نصه للبدء</h3>
-            <p>سيقوم Gemini AI باستخراج جميع الكيانات القانونية، الأطراف، والشروط الجزائية فوراً</p>
+            <p>سيقوم المساعد المحلي باستخراج الكيانات القانونية والأطراف والشروط الجزائية</p>
         </div>
     </div>
 
@@ -529,7 +529,7 @@
             <div class="diff-stats" id="diffStats"></div>
             <!-- AI Insight -->
             <div class="ai-insight-box" id="diffInsight" style="display:none">
-                <h4>🤖 تحليل Gemini للفروق الجوهرية والتبعات القانونية</h4>
+                <h4>🤖 تحليل المساعد المحلي للفروق الجوهرية والتبعات القانونية</h4>
                 <p id="diffInsightText"></p>
             </div>
             <!-- Diff Viewer -->
@@ -713,7 +713,7 @@ async function runAnalysis() {
 function renderAnalysisResults(a) {
     // Contract type badge
     const typeEl = document.getElementById('contractTypeBadge');
-    typeEl.innerHTML = `<div class="contract-type-badge">📋 ${escHtml(a.contract_type || 'غير محدد')} ${a.is_ai_used ? '<span style="font-size:12px;opacity:0.7">• Gemini AI</span>' : ''}</div>`;
+    typeEl.innerHTML = `<div class="contract-type-badge">📋 ${escHtml(a.contract_type || 'غير محدد')} ${a.is_ai_used ? '<span style="font-size:12px;opacity:0.7">• المساعد المحلي</span>' : ''}</div>`;
 
     // Summary
     if (a.summary) {

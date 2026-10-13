@@ -1,13 +1,12 @@
 """
-خدمة الذكاء الاصطناعي المتقدمة — Gemini API (google-genai SDK)
-GeminiLegalAssistant: مساعد قانوني يمني ذكي مبني على Gemini 2.5 Flash
+خدمة الذكاء الاصطناعي الخاصة — Ollama داخل شبكة الاستضافة
+LocalLegalAssistant: مساعد قانوني يرسل الطلبات إلى نموذج محلي خاص
 مع ذاكرة محادثة + سياق ديناميكي + تحليل ذكي
 """
-import os
 import logging
-import time
 from typing import Optional, List, Dict
 from collections import defaultdict
+from ai_engine.local_model import generate_local
 
 logger = logging.getLogger(__name__)
 
@@ -40,70 +39,32 @@ SYSTEM_PROMPT = """أنت المستشار القانوني الأول والم�
 """
 
 
-class GeminiLegalAssistant:
+class LocalLegalAssistant:
     """
-    مساعد قانوني يمني ذكي متقدم مبني على Gemini API (google-genai SDK).
-    يتميز بـ: ذاكرة محادثة، سياق ديناميكي، تحليل ذكي، وتعلم مستمر.
+    مساعد قانوني يمني يستخدم نموذج Ollama داخل الشبكة الخاصة للاستضافة.
+    يدير سياق المحادثة ويرسل الطلبات إلى النموذج الخاص.
     """
 
     def __init__(self):
-        self._client = None
-        self._available = False
-        self._init_error = None
-        # ذاكرة المحادثات لكل مستخدم {user_id: [(role, text), ...]}
-        self._conversation_memory: Dict[int, List[Dict]] = defaultdict(list)
+        # ذاكرة معزولة لكل مكتب ومستخدم.
+        self._conversation_memory: Dict[tuple, List[Dict]] = defaultdict(list)
         self._max_memory = 10  # أقصى عدد رسائل محفوظة في الذاكرة
-        self._initialize()
 
-    def _initialize(self):
-        """تهيئة الاتصال بـ Gemini API"""
-        try:
-            api_key = os.environ.get("GEMINI_API_KEY", "").strip()
-            if not api_key:
-                try:
-                    from dotenv import load_dotenv
-                    load_dotenv()
-                    api_key = os.environ.get("GEMINI_API_KEY", "").strip()
-                except Exception:
-                    pass
-
-            if not api_key:
-                self._init_error = "GEMINI_API_KEY غير موجود"
-                logger.warning(self._init_error)
-                return
-
-            from google import genai
-            self._client = genai.Client(api_key=api_key)
-            self._available = True
-            logger.info("✅ Gemini Legal Assistant v2.0 initialized successfully")
-
-        except ImportError:
-            self._init_error = "مكتبة google-genai غير مثبتة. قم بتثبيتها: pip install google-genai"
-            logger.error(self._init_error)
-        except Exception as e:
-            self._init_error = f"خطأ في تهيئة Gemini: {str(e)}"
-            logger.error(self._init_error)
-
-    @property
-    def is_available(self) -> bool:
-        """هل خدمة Gemini متاحة؟"""
-        return self._available and self._client is not None
-
-    def add_to_memory(self, user_id: int, role: str, text: str):
+    def add_to_memory(self, user_id: int, role: str, text: str, office_id: int = 0):
         """إضافة رسالة إلى ذاكرة المحادثة"""
-        memory = self._conversation_memory[user_id]
+        memory = self._conversation_memory[(office_id, user_id)]
         memory.append({"role": role, "text": text})
         # الاحتفاظ بآخر N رسائل فقط
         if len(memory) > self._max_memory * 2:
-            self._conversation_memory[user_id] = memory[-self._max_memory * 2:]
+            self._conversation_memory[(office_id, user_id)] = memory[-self._max_memory * 2:]
 
-    def clear_memory(self, user_id: int):
+    def clear_memory(self, user_id: int, office_id: int = 0):
         """مسح ذاكرة المحادثة لمستخدم"""
-        self._conversation_memory[user_id] = []
+        self._conversation_memory[(office_id, user_id)] = []
 
-    def _build_conversation_context(self, user_id: int) -> str:
+    def _build_conversation_context(self, user_id: int, office_id: int = 0) -> str:
         """بناء نص سياق المحادثة السابقة"""
-        memory = self._conversation_memory.get(user_id, [])
+        memory = self._conversation_memory.get((office_id, user_id), [])
         if not memory:
             return ""
 
@@ -124,11 +85,12 @@ class GeminiLegalAssistant:
         local_context: Optional[str] = None,
         user_name: str = "",
         user_id: Optional[int] = None,
+        office_id: int = 0,
         db_data: Optional[Dict] = None,
         office_stats: Optional[str] = None,
     ) -> Optional[str]:
         """
-        يرسل سؤال المستخدم إلى Gemini مع كامل السياق ويعيد إجابة ذكية.
+        يرسل السؤال والسياق إلى نموذج Ollama الخاص ويعيد الإجابة.
 
         Args:
             question: سؤال المستخدم
@@ -141,10 +103,6 @@ class GeminiLegalAssistant:
         Returns:
             نص الإجابة أو None في حالة الفشل
         """
-        if not self.is_available:
-            logger.warning(f"Gemini غير متاح: {self._init_error}")
-            return None
-
         try:
             # بناء الرسالة الشاملة مع كل السياقات
             prompt_parts = []
@@ -155,7 +113,7 @@ class GeminiLegalAssistant:
 
             # 2. ذاكرة المحادثة
             if user_id:
-                conv_context = self._build_conversation_context(user_id)
+                conv_context = self._build_conversation_context(user_id, office_id)
                 if conv_context:
                     prompt_parts.append(conv_context)
 
@@ -193,63 +151,23 @@ class GeminiLegalAssistant:
 
             full_prompt = "\n\n".join(prompt_parts)
 
-            # إرسال لـ Gemini مع إعادة المحاولة
-            response = self._call_gemini(full_prompt)
+            response = generate_local(full_prompt, system=SYSTEM_PROMPT)
 
             if response:
                 # حفظ في الذاكرة
                 if user_id:
-                    self.add_to_memory(user_id, "user", question)
-                    self.add_to_memory(user_id, "assistant", response)
+                    self.add_to_memory(user_id, "user", question, office_id)
+                    self.add_to_memory(user_id, "assistant", response, office_id)
                 return response
 
             return None
 
         except Exception as e:
-            error_msg = str(e)
-            logger.error(f"خطأ في Gemini API: {error_msg}")
+            logger.error("خطأ في المساعد المحلي: %s", type(e).__name__)
             return None
 
-    def _call_gemini(self, prompt: str, retries: int = 2) -> Optional[str]:
-        """استدعاء Gemini API مع تجربة الموديلات المتاحة تلقائياً"""
-        # gemini-2.5-flash هو الموديل الوحيد العامل حالياً (2026)
-        models_to_try = ["gemini-2.5-flash"]
-        for model_name in models_to_try:
-            for attempt in range(retries + 1):
-                try:
-                    response = self._client.models.generate_content(
-                        model=model_name,
-                        contents=prompt,
-                        config={
-                            "system_instruction": SYSTEM_PROMPT,
-                            "temperature": 0.4,
-                            "top_p": 0.9,
-                            "top_k": 40,
-                            "max_output_tokens": 2048,
-                        },
-                    )
-                    if response and response.text:
-                        return response.text.strip()
-                    break
-                except Exception as e:
-                    error_msg = str(e)
-                    logger.warning(f"Gemini model {model_name} attempt {attempt + 1} failed: {error_msg[:200]}")
-                    if "quota" in error_msg.lower() or "429" in error_msg or "resource_exhausted" in error_msg.lower():
-                        logger.warning("⚠️ Gemini API quota exceeded")
-                        break
-                    if "safety" in error_msg.lower():
-                        logger.warning("⚠️ تم حجب الرد بسبب إعدادات الأمان")
-                        return None
-                    if "not_found" in error_msg.lower() or "404" in error_msg:
-                        logger.warning(f"⚠️ Model {model_name} not found, skipping")
-                        break
-                    if attempt < retries:
-                        time.sleep(0.5)
-                        continue
-        return None
-
     def _format_db_data(self, data: Dict) -> Optional[str]:
-        """تحويل بيانات قاعدة البيانات إلى نص مقروء لـ Gemini"""
+        """تحويل نتائج استعلام المكتب إلى نص مقروء للنموذج المحلي"""
         if not data:
             return None
 
@@ -330,12 +248,12 @@ class GeminiLegalAssistant:
 # ─────────────────────────────────────────────
 # Singleton instance
 # ─────────────────────────────────────────────
-_gemini_instance: Optional[GeminiLegalAssistant] = None
+_local_instance: Optional[LocalLegalAssistant] = None
 
 
-def get_gemini_assistant() -> GeminiLegalAssistant:
+def get_local_assistant() -> LocalLegalAssistant:
     """يعيد instance واحد من المساعد (Singleton)"""
-    global _gemini_instance
-    if _gemini_instance is None:
-        _gemini_instance = GeminiLegalAssistant()
-    return _gemini_instance
+    global _local_instance
+    if _local_instance is None:
+        _local_instance = LocalLegalAssistant()
+    return _local_instance

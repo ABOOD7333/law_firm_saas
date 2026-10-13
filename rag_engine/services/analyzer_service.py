@@ -1,37 +1,17 @@
 """
-Contract Analyzer Service — AI-Powered (Gemini)
-محرك تحليل العقود الذكي باستخدام Gemini API
+Contract Analyzer Service — private local model
+محرك تحليل العقود بالنموذج المحلي داخل الاستضافة
 
 المميزات:
 - استخراج الكيانات القانونية المعقدة (أطراف، التزامات، شروط جزائية، تواريخ، مبالغ)
 - كشف المخاطر القانونية ومقارنتها بالقانون المدني اليمني
 - مقارنة نسختين من العقد وإظهار الفروق (Document Diff)
 """
-import os
 import re
 import json
 import difflib
-from typing import Dict, Any, List, Optional
-
-
-def _get_gemini_client():
-    """الحصول على عميل Gemini (Lazy Loading)"""
-    try:
-        api_key = os.environ.get("GEMINI_API_KEY", "").strip()
-        if not api_key:
-            try:
-                from dotenv import load_dotenv
-                load_dotenv()
-                api_key = os.environ.get("GEMINI_API_KEY", "").strip()
-            except Exception:
-                pass
-        if not api_key:
-            return None, "GEMINI_API_KEY غير موجود"
-        from google import genai
-        client = genai.Client(api_key=api_key)
-        return client, None
-    except Exception as e:
-        return None, str(e)
+from typing import Dict, Any, List
+from ai_engine.local_model import generate_local
 
 
 # ─── بنود القانون المدني اليمني عالية المخاطر ────────────────────────────────
@@ -94,15 +74,10 @@ class ContractAnalyzerAI:
         )
 
     # ─────────────────────────────────────────────────────────────────────────
-    # 1. التحليل الكامل بـ Gemini
+    # 1. التحليل الكامل بالنموذج المحلي
     # ─────────────────────────────────────────────────────────────────────────
     def analyze_contract_ai(self, text: str) -> Dict[str, Any]:
-        """تحليل كامل للعقد باستخدام Gemini API"""
-
-        client, error = _get_gemini_client()
-
-        if not client:
-            return self._analyze_contract_regex(text, gemini_error=error)
+        """تحليل العقد عبر نموذج Ollama الخاص، مع فحص Regex عند تعذره."""
 
         prompt = f"""أنت محامٍ يمني خبير ومتخصص في تحليل العقود القانونية.
 قم بتحليل العقد التالي وأعد النتيجة بصيغة JSON فقط (بدون أي نص إضافي قبل أو بعد):
@@ -133,38 +108,34 @@ class ContractAnalyzerAI:
 ---"""
 
         try:
-            response = client.models.generate_content(
-                model="gemini-2.0-flash",
-                contents=prompt
-            )
-            raw = response.text.strip()
+            raw = generate_local(prompt, timeout=180)
+            if not raw:
+                return self._analyze_contract_regex(text)
             # تنظيف أي markdown
             raw = re.sub(r'^```json\s*', '', raw)
             raw = re.sub(r'\s*```$', '', raw)
             result = json.loads(raw)
             result["is_ai_used"] = True
-            result["ai_model"] = "gemini-2.0-flash"
+            result["ai_model"] = "private-local-model"
             return result
         except json.JSONDecodeError:
             # إذا لم يُرجع JSON نظيف، نرجع ما تيسر
             return {
                 "is_ai_used": True,
-                "ai_model": "gemini-2.0-flash",
-                "raw_analysis": response.text,
-                "summary": response.text[:500],
+                "ai_model": "private-local-model",
+                "raw_analysis": raw,
+                "summary": raw[:500],
                 "parties": [], "obligations": [], "penalty_clauses": [],
                 "key_dates": [], "financial_terms": [], "contract_type": "غير محدد"
             }
-        except Exception as e:
-            return self._analyze_contract_regex(text, gemini_error=str(e))
+        except Exception:
+            return self._analyze_contract_regex(text)
 
     # ─────────────────────────────────────────────────────────────────────────
     # 2. كشف المخاطر القانونية
     # ─────────────────────────────────────────────────────────────────────────
     def detect_risks(self, text: str) -> Dict[str, Any]:
         """يكشف البنود عالية المخاطر ويقارنها بالقانون المدني اليمني"""
-
-        client, error = _get_gemini_client()
 
         # فحص Regex أولاً
         regex_risks = []
@@ -177,26 +148,12 @@ class ContractAnalyzerAI:
                     "detected_by": "regex"
                 })
 
-        if not client:
-            return {
-                "is_ai_used": False,
-                "risks": regex_risks,
-                "overall_risk": self._calculate_overall_risk(regex_risks),
-                "recommendation": "يُنصح بمراجعة العقد مع محامٍ متخصص" if regex_risks else "لم يتم اكتشاف مخاطر واضحة بالفحص الأولي"
-            }
-
         prompt = f"""أنت محامٍ يمني متخصص في تدقيق العقود. حلل العقد التالي وأعد قائمة بجميع البنود عالية المخاطر أو المخالفة للقانون اليمني.
 أعد النتيجة بصيغة JSON فقط:
 
 {{
   "risks": [
-    {{
-      "clause_text": "نص البند المشكوك فيه (أول 100 حرف)",
-      "risk_level": "عالي | متوسط | منخفض",
-      "law_reference": "المادة القانونية المخالفة",
-      "description": "وصف المخاطرة القانونية",
-      "recommendation": "التوصية للمعالجة"
-    }}
+    {{"clause_text": "نص البند", "risk_level": "عالي | متوسط | منخفض", "law_reference": "المادة القانونية", "description": "وصف المخاطرة", "recommendation": "التوصية"}}
   ],
   "overall_risk": "عالي | متوسط | منخفض | آمن",
   "recommendation": "التوصية العامة للمحامي"
@@ -206,26 +163,29 @@ class ContractAnalyzerAI:
 ---
 {text[:6000]}
 ---"""
-
-        try:
-            response = client.models.generate_content(
-                model="gemini-2.0-flash",
-                contents=prompt
-            )
-            raw = response.text.strip()
-            raw = re.sub(r'^```json\s*', '', raw)
-            raw = re.sub(r'\s*```$', '', raw)
-            result = json.loads(raw)
-            result["is_ai_used"] = True
-            # دمج نتائج Regex مع Gemini
-            result["risks"] = result.get("risks", []) + [r for r in regex_risks if r not in result.get("risks", [])]
-            return result
-        except Exception as e:
+        raw = generate_local(prompt, timeout=180)
+        if not raw:
             return {
                 "is_ai_used": False,
                 "risks": regex_risks,
                 "overall_risk": self._calculate_overall_risk(regex_risks),
-                "recommendation": f"تعذر التحليل الذكي: {str(e)}"
+                "recommendation": "يُنصح بمراجعة العقد مع محامٍ متخصص" if regex_risks else "لم يتم اكتشاف مخاطر واضحة بالفحص الأولي"
+            }
+
+        try:
+            raw = re.sub(r'^```json\s*', '', raw)
+            raw = re.sub(r'\s*```$', '', raw)
+            result = json.loads(raw)
+            result["is_ai_used"] = True
+            # دمج نتائج النموذج المحلي مع فحص Regex
+            result["risks"] = result.get("risks", []) + [r for r in regex_risks if r not in result.get("risks", [])]
+            return result
+        except Exception:
+            return {
+                "is_ai_used": False,
+                "risks": regex_risks,
+                "overall_risk": self._calculate_overall_risk(regex_risks),
+                "recommendation": "تعذر تحليل العقد بالنموذج المحلي؛ هذه نتيجة الفحص الأولي فقط."
             }
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -261,11 +221,10 @@ class ContractAnalyzerAI:
             else:
                 diff_html_lines.append({"type": "unchanged", "text": line})
 
-        # تحليل Gemini للفروق الجوهرية
-        client, _ = _get_gemini_client()
+        # تحليل الفروق الجوهرية داخل النموذج المحلي الخاص
         ai_summary = None
 
-        if client and (added > 0 or removed > 0):
+        if added > 0 or removed > 0:
             diff_text = "".join(diff[:100])  # أول 100 سطر من الـ diff
             prompt = f"""قارن بين نسختين من عقد قانوني يمني. الفروق هي:
 ---
@@ -273,11 +232,7 @@ class ContractAnalyzerAI:
 ---
 أعد تحليلاً موجزاً بالعربية للفروق الجوهرية بين النسختين وأثرها القانوني في 5 نقاط أو أقل."""
             try:
-                response = client.models.generate_content(
-                    model="gemini-2.0-flash",
-                    contents=prompt
-                )
-                ai_summary = response.text.strip()
+                ai_summary = generate_local(prompt, timeout=120)
             except Exception:
                 pass
 
@@ -298,8 +253,8 @@ class ContractAnalyzerAI:
     # ─────────────────────────────────────────────────────────────────────────
     # دوال مساعدة
     # ─────────────────────────────────────────────────────────────────────────
-    def _analyze_contract_regex(self, text: str, gemini_error: str = None) -> Dict[str, Any]:
-        """تحليل Regex كـ fallback عند عدم توفر Gemini"""
+    def _analyze_contract_regex(self, text: str) -> Dict[str, Any]:
+        """تحليل أولي باستخدام Regex عند تعذر النموذج المحلي."""
         moneys = list(set(re.findall(self.money_pattern, text)))
         dates = list(set(re.findall(self.date_pattern, text)))
         parties_raw = re.findall(self.party_pattern, text)
@@ -307,14 +262,13 @@ class ContractAnalyzerAI:
 
         return {
             "is_ai_used": False,
-            "gemini_error": gemini_error,
             "contract_type": "غير محدد",
             "parties": parties,
             "obligations": [],
             "penalty_clauses": [],
             "key_dates": [{"label": "تاريخ", "date": d} for d in dates],
             "financial_terms": [{"label": "مبلغ", "amount": m, "payment_schedule": ""} for m in moneys],
-            "summary": "تم التحليل بالطريقة الأساسية (Regex). يُنصح برفع العقد مع اتصال إنترنت للحصول على التحليل الكامل."
+            "summary": "تم التحليل بالطريقة الأساسية (Regex)؛ لم يتوفر النموذج المحلي لإجراء التحليل التفصيلي."
         }
 
     def _calculate_overall_risk(self, risks: List[Dict]) -> str:

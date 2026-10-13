@@ -2,8 +2,8 @@
 Legal Summarizer Service
 يقوم بتلخيص الأحكام والقضايا الطويلة باستخدام Local LLM (Ollama)
 """
-import requests
-from ..config import USE_LOCAL_LLM, OLLAMA_API_URL, OLLAMA_MODEL
+from ai_engine.local_model import generate_local
+from ..config import USE_LOCAL_LLM
 
 class LegalSummarizer:
     
@@ -25,20 +25,10 @@ class LegalSummarizer:
 
 الملخص:"""
         try:
-            response = requests.post(
-                OLLAMA_API_URL,
-                json={
-                    "model": OLLAMA_MODEL,
-                    "prompt": prompt,
-                    "stream": False
-                },
-                timeout=120
-            )
-            if response.status_code == 200:
-                return response.json().get('response', '')
-            return f"حدث خطأ في LLM المحلي: {response.text}"
-        except Exception as e:
-            return f"تعذر الاتصال بـ Ollama: {str(e)}"
+            result = generate_local(prompt, timeout=120)
+            return result or self._summarize_fallback(text)
+        except Exception:
+            return self._summarize_fallback(text)
 
     def _summarize_fallback(self, text: str) -> str:
         """

@@ -1,6 +1,6 @@
 """
 API Router للمساعد الذكي القانوني اليمني — الإصدار المتقدم v2.0
-يستخدم Gemini كمحرك ذكاء أساسي مع سياق محلي + ذاكرة محادثة
+يستخدم نموذجاً محلياً خاصاً مع سياق بيانات المكتب + ذاكرة محادثة معزولة
 """
 import time
 from datetime import datetime
@@ -58,7 +58,7 @@ def _get_doc_generator():
 
 
 # ══════════════════════════════════════════════
-# معالجة الدردشة البسيطة (بدون Gemini)
+# معالجة الدردشة البسيطة (بدون استدعاء النموذج)
 # ══════════════════════════════════════════════
 def _handle_conversational_query(question: str, user_name: str = ""):
     """يعالج الأسئلة العامة والدردشة البسيطة فوراً"""
@@ -145,7 +145,7 @@ def _handle_conversational_query(question: str, user_name: str = ""):
 async def ai_chat(request: Request, db: Session = Depends(get_db), current_user: AccessProfiles = Depends(get_current_user)):
     """
     المساعد الذكي المتقدم — يُجيب على أسئلة المستخدم
-    باستخدام Gemini AI + سياق محلي + ذاكرة محادثة
+    باستخدام النموذج المحلي الخاص + سياق المكتب + ذاكرة محادثة
     """
     start_time = time.time()
     try:
@@ -237,7 +237,7 @@ async def ai_chat(request: Request, db: Session = Depends(get_db), current_user:
         unified_results = _unified_assistant_search(db, office_id, question, current_user)
 
         # ──────────────────────────────────────
-        # 4. بناء السياق الشامل لـ Gemini
+        # 4. بناء السياق الشامل للمكتب الحالي
         # ──────────────────────────────────────
         user_context = _build_user_context(current_user, db)
         local_context = _build_local_context(unified_results)
@@ -261,8 +261,8 @@ async def ai_chat(request: Request, db: Session = Depends(get_db), current_user:
         # 4.5. فحص رصيد النقاط اليومي للمستخدم
         # ──────────────────────────────────────
         quota, today_str = _get_user_quota_info(db, office_id, user_id, current_user)
-        has_advanced_points = quota.gemini_used < quota.daily_limit
-        used_model = "gemini"
+        has_local_model_quota = quota.local_model_used < quota.daily_limit
+        used_model = "private"
 
         # ──────────────────────────────────────
         # 5. جلب سجل المحادثة من قاعدة البيانات  
@@ -270,19 +270,20 @@ async def ai_chat(request: Request, db: Session = Depends(get_db), current_user:
         _load_conversation_memory(db, office_id, user_id)
 
         # ──────────────────────────────────────
-        # 6. إرسال لـ Gemini إذا كان الرصيد متاحاً
+        # 6. إرسال إلى نموذج Ollama داخل شبكة الاستضافة إذا كان الرصيد متاحاً
         # ──────────────────────────────────────
         answer = None
-        if has_advanced_points:
-            answer = _ask_gemini_advanced(
+        if has_local_model_quota:
+            answer = _ask_local_model(
                 question=question,
                 local_context=full_context,
                 user_name=user_name,
                 user_id=user_id,
+                office_id=office_id,
                 db_data=db_data,
             )
             if answer:
-                quota.gemini_used += 1
+                quota.local_model_used += 1
                 try:
                     db.commit()
                 except Exception:
@@ -292,7 +293,7 @@ async def ai_chat(request: Request, db: Session = Depends(get_db), current_user:
         # 7. Fallback: الموديل القديم / الداخلي (عند نفاد النقاط أو فشل الاتصال)
         # ──────────────────────────────────────
         if not answer:
-            used_model = "local"
+            used_model = "rules"
             quota.local_used += 1
             try:
                 db.commit()
@@ -315,8 +316,8 @@ async def ai_chat(request: Request, db: Session = Depends(get_db), current_user:
                     answer = formatted
 
             # إذا كان التحويل بسبب نفاد رصيد اليوم، نضيف تنبيهاً لطيفاً في نهاية الرد
-            if not has_advanced_points and answer:
-                quota_note = "\n\n---\n⚡ *تنويه: تم إعداد هذا الرد عبر المحرك القانوني الداخلي (الموديل المحلي) نظراً لاكتمال نقاط الاستعلام اليومية المتقدمة لحسابكم، ويتم تجديد الرصيد تلقائياً كل يوم.*"
+            if not has_local_model_quota and answer:
+                quota_note = "\n\n---\n⚡ *تم بلوغ حد استخدام النموذج لهذا اليوم، لذلك أُعد هذا الرد بإجابات النظام الأساسية. يتجدد الحد يومياً.*"
                 answer += quota_note
 
         # ──────────────────────────────────────
@@ -329,7 +330,7 @@ async def ai_chat(request: Request, db: Session = Depends(get_db), current_user:
         # ──────────────────────────────────────
         _save_chat(db, office_id, user_id, question, answer, intent.type)
 
-        remaining_pts = max(0, quota.daily_limit - quota.gemini_used)
+        remaining_pts = max(0, quota.daily_limit - quota.local_model_used)
         elapsed = int((time.time() - start_time) * 1000)
         return JSONResponse({
             "success": True,
@@ -552,15 +553,15 @@ async def get_user_quota(request: Request, db: Session = Depends(get_db), curren
             return JSONResponse({"success": False, "error": "غير مسجل الدخول"}, status_code=401)
 
         quota, today_str = _get_user_quota_info(db, current_user.office_id, current_user.id, current_user)
-        remaining = max(0, quota.daily_limit - quota.gemini_used) if quota else 50
+        remaining = max(0, quota.daily_limit - quota.local_model_used) if quota else 50
 
         return JSONResponse({
             "success": True,
             "daily_limit": quota.daily_limit if quota else 50,
-            "gemini_used": quota.gemini_used if quota else 0,
+            "local_model_used": quota.local_model_used if quota else 0,
             "local_used": quota.local_used if quota else 0,
             "remaining_points": remaining,
-            "has_advanced_ai": remaining > 0,
+            "has_local_model_quota": remaining > 0,
             "date": today_str
         })
     except Exception as e:
@@ -592,6 +593,7 @@ def _get_user_quota_info(db: Session, office_id: int, user_id: int, current_user
         daily_limit = 50
 
     quota = db.query(AIUserQuota).filter(
+        AIUserQuota.office_id == (office_id or getattr(current_user, 'office_id', None)),
         AIUserQuota.user_id == user_id,
         AIUserQuota.usage_date == today_str
     ).first()
@@ -601,7 +603,7 @@ def _get_user_quota_info(db: Session, office_id: int, user_id: int, current_user
             office_id=office_id or (getattr(current_user, 'office_id', None)),
             user_id=user_id,
             usage_date=today_str,
-            gemini_used=0,
+            local_model_used=0,
             local_used=0,
             daily_limit=daily_limit
         )
@@ -612,6 +614,7 @@ def _get_user_quota_info(db: Session, office_id: int, user_id: int, current_user
         except Exception:
             db.rollback()
             quota = db.query(AIUserQuota).filter(
+                AIUserQuota.office_id == (office_id or getattr(current_user, 'office_id', None)),
                 AIUserQuota.user_id == user_id,
                 AIUserQuota.usage_date == today_str
             ).first()
@@ -619,19 +622,13 @@ def _get_user_quota_info(db: Session, office_id: int, user_id: int, current_user
     return quota, today_str
 
 def _load_conversation_memory(db: Session, office_id: int, user_id: int):
-    """تحميل ذاكرة المحادثة من قاعدة البيانات إلى Gemini"""
+    """تحميل سجل محادثات المستخدم من المكتب الحالي إلى الذاكرة المحلية."""
     try:
-        from ai_engine.llm_service import get_gemini_assistant
-        gemini = get_gemini_assistant()
-        if not gemini.is_available:
-            return
+        from ai_engine.llm_service import get_local_assistant
+        assistant = get_local_assistant()
 
-        # تحقق إذا كانت الذاكرة محملة مسبقاً
-        existing = gemini._conversation_memory.get(user_id, [])
-        if existing:
-            return  # الذاكرة موجودة بالفعل
-
-        # جلب آخر 10 محادثات
+        # أعد تحميل السجل لكل طلب حتى تتطابق الذاكرة بين عمال Railway.
+        assistant.clear_memory(user_id, office_id)
         history = db.query(AIChatHistory).filter(
             AIChatHistory.office_id == office_id,
             AIChatHistory.user_id == user_id,
@@ -639,41 +636,41 @@ def _load_conversation_memory(db: Session, office_id: int, user_id: int):
         ).order_by(AIChatHistory.created_at.desc()).limit(10).all()
 
         for h in reversed(history):
-            gemini.add_to_memory(user_id, "user", h.question)
+            assistant.add_to_memory(user_id, "user", h.question, office_id)
             if h.answer:
-                gemini.add_to_memory(user_id, "assistant", h.answer)
+                assistant.add_to_memory(user_id, "assistant", h.answer, office_id)
 
     except Exception as e:
         print(f"Error loading conversation memory: {e}")
 
 
-def _ask_gemini_advanced(
+def _ask_local_model(
     question: str,
     local_context: str = None,
     user_name: str = "",
     user_id: int = None,
+    office_id: int = 0,
     db_data: dict = None,
 ) -> str:
-    """يرسل السؤال لـ Gemini مع السياق الكامل"""
+    """يرسل السؤال والسياق إلى نموذج Ollama الخاص داخل الاستضافة."""
     try:
-        from ai_engine.llm_service import get_gemini_assistant
-        gemini = get_gemini_assistant()
-        if not gemini.is_available:
-            return None
-        return gemini.ask(
+        from ai_engine.llm_service import get_local_assistant
+        assistant = get_local_assistant()
+        return assistant.ask(
             question=question,
             local_context=local_context,
             user_name=user_name,
             user_id=user_id,
+            office_id=office_id,
             db_data=db_data,
         )
     except Exception as e:
-        print(f"Gemini error: {e}")
+        print(f"Local model error: {type(e).__name__}")
         return None
 
 
 def _build_user_context(current_user, db) -> str:
-    """يبني سياق المستخدم الحالي لإرساله مع السؤال لـ Gemini"""
+    """يبني سياق المستخدم الحالي من بيانات مكتبه فقط."""
     try:
         role_map = {
             'admin': 'مدير المكتب', 'مدير': 'مدير المكتب',
@@ -736,9 +733,9 @@ def _build_local_context(unified_results: dict) -> str:
 def _generate_suggestions(intent_type: str, question: str) -> list:
     """توليد اقتراحات أسئلة متابعة ذكية"""
     try:
-        from ai_engine.llm_service import get_gemini_assistant
-        gemini = get_gemini_assistant()
-        return gemini.generate_follow_up_suggestions(question, "", intent_type)
+        from ai_engine.llm_service import get_local_assistant
+        assistant = get_local_assistant()
+        return assistant.generate_follow_up_suggestions(question, "", intent_type)
     except Exception:
         return ["كم عدد القضايا المفتوحة؟", "ما الجلسات القادمة؟", "أنشئ لي عقد إيجار"]
 

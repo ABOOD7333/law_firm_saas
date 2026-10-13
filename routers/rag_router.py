@@ -405,7 +405,7 @@ async def analyze_contract(
     db: Session = Depends(get_db),
     current_user: AccessProfiles = Depends(get_current_user)
 ):
-    """تحليل عقد كامل باستخدام Gemini AI — دعم رفع ملف أو لصق نص مباشر"""
+    """تحليل عقد كامل بالنموذج المحلي — دعم رفع ملف أو لصق نص مباشر"""
     _authorize_ai_processing(request, current_user)
 
     text = ""

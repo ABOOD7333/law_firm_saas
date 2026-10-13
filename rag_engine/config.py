@@ -33,11 +33,11 @@ TESSERACT_CMD = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 # Poppler path for PDF to Image conversion
 POPPLER_PATH = str(BASE_DIR.parent / "poppler" / "poppler-24.08.0" / "Library" / "bin")
 
-# Local LLM Settings (Ollama / HuggingFace)
-# Set to True if Ollama is running locally for summarization and drafting
-USE_LOCAL_LLM = False
-OLLAMA_API_URL = "http://localhost:11434/api/generate"
-OLLAMA_MODEL = "llama3" # Or 'qwen:7b' for better Arabic
+# Local/private Ollama service. Railway should point this at the Ollama service
+# in the same project (private DNS); local development may override it.
+USE_LOCAL_LLM = os.getenv("USE_LOCAL_LLM", "true").strip().lower() in {"1", "true", "yes", "on"}
+OLLAMA_API_URL = os.getenv("OLLAMA_API_URL", "http://ollama.railway.internal:11434/api/generate").strip()
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:3b").strip()
 
 # Supported Document Types
 SUPPORTED_EXTENSIONS = [".pdf", ".docx", ".txt", ".png", ".jpg", ".jpeg"]
