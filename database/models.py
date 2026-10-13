@@ -66,6 +66,17 @@ class AuthVerificationTokens(Base):
     consumed_at: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
 
+class AuthOtpTokens(Base):
+    """Short-lived email/SMS OTPs, including pre-registration identifiers."""
+    __tablename__ = 'auth_otp_tokens'
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    identifier: Mapped[str] = mapped_column(Text, nullable=False, index=True)
+    token_hash: Mapped[str] = mapped_column(Text, nullable=False, index=True)
+    expires_at: Mapped[str] = mapped_column(Text, nullable=False)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text('0'))
+    consumed_at: Mapped[Optional[str]] = mapped_column(Text)
+    created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+
 class AuthSessions(Base):
     __tablename__ = 'auth_sessions'
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

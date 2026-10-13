@@ -26,9 +26,9 @@ except ImportError:
 # ──────────────────────────────────────────────────────────────────────
 
 
-def _hash_otp(code: str) -> str:
-    """Hash OTP code for secure database storage."""
-    return hashlib.sha256(code.encode("utf-8")).hexdigest()
+def _hash_otp(code: str, identifier: str) -> str:
+    """Hash an OTP with its normalized identifier to avoid cross-user collisions."""
+    return hashlib.sha256(f"{identifier}:{code}".encode("utf-8")).hexdigest()
 
 
 def _get_db():
@@ -82,23 +82,18 @@ def generate_otp(length: int = 6) -> str:
 
 def store_otp(identifier: str, code: str, ttl_minutes: int = 10):
     """يحفظ رمز OTP في قاعدة البيانات لمعرف معين (email/phone) لمدة ttl_minutes."""
-    from database.models import AuthVerificationTokens
+    from database.models import AuthOtpTokens
     db = _get_db()
     try:
         ident = identifier.lower().strip()
         expires = (datetime.now() + timedelta(minutes=ttl_minutes)).strftime("%Y-%m-%d %H:%M:%S")
         # حذف الرموز القديمة غير المستهلكة لنفس المعرف
-        old_tokens = db.query(AuthVerificationTokens).filter(
-            AuthVerificationTokens.token_type.like(f"otp:%:{ident}"),
-            AuthVerificationTokens.consumed_at.is_(None),
-        ).all()
+        old_tokens = db.query(AuthOtpTokens).filter(AuthOtpTokens.identifier == ident).all()
         for t in old_tokens:
             db.delete(t)
-        # إنشاء رمز جديد
-        new_token = AuthVerificationTokens(
-            user_id=0,
-            token_hash=_hash_otp(code),
-            token_type=f"otp:general:{ident}",
+        new_token = AuthOtpTokens(
+            identifier=ident,
+            token_hash=_hash_otp(code, ident),
             expires_at=expires,
             attempts=0,
         )
@@ -107,25 +102,27 @@ def store_otp(identifier: str, code: str, ttl_minutes: int = 10):
     except Exception as e:
         db.rollback()
         print(f"[OTP] Error storing OTP: {e}")
+        raise
     finally:
         db.close()
 
 
 def verify_otp(identifier: str, code: str) -> bool:
     """يتحقق من صحة رمز OTP وصلاحيته الزمنية من قاعدة البيانات."""
-    from database.models import AuthVerificationTokens
+    from database.models import AuthOtpTokens
     db = _get_db()
     try:
         ident = identifier.lower().strip()
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        entry = db.query(AuthVerificationTokens).filter(
-            AuthVerificationTokens.token_type.like(f"otp:%:{ident}"),
-            AuthVerificationTokens.consumed_at.is_(None),
-            AuthVerificationTokens.expires_at > now_str,
+        entry = db.query(AuthOtpTokens).filter(
+            AuthOtpTokens.identifier == ident,
+            AuthOtpTokens.consumed_at.is_(None),
+            AuthOtpTokens.expires_at > now_str,
+            AuthOtpTokens.attempts < 5,
         ).first()
         if not entry:
             return False
-        if hmac.compare_digest(entry.token_hash, _hash_otp(code)):
+        if hmac.compare_digest(entry.token_hash, _hash_otp(code, ident)):
             entry.consumed_at = now_str
             db.commit()
             return True

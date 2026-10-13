@@ -9,7 +9,7 @@ from core.error_handler import safe_error_html
 
 from database.database import get_db
 from database.models import AccessProfiles, LawCases, LawParties, LawClients, LawAuditLog
-from dependencies import get_current_user, templates, check_user_permission
+from dependencies import get_current_user, templates, check_user_permission, require_user_permission, user_can_access_case
 
 router = APIRouter()
 
@@ -387,6 +387,7 @@ async def get_party_details(
     """Secure JSON API for Party View & Edit Modals"""
     if not user:
         raise HTTPException(status_code=401, detail="غير مصرح")
+    require_user_permission(user, "cases", "view")
     office_id = user.office_id
     p = db.query(LawParties).filter(
         LawParties.id == party_id,
@@ -396,7 +397,10 @@ async def get_party_details(
     if not p:
         raise HTTPException(status_code=404, detail="الطرف غير موجود")
 
-    can_view_internal = (user.role in ['مدير المكتب', 'المسؤول', 'أدمن', 'محامي', 'محامٍ'])
+    if p.case_id and not user_can_access_case(db, user, p.case_id):
+        raise HTTPException(status_code=403, detail="غير مصرح بالوصول إلى القضية")
+
+    can_view_internal = check_user_permission(user, "cases", "edit")
 
     return {
         "id": p.id,

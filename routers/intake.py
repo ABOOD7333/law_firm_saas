@@ -20,6 +20,7 @@ from database.models import (
 )
 from dependencies import templates, get_current_user, check_user_permission
 from utils.conflict_checker import check_conflict_of_interest
+from core.rate_limiter import is_rate_limited, record_attempt
 
 router = APIRouter(tags=["Client Intake & E-Signature"])
 
@@ -295,6 +296,7 @@ async def public_intake_form(
 @router.post("/form/{form_token}/submit")
 async def submit_public_intake_form(
     form_token: str,
+    request: Request,
     full_name: str = Form(...),
     phone: str = Form(...),
     email: Optional[str] = Form(None),
@@ -305,6 +307,10 @@ async def submit_public_intake_form(
     opposing_party_id: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
+    client_ip = request.client.host if request.client else "unknown"
+    if is_rate_limited(client_ip, "public_intake", max_attempts=10, window_seconds=900):
+        raise HTTPException(status_code=429, detail="تجاوزت عدد الطلبات المسموح. حاول لاحقاً.")
+    record_attempt(client_ip, "public_intake")
     fields = (full_name, phone, email or "", national_id or "", case_type or "", case_summary,
               opposing_party_name or "", opposing_party_id or "")
     if any(len(value) > limit for value, limit in zip(fields, (200, 40, 254, 80, 120, 10000, 200, 80))):

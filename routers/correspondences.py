@@ -1,5 +1,4 @@
 import os
-import shutil
 from datetime import datetime
 from typing import Optional
 from fastapi import APIRouter, Request, Depends, HTTPException, Form, UploadFile, File
@@ -11,7 +10,8 @@ from core.error_handler import safe_error_html
 
 from database.database import get_db
 from database.models import AccessProfiles, LawCases, LawCorrespondences, LawClients, LawParties, LawTasks
-from dependencies import get_current_user, templates
+from dependencies import get_current_user, templates, require_user_permission, user_can_access_case
+from core.upload_security import save_upload
 
 router = APIRouter()
 
@@ -43,6 +43,7 @@ async def correspondences_page(
 ):
     if not user:
         return RedirectResponse(url="/", status_code=303)
+    require_user_permission(user, "correspondences", "view")
     try:
         office_id = user.office_id
         today_str = datetime.now().strftime("%Y-%m-%d")
@@ -51,6 +52,13 @@ async def correspondences_page(
             LawCorrespondences.office_id == office_id,
             LawCorrespondences.is_deleted == 0
         )
+        if user.role in {"محامي", "محامٍ"} and not getattr(user, "can_view_all_cases", 0):
+            visible_case_ids = db.query(LawCases.id).filter(
+                LawCases.office_id == office_id,
+                LawCases.lead_lawyer_id == user.id,
+                LawCases.is_deleted == 0,
+            ).subquery()
+            query = query.filter(LawCorrespondences.case_id.in_(visible_case_ids))
 
         if direction:
             query = query.filter(LawCorrespondences.direction_key == direction)
@@ -74,6 +82,8 @@ async def correspondences_page(
             LawCorrespondences.office_id == office_id,
             LawCorrespondences.is_deleted == 0
         ).all()
+        if user.role in {"محامي", "محامٍ"} and not getattr(user, "can_view_all_cases", 0):
+            all_office_corrs = [c for c in all_office_corrs if c.case_id and user_can_access_case(db, user, c.case_id)]
 
         total_count = len(all_office_corrs)
         outgoing_count = sum(1 for c in all_office_corrs if c.direction_key == "صادر")
@@ -89,10 +99,13 @@ async def correspondences_page(
             "overdue": overdue_count
         }
 
-        cases = db.query(LawCases).filter(
+        cases_query = db.query(LawCases).filter(
             LawCases.office_id == office_id,
             LawCases.is_deleted == 0
-        ).order_by(LawCases.id.desc()).all()
+        )
+        if user.role in {"محامي", "محامٍ"} and not getattr(user, "can_view_all_cases", 0):
+            cases_query = cases_query.filter(LawCases.lead_lawyer_id == user.id)
+        cases = cases_query.order_by(LawCases.id.desc()).all()
 
         return templates.TemplateResponse(
             request=request,
@@ -138,6 +151,7 @@ async def add_correspondence(
 ):
     if not user:
         return RedirectResponse(url="/", status_code=303)
+    require_user_permission(user, "correspondences", "add")
     office_id = user.office_id
 
     case = db.query(LawCases).filter(
@@ -146,6 +160,8 @@ async def add_correspondence(
     ).first()
     if not case:
         raise HTTPException(status_code=403, detail="القضية غير مصرح بالوصول إليها")
+    if not user_can_access_case(db, user, case_id):
+        raise HTTPException(status_code=403, detail="غير مصرح بالوصول إلى القضية")
 
     # Generate sequential registry number
     registry_number = generate_registry_number(db, office_id, direction_key)
@@ -153,18 +169,12 @@ async def add_correspondence(
     # File uploads
     attachment_path = None
     if attachment and attachment.filename:
-        safe_att_name = f"{office_id}_{case_id}_{int(datetime.now().timestamp())}_doc_{attachment.filename}"
-        att_dest = os.path.join(UPLOAD_DIR, safe_att_name)
-        with open(att_dest, "wb") as buffer:
-            shutil.copyfileobj(attachment.file, buffer)
+        safe_att_name = save_upload(attachment, UPLOAD_DIR)
         attachment_path = f"/static/uploads/correspondences/{safe_att_name}"
 
     proof_path = None
     if proof_of_delivery and proof_of_delivery.filename:
-        safe_proof_name = f"{office_id}_{case_id}_{int(datetime.now().timestamp())}_proof_{proof_of_delivery.filename}"
-        proof_dest = os.path.join(UPLOAD_DIR, safe_proof_name)
-        with open(proof_dest, "wb") as buffer:
-            shutil.copyfileobj(proof_of_delivery.file, buffer)
+        safe_proof_name = save_upload(proof_of_delivery, UPLOAD_DIR)
         proof_path = f"/static/uploads/correspondences/{safe_proof_name}"
 
     response_status = "بانتظار الرد" if needs_reply == "نعم" else "لا يتطلب رد"
@@ -240,6 +250,7 @@ async def edit_correspondence(
 ):
     if not user:
         return RedirectResponse(url="/", status_code=303)
+    require_user_permission(user, "correspondences", "edit")
     c = db.query(LawCorrespondences).filter(
         LawCorrespondences.id == corr_id,
         LawCorrespondences.office_id == user.office_id,
@@ -247,6 +258,8 @@ async def edit_correspondence(
     ).first()
     if not c:
         raise HTTPException(status_code=404, detail="المراسلة غير موجودة")
+    if not user_can_access_case(db, user, c.case_id):
+        raise HTTPException(status_code=403, detail="غير مصرح بالوصول إلى القضية")
 
     c.direction_key = direction_key
     c.letter_number = letter_number.strip() if letter_number else None
@@ -265,17 +278,11 @@ async def edit_correspondence(
 
     # File uploads
     if attachment and attachment.filename:
-        safe_att_name = f"{user.office_id}_{c.case_id}_{int(datetime.now().timestamp())}_doc_{attachment.filename}"
-        att_dest = os.path.join(UPLOAD_DIR, safe_att_name)
-        with open(att_dest, "wb") as buffer:
-            shutil.copyfileobj(attachment.file, buffer)
+        safe_att_name = save_upload(attachment, UPLOAD_DIR)
         c.attachment_path = f"/static/uploads/correspondences/{safe_att_name}"
 
     if proof_of_delivery and proof_of_delivery.filename:
-        safe_proof_name = f"{user.office_id}_{c.case_id}_{int(datetime.now().timestamp())}_proof_{proof_of_delivery.filename}"
-        proof_dest = os.path.join(UPLOAD_DIR, safe_proof_name)
-        with open(proof_dest, "wb") as buffer:
-            shutil.copyfileobj(proof_of_delivery.file, buffer)
+        safe_proof_name = save_upload(proof_of_delivery, UPLOAD_DIR)
         c.proof_of_delivery_path = f"/static/uploads/correspondences/{safe_proof_name}"
 
     db.commit()
@@ -291,11 +298,14 @@ async def delete_correspondence(
 ):
     if not user:
         return RedirectResponse(url="/", status_code=303)
+    require_user_permission(user, "correspondences", "delete")
     c = db.query(LawCorrespondences).filter(
         LawCorrespondences.id == corr_id,
         LawCorrespondences.office_id == user.office_id
     ).first()
     if c:
+        if not user_can_access_case(db, user, c.case_id):
+            raise HTTPException(status_code=403, detail="غير مصرح بالوصول إلى القضية")
         c.is_deleted = 1
         db.commit()
     return RedirectResponse(url="/correspondences", status_code=303)
@@ -309,6 +319,7 @@ async def get_correspondence_api(
 ):
     if not user:
         raise HTTPException(status_code=401, detail="غير مصرح")
+    require_user_permission(user, "correspondences", "view")
     c = db.query(LawCorrespondences).filter(
         LawCorrespondences.id == corr_id,
         LawCorrespondences.office_id == user.office_id,
@@ -316,6 +327,8 @@ async def get_correspondence_api(
     ).first()
     if not c:
         raise HTTPException(status_code=404, detail="المراسلة غير موجودة")
+    if not user_can_access_case(db, user, c.case_id):
+        raise HTTPException(status_code=403, detail="غير مصرح بالوصول إلى القضية")
 
     return {
         "id": c.id,

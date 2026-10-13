@@ -10,6 +10,7 @@ from database.database import get_db, SessionLocal
 from database.models import AccessProfiles, KnowledgeDocument, DocumentChunkMetadata
 from dependencies import get_current_user, check_user_permission
 from core.security import validate_file_signature
+from core.rate_limiter import is_rate_limited, record_attempt
 
 # RAG Engine Imports
 from rag_engine.config import KNOWLEDGE_DATA_DIR, SUPPORTED_EXTENSIONS
@@ -24,6 +25,15 @@ router = APIRouter(
     prefix="/api/rag",
     tags=["RAG Engine"]
 )
+
+
+def _authorize_ai_processing(request: Request, user: AccessProfiles) -> None:
+    if not user or not user.office_id or not check_user_permission(user, "knowledge", "view"):
+        raise HTTPException(status_code=403, detail="لا تملك صلاحية استخدام معالجة المستندات")
+    client_ip = request.client.host if request.client else "unknown"
+    if is_rate_limited(client_ip, "rag_ai_processing", max_attempts=10, window_seconds=3600):
+        raise HTTPException(status_code=429, detail="تجاوزت حد معالجة المستندات. حاول لاحقاً.")
+    record_attempt(client_ip, "rag_ai_processing")
 
 # ---------------------------------------------------------
 # Background Task for Processing Documents
@@ -389,14 +399,14 @@ async def semantic_search(
 
 @router.post("/analyze-contract")
 async def analyze_contract(
+    request: Request,
     file: UploadFile = File(None),
     raw_text: str = Form(None),
     db: Session = Depends(get_db),
     current_user: AccessProfiles = Depends(get_current_user)
 ):
     """تحليل عقد كامل باستخدام Gemini AI — دعم رفع ملف أو لصق نص مباشر"""
-    if not current_user:
-        raise HTTPException(status_code=401)
+    _authorize_ai_processing(request, current_user)
 
     text = ""
     temp_path = None
@@ -411,6 +421,8 @@ async def analyze_contract(
 
         if not text or text.startswith("Error"):
             return {"success": False, "error": f"تعذر استخراج النص: {text}"}
+        if len(text) > 100_000:
+            raise HTTPException(status_code=413, detail="النص يتجاوز الحد المسموح للتحليل")
         analysis = analyzer_service.analyze_contract_ai(text)
         return {"success": True, "analysis": analysis, "text_length": len(text)}
     finally:
@@ -420,14 +432,14 @@ async def analyze_contract(
 
 @router.post("/detect-risks")
 async def detect_contract_risks(
+    request: Request,
     file: UploadFile = File(None),
     raw_text: str = Form(None),
     db: Session = Depends(get_db),
     current_user: AccessProfiles = Depends(get_current_user)
 ):
     """كشف البنود عالية المخاطر في العقد — دعم رفع ملف أو لصق نص مباشر"""
-    if not current_user:
-        raise HTTPException(status_code=401)
+    _authorize_ai_processing(request, current_user)
 
     text = ""
     temp_path = None
@@ -442,6 +454,8 @@ async def detect_contract_risks(
 
         if not text or text.startswith("Error"):
             return {"success": False, "error": f"تعذر استخراج النص: {text}"}
+        if len(text) > 100_000:
+            raise HTTPException(status_code=413, detail="النص يتجاوز الحد المسموح للتحليل")
         risks = analyzer_service.detect_risks(text)
         return {"success": True, "risks": risks, "text_length": len(text)}
     finally:
@@ -451,6 +465,7 @@ async def detect_contract_risks(
 
 @router.post("/compare-contracts")
 async def compare_two_contracts(
+    request: Request,
     file1: UploadFile = File(...),
     file2: UploadFile = File(...),
     label1: str = Form(default="النسخة الأولى"),
@@ -459,8 +474,7 @@ async def compare_two_contracts(
     current_user: AccessProfiles = Depends(get_current_user)
 ):
     """مقارنة نسختين من العقد وإظهار التعديلات (Document Diff)"""
-    if not current_user:
-        raise HTTPException(status_code=401)
+    _authorize_ai_processing(request, current_user)
 
     temp1 = await _save_validated_upload(file1, "cmp1")
     temp2 = None
@@ -490,8 +504,7 @@ async def summarize_text(
     current_user: AccessProfiles = Depends(get_current_user),
 ):
     """تلخيص نص طويل (حكم، قضية)"""
-    if not current_user:
-        raise HTTPException(status_code=401, detail="غير مصرح")
+    _authorize_ai_processing(request, current_user)
     data = await request.json()
     text = data.get("text")
     if not text:

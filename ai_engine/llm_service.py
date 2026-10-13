@@ -68,7 +68,9 @@ class GeminiLegalAssistant:
                     pass
 
             if not api_key:
-                api_key = "AQ.Ab8RN6JIQtFVp2wK-d5AROzv2faw7FqxFgCznjuxEwm1Pabxng"
+                self._init_error = "GEMINI_API_KEY غير موجود"
+                logger.warning(self._init_error)
+                return
 
             from google import genai
             self._client = genai.Client(api_key=api_key)

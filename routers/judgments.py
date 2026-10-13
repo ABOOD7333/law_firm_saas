@@ -1,5 +1,4 @@
 import os
-import shutil
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -11,6 +10,7 @@ from core.error_handler import safe_error_html
 from database.database import get_db
 from database.models import AccessProfiles, LawCases, LawJudgments, LawTasks, LawExecutions, LawOffices
 from dependencies import get_current_user, templates, check_user_permission
+from core.upload_security import save_upload
 
 router = APIRouter(tags=["Judgments & Court Decrees"])
 
@@ -163,11 +163,7 @@ async def add_judgment(
     attachment_path = None
     if attachment and attachment.filename:
         upload_dir = os.path.join("static", "uploads", "judgments")
-        os.makedirs(upload_dir, exist_ok=True)
-        safe_filename = f"judgment_{case_id}_{int(datetime.now().timestamp())}_{attachment.filename}"
-        file_path = os.path.join(upload_dir, safe_filename)
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(attachment.file, buffer)
+        safe_filename = save_upload(attachment, upload_dir)
         attachment_path = f"/static/uploads/judgments/{safe_filename}"
 
     new_judgment = LawJudgments(
@@ -285,11 +281,7 @@ async def edit_judgment(
     # Handle file replacement
     if attachment and attachment.filename:
         upload_dir = os.path.join("static", "uploads", "judgments")
-        os.makedirs(upload_dir, exist_ok=True)
-        safe_filename = f"judgment_{case_id}_{int(datetime.now().timestamp())}_{attachment.filename}"
-        file_path = os.path.join(upload_dir, safe_filename)
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(attachment.file, buffer)
+        safe_filename = save_upload(attachment, upload_dir)
         j.attachment_path = f"/static/uploads/judgments/{safe_filename}"
 
     db.commit()

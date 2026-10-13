@@ -891,7 +891,12 @@ def _unified_assistant_search(db: Session, office_id: int, query_text: str, curr
     try:
         from rag_engine.core.vector_store import vector_store
         if vector_store.collection.count() > 0:
-            rag_matches = vector_store.semantic_search(query_clean, n_results=2)
+            # لا تبحث في مجموعة Chroma المشتركة دون قيد المكتب؛ غياب الوسم
+            # يعيد نتائج من جميع المكاتب.
+            rag_matches = vector_store.semantic_search(
+                query_clean, n_results=2,
+                filter_meta={"$or": [{"is_system_law": True}, {"office_id": int(office_id)}]}
+            )
             results["semantic"] = rag_matches
     except Exception:
         pass

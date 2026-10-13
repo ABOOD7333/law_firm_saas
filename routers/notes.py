@@ -1,5 +1,4 @@
 import os
-import shutil
 from datetime import datetime
 from typing import Optional
 from fastapi import APIRouter, Request, Depends, HTTPException, Form, UploadFile, File
@@ -11,7 +10,8 @@ from core.error_handler import safe_error_html
 
 from database.database import get_db
 from database.models import AccessProfiles, LawCases, LawNotes, LawTasks
-from dependencies import get_current_user, templates
+from dependencies import get_current_user, templates, require_user_permission, user_can_access_case
+from core.upload_security import save_upload
 
 router = APIRouter()
 
@@ -30,12 +30,20 @@ async def notes_page(
 ):
     if not user:
         return RedirectResponse(url="/", status_code=303)
+    require_user_permission(user, "notes", "view")
     try:
         # Multi-tenant base query
         query = db.query(LawNotes).filter(
             LawNotes.office_id == user.office_id,
             LawNotes.is_deleted == 0
         )
+        if user.role in {"محامي", "محامٍ"} and not getattr(user, "can_view_all_cases", 0):
+            visible_case_ids = db.query(LawCases.id).filter(
+                LawCases.office_id == user.office_id,
+                LawCases.lead_lawyer_id == user.id,
+                LawCases.is_deleted == 0,
+            ).subquery()
+            query = query.filter(LawNotes.case_id.in_(visible_case_ids))
 
         if case_id:
             query = query.filter(LawNotes.case_id == case_id)
@@ -52,6 +60,8 @@ async def notes_page(
             LawNotes.office_id == user.office_id,
             LawNotes.is_deleted == 0
         ).all()
+        if user.role in {"محامي", "محامٍ"} and not getattr(user, "can_view_all_cases", 0):
+            all_office_notes = [n for n in all_office_notes if n.case_id and user_can_access_case(db, user, n.case_id)]
 
         # KPIs
         total_notes = len(all_office_notes)
@@ -71,10 +81,13 @@ async def notes_page(
         }
 
         # Available cases for dropdown
-        cases = db.query(LawCases).filter(
+        cases_query = db.query(LawCases).filter(
             LawCases.office_id == user.office_id,
             LawCases.is_deleted == 0
-        ).order_by(LawCases.id.desc()).all()
+        )
+        if user.role in {"محامي", "محامٍ"} and not getattr(user, "can_view_all_cases", 0):
+            cases_query = cases_query.filter(LawCases.lead_lawyer_id == user.id)
+        cases = cases_query.order_by(LawCases.id.desc()).all()
 
         # Office team members
         team_members = db.query(AccessProfiles).filter(
@@ -126,6 +139,7 @@ async def add_note(
 ):
     if not user:
         return RedirectResponse(url="/", status_code=303)
+    require_user_permission(user, "notes", "add")
     office_id = user.office_id
 
     case = db.query(LawCases).filter(
@@ -134,13 +148,12 @@ async def add_note(
     ).first()
     if not case:
         raise HTTPException(status_code=403, detail="القضية غير موجودة أو غير مصرح بالوصول إليها")
+    if not user_can_access_case(db, user, case_id):
+        raise HTTPException(status_code=403, detail="غير مصرح بالوصول إلى القضية")
 
     attachment_path = None
     if attachment and attachment.filename:
-        safe_name = f"{office_id}_{case_id}_{int(datetime.now().timestamp())}_{attachment.filename}"
-        file_location = os.path.join(UPLOAD_DIR, safe_name)
-        with open(file_location, "wb") as buffer:
-            shutil.copyfileobj(attachment.file, buffer)
+        safe_name = save_upload(attachment, UPLOAD_DIR)
         attachment_path = f"/static/uploads/notes/{safe_name}"
 
     note = LawNotes(
@@ -208,6 +221,7 @@ async def edit_note(
 ):
     if not user:
         return RedirectResponse(url="/", status_code=303)
+    require_user_permission(user, "notes", "edit")
     n = db.query(LawNotes).filter(
         LawNotes.id == note_id,
         LawNotes.office_id == user.office_id,
@@ -215,6 +229,8 @@ async def edit_note(
     ).first()
     if not n:
         raise HTTPException(status_code=404, detail="الملاحظة غير موجودة")
+    if not user_can_access_case(db, user, n.case_id):
+        raise HTTPException(status_code=403, detail="غير مصرح بالوصول إلى القضية")
 
     n.title = title.strip()
     n.note_type_key = note_type_key
@@ -231,10 +247,7 @@ async def edit_note(
     n.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     if attachment and attachment.filename:
-        safe_name = f"{user.office_id}_{n.case_id}_{int(datetime.now().timestamp())}_{attachment.filename}"
-        file_location = os.path.join(UPLOAD_DIR, safe_name)
-        with open(file_location, "wb") as buffer:
-            shutil.copyfileobj(attachment.file, buffer)
+        safe_name = save_upload(attachment, UPLOAD_DIR)
         n.attachment_path = f"/static/uploads/notes/{safe_name}"
 
     db.commit()
@@ -250,6 +263,7 @@ async def toggle_pin_note(
 ):
     if not user:
         return JSONResponse({"status": "error", "message": "غير مصرح"}, status_code=401)
+    require_user_permission(user, "notes", "edit")
     n = db.query(LawNotes).filter(
         LawNotes.id == note_id,
         LawNotes.office_id == user.office_id,
@@ -257,6 +271,8 @@ async def toggle_pin_note(
     ).first()
     if not n:
         return JSONResponse({"status": "error", "message": "الملاحظة غير موجودة"}, status_code=404)
+    if not user_can_access_case(db, user, n.case_id):
+        raise HTTPException(status_code=403, detail="غير مصرح بالوصول إلى القضية")
 
     n.is_pinned = 0 if (n.is_pinned == 1) else 1
     db.commit()
@@ -281,11 +297,14 @@ async def delete_note(
 ):
     if not user:
         return RedirectResponse(url="/", status_code=303)
+    require_user_permission(user, "notes", "delete")
     n = db.query(LawNotes).filter(
         LawNotes.id == note_id,
         LawNotes.office_id == user.office_id
     ).first()
     if n:
+        if not user_can_access_case(db, user, n.case_id):
+            raise HTTPException(status_code=403, detail="غير مصرح بالوصول إلى القضية")
         n.is_deleted = 1
         db.commit()
     return RedirectResponse(url="/notes", status_code=303)
@@ -299,6 +318,7 @@ async def get_note_api(
 ):
     if not user:
         raise HTTPException(status_code=401, detail="غير مصرح")
+    require_user_permission(user, "notes", "view")
     n = db.query(LawNotes).filter(
         LawNotes.id == note_id,
         LawNotes.office_id == user.office_id,
@@ -306,6 +326,8 @@ async def get_note_api(
     ).first()
     if not n:
         raise HTTPException(status_code=404, detail="الملاحظة غير موجودة")
+    if not user_can_access_case(db, user, n.case_id):
+        raise HTTPException(status_code=403, detail="غير مصرح بالوصول إلى القضية")
 
     return {
         "id": n.id,

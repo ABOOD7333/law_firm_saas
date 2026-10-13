@@ -383,7 +383,8 @@ app.mount("/static", SafeStaticFiles(directory="static"), name="static")
 
 # Templates setup - imported from dependencies to avoid circular imports in routers
 
-from dependencies import templates, get_current_user, check_user_permission
+from dependencies import templates, get_current_user, check_user_permission, require_user_permission, user_can_access_case
+from core.upload_security import save_upload
 
 @app.get("/", response_class=HTMLResponse)
 async def login_page(request: Request, user: AccessProfiles = Depends(get_current_user)):
@@ -2208,14 +2209,10 @@ async def add_hearing(
         if not case: raise HTTPException(status_code=403, detail="غير مصرح")
 
     attachment_path = None
-    if attachment and attachment.filename and "".join(c for c in attachment.filename if c.isalnum() or c in ' ._-'):
-        import time, shutil
+    if attachment and attachment.filename:
         upload_dir = "static/uploads/hearings"
-        os.makedirs(upload_dir, exist_ok=True)
-        safe_filename = f"{int(time.time())}_" + "".join(c for c in attachment.filename if c.isalnum() or c in ' ._-')
+        safe_filename = save_upload(attachment, upload_dir)
         attachment_path = f"{upload_dir}/{safe_filename}"
-        with open(attachment_path, "wb") as buffer:
-            shutil.copyfileobj(attachment.file, buffer)
 
     # Generate report_number if not provided
     if not report_number:
@@ -3043,14 +3040,10 @@ async def edit_hearing(
 
         hearing.show_in_client_portal = 1 if str(show_in_client_portal) in ("1", "true", "True") else 0
 
-        if attachment and attachment.filename and "".join(c for c in attachment.filename if c.isalnum() or c in ' ._-'):
-            import time, shutil
+        if attachment and attachment.filename:
             upload_dir = "static/uploads/hearings"
-            os.makedirs(upload_dir, exist_ok=True)
-            safe_filename = f"{int(time.time())}_" + "".join(c for c in attachment.filename if c.isalnum() or c in ' ._-')
+            safe_filename = save_upload(attachment, upload_dir)
             attachment_path = f"{upload_dir}/{safe_filename}"
-            with open(attachment_path, "wb") as buffer:
-                shutil.copyfileobj(attachment.file, buffer)
             hearing.attachment_path = attachment_path
 
         db.commit()
@@ -3204,6 +3197,8 @@ async def edit_user(
     return RedirectResponse(url="/settings", status_code=303)
 
 _pending_registrations = {}
+_PENDING_REGISTRATION_TTL = 15 * 60
+_MAX_PENDING_REGISTRATIONS = 1000
 
 @app.post("/api/register-secure")
 
@@ -3212,6 +3207,18 @@ async def api_register_secure(request: Request, db: Session = Depends(get_db)):
     from fastapi.responses import JSONResponse as _J
 
     try:
+
+        client_ip = request.client.host if request.client else "unknown"
+        if is_rate_limited(client_ip, "register_secure", max_attempts=5, window_seconds=3600):
+            return _J({"success": False, "error": "تجاوزت عدد محاولات التسجيل. حاول لاحقاً."}, status_code=429)
+        record_attempt(client_ip, "register_secure")
+        now = time.time()
+        for pending_email, pending in list(_pending_registrations.items()):
+            if pending.get("expires_at", 0) <= now:
+                _pending_registrations.pop(pending_email, None)
+        if len(_pending_registrations) >= _MAX_PENDING_REGISTRATIONS:
+            oldest_email = min(_pending_registrations, key=lambda key: _pending_registrations[key].get("expires_at", 0))
+            _pending_registrations.pop(oldest_email, None)
 
         data = await request.json()
 
@@ -3244,8 +3251,9 @@ async def api_register_secure(request: Request, db: Session = Depends(get_db)):
             (AccessProfiles.email == email) | (AccessProfiles.username == username) | (AccessProfiles.phone == phone)
 
         ).first():
-
-            return _J({"success": False, "error": "البريد الإلكتروني، اسم المستخدم، أو رقم الهاتف مسجل مسبقاً"}, status_code=409)
+            # Keep duplicate-account checks indistinguishable from a normal
+            # request to prevent account enumeration.
+            return _J({"success": True, "message": "إذا كانت البيانات صالحة، فسيصلك رمز التحقق."})
 
         # إرسال رمز التحقق أولاً بدون الحفظ في قاعدة البيانات
 
@@ -3277,7 +3285,8 @@ async def api_register_secure(request: Request, db: Session = Depends(get_db)):
 
         "access_pin_hash": _hash_pin(access_pin),
 
-            "role": role
+            "role": role,
+            "expires_at": time.time() + _PENDING_REGISTRATION_TTL,
 
         }
 
@@ -3299,6 +3308,11 @@ async def api_verify_register_otp(request: Request, db: Session = Depends(get_db
 
     try:
 
+        client_ip = request.client.host if request.client else "unknown"
+        if is_rate_limited(client_ip, "verify_register_otp", max_attempts=10, window_seconds=900):
+            return _J({"success": False, "error": "تجاوزت عدد محاولات التحقق. حاول لاحقاً."}, status_code=429)
+        record_attempt(client_ip, "verify_register_otp")
+
         data  = await request.json()
 
         email = (data.get("email") or "").strip().lower()
@@ -3317,7 +3331,8 @@ async def api_verify_register_otp(request: Request, db: Session = Depends(get_db
 
         pending_user = _pending_registrations.get(email)
 
-        if not pending_user:
+        if not pending_user or pending_user.get("expires_at", 0) <= time.time():
+            _pending_registrations.pop(email, None)
 
             return _J({"success": False, "error": "انتهت صلاحية جلسة التسجيل أو أنك تستخدم نافذة مختلفة، يرجى إعادة تعبئة البيانات"}, status_code=400)
 
@@ -3425,17 +3440,10 @@ async def add_document(
 
     file_path = None
 
-    if file and "".join(c for c in file.filename if c.isalnum() or c in ' ._-'):
-
-        import time
-
-        safe_filename = f"{int(time.time())}_" + "".join(c for c in file.filename if c.isalnum() or c in ' ._-')
-
-        file_path = f"static/uploads/documents/{safe_filename}"
-
-        with open(file_path, "wb") as buffer:
-
-            shutil.copyfileobj(file.file, buffer)
+    if file and file.filename:
+        upload_dir = "static/uploads/documents"
+        safe_filename = save_upload(file, upload_dir)
+        file_path = f"{upload_dir}/{safe_filename}"
 
     office_id = user.office_id
 
@@ -3475,6 +3483,7 @@ async def tasks_page(
 ):
     if not user:
         return RedirectResponse(url="/", status_code=303)
+    require_user_permission(user, "tasks", "view")
     try:
         from datetime import date as _date, datetime as _dt
         today_str = str(_date.today())
@@ -3570,6 +3579,7 @@ async def get_task_api(
 ):
     if not user:
         return JSONResponse({"error": "unauthorized"}, status_code=401)
+    require_user_permission(user, "tasks", "view")
     task = db.query(LawTasks).filter(
         LawTasks.id == task_id,
         LawTasks.office_id == user.office_id,
@@ -3577,6 +3587,9 @@ async def get_task_api(
     ).first()
     if not task:
         return JSONResponse({"error": "not found"}, status_code=404)
+    if user.role not in {"مدير", "مدير المكتب", "صاحب المكتب", "صاحب مكتب", "مدير النظام", "admin", "owner"}:
+        if task.assignee_user_id != user.id:
+            return JSONResponse({"error": "not found"}, status_code=404)
     return JSONResponse({
         "id": task.id,
         "title": task.title,
@@ -3610,10 +3623,17 @@ async def add_task(
     user: AccessProfiles = Depends(get_current_user)
 ):
     if not user: return RedirectResponse(url="/", status_code=303)
+    require_user_permission(user, "tasks", "add")
     office_id = user.office_id
     if case_id:
         case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
-        if not case: raise HTTPException(status_code=403, detail="غير مصرح")
+        if not case or not user_can_access_case(db, user, case_id): raise HTTPException(status_code=403, detail="غير مصرح")
+
+    if assignee_user_id and not db.query(AccessProfiles.id).filter(
+        AccessProfiles.id == assignee_user_id, AccessProfiles.office_id == office_id,
+        AccessProfiles.is_active == 1
+    ).first():
+        raise HTTPException(status_code=400, detail="المكلّف غير تابع لمكتبك")
 
     task = LawTasks(
         title=title.strip(),
@@ -3658,13 +3678,21 @@ async def edit_task(
     user: AccessProfiles = Depends(get_current_user)
 ):
     if not user: return RedirectResponse(url="/", status_code=303)
+    require_user_permission(user, "tasks", "edit")
     office_id = user.office_id
     task = db.query(LawTasks).filter(LawTasks.id == task_id, LawTasks.office_id == office_id, LawTasks.is_deleted == 0).first()
     if task:
         from datetime import datetime as _dt
+        if task.case_id and not user_can_access_case(db, user, task.case_id):
+            raise HTTPException(status_code=403, detail="غير مصرح بالوصول إلى القضية")
         if case_id:
             case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
-            if not case: raise HTTPException(status_code=403, detail="غير مصرح")
+            if not case or not user_can_access_case(db, user, case_id): raise HTTPException(status_code=403, detail="غير مصرح")
+        if assignee_user_id and not db.query(AccessProfiles.id).filter(
+            AccessProfiles.id == assignee_user_id, AccessProfiles.office_id == office_id,
+            AccessProfiles.is_active == 1
+        ).first():
+            raise HTTPException(status_code=400, detail="المكلّف غير تابع لمكتبك")
         task.title = title.strip()
         task.description = description.strip() if description else None
         task.case_id = case_id if case_id and case_id > 0 else None
@@ -3694,6 +3722,7 @@ async def update_task_status(
     user: AccessProfiles = Depends(get_current_user)
 ):
     if not user: return RedirectResponse(url="/", status_code=303)
+    require_user_permission(user, "tasks", "edit")
     office_id = user.office_id
     task = db.query(LawTasks).filter(LawTasks.id == task_id, LawTasks.office_id == office_id, LawTasks.is_deleted == 0).first()
     if task:
@@ -3715,9 +3744,12 @@ async def delete_task(
     user: AccessProfiles = Depends(get_current_user)
 ):
     if not user: return RedirectResponse(url="/", status_code=303)
+    require_user_permission(user, "tasks", "delete")
     office_id = user.office_id
     task = db.query(LawTasks).filter(LawTasks.id == task_id, LawTasks.office_id == office_id).first()
     if task:
+        if task.case_id and not user_can_access_case(db, user, task.case_id):
+            raise HTTPException(status_code=403, detail="غير مصرح بالوصول إلى القضية")
         task.is_deleted = 1
         db.commit()
 
@@ -3740,6 +3772,9 @@ async def convert_task_to_timesheet(
     task = db.query(LawTasks).filter(LawTasks.id == task_id, LawTasks.office_id == office_id, LawTasks.is_deleted == 0).first()
     if not task or not task.case_id:
         raise HTTPException(status_code=400, detail="المهمة غير مرتبطة بقضية محددة لتحويلها إلى سجل أتعاب")
+    require_user_permission(user, "tasks", "edit")
+    if not user_can_access_case(db, user, task.case_id):
+        raise HTTPException(status_code=403, detail="غير مصرح بالوصول إلى القضية")
 
     entry = LawTimesheets(
         case_id=task.case_id,

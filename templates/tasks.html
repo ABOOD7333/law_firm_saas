@@ -766,26 +766,55 @@
 
                 const card = document.createElement('div');
                 card.className = 'kanban-card';
-                card.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
-                        <strong style="font-size: 0.9rem; color: #1e293b;">${t.title}</strong>
-                        <span class="badge" style="background: #f1f5f9; font-size: 0.7rem;">${t.task_type || 'عام'}</span>
-                    </div>
-                    ${t.case ? `<div style="font-size: 0.8rem; color: #4338ca; margin-bottom: 6px;"><i class="fa-solid fa-folder"></i> ${t.case.title}</div>` : ''}
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 0.8rem; color: #64748b;">
-                        <span><i class="fa-regular fa-clock"></i> ${t.due_at ? t.due_at.split(' ')[0] : '-'}</span>
-                        ${t.assignee ? `<span style="font-weight: 600; color: #334155;"><i class="fa-solid fa-user"></i> ${t.assignee.name}</span>` : ''}
-                    </div>
-                    <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
-                        <select onchange="moveKanbanTask(${t.id}, this.value)" style="padding: 3px 6px; font-size: 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px; font-family: inherit;">
-                            <option value="pending" ${t.status_key === 'pending' ? 'selected' : ''}>بانتظار البدء</option>
-                            <option value="in_progress" ${t.status_key === 'in_progress' ? 'selected' : ''}>قيد التنفيذ</option>
-                            <option value="under_review" ${t.status_key === 'under_review' ? 'selected' : ''}>قيد المراجعة</option>
-                            <option value="completed" ${t.status_key === 'completed' ? 'selected' : ''}>مكتملة</option>
-                        </select>
-                        <button onclick="openEditTaskModalById(${t.id})" style="border: none; background: none; color: #3b82f6; cursor: pointer; font-size: 0.85rem;"><i class="fa-solid fa-pen"></i></button>
-                    </div>
-                `;
+                const header = document.createElement('div');
+                header.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;';
+                const title = document.createElement('strong');
+                title.style.cssText = 'font-size:0.9rem;color:#1e293b;';
+                title.textContent = t.title || '';
+                const badge = document.createElement('span');
+                badge.className = 'badge';
+                badge.style.cssText = 'background:#f1f5f9;font-size:0.7rem;';
+                badge.textContent = t.task_type || 'عام';
+                header.append(title, badge);
+                card.appendChild(header);
+                if (t.case) {
+                    const caseLine = document.createElement('div');
+                    caseLine.style.cssText = 'font-size:0.8rem;color:#4338ca;margin-bottom:6px;';
+                    caseLine.textContent = `📁 ${t.case.title || ''}`;
+                    card.appendChild(caseLine);
+                }
+                const details = document.createElement('div');
+                details.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:0.8rem;color:#64748b;';
+                const due = document.createElement('span');
+                due.textContent = `◷ ${t.due_at ? t.due_at.split(' ')[0] : '-'}`;
+                details.appendChild(due);
+                if (t.assignee) {
+                    const assignee = document.createElement('span');
+                    assignee.style.cssText = 'font-weight:600;color:#334155;';
+                    assignee.textContent = `♙ ${t.assignee.name || ''}`;
+                    details.appendChild(assignee);
+                }
+                card.appendChild(details);
+                const controls = document.createElement('div');
+                controls.style.cssText = 'margin-top:10px;padding-top:8px;border-top:1px dashed #e2e8f0;display:flex;justify-content:space-between;align-items:center;';
+                const statusSelect = document.createElement('select');
+                statusSelect.style.cssText = 'padding:3px 6px;font-size:0.75rem;border:1px solid #cbd5e1;border-radius:6px;font-family:inherit;';
+                [['pending','بانتظار البدء'],['in_progress','قيد التنفيذ'],['under_review','قيد المراجعة'],['completed','مكتملة']].forEach(([value, label]) => {
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = label;
+                    option.selected = t.status_key === value;
+                    statusSelect.appendChild(option);
+                });
+                statusSelect.addEventListener('change', () => moveKanbanTask(t.id, statusSelect.value));
+                const editButton = document.createElement('button');
+                editButton.type = 'button';
+                editButton.textContent = '✎';
+                editButton.setAttribute('aria-label', 'تعديل المهمة');
+                editButton.style.cssText = 'border:none;background:none;color:#3b82f6;cursor:pointer;font-size:0.85rem;';
+                editButton.addEventListener('click', () => openEditTaskModalById(t.id));
+                controls.append(statusSelect, editButton);
+                card.appendChild(controls);
                 cols[colKey].appendChild(card);
             });
 
