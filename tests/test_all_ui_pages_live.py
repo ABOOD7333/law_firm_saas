@@ -45,8 +45,7 @@ async def test_all_ui_pages():
             ("/timesheet", "Timesheet"),
             ("/finance", "Finance"),
             ("/reports", "Reports"),
-            ("/ai-assistant", "AI Assistant"),
-            ("/contract-analyzer", "Contract Analyzer"),
+            ("/yemeni-laws", "Yemeni Laws Library"),
             ("/settings", "Settings"),
             ("/team", "Team"),
             ("/subscription", "Subscription"),
@@ -55,7 +54,6 @@ async def test_all_ui_pages():
             ("/activity", "Activity Log"),
             ("/client-portal", "Client Portal"),
             ("/automation", "Automation"),
-            ("/knowledge-admin", "Knowledge Admin"),
             ("/advanced_operations", "Advanced Operations")
         ]
 

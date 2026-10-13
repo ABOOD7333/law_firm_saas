@@ -27,7 +27,6 @@ async def run_pleadings_test():
         print("GET /pleadings status:", get_resp.status_code)
         assert get_resp.status_code == 200, f"Failed GET /pleadings: {get_resp.status_code}"
         assert "المرافعات والمذكرات القانونية" in get_resp.text
-        assert "صياغة بالذكاء الاصطناعي" in get_resp.text
         assert "addPleadingModal" in get_resp.text
         assert "editPleadingModal" in get_resp.text
 
@@ -71,23 +70,7 @@ async def run_pleadings_test():
         print("API Pleading title:", p_json.get("title"))
         assert p_json.get("title") == "مذكرة دفاع جوابية اختبارية رصينة"
 
-        # 6. Test POST /api/pleadings/ai-draft
-        print("\n--- Testing POST /api/pleadings/ai-draft ---")
-        ai_payload = {
-            "case_id": str(case_id),
-            "pleading_type": "defense",
-            "key_points": "تم تسليم البضاعة كاملة والمدعي يطالب بتعويض غير مستحق",
-            "notes": "التمسك بالمادة 80 من نظام الإثبات"
-        }
-        ai_resp = await client.post("/api/pleadings/ai-draft", json=ai_payload, cookies=cookies, headers=headers)
-        print("POST /api/pleadings/ai-draft status:", ai_resp.status_code)
-        assert ai_resp.status_code == 200
-        ai_data = ai_resp.json()
-        assert ai_data.get("success") is True
-        assert len(ai_data.get("draft", "")) > 100
-        print("AI Draft Generated Length:", len(ai_data.get("draft")))
-
-        # 7. Test POST /pleadings/edit
+        # 6. Test POST /pleadings/edit
         print("\n--- Testing POST /pleadings/edit ---")
         edit_data = {
             "pleading_id": str(pleading_id),
@@ -103,7 +86,7 @@ async def run_pleadings_test():
         print("POST /pleadings/edit status:", edit_resp.status_code)
         assert edit_resp.status_code == 303
 
-        # 8. Test GET /pleadings/{id}/print
+        # 7. Test GET /pleadings/{id}/print
         print("\n--- Testing GET /pleadings/{id}/print ---")
         print_resp = await client.get(f"/pleadings/{pleading_id}/print", cookies=cookies)
         print("Print page status:", print_resp.status_code)

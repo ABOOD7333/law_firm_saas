@@ -2,7 +2,7 @@
 Database Configuration — LawSaaS
 يقرأ DATABASE_URL من ملف .env تلقائياً عبر python-dotenv
 """
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, inspect, text as _sql_text
 from sqlalchemy.orm import sessionmaker
 from .models import Base
 import os
@@ -72,6 +72,65 @@ def init_db():
         # Do not print the connection URL or driver exception (which may embed
         # deployment credentials). A partially initialized app must not start.
         raise RuntimeError("Database schema initialization failed; startup aborted") from None
+
+    # Preserve prior Yemeni-law documents, then remove the obsolete AI/RAG data.
+    # Model output, chat transcripts, vector chunks, and quotas are intentionally dropped.
+    try:
+        legacy_categories = (
+            "constitution", "civil_law", "criminal_law", "procedures_law",
+            "execution_law", "commercial_law", "companies_law", "labor_law",
+            "family_law", "investment_law", "tax_law", "real_estate_law", "regulations",
+        )
+        inspector = inspect(engine)
+        if "rag_knowledge_documents" in inspector.get_table_names():
+            with engine.begin() as conn:
+                legacy_docs = conn.execute(_sql_text(
+                    "SELECT id, file_name, file_path, file_type, category, created_at "
+                    "FROM rag_knowledge_documents WHERE COALESCE(is_deleted, 0) = 0"
+                )).mappings().all()
+                for old in legacy_docs:
+                    if old["category"] not in legacy_categories:
+                        continue
+                    already_migrated = conn.execute(_sql_text(
+                        "SELECT 1 FROM yemeni_law_documents WHERE legacy_document_id = :legacy_id"
+                    ), {"legacy_id": old["id"]}).first()
+                    if already_migrated:
+                        continue
+                    old_type = old["file_type"] or ""
+                    file_name = old["file_name"] or "تشريع يمني"
+                    conn.execute(_sql_text(
+                        "INSERT INTO yemeni_law_documents "
+                        "(title, law_type, category, source_reference, legal_text, file_name, file_type, "
+                        "legacy_file_path, legacy_document_id, created_at, is_deleted) "
+                        "VALUES (:title, :law_type, :category, :source, '', :file_name, :file_type, "
+                        ":file_path, :legacy_id, :created_at, 0)"
+                    ), {
+                        "title": file_name,
+                        "law_type": "regulation" if old["category"] == "regulations" else "law",
+                        "category": old["category"],
+                        "source": "مستورد من مكتبة القوانين السابقة",
+                        "file_name": file_name,
+                        "file_type": old_type,
+                        "file_path": old["file_path"],
+                        "legacy_id": old["id"],
+                        "created_at": old["created_at"],
+                    })
+                for obsolete_table in (
+                    "rag_chunk_metadata", "rag_knowledge_documents",
+                    "ai_chat_history", "ai_knowledge", "ai_user_quotas",
+                ):
+                    if obsolete_table in inspect(conn).get_table_names():
+                        conn.execute(_sql_text(f"DROP TABLE {obsolete_table}"))
+        else:
+            with engine.begin() as conn:
+                for obsolete_table in ("ai_chat_history", "ai_knowledge", "ai_user_quotas", "rag_chunk_metadata"):
+                    if obsolete_table in inspect(conn).get_table_names():
+                        conn.execute(_sql_text(f"DROP TABLE {obsolete_table}"))
+        print("[Database] Obsolete AI/RAG data removed; Yemeni-law records retained.")
+    except Exception:
+        # A failed destructive migration must abort startup rather than leave the
+        # application partially migrated or continue serving obsolete features.
+        raise RuntimeError("Yemeni law library migration failed; startup aborted") from None
 
     
     # محاولة إضافة الأعمدة الجديدة للتحديث التلقائي بدون تهيئة يدوية

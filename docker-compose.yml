@@ -20,9 +20,6 @@ services:
     environment:
       - APP_ENV=development
       - DATABASE_URL=postgresql://lawsaas:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in your local environment}@db:5432/lawsaas_db
-      - USE_LOCAL_LLM=true
-      - OLLAMA_API_URL=http://ollama:11434/api/generate
-      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5:3b}
     volumes:
       # مجلد الرفع يبقى خارج الحاوية (persistent)
       - uploads_data:/app/static/uploads
@@ -55,21 +52,6 @@ services:
     networks:
       - lawsaas_network
 
-  # --- نموذج محلي خاص (لا تنشر له نطاقاً عاماً) ---
-  ollama:
-    build:
-      context: .
-      dockerfile: railway-ollama/Dockerfile
-    restart: unless-stopped
-    environment:
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
-    volumes:
-      - ollama_data:/root/.ollama
-    expose:
-      - "11434"
-    networks:
-      - lawsaas_network
-
   # --- Nginx Reverse Proxy (اختياري في التطوير) ---
   # nginx:
   #   image: nginx:alpine
@@ -95,6 +77,4 @@ volumes:
   postgres_data:
     driver: local
   uploads_data:
-    driver: local
-  ollama_data:
     driver: local

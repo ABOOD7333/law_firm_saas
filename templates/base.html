@@ -253,21 +253,9 @@
                 <a href="/dashboard"><i class="fa-solid fa-chart-pie"></i> {% if user and user.role == 'موكل' %}بوابتي (الرئيسية){% else %}لوحة التحكم{% endif %}</a>
             </li>
 
-            {% if is_module_enabled(user, "ai_assistant") %}
-            <li class="nav-item {% if active_page == 'ai-assistant' %}active{% endif %}">
-                <a href="/ai-assistant"><i class="fa-solid fa-robot"></i> المساعد الذكي ⚡</a>
-            </li>
-            {% endif %}
-
-            {% if is_module_enabled(user, "contract_analyzer") %}
-            <li class="nav-item {% if active_page == 'contract-analyzer' %}active{% endif %}">
-                <a href="/contract-analyzer"><i class="fa-solid fa-file-contract"></i> محلل العقود الذكي 🆕</a>
-            </li>
-            {% endif %}
-
-            {% if is_module_enabled(user, "rag") %}
-            <li class="nav-item {% if active_page == 'knowledge-admin' %}active{% endif %}">
-                <a href="/knowledge-admin"><i class="fa-solid fa-brain"></i> إدارة المعرفة (RAG)</a>
+            {% if not_client %}
+            <li class="nav-item {% if active_page == 'yemeni-laws' %}active{% endif %}">
+                <a href="/yemeni-laws"><i class="fa-solid fa-scale-balanced"></i> القوانين واللوائح اليمنية</a>
             </li>
             {% endif %}
             
@@ -749,34 +737,6 @@
         }
     });
     </script>
-
-<!-- ===== زر المساعد الذكي العائم ===== -->
-<style>
-.ai-float-btn {
-    position: fixed; bottom: 28px; left: 28px;
-    width: 60px; height: 60px;
-    background: linear-gradient(135deg, #4f46e5, #7c3aed);
-    border-radius: 50%; display: flex; align-items: center; justify-content: center;
-    font-size: 26px; cursor: pointer;
-    box-shadow: 0 4px 20px rgba(79,70,229,0.5);
-    z-index: 9999; transition: all 0.3s;
-    text-decoration: none; border: 3px solid rgba(255,255,255,0.3);
-    animation: ai-pulse 3s ease-in-out infinite;
-}
-@keyframes ai-pulse {
-    0%, 100% { box-shadow: 0 4px 20px rgba(79,70,229,0.5); }
-    50% { box-shadow: 0 4px 40px rgba(79,70,229,0.8), 0 0 0 8px rgba(79,70,229,0.1); }
-}
-.ai-float-btn:hover { transform: scale(1.1) rotate(-5deg); }
-.ai-float-badge {
-    position: absolute; top: -4px; right: -4px;
-    width: 18px; height: 18px; background: #22c55e;
-    border-radius: 50%; border: 2px solid #fff;
-}
-</style>
-<a href="/ai-assistant" class="ai-float-btn" title="المساعد الذكي القانوني">
-    ??<div class="ai-float-badge"></div>
-</a>
 
 <script>
 // 🛡️ Global CSRF Auto-Protection for All Forms & Requests

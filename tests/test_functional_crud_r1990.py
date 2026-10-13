@@ -116,32 +116,8 @@ async def test_crud_suite():
         assert created_hearing is not None, "Hearing was not saved in DB"
         print(f"Created Hearing ID: {created_hearing.id}")
 
-        print("\n=== Test 5: Save Contract Analysis Report (POST /api/contract-analyzer/save-report) ===")
-        report_data = {
-            "case_id": str(case_id),
-            "contract_title": "عقد توريد تجاري اختباري",
-            "report_content": "تقرير فحص المخاطر القانونية: العقد يتضمن بنود إعفاء غير مقبولة نظاماً، ويجب إضافة بند التحكيم.",
-            "risk_level": "عالي"
-        }
-        res_report = await client.post(
-            "/api/contract-analyzer/save-report",
-            data=report_data,
-            cookies=cookies,
-            headers=headers
-        )
-        print(f"Contract Report Save Status: {res_report.status_code}")
-        assert res_report.status_code == 200, f"Unexpected status {res_report.status_code}"
-        report_json = res_report.json()
-        print("Report Save Response:", report_json)
-        assert report_json.get("success") is True, "Report save failed"
-
-        # Verify document was created in DB
-        saved_doc = db.query(LawDocuments).filter(LawDocuments.case_id == case_id).first()
-        assert saved_doc is not None, "Document not created in DB"
-        print(f"Created Document in DMS: ID={saved_doc.id}, Name={saved_doc.name}")
-
         db.close()
-        print("\n=== ALL 5 FUNCTIONAL CRUD WORKFLOWS PASSED WITH 100% SUCCESS ===")
+        print("\n=== ALL 4 FUNCTIONAL CRUD WORKFLOWS COMPLETED ===")
 
 if __name__ == "__main__":
     asyncio.run(test_crud_suite())

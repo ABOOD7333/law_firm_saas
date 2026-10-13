@@ -309,33 +309,6 @@
         <!-- Modules Checklist -->
         <div style="overflow-y: auto; flex: 1; padding-right: 5px; margin-bottom: 20px;" id="modules-list-container">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <!-- AI Assistant -->
-                <label style="display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; transition: 0.2s;" class="module-item">
-                    <input type="checkbox" id="mod-ai_assistant" value="ai_assistant" style="width: 18px; height: 18px; accent-color: #0284c7;">
-                    <div>
-                        <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a;">المساعد الذكي ⚡</div>
-                        <div style="font-size: 0.72rem; color: #64748b;">ذكاء اصطناعي وصياغة قانونية</div>
-                    </div>
-                </label>
-
-                <!-- Contract Analyzer -->
-                <label style="display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; transition: 0.2s;" class="module-item">
-                    <input type="checkbox" id="mod-contract_analyzer" value="contract_analyzer" style="width: 18px; height: 18px; accent-color: #0284c7;">
-                    <div>
-                        <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a;">محلل العقود الذكي 🆕</div>
-                        <div style="font-size: 0.72rem; color: #64748b;">فحص الثغرات وتحليل البنود</div>
-                    </div>
-                </label>
-
-                <!-- RAG Knowledge Base -->
-                <label style="display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; transition: 0.2s;" class="module-item">
-                    <input type="checkbox" id="mod-rag" value="rag" style="width: 18px; height: 18px; accent-color: #0284c7;">
-                    <div>
-                        <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a;">إدارة المعرفة (RAG)</div>
-                        <div style="font-size: 0.72rem; color: #64748b;">أرشفة وبحث في المراجع بالـ AI</div>
-                    </div>
-                </label>
-
                 <!-- Intake & Signatures -->
                 <label style="display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; transition: 0.2s;" class="module-item">
                     <input type="checkbox" id="mod-intake" value="intake" style="width: 18px; height: 18px; accent-color: #0284c7;">
@@ -480,7 +453,7 @@
 
 let currentModulesOfficeId = null;
 const ALL_MODULE_KEYS = [
-    "ai_assistant", "contract_analyzer", "rag", "intake", 
+    "intake",
     "accounting", "finance", "expenses", "timesheet", 
     "kanban", "automation", "timeline", "execution", 
     "power_of_attorney", "advanced_operations"

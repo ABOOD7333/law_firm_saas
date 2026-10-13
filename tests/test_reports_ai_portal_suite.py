@@ -6,10 +6,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from httpx import AsyncClient, ASGITransport
 from main import app
 from database.database import SessionLocal, engine
-from database.models import AccessProfiles, LawCases, LawClients, AIChatHistory
+from database.models import AccessProfiles, LawCases, LawClients
 from sqlalchemy import text
 
-async def test_reports_ai_portal_suite():
+async def test_reports_portal_suite():
     # 0. Clear rate limit attempts
     with engine.begin() as conn:
         conn.execute(text("DELETE FROM rate_limit_attempts"))
@@ -51,33 +51,7 @@ async def test_reports_ai_portal_suite():
         assert sum_data.get("office_id") == office1_id
 
         # -------------------------------------------------------------
-        # Part 2: المساعد الذكي ⚡ (/ai-assistant & /api/ai/*)
-        # -------------------------------------------------------------
-        r_ai_page = await client.get("/ai-assistant", cookies=cookies1)
-        assert r_ai_page.status_code == 200
-        assert "المساعد الذكي القانوني" in r_ai_page.text
-
-        r_ai_sugg = await client.get("/api/ai/suggestions", cookies=cookies1)
-        assert r_ai_sugg.status_code == 200
-        assert len(r_ai_sugg.json().get("suggestions", [])) > 0
-
-        r_ai_quota = await client.get("/api/ai/quota", cookies=cookies1)
-        assert r_ai_quota.status_code == 200
-        assert r_ai_quota.json().get("remaining_points") > 0
-
-        # Send test chat message
-        chat_payload = {"question": "السلام عليكم، ما هي خدمات المساعد؟"}
-        r_ai_chat = await client.post("/api/ai/chat", json=chat_payload, cookies=cookies1, headers=headers1)
-        assert r_ai_chat.status_code == 200
-        assert r_ai_chat.json().get("success") is True
-
-        # Clear AI history
-        r_clear = await client.post("/api/ai/clear-history", cookies=cookies1, headers=headers1)
-        assert r_clear.status_code == 200
-        assert r_clear.json().get("success") is True
-
-        # -------------------------------------------------------------
-        # Part 3: بوابة الموكل (/client-portal/*)
+        # Part 2: بوابة الموكل (/client-portal/*)
         # -------------------------------------------------------------
         routes = [
             "/client-portal",
@@ -92,7 +66,7 @@ async def test_reports_ai_portal_suite():
             assert "بوابة الموكلين" in r_cp.text or "LawSaaS VIP" in r_cp.text
 
         # -------------------------------------------------------------
-        # Part 4: Multi-Tenant Cross-Office Isolation
+        # Part 3: Multi-Tenant Cross-Office Isolation
         # -------------------------------------------------------------
         with engine.begin() as conn:
             conn.execute(text("DELETE FROM rate_limit_attempts"))
@@ -110,7 +84,7 @@ async def test_reports_ai_portal_suite():
         r_cp2 = await client.get("/client-portal", cookies=cookies2)
         assert r_cp2.status_code == 200
 
-    print("ALL REPORTS, AI-ASSISTANT, AND CLIENT-PORTAL TESTS PASSED 100%!")
+    print("ALL REPORTS AND CLIENT-PORTAL CHECKS PASSED!")
 
 if __name__ == "__main__":
-    asyncio.run(test_reports_ai_portal_suite())
+    asyncio.run(test_reports_portal_suite())

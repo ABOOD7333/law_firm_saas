@@ -1,11 +1,4 @@
 # ——— Logging ——————————————————————————————————————————————————————
-# ChromaDB sqlite3 version override for production environment (Docker / Railway)
-try:
-    __import__('pysqlite3')
-    import sys
-    sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
-except ImportError:
-    pass
 from core.logger import app_logger
 from core.audit import write_audit
 from core.security import hash_session_token, login_lockout_active, record_login_failure
@@ -73,17 +66,7 @@ async def startup_event():
     import asyncio
     asyncio.create_task(daily_scheduler())
 
-    # ─────────────────────────────────────────────────────────────────────
-    # ChromaDB / Embedding model indexing — DISABLED on startup intentionally
-    #
-    # السبب: تحميل نموذج sentence-transformers (229MB) عند كل إعادة تشغيل
-    # يستنفد RAM الخادم على Railway → crash loop لانهائي.
-    #
-    # الحل: البحث الهجين يعمل بـ BM25 المعجمي بشكل كامل وهو كافٍ.
-    # إذا أردت تفعيل الجزء الدلالي مستقبلاً، قم بتشغيل سكربت الفهرسة
-    # يدوياً محلياً ورفع قاعدة بيانات chromadb إلى Volume مخصص.
-    # ─────────────────────────────────────────────────────────────────────
-    print("[Startup] Server ready. Semantic indexing disabled to preserve RAM on Railway.")
+    print("[Startup] Server ready.")
 
 try:
 
@@ -4045,25 +4028,13 @@ app.include_router(advanced_operations.router)
 
 app.include_router(superadmin.router)
 
-# المساعد الذكي القانوني اليمني
-
-from routers import ai_assistant as ai_assistant_router
-
-app.include_router(ai_assistant_router.router)
-
-try:
-    from routers import rag_router
-    app.include_router(rag_router.router)
-except ImportError as e:
-    print(f"[RAG] تحذير: تعذر تحميل RAG Engine ({e}). سيعمل النظام بدون ميزة تحليل المستندات.")
-
 # لوحة الكانبان (Kanban Boards)
 from routers import kanban as kanban_router
 app.include_router(kanban_router.router)
 
-# محلل العقود الذكي
-from routers import contract_analyzer as contract_analyzer_router
-app.include_router(contract_analyzer_router.router)
+# مكتبة القوانين واللوائح اليمنية
+from routers import yemeni_laws
+app.include_router(yemeni_laws.router)
 
 # نظام الفوترة الإلكترونية والمحاسبة (ZATCA)
 from routers import accounting as accounting_router
@@ -4188,19 +4159,22 @@ async def api_subscription_checkout(request: Request, db: Session = Depends(get_
 
     return _J({"success": True, "message": "تم إرسال السند بنجاح"})
 
-@app.get("/ai-assistant")
-async def ai_assistant_page(request: Request, db: Session = Depends(get_db)):
-    user = get_current_user(request, db)
-    if not user:
-        return RedirectResponse("/", status_code=302)
-    return templates.TemplateResponse("ai_assistant.html", {"request": request, "user": user})
-
-@app.get("/knowledge-admin")
-async def knowledge_admin_page(request: Request, db: Session = Depends(get_db)):
+@app.get("/yemeni-laws")
+async def yemeni_laws_page(request: Request, db: Session = Depends(get_db)):
     user = get_current_user(request, db)
     if not user or user.role in ['موكل']:
         return RedirectResponse("/", status_code=302)
-    return templates.TemplateResponse("knowledge_admin.html", {"request": request, "user": user})
+    editor_roles = {'صاحب المكتب', 'صاحب مكتب', 'مدير المكتب', 'مدير مكتب', 'مدير', 'مدير النظام'}
+    can_manage = getattr(user, 'is_superadmin', 0) == 1 or user.role in editor_roles
+    from core.yemeni_laws import LEGAL_CATEGORIES
+    return templates.TemplateResponse("yemeni_laws.html", {
+        "request": request,
+        "user": user,
+        "current_user": user,
+        "active_page": "yemeni-laws",
+        "legal_categories": LEGAL_CATEGORIES,
+        "can_manage": can_manage,
+    })
 
 # [SECURITY FIX CRITICAL] تم حذف endpoint التشخيصي /debug-login-test
 # كان هذا الـ endpoint يُتيح اختبار كلمات المرور وعرض بيانات المستخدمين دون مصادقة.

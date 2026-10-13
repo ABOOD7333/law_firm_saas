@@ -198,9 +198,6 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
         # ── التحقق من الواجهات المقفلة على هذا المكتب (Tenant Module Restriction) ──
         # خريطة المسارات التابعة لكل موديول
         _MODULE_PATH_MAP = {
-            "ai_assistant": ["/ai-assistant", "/api/ai"],
-            "contract_analyzer": ["/contract-analyzer", "/api/contract"],
-            "rag": ["/knowledge-admin", "/api/rag"],
             "accounting": ["/accounting", "/api/accounting"],
             "finance": ["/finance", "/api/finance"],
             "expenses": ["/expenses", "/api/expenses"],
@@ -235,7 +232,7 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
         # 2. المحاسب (Accountant)
         elif user.role == 'محاسب':
             allowed_exact = {'/', '/logout'}
-            allowed_prefixes = ('/dashboard', '/finance', '/expenses', '/timesheet', '/reports', '/clients', '/static', '/api/finance', '/api/expenses', '/api/timesheets', '/api/ai')
+            allowed_prefixes = ('/dashboard', '/finance', '/expenses', '/timesheet', '/reports', '/clients', '/static', '/api/finance', '/api/expenses', '/api/timesheets')
             is_allowed = path in allowed_exact or any(
                 path == prefix or path.startswith(prefix + '/')
                 for prefix in allowed_prefixes
@@ -248,7 +245,7 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
         # 3. السكرتير والمحامي (Secretary & Lawyer)
         elif user.role in ['سكرتير', 'محامي', 'محامٍ']:
             forbidden_prefixes = ('/team', '/settings', '/finance', '/expenses', '/login_log', '/activity', '/api/team', '/api/settings', '/api/finance', '/api/expenses', '/advanced_operations', '/reports', '/api/advanced')
-            if path.startswith(forbidden_prefixes) and not path.startswith('/api/ai'):
+            if path.startswith(forbidden_prefixes):
                 if path.startswith('/api/'):
                     raise HTTPException(status_code=403, detail="غير مصرح لك بالقيام بهذا الإجراء")
                 raise HTTPException(status_code=status.HTTP_303_SEE_OTHER, headers={"Location": "/dashboard"})

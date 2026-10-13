@@ -1,5 +1,5 @@
 from typing import Optional, List
-from sqlalchemy import Column, CheckConstraint, ForeignKey, Index, Integer, REAL, Table, Text, UniqueConstraint, text, Float
+from sqlalchemy import Column, CheckConstraint, ForeignKey, Index, Integer, REAL, Table, Text, UniqueConstraint, text, Float, LargeBinary
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 class Base(DeclarativeBase):
@@ -771,85 +771,26 @@ class LawUserDevices(Base):
     user: Mapped['AccessProfiles'] = relationship('AccessProfiles')
 
 
-# ===================================================
-# ÌÏÇæá ÇáãÓÇÚÏ ÇáÐßí ÇáÞÇäæäí
-# ===================================================
-
-class AIChatHistory(Base):
-    __tablename__ = 'ai_chat_history'
+class YemeniLawDocument(Base):
+    """Shared archive of Yemeni laws and regulations (no model/AI processing)."""
+    __tablename__ = 'yemeni_law_documents'
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    office_id: Mapped[int] = mapped_column(ForeignKey('law_offices.id', ondelete='CASCADE'), nullable=False, index=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey('access_profiles.id', ondelete='CASCADE'), nullable=False, index=True)
-    question: Mapped[str] = mapped_column(Text, nullable=False)
-    answer: Mapped[str] = mapped_column(Text, nullable=False)
-    intent_type: Mapped[Optional[str]] = mapped_column(Text, index=True)
-    response_time_ms: Mapped[Optional[int]] = mapped_column(Integer)
-    created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'), index=True)
-    is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
-
-
-class AIKnowledge(Base):
-    __tablename__ = 'ai_knowledge'
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    office_id: Mapped[int] = mapped_column(ForeignKey('law_offices.id', ondelete='CASCADE'), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(Text, nullable=False, index=True)
+    law_type: Mapped[str] = mapped_column(Text, nullable=False, server_default=text("'law'"), index=True)
     category: Mapped[str] = mapped_column(Text, nullable=False, index=True)
-    title: Mapped[str] = mapped_column(Text, nullable=False)
-    content: Mapped[str] = mapped_column(Text, nullable=False)
-    keywords: Mapped[Optional[str]] = mapped_column(Text)
-    source: Mapped[Optional[str]] = mapped_column(Text)
-    created_by: Mapped[int] = mapped_column(ForeignKey('access_profiles.id'), nullable=False)
+    law_number: Mapped[Optional[str]] = mapped_column(Text, index=True)
+    issue_year: Mapped[Optional[str]] = mapped_column(Text, index=True)
+    source_reference: Mapped[Optional[str]] = mapped_column(Text)
+    legal_text: Mapped[str] = mapped_column(Text, nullable=False, server_default=text("''"))
+    file_name: Mapped[Optional[str]] = mapped_column(Text)
+    file_type: Mapped[Optional[str]] = mapped_column(Text)
+    file_data: Mapped[Optional[bytes]] = mapped_column(LargeBinary)
+    legacy_file_path: Mapped[Optional[str]] = mapped_column(Text)
+    legacy_document_id: Mapped[Optional[int]] = mapped_column(Integer, unique=True)
+    uploaded_by: Mapped[Optional[int]] = mapped_column(ForeignKey('access_profiles.id', ondelete='SET NULL'))
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'), index=True)
     updated_at: Mapped[Optional[str]] = mapped_column(Text)
     is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
-
-
-class AIUserQuota(Base):
-    __tablename__ = 'ai_user_quotas'
-    __table_args__ = (
-        UniqueConstraint('user_id', 'usage_date', name='uq_user_ai_date'),
-    )
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    office_id: Mapped[int] = mapped_column(ForeignKey('law_offices.id', ondelete='CASCADE'), nullable=False, index=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey('access_profiles.id', ondelete='CASCADE'), nullable=False, index=True)
-    usage_date: Mapped[str] = mapped_column(Text, nullable=False, index=True)  # 'YYYY-MM-DD'
-    # Keep the existing physical column name for deployed database compatibility.
-    local_model_used: Mapped[int] = mapped_column('gemini_used', Integer, nullable=False, server_default=text('0'))
-    local_used: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text('0'))
-    daily_limit: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text('50'))
-    created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
-    updated_at: Mapped[Optional[str]] = mapped_column(Text)
-
-
-# ===================================================
-# ÌÏÇæá ãÍÑß ÇáãÚÑÝÉ RAG (ÇáãÑÍáÉ ÇáËÇäíÉ)
-# ===================================================
-
-class KnowledgeDocument(Base):
-    __tablename__ = 'rag_knowledge_documents'
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    office_id: Mapped[int] = mapped_column(ForeignKey('law_offices.id', ondelete='CASCADE'), nullable=False, index=True)
-    file_name: Mapped[str] = mapped_column(Text, nullable=False)
-    file_path: Mapped[str] = mapped_column(Text, nullable=False)
-    file_type: Mapped[str] = mapped_column(Text, nullable=False) # pdf, docx, txt, img
-    category: Mapped[str] = mapped_column(Text, nullable=False, index=True) # ÇáÞÓã ÇáÞÇäæäí
-    status: Mapped[str] = mapped_column(Text, nullable=False, server_default=text("'pending'")) # pending, indexing, indexed, failed
-    document_hash: Mapped[str] = mapped_column(Text, unique=True, index=True)
-    chunk_count: Mapped[int] = mapped_column(Integer, server_default=text('0'))
-    uploaded_by: Mapped[int] = mapped_column(ForeignKey('access_profiles.id'), nullable=False)
-    created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'), index=True)
-    updated_at: Mapped[Optional[str]] = mapped_column(Text)
-    is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
-
-
-class DocumentChunkMetadata(Base):
-    __tablename__ = 'rag_chunk_metadata'
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    document_id: Mapped[int] = mapped_column(ForeignKey('rag_knowledge_documents.id', ondelete='CASCADE'), nullable=False, index=True)
-    chunk_id: Mapped[str] = mapped_column(Text, nullable=False, unique=True, index=True) # ID in Vector DB
-    chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
-    article_number: Mapped[Optional[str]] = mapped_column(Text)
-    page_number: Mapped[Optional[int]] = mapped_column(Integer)
-    created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
 
 
 # ============================================================
