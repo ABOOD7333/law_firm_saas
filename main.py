@@ -4100,6 +4100,11 @@ app.include_router(intake_router.router)
 from routers import client_portal as client_portal_router
 app.include_router(client_portal_router.router)
 
+# واجهة القضايا والملفات الواردة (Incoming Cases Reception)
+from routers import incoming_cases as incoming_cases_router
+app.include_router(incoming_cases_router.router)
+
+
 # ----------------------------------------------------------------------------
 
 # SaaS Subscription Routes

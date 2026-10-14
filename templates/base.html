@@ -276,6 +276,9 @@
                 <li class="nav-item {% if active_page == 'cases' %}active{% endif %}">
                     <a href="/cases"><i class="fa-solid fa-gavel"></i> إدارة القضايا</a>
                 </li>
+                <li class="nav-item {% if active_page == 'incoming_cases' %}active{% endif %}">
+                    <a href="/incoming-cases"><i class="fa-solid fa-inbox"></i> القضايا الواردة</a>
+                </li>
                 {% if has_perm(user, 'parties', 'view') %}
                 <li class="nav-item {% if active_page == 'parties' %}active{% endif %}">
                     <a href="/parties"><i class="fa-solid fa-people-arrows"></i> الأطراف والمتقاضون</a>

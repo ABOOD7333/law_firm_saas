@@ -954,3 +954,77 @@ class RetainerAgreements(Base):
     created_at: Mapped[str] = mapped_column(Text, server_default=text('CURRENT_TIMESTAMP'))
 
 
+class LawIncomingCases(Base):
+    """
+    سجل القضايا والملفات الواردة إلى المكتب
+    مقسمة وفق 5 جهات: الشرطة، النيابة العامة، المحكمة الابتدائية، المحكمة الاستئنافية، التنفيذ
+    """
+    __tablename__ = 'law_incoming_cases'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    office_id: Mapped[int] = mapped_column(ForeignKey('law_offices.id', ondelete='CASCADE'), nullable=False, index=True)
+    section_key: Mapped[str] = mapped_column(Text, nullable=False, index=True)  # police, prosecution, first_instance, appeal, enforcement
+    internal_number: Mapped[str] = mapped_column(Text, nullable=False, index=True)  # e.g. 1001, 2001, 3001, 4001, 5001
+    
+    # Client & Relations
+    client_id: Mapped[Optional[int]] = mapped_column(ForeignKey('law_clients.id', ondelete='SET NULL'), nullable=True, index=True)
+    client_name: Mapped[Optional[str]] = mapped_column(Text)
+    case_id: Mapped[Optional[int]] = mapped_column(ForeignKey('law_cases.id', ondelete='SET NULL'), nullable=True, index=True)
+    
+    # Reception Info
+    reception_date: Mapped[str] = mapped_column(Text, nullable=False)  # YYYY-MM-DD
+    status_key: Mapped[str] = mapped_column(Text, nullable=False, server_default=text("'under_review'"))  # completed, under_review, incomplete
+    subject_description: Mapped[Optional[str]] = mapped_column(Text)
+    notes: Mapped[Optional[str]] = mapped_column(Text)
+    
+    created_by_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey('access_profiles.id', ondelete='SET NULL'), nullable=True)
+    assigned_lawyer_id: Mapped[Optional[int]] = mapped_column(ForeignKey('access_profiles.id', ondelete='SET NULL'), nullable=True)
+
+    # 1. Police section fields
+    police_station: Mapped[Optional[str]] = mapped_column(Text)
+    police_report_number: Mapped[Optional[str]] = mapped_column(Text, index=True)
+    document_date: Mapped[Optional[str]] = mapped_column(Text)
+    police_referral_status: Mapped[Optional[str]] = mapped_column(Text)
+
+    # 2. Prosecution section fields
+    prosecution_name: Mapped[Optional[str]] = mapped_column(Text)
+    prosecution_file_number: Mapped[Optional[str]] = mapped_column(Text, index=True)
+    prosecution_decision_date: Mapped[Optional[str]] = mapped_column(Text)
+
+    # 3. First instance court section fields
+    court_name: Mapped[Optional[str]] = mapped_column(Text)
+    court_case_number: Mapped[Optional[str]] = mapped_column(Text, index=True)
+    case_year: Mapped[Optional[str]] = mapped_column(Text)
+    judicial_document_type: Mapped[Optional[str]] = mapped_column(Text)
+    client_capacity: Mapped[Optional[str]] = mapped_column(Text)
+
+    # 4. Appeal court section fields
+    appeal_court_name: Mapped[Optional[str]] = mapped_column(Text)
+    appeal_case_number: Mapped[Optional[str]] = mapped_column(Text, index=True)
+    appeal_year: Mapped[Optional[str]] = mapped_column(Text)
+    primary_case_number: Mapped[Optional[str]] = mapped_column(Text)
+    primary_judgment_date: Mapped[Optional[str]] = mapped_column(Text)
+
+    # 5. Enforcement section fields
+    enforcement_authority: Mapped[Optional[str]] = mapped_column(Text)
+    enforcement_file_number: Mapped[Optional[str]] = mapped_column(Text, index=True)
+    enforcement_document_type: Mapped[Optional[str]] = mapped_column(Text)
+    enforcement_parties: Mapped[Optional[str]] = mapped_column(Text)
+    enforcement_document_date: Mapped[Optional[str]] = mapped_column(Text)
+
+    # Attachments & Lifecycle
+    attachments_json: Mapped[Optional[str]] = mapped_column(Text)  # JSON string of uploaded documents list
+    is_cancelled: Mapped[int] = mapped_column(Integer, CheckConstraint('is_cancelled IN (0, 1)'), nullable=False, server_default=text('0'))
+    cancellation_reason: Mapped[Optional[str]] = mapped_column(Text)
+    is_deleted: Mapped[int] = mapped_column(Integer, CheckConstraint('is_deleted IN (0, 1)'), nullable=False, server_default=text('0'))
+    created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+    updated_at: Mapped[Optional[str]] = mapped_column(Text)
+
+    # Relationships
+    law_client: Mapped[Optional['LawClients']] = relationship('LawClients')
+    law_case: Mapped[Optional['LawCases']] = relationship('LawCases')
+    created_by: Mapped[Optional['AccessProfiles']] = relationship('AccessProfiles', foreign_keys=[created_by_user_id])
+    assigned_lawyer: Mapped[Optional['AccessProfiles']] = relationship('AccessProfiles', foreign_keys=[assigned_lawyer_id])
+
+
+
