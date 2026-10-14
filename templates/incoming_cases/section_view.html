@@ -60,6 +60,12 @@
     box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
 }
 
+/* Make all date inputs appear clickable */
+input[type="date"].form-control-custom,
+input[type="date"].custom-input {
+    cursor: pointer !important;
+}
+
 /* Section Header Banner matching image */
 .section-ribbon {
     background: {{ cfg.badge_color }};
@@ -161,6 +167,199 @@
     background: #0f172a;
     color: #ffffff;
     border-color: #0f172a;
+}
+
+/* ==============================================================
+   Official Add Client Modal Styles (Exact Match with clients.html)
+   ============================================================== */
+.custom-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 23, 42, 0.65);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1200;
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+}
+.custom-modal-overlay.active {
+    display: flex !important;
+    opacity: 1 !important;
+}
+.custom-modal-box {
+    background: #ffffff;
+    border-radius: 16px;
+    width: 780px;
+    max-width: 95%;
+    max-height: 90vh;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: modalSlideIn 0.25s ease-out;
+}
+@keyframes modalSlideIn {
+    from { transform: translateY(15px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+.modal-header-styled {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 24px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+.modal-close-btn {
+    background: none;
+    border: none;
+    font-size: 1.6rem;
+    color: #94a3b8;
+    cursor: pointer;
+    line-height: 1;
+    padding: 4px;
+}
+.modal-close-btn:hover {
+    color: #0f172a;
+}
+.modal-tabs-header {
+    display: flex;
+    gap: 8px;
+    padding: 10px 24px 0 24px;
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    overflow-x: auto;
+}
+.modal-tab-btn {
+    background: none;
+    border: none;
+    padding: 10px 16px;
+    font-family: 'Cairo', sans-serif;
+    font-weight: 700;
+    font-size: 0.88rem;
+    color: #64748b;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+.modal-tab-btn.active {
+    color: #1e40af;
+    border-bottom-color: #1e40af;
+    background: #eff6ff;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+}
+.modal-body-content {
+    padding: 22px 24px;
+    overflow-y: auto;
+    flex: 1;
+}
+.form-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+.form-grid-1 {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+@media (max-width: 650px) {
+    .form-grid-2 {
+        grid-template-columns: 1fr;
+    }
+}
+.custom-label {
+    font-weight: 700;
+    color: #334155;
+    font-size: 0.88rem;
+    margin-bottom: 6px;
+    display: block;
+}
+.custom-input, .custom-select, .custom-textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-family: 'Cairo', sans-serif;
+    font-size: 0.9rem;
+    background: #ffffff;
+    color: #0f172a;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+}
+.custom-input:focus, .custom-select:focus, .custom-textarea:focus {
+    outline: none;
+    border-color: #1e40af;
+    box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+}
+.form-section-box {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-bottom: 18px;
+}
+.form-section-title {
+    font-weight: 800;
+    color: #1e40af;
+    font-size: 0.95rem;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.modal-footer-styled {
+    padding: 16px 24px;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.btn-styled {
+    padding: 9px 18px;
+    border-radius: 8px;
+    font-family: 'Cairo', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+}
+.btn-styled-primary {
+    background: #1e40af;
+    color: #ffffff;
+}
+.btn-styled-primary:hover {
+    background: #1d4ed8;
+}
+.btn-styled-success {
+    background: #059669;
+    color: #ffffff;
+}
+.btn-styled-success:hover {
+    background: #047857;
+}
+.btn-styled-secondary {
+    background: #ffffff;
+    border-color: #cbd5e1;
+    color: #475569;
+}
+.btn-styled-secondary:hover {
+    background: #f1f5f9;
+    color: #0f172a;
 }
 </style>
 {% endblock %}
@@ -393,12 +592,12 @@
             <form id="incomingCreateForm" action="/incoming-cases/{{ section_key }}/create" method="post" enctype="multipart/form-data">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
-                <!-- 1. الموكل (مع خيار إضافة موكل سريع) -->
+                <!-- 1. الموكل (مع زر فتح واجهة إضافة موكل الرسمية للنظام) -->
                 <div class="form-group-custom">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                         <label style="margin: 0;">الموكل <span style="color: #e11d48;">*</span></label>
-                        <button type="button" onclick="openQuickClientModal()" style="background: none; border: none; color: #4f46e5; font-size: 0.82rem; font-weight: 800; cursor: pointer; text-decoration: underline;">
-                            + إضافة موكل جديد
+                        <button type="button" onclick="openAddClientModal()" style="background: none; border: none; color: #4f46e5; font-size: 0.84rem; font-weight: 800; cursor: pointer; text-decoration: underline; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fa-solid fa-user-plus"></i> + إضافة موكل جديد
                         </button>
                     </div>
                     <select name="client_id" id="clientSelect" class="form-control-custom">
@@ -429,7 +628,7 @@
                         </div>
                         <div class="form-group-custom">
                             <label>تاريخ المستند <span style="color: #e11d48;">*</span></label>
-                            <input type="date" name="document_date" required class="form-control-custom">
+                            <input type="date" name="document_date" required class="form-control-custom" onclick="this.showPicker()" onfocus="this.showPicker()" style="cursor: pointer;">
                         </div>
                     </div>
 
@@ -447,7 +646,7 @@
                         </div>
                         <div class="form-group-custom">
                             <label>تاريخ قرار الإحالة / المستند</label>
-                            <input type="date" name="prosecution_decision_date" class="form-control-custom">
+                            <input type="date" name="prosecution_decision_date" class="form-control-custom" onclick="this.showPicker()" onfocus="this.showPicker()" style="cursor: pointer;">
                         </div>
                     </div>
 
@@ -517,7 +716,7 @@
                         </div>
                         <div class="form-group-custom">
                             <label>تاريخ الحكم الابتدائي (إن وجد)</label>
-                            <input type="date" name="primary_judgment_date" class="form-control-custom">
+                            <input type="date" name="primary_judgment_date" class="form-control-custom" onclick="this.showPicker()" onfocus="this.showPicker()" style="cursor: pointer;">
                         </div>
                     </div>
 
@@ -553,7 +752,7 @@
                         </div>
                         <div class="form-group-custom">
                             <label>تاريخ السند</label>
-                            <input type="date" name="enforcement_document_date" class="form-control-custom">
+                            <input type="date" name="enforcement_document_date" class="form-control-custom" onclick="this.showPicker()" onfocus="this.showPicker()" style="cursor: pointer;">
                         </div>
                     </div>
 
@@ -563,7 +762,7 @@
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                     <div class="form-group-custom">
                         <label>تاريخ الاستلام في المكتب <span style="color: #e11d48;">*</span></label>
-                        <input type="date" name="reception_date" value="{{ today_date }}" required class="form-control-custom">
+                        <input type="date" name="reception_date" value="{{ today_date }}" required class="form-control-custom" onclick="this.showPicker()" onfocus="this.showPicker()" style="cursor: pointer;">
                     </div>
                     <div class="form-group-custom">
                         <label>حالة اكتمال الملف</label>
@@ -648,42 +847,197 @@
 </div>
 
 <!-- ========================================================================= -->
-<!-- Modal 2: إضافة موكل سريع (Quick Add Client Modal) -->
+<!-- Modal 2: واجهة إضافة موكل جديد الرسمية للنظام (Official 4-Step Modal)   -->
 <!-- ========================================================================= -->
-<div id="quickClientModal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 1060; align-items: center; justify-content: center; padding: 20px;">
-    <div style="background: #ffffff; border-radius: 16px; width: 100%; max-width: 480px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); padding: 24px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 16px;">
-            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #0f172a;">
-                <i class="fa-solid fa-user-plus" style="color: #4f46e5; margin-left: 6px;"></i> إضافة موكل جديد سريعاً
-            </h3>
-            <button type="button" onclick="closeQuickClientModal()" style="background: none; border: none; font-size: 1.3rem; color: #64748b; cursor: pointer;">
-                <i class="fa-solid fa-xmark"></i>
+<div id="addClientModal" class="custom-modal-overlay" dir="rtl">
+    <div class="custom-modal-box">
+        <div class="modal-header-styled">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 42px; height: 42px; background: #eff6ff; color: #1d4ed8; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                    <i class="fa-solid fa-user-plus"></i>
+                </div>
+                <div>
+                    <h2 style="margin: 0; font-size: 1.15rem; color: #0f172a; font-weight: 800;">إضافة موكل جديد للنظام</h2>
+                    <p style="margin: 2px 0 0 0; font-size: 0.82rem; color: #64748b;">تسجيل موكل جديد وربطه بالقضايا وبوابة الموكلين الإلكترونية</p>
+                </div>
+            </div>
+            <button type="button" class="modal-close-btn" onclick="closeAddClientModal()">&times;</button>
+        </div>
+
+        <!-- Notification banner for add client -->
+        <div id="addClientMsg" style="display: none; padding: 10px 16px; margin: 12px 24px 0 24px; border-radius: 8px; font-size: 0.88rem; font-weight: 700;"></div>
+
+        <div class="modal-tabs-header">
+            <button type="button" class="modal-tab-btn active" id="tabAdd1Btn" onclick="switchAddTab(1)">
+                <i class="fa-solid fa-id-card"></i> 1. الهوية والكيان
+            </button>
+            <button type="button" class="modal-tab-btn" id="tabAdd2Btn" onclick="switchAddTab(2)">
+                <i class="fa-solid fa-address-book"></i> 2. الاتصال والعنوان
+            </button>
+            <button type="button" class="modal-tab-btn" id="tabAdd3Btn" onclick="switchAddTab(3)">
+                <i class="fa-solid fa-scale-balanced"></i> 3. القضية والملاحظات
+            </button>
+            <button type="button" class="modal-tab-btn" id="tabAdd4Btn" onclick="switchAddTab(4)">
+                <i class="fa-solid fa-shield-halved"></i> 4. بوابة الموكل
             </button>
         </div>
 
-        <div id="quickClientMsg" style="display: none; padding: 8px 12px; border-radius: 8px; font-size: 0.85rem; font-weight: 700; margin-bottom: 12px;"></div>
+        <form id="addClientForm" onsubmit="submitOfficialClientForm(event)" style="display: flex; flex-direction: column; flex: 1; overflow: hidden; margin: 0;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token or request.cookies.get('csrf_token', '') }}">
 
-        <div class="form-group-custom">
-            <label>الاسم الكامل للموكل <span style="color: #e11d48;">*</span></label>
-            <input type="text" id="quickName" placeholder="أدخل اسم الموكل..." class="form-control-custom">
-        </div>
-        <div class="form-group-custom">
-            <label>رقم الهاتف / الجوال</label>
-            <input type="text" id="quickPhone" placeholder="مثال: 777123456" class="form-control-custom">
-        </div>
-        <div class="form-group-custom">
-            <label>رقم الهوية الوطنية / الإثبات</label>
-            <input type="text" id="quickId" placeholder="الرقم الوطني / جواز السفر" class="form-control-custom">
-        </div>
+            <div class="modal-body-content">
+                <!-- Tab 1: الهوية والكيان -->
+                <div id="tabAdd1" class="tab-panel">
+                    <div class="form-section-box">
+                        <div class="form-section-title">
+                            <i class="fa-solid fa-user-gear"></i> البيانات التعريفية الأساسية
+                        </div>
+                        <div class="form-grid-2">
+                            <div class="custom-form-group">
+                                <label class="custom-label">نوع الموكل / الكيان القانوني <span style="color: red;">*</span></label>
+                                <select name="client_type" class="custom-select" id="addClientType" onchange="onClientTypeChange('add')">
+                                    <option value="individual">فرد طبيعي</option>
+                                    <option value="company">شركة / مؤسسة / جهة اعتبارية</option>
+                                </select>
+                            </div>
+                            <div class="custom-form-group">
+                                <label class="custom-label">الاسم الكامل / اسم الشركة <span style="color: red;">*</span></label>
+                                <input type="text" name="name" id="officialClientName" required class="custom-input" placeholder="مثال: أحمد عبد الله اليماني أو شركة الرواد للتجارة">
+                            </div>
+                        </div>
 
-        <div style="display: flex; gap: 10px; margin-top: 20px;">
-            <button type="button" onclick="submitQuickClient()" style="flex: 2; background: #4f46e5; color: #ffffff; border: none; padding: 10px; border-radius: 8px; font-weight: 800; cursor: pointer;">
-                حفظ واختيار الموكل
-            </button>
-            <button type="button" onclick="closeQuickClientModal()" style="flex: 1; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 10px; border-radius: 8px; font-weight: 700; cursor: pointer;">
-                إلغاء
-            </button>
-        </div>
+                        <div class="form-grid-2">
+                            <div class="custom-form-group" id="addNationalIdBox">
+                                <label class="custom-label">رقم الهوية الوطنية / جواز السفر / الإقامة</label>
+                                <input type="text" name="national_id" class="custom-input" placeholder="رقم الهوية الوطنية أو البطاقة الشخصية">
+                            </div>
+                            <div class="custom-form-group" id="addCrNumberBox" style="display:none;">
+                                <label class="custom-label">رقم السجل التجاري (CR)</label>
+                                <input type="text" name="cr_number" class="custom-input" placeholder="مثال: 1010XXXXXX">
+                            </div>
+                            <div class="custom-form-group" id="addLegalRepBox" style="display:none;">
+                                <label class="custom-label">اسم المفوض / الممثل القانوني للشركة</label>
+                                <input type="text" name="legal_rep_name" class="custom-input" placeholder="اسم المدير العام أو الوكيل المفوض">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 2: الاتصال والعنوان -->
+                <div id="tabAdd2" class="tab-panel" style="display:none;">
+                    <div class="form-section-box">
+                        <div class="form-section-title">
+                            <i class="fa-solid fa-phone-volume"></i> بيانات التواصل والعنوان الوطني
+                        </div>
+                        <div class="form-grid-2">
+                            <div class="custom-form-group">
+                                <label class="custom-label">رقم الهاتف الأساسي <span style="color: red;">*</span></label>
+                                <input type="text" name="phone" required class="custom-input" placeholder="مثال: 771234567" dir="ltr">
+                            </div>
+                            <div class="custom-form-group">
+                                <label class="custom-label">هاتف بديل / رقم واتساب</label>
+                                <input type="text" name="alt_phone" class="custom-input" placeholder="هاتف إضافي للمتابعة" dir="ltr">
+                            </div>
+                        </div>
+
+                        <div class="form-grid-2">
+                            <div class="custom-form-group">
+                                <label class="custom-label">البريد الإلكتروني</label>
+                                <input type="email" name="email" class="custom-input" placeholder="client@example.com" dir="ltr">
+                            </div>
+                            <div class="custom-form-group">
+                                <label class="custom-label">المدينة / المحافظة</label>
+                                <input type="text" name="city" class="custom-input" placeholder="مثال: صنعاء، عدن، تعز...">
+                            </div>
+                        </div>
+
+                        <div class="form-grid-1">
+                            <div class="custom-form-group">
+                                <label class="custom-label">العنوان التفصيلي / المقر</label>
+                                <input type="text" name="address" class="custom-input" placeholder="الشارع، الحي، المبنى، رقم المكتب أو الشقة...">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 3: القضية والملاحظات -->
+                <div id="tabAdd3" class="tab-panel" style="display:none;">
+                    <div class="form-section-box">
+                        <div class="form-section-title">
+                            <i class="fa-solid fa-briefcase"></i> الربط بالقضايا والملاحظات السرية
+                        </div>
+                        <div class="form-grid-2">
+                            <div class="custom-form-group">
+                                <label class="custom-label">ربط بقضية حالية بالمكتب (اختياري)</label>
+                                <select name="case_id" class="custom-select">
+                                    <option value="">-- بدون ربط بقضية حالية --</option>
+                                    {% for c in cases %}
+                                    <option value="{{ c.id }}">{{ c.case_number }} - {{ c.title[:35] }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="custom-form-group">
+                                <label class="custom-label">أو رقم قضية مرجعي خارجي</label>
+                                <input type="text" name="case_number" class="custom-input" placeholder="مثال: CAS-2026-001">
+                            </div>
+                        </div>
+
+                        <div class="form-grid-1">
+                            <div class="custom-form-group">
+                                <label class="custom-label">ملاحظات داخلية خاصة بالمكتب</label>
+                                <textarea name="notes" rows="3" class="custom-textarea" placeholder="أي شروط تعاقدية، بنود أتعاب، أو توجيهات خاصة بالموكل..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 4: بوابة الموكل -->
+                <div id="tabAdd4" class="tab-panel" style="display:none;">
+                    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 12px 16px; margin-bottom: 18px; display: flex; align-items: center; gap: 10px; font-size: 0.88rem; color: #1e40af;">
+                        <i class="fa-solid fa-circle-info" style="font-size: 1.1rem; flex-shrink: 0;"></i>
+                        <span>تتيح بوابة الموكل للموكل متابعة جلسات قضيته، والاطلاع على المستندات المودعة مباشرة عبر حسابه الخاص.</span>
+                    </div>
+
+                    <div class="form-section-box">
+                        <div class="form-section-title">
+                            <i class="fa-solid fa-key"></i> إعدادات حساب الدخول
+                        </div>
+                        <div style="margin-bottom: 16px;">
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 700; color: #0f172a; font-size: 0.95rem;">
+                                <input type="checkbox" name="portal_access" value="1" id="addPortalToggle" checked onchange="togglePortalFields('add')" style="width: 18px; height: 18px; accent-color: #1e40af; cursor: pointer;">
+                                تفعيل حساب دخول بوابة الموكلين الإلكترونية
+                            </label>
+                        </div>
+
+                        <div class="form-grid-2 portal-add-field">
+                            <div class="custom-form-group">
+                                <label class="custom-label">اسم المستخدم (Username)</label>
+                                <input type="text" name="username" class="custom-input" placeholder="اتركه فارغاً للتوليد التلقائي" dir="ltr">
+                            </div>
+                            <div class="custom-form-group">
+                                <label class="custom-label">كلمة المرور (8 أحرف فأكثر)</label>
+                                <input type="password" name="password" class="custom-input" placeholder="اتركه فارغاً للتوليد التلقائي" dir="ltr">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer-styled">
+                <button type="button" class="btn-styled btn-styled-secondary" onclick="closeAddClientModal()">إلغاء</button>
+                <div style="display: flex; gap: 10px;">
+                    <button type="button" class="btn-styled btn-styled-secondary" id="prevAddBtn" style="display:none;" onclick="stepAddTab(-1)">
+                        <i class="fa-solid fa-arrow-right"></i> السابق
+                    </button>
+                    <button type="button" class="btn-styled btn-styled-primary" id="nextAddBtn" onclick="stepAddTab(1)">
+                        التالي <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                    <button type="submit" class="btn-styled btn-styled-success" id="submitAddBtn" style="display:none;">
+                        <i class="fa-solid fa-check"></i> حفظ وإضافة الموكل
+                    </button>
+                </div>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -745,14 +1099,31 @@
 </div>
 
 <script>
-// 1. Focus the create form when "+ إضافة ملف جديد" clicked
+// ==============================================================
+// 1. فتح التقويم/التاريخ تلقائياً عند النقر في أي حقل تاريخ
+// ==============================================================
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('input[type="date"]').forEach(function(el) {
+        el.style.cursor = 'pointer';
+        el.addEventListener('click', function() {
+            try {
+                if (typeof this.showPicker === 'function') {
+                    this.showPicker();
+                }
+            } catch (err) {}
+        });
+    });
+});
+
+// 2. Focus the create form when "+ إضافة ملف جديد" clicked
 function focusCreateForm() {
     const formCard = document.getElementById('receptionFormCard');
     formCard.scrollIntoView({ behavior: 'smooth' });
-    document.getElementById('refNumberInput').focus();
+    const ref = document.getElementById('refNumberInput');
+    if (ref) ref.focus();
 }
 
-// 2. Update selected file names in upload preview
+// 3. Update selected file names in upload preview
 function updateSelectedFiles(input) {
     const listDiv = document.getElementById('selectedFilesList');
     listDiv.innerHTML = '';
@@ -765,7 +1136,7 @@ function updateSelectedFiles(input) {
     }
 }
 
-// 3. Duplicate Number Check (Non-blocking warning)
+// 4. Duplicate Number Check (Non-blocking warning)
 function checkDuplicateNumber() {
     const refInput = document.getElementById('refNumberInput');
     const val = refInput ? refInput.value.trim() : '';
@@ -790,37 +1161,84 @@ function checkDuplicateNumber() {
         .catch(err => console.error(err));
 }
 
-// 4. Quick Add Client Modal
-function openQuickClientModal() {
-    document.getElementById('quickClientModal').style.display = 'flex';
-    document.getElementById('quickName').focus();
-}
+// ==============================================================
+// 5. واجهة إضافة موكل جديد الرسمية للنظام (Official 4-Step Modal Logic)
+// ==============================================================
+let currentAddTab = 1;
 
-function closeQuickClientModal() {
-    document.getElementById('quickClientModal').style.display = 'none';
-}
-
-function submitQuickClient() {
-    const name = document.getElementById('quickName').value.trim();
-    const phone = document.getElementById('quickPhone').value.trim();
-    const nationalId = document.getElementById('quickId').value.trim();
-    const msgDiv = document.getElementById('quickClientMsg');
-
-    if (!name) {
-        msgDiv.style.display = 'block';
-        msgDiv.style.background = '#fee2e2';
-        msgDiv.style.color = '#b91c1c';
-        msgDiv.innerText = 'يرجى إدخال اسم الموكل';
-        return;
+function switchAddTab(tabIdx) {
+    currentAddTab = tabIdx;
+    for (let i = 1; i <= 4; i++) {
+        const panel = document.getElementById(`tabAdd${i}`);
+        const btn = document.getElementById(`tabAdd${i}Btn`);
+        if (panel) panel.style.display = (i === tabIdx) ? 'block' : 'none';
+        if (btn) btn.classList.toggle('active', i === tabIdx);
     }
+    const prevBtn = document.getElementById('prevAddBtn');
+    const nextBtn = document.getElementById('nextAddBtn');
+    const submitBtn = document.getElementById('submitAddBtn');
 
-    const formData = new FormData();
-    formData.append('name', name);
-    formData.append('phone', phone);
-    formData.append('national_id', nationalId);
-    formData.append('csrf_token', '{{ csrf_token }}');
+    if (prevBtn) prevBtn.style.display = tabIdx > 1 ? 'inline-flex' : 'none';
+    if (nextBtn) nextBtn.style.display = tabIdx < 4 ? 'inline-flex' : 'none';
+    if (submitBtn) submitBtn.style.display = tabIdx === 4 ? 'inline-flex' : 'none';
+}
 
-    fetch('/incoming-cases/api/quick-client', {
+function stepAddTab(step) {
+    switchAddTab(currentAddTab + step);
+}
+
+function openAddClientModal() {
+    switchAddTab(1);
+    const m = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
+    const token = m ? decodeURIComponent(m[1]) : '';
+    const input = document.querySelector('#addClientForm input[name="csrf_token"]');
+    if (input && (!input.value || input.value.trim() === '') && token) {
+        input.value = token;
+    }
+    const msg = document.getElementById('addClientMsg');
+    if (msg) msg.style.display = 'none';
+    document.getElementById('addClientModal').classList.add('active');
+    setTimeout(() => {
+        const nameField = document.getElementById('officialClientName');
+        if (nameField) nameField.focus();
+    }, 100);
+}
+
+function closeAddClientModal() {
+    document.getElementById('addClientModal').classList.remove('active');
+}
+
+function onClientTypeChange(mode) {
+    const isAdd = (mode === 'add');
+    const typeSelect = document.getElementById(isAdd ? 'addClientType' : 'edit_client_type');
+    if (!typeSelect) return;
+    const type = typeSelect.value;
+    const isCompany = (type === 'company' || type === 'شركة' || type === 'مؤسسة');
+
+    if (isAdd) {
+        const crBox = document.getElementById('addCrNumberBox');
+        const repBox = document.getElementById('addLegalRepBox');
+        if (crBox) crBox.style.display = isCompany ? 'block' : 'none';
+        if (repBox) repBox.style.display = isCompany ? 'block' : 'none';
+    }
+}
+
+function togglePortalFields(mode) {
+    const toggle = document.getElementById('addPortalToggle');
+    const isChecked = toggle ? toggle.checked : true;
+    document.querySelectorAll('.portal-add-field').forEach(el => {
+        el.style.opacity = isChecked ? '1' : '0.4';
+    });
+}
+
+// حفظ الموكل الجديد من خلال الواجهة الرسمية وإدراجه مباشرة في قائمة الاستقبال
+function submitOfficialClientForm(e) {
+    e.preventDefault();
+    const form = document.getElementById('addClientForm');
+    const formData = new FormData(form);
+    const msgDiv = document.getElementById('addClientMsg');
+
+    fetch('/incoming-cases/api/add-full-client', {
         method: 'POST',
         headers: { 'X-CSRF-Token': '{{ csrf_token }}' },
         body: formData
@@ -828,33 +1246,36 @@ function submitQuickClient() {
     .then(res => res.json())
     .then(data => {
         if (data.success) {
-            // إضافة الخيار إلى القائمة المنسدلة واختياره
+            // إضافة الخيار الجديد لقائمة اختيار الموكل في نموذج الاستقبال واختياره فوراً
             const clientSelect = document.getElementById('clientSelect');
             const newOpt = document.createElement('option');
             newOpt.value = data.client_id;
-            newOpt.text = `${data.client_name} (تمت إضافته الآن)`;
+            newOpt.text = `${data.client_name} ${data.phone ? '(' + data.phone + ')' : ''} [موكل جديد]`;
             newOpt.selected = true;
             clientSelect.appendChild(newOpt);
 
-            closeQuickClientModal();
-            // تفريغ الحقول
-            document.getElementById('quickName').value = '';
-            document.getElementById('quickPhone').value = '';
-            document.getElementById('quickId').value = '';
+            // تفريغ حقل الاسم البديل
+            const nameInput = document.getElementById('clientNameInput');
+            if (nameInput) nameInput.value = '';
+
+            closeAddClientModal();
+            form.reset();
+
+            alert(`تم تسجيل الموكل (${data.client_name}) بنجاح وتم اختياره تلقائياً لملف الاستقبال!`);
         } else {
             msgDiv.style.display = 'block';
             msgDiv.style.background = '#fee2e2';
             msgDiv.style.color = '#b91c1c';
-            msgDiv.innerText = data.detail || 'حدث خطأ أثناء إضافة الموكل';
+            msgDiv.innerText = data.detail || 'حدث خطأ أثناء حفظ بيانات الموكل.';
         }
     })
     .catch(err => {
         console.error(err);
-        alert('تعذر حفظ الموكل الجديد.');
+        alert('تعذر حفظ بيانات الموكل.');
     });
 }
 
-// 5. Open File Full Details Modal
+// 6. Open File Full Details Modal
 function openDetailsModal(id) {
     const modal = document.getElementById('detailsModal');
     const body = document.getElementById('detailsModalBody');
@@ -991,7 +1412,7 @@ function closeDetailsModal() {
     document.getElementById('detailsModal').style.display = 'none';
 }
 
-// 6. Convert incoming file to official LawCase
+// 7. Convert incoming file to official LawCase
 function convertToCase(id) {
     if (!confirm('هل توافق على تولي هذه القضية وإنشاء ملف قضية رسمي في سجل القضايا؟')) return;
 
@@ -1014,7 +1435,7 @@ function convertToCase(id) {
     });
 }
 
-// 7. Open Edit Modal
+// 8. Open Edit Modal
 function openEditModal(id) {
     const modal = document.getElementById('editModal');
     document.getElementById('editRecordId').value = id;

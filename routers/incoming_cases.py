@@ -13,6 +13,9 @@
 import os
 import uuid
 import json
+import secrets
+import hashlib
+import base64
 from datetime import datetime
 from typing import Optional, List
 
@@ -882,6 +885,134 @@ async def quick_create_client(
             "message": "تم تسجيل الموكل الجديد بنجاح",
         }
     )
+
+
+def _hash_client_pin(pin: str) -> str:
+    pin = pin.translate(str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", "01234567890123456789")).strip()
+    salt = os.urandom(16)
+    iterations = 260000
+    actual = hashlib.pbkdf2_hmac('sha256', pin.encode('utf-8'), salt, iterations)
+    salt_b64 = base64.b64encode(salt).decode('utf-8').rstrip('=')
+    hash_b64 = base64.b64encode(actual).decode('utf-8').rstrip('=')
+    return f"pbkdf2:sha256:{iterations}${salt_b64}${hash_b64}"
+
+
+@router.post("/api/add-full-client")
+async def add_full_client_from_modal(
+    request: Request,
+    name: str = Form(...),
+    client_type: str = Form("individual"),
+    username: Optional[str] = Form(None),
+    password: Optional[str] = Form(None),
+    case_id: Optional[int] = Form(None),
+    case_number: Optional[str] = Form(None),
+    phone: Optional[str] = Form(None),
+    alt_phone: Optional[str] = Form(None),
+    national_id: Optional[str] = Form(None),
+    cr_number: Optional[str] = Form(None),
+    legal_rep_name: Optional[str] = Form(None),
+    email: Optional[str] = Form(None),
+    city: Optional[str] = Form(None),
+    address: Optional[str] = Form(None),
+    notes: Optional[str] = Form(None),
+    portal_access: int = Form(0),
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user),
+):
+    """إضافة موكل كامل بجميع حقول النظام وبوابته من داخل نافذة الاستقبال"""
+    if not user or not user.office_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+
+    clean_name = name.strip()
+    if not clean_name:
+        raise HTTPException(status_code=400, detail="اسم الموكل مطلوب")
+
+    # معالجة اسم المستخدم في حال تفعيل البوابة
+    if portal_access == 1:
+        if not username or not username.strip():
+            username_val = f"cli_{secrets.token_hex(4)}"
+        else:
+            username_val = username.strip()
+
+        existing = db.query(AccessProfiles).filter(AccessProfiles.username == username_val).first()
+        if existing:
+            username_val = f"{username_val}_{secrets.token_hex(2)}"
+    else:
+        username_val = username.strip() if username else None
+
+    # معالجة القضية المرتبطة إن وجدت
+    final_case_number = case_number
+    if case_id and case_id > 0:
+        target_case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == user.office_id).first()
+        if target_case and not final_case_number:
+            final_case_number = target_case.case_number
+
+    new_client = LawClients(
+        office_id=user.office_id,
+        name=clean_name,
+        client_type=client_type,
+        case_id=case_id if case_id and case_id > 0 else None,
+        case_number=final_case_number.strip() if final_case_number else None,
+        phone=phone.strip() if phone else None,
+        alt_phone=alt_phone.strip() if alt_phone else None,
+        national_id=national_id.strip() if national_id else None,
+        cr_number=cr_number.strip() if cr_number else None,
+        legal_rep_name=legal_rep_name.strip() if legal_rep_name else None,
+        email=email.strip() if email else None,
+        city=city.strip() if city else None,
+        address=address.strip() if address else None,
+        notes=notes.strip() if notes else None,
+        username=username_val,
+        portal_access=portal_access,
+    )
+    db.add(new_client)
+
+    # إنشاء حساب دخول للموكل إذا كان مطلوباً
+    if portal_access == 1:
+        client_pass = password.strip() if password and len(password.strip()) >= 8 else secrets.token_urlsafe(10)
+        target_email = email.strip() if email else f"{username_val}@client.local"
+        existing_profile = None
+        if target_email or phone:
+            conds = []
+            if target_email:
+                conds.append(AccessProfiles.email == target_email)
+            if phone and phone.strip():
+                conds.append(AccessProfiles.phone == phone.strip())
+            existing_profile = db.query(AccessProfiles).filter(or_(*conds)).first()
+
+        if existing_profile and existing_profile.role == 'موكل':
+            new_client.user_id = existing_profile.id
+        else:
+            new_user = AccessProfiles(
+                name=clean_name,
+                username=username_val,
+                email=target_email,
+                phone=phone.strip() if phone else username_val,
+                case_number=final_case_number or "",
+                access_pin_hash=_hash_client_pin(client_pass),
+                role='موكل',
+                office_id=user.office_id,
+                is_active=1,
+                email_verified=1,
+                state="active",
+            )
+            db.add(new_user)
+            db.flush()
+            new_client.user_id = new_user.id
+
+    db.commit()
+    db.refresh(new_client)
+
+    return JSONResponse(
+        {
+            "success": True,
+            "client_id": new_client.id,
+            "client_name": new_client.name,
+            "phone": new_client.phone or "",
+            "message": "تم تسجيل الموكل الجديد بنجاح في النظام",
+        }
+    )
+
 
 
 @router.post("/api/convert-to-case/{record_id}")
