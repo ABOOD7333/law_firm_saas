@@ -221,7 +221,19 @@ def init_db():
         ('postponement_reason', 'TEXT'),
         ('next_hearing_requirements', 'TEXT'),
         ('attachments_json', 'TEXT'),
-        ('report_status', "TEXT DEFAULT 'approved'")
+        ('report_status', "TEXT DEFAULT 'approved'"),
+        ('minutes_type', "TEXT DEFAULT 'primary'"),
+        ('minutes_date', 'TEXT'),
+        ('session_type', 'TEXT'),
+        ('court_decision', 'TEXT'),
+        ('judge_head', 'TEXT'),
+        ('court_secretary', 'TEXT'),
+        ('prosecutor_name', 'TEXT'),
+        ('bench_judges_json', 'TEXT'),
+        ('prosecution_details_json', 'TEXT'),
+        ('decision_attachments_json', 'TEXT'),
+        ('submitted_papers_json', 'TEXT'),
+        ('attendees_list_json', 'TEXT')
     ]
     for col_name, col_type in new_hearing_cols:
         try:

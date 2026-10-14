@@ -2080,6 +2080,7 @@ async def hearings_page(
                 "id": c.id,
                 "case_number": c.case_number,
                 "title": c.title,
+                "case_type": getattr(c, 'case_type_key', '') or getattr(c, 'case_type', '') or '',
                 "court_name": getattr(c, 'court_name', '') or '',
                 "court_case_number": getattr(c, 'court_case_number', '') or '',
                 "litigation_level_key": getattr(c, 'litigation_level_key', '') or '',
@@ -2088,22 +2089,21 @@ async def hearings_page(
             for c in cases
         ]
 
+        staff = db.query(AccessProfiles).filter(AccessProfiles.office_id == office_id).all()
+
         return templates.TemplateResponse(
-
             request=request,
-
             name="hearings.html",
-
             context={
                 "user": user, 
                 "hearings": hearings, 
                 "cases": cases, 
                 "cases_json": cases_json,
+                "staff": staff,
                 "selected_case_id": selected_case_id,
                 "open_new_modal": open_new_modal,
                 "active_page": "hearings"
             }
-
         )
 
     except Exception as e:
@@ -2113,211 +2113,190 @@ async def hearings_page(
         return _safe_error(traceback.format_exc())
 
 @app.post("/hearings/add")
-
 async def add_hearing(
-
     request: Request,
-
-    case_id: int = Form(...),
-
-    title: str = Form(...),
-
-    hearing_at: str = Form(...),
-
-    next_hearing_date: str = Form(None),
-
-    status_key: str = Form("قادمة"),
-
-    chamber_number: str = Form(None),
-
-    floor_number: str = Form(None),
-
-    show_in_client_portal: int = Form(1),
-
-    attachment: UploadFile = File(None),
-
-    redirect_to_case: str = Form(None),
-
-    # New comprehensive hearing report fields
-    report_number: str = Form(None),
-
-    court_name: str = Form(None),
-
-    court_case_number: str = Form(None),
-
-    litigation_level: str = Form(None),
-
-    hearing_time: str = Form(None),
-
-    judge_name: str = Form(None),
-
-    hearing_type: str = Form(None),
-
-    attendees_json: str = Form(None),
-
-    hearing_summary: str = Form(None),
-
-    client_requests: str = Form(None),
-
-    opponent_requests: str = Form(None),
-
-    pleadings_submitted: str = Form(None),
-
-    evidence_submitted: str = Form(None),
-
-    internal_notes: str = Form(None),
-
-    has_court_decision: int = Form(0),
-
-    decision_type: str = Form(None),
-
-    decision_text: str = Form(None),
-
-    has_judgment: int = Form(0),
-
-    judgment_number: str = Form(None),
-
-    judgment_date: str = Form(None),
-
-    post_hearing_actions: str = Form(None),
-
-    has_next_hearing: int = Form(0),
-
-    postponement_reason: str = Form(None),
-
-    next_hearing_requirements: str = Form(None),
-
-    attachments_json: str = Form(None),
-
-    report_status: str = Form("approved"),
-
-    action_type: str = Form("save"), # 'save', 'draft', 'save_and_add_another'
-
     db: Session = Depends(get_db),
-
     user: AccessProfiles = Depends(get_current_user)
-
 ):
-
     if not user:
-
         return RedirectResponse(url="/", status_code=303)
 
     if not check_user_permission(user, 'hearings', 'add'):
-
         raise HTTPException(status_code=403, detail="غير مصرح لك بإضافة جلسة")
 
-    # Get user office or default to first
-
     office_id = user.office_id
-
     if not office_id:
-
         first_office = db.query(LawOffices).first()
-
         office_id = first_office.id if first_office else 1
 
-    # Clean datetime format from HTML5 datetime-local (e.g. 2023-05-10T14:30)
+    form = await request.form()
+    case_id_raw = form.get("case_id")
+    case_id = int(case_id_raw) if case_id_raw and str(case_id_raw).isdigit() else None
+    title = (form.get("title") or "").strip()
+    if not title:
+        title = "محضر جلسة"
 
+    hearing_at = form.get("hearing_at") or ""
     formatted_hearing_at = hearing_at.replace('T', ' ') if hearing_at else None
+    next_hearing_date = form.get("next_hearing_date") or None
+    status_key = form.get("status_key") or "قادمة"
+    chamber_number = form.get("chamber_number") or None
+    floor_number = form.get("floor_number") or None
+    show_in_client_portal = 1 if str(form.get("show_in_client_portal", "1")) in ("1", "true", "True") else 0
+    redirect_to_case = form.get("redirect_to_case")
+
+    # Judicial Minutes Specific Fields
+    minutes_type = form.get("minutes_type") or "primary"
+    minutes_date = form.get("minutes_date") or None
+    session_type = form.get("session_type") or None
+    court_decision = form.get("court_decision") or None
+    judge_head = form.get("judge_head") or None
+    court_secretary = form.get("court_secretary") or None
+    prosecutor_name = form.get("prosecutor_name") or None
+    bench_judges_json = form.get("bench_judges_json") or None
+    prosecution_details_json = form.get("prosecution_details_json") or None
+    attendees_list_json = form.get("attendees_list_json") or None
+
+    # Comprehensive / Legacy Report Fields
+    report_number = form.get("report_number") or None
+    court_name = form.get("court_name") or None
+    court_case_number = form.get("court_case_number") or None
+    litigation_level = form.get("litigation_level") or None
+    hearing_time = form.get("hearing_time") or None
+    judge_name = form.get("judge_name") or judge_head or None
+    hearing_type = form.get("hearing_type") or session_type or None
+    attendees_json = form.get("attendees_json") or attendees_list_json or None
+    hearing_summary = form.get("hearing_summary") or None
+    client_requests = form.get("client_requests") or None
+    opponent_requests = form.get("opponent_requests") or None
+    pleadings_submitted = form.get("pleadings_submitted") or None
+    evidence_submitted = form.get("evidence_submitted") or None
+    internal_notes = form.get("internal_notes") or None
+    has_court_decision = 1 if form.get("has_court_decision") in ("1", "true", "True") or court_decision else 0
+    decision_type = form.get("decision_type") or None
+    decision_text = form.get("decision_text") or court_decision or None
+    has_judgment = 1 if form.get("has_judgment") in ("1", "true", "True") else 0
+    judgment_number = form.get("judgment_number") or None
+    judgment_date = form.get("judgment_date") or None
+    post_hearing_actions = form.get("post_hearing_actions") or None
+    has_next_hearing = 1 if form.get("has_next_hearing") in ("1", "true", "True") or next_hearing_date else 0
+    postponement_reason = form.get("postponement_reason") or None
+    next_hearing_requirements = form.get("next_hearing_requirements") or None
+    attachments_json = form.get("attachments_json") or None
+    report_status = form.get("report_status") or "approved"
+    action_type = form.get("action_type") or "save"
 
     if case_id:
-
         case = db.query(LawCases).filter(LawCases.id == case_id, LawCases.office_id == office_id).first()
+        if not case:
+            raise HTTPException(status_code=403, detail="غير مصرح")
 
-        if not case: raise HTTPException(status_code=403, detail="غير مصرح")
+    import os, time, shutil, json
+    upload_dir = "static/uploads/hearings"
+    os.makedirs(upload_dir, exist_ok=True)
 
+    # 1. Standard single attachment
+    attachment = form.get("attachment")
     attachment_path = None
-    if attachment and attachment.filename:
-        upload_dir = "static/uploads/hearings"
-        safe_filename = save_upload(attachment, upload_dir)
-        attachment_path = f"{upload_dir}/{safe_filename}"
+    if attachment and hasattr(attachment, "filename") and attachment.filename:
+        clean_name = "".join(c for c in attachment.filename if c.isalnum() or c in ' ._-')
+        if clean_name:
+            safe_filename = f"{int(time.time())}_{clean_name}"
+            attachment_path = f"{upload_dir}/{safe_filename}"
+            with open(attachment_path, "wb") as buffer:
+                shutil.copyfileobj(attachment.file, buffer)
 
-    # Generate report_number if not provided
-    if not report_number:
-        import time
+    # 2. Decision files (قرارات المحكمة في هذه الجلسة)
+    decision_attachments = []
+    for f in form.getlist("decision_files"):
+        if hasattr(f, "filename") and f.filename:
+            clean_name = "".join(c for c in f.filename if c.isalnum() or c in ' ._-')
+            if clean_name:
+                safe_filename = f"dec_{int(time.time())}_{clean_name}"
+                dest_path = f"{upload_dir}/{safe_filename}"
+                with open(dest_path, "wb") as buffer:
+                    shutil.copyfileobj(f.file, buffer)
+                decision_attachments.append({
+                    "name": f.filename,
+                    "url": f"/{dest_path}",
+                    "uploaded_at": time.strftime("%Y-%m-%d %H:%M:%S")
+                })
+    decision_attachments_json = json.dumps(decision_attachments, ensure_ascii=False) if decision_attachments else None
+
+    # 3. Papers files (الأوراق المقدمة في الجلسة)
+    submitted_papers = []
+    for f in form.getlist("papers_files"):
+        if hasattr(f, "filename") and f.filename:
+            clean_name = "".join(c for c in f.filename if c.isalnum() or c in ' ._-')
+            if clean_name:
+                safe_filename = f"paper_{int(time.time())}_{clean_name}"
+                dest_path = f"{upload_dir}/{safe_filename}"
+                with open(dest_path, "wb") as buffer:
+                    shutil.copyfileobj(f.file, buffer)
+                submitted_papers.append({
+                    "name": f.filename,
+                    "url": f"/{dest_path}",
+                    "uploaded_at": time.strftime("%Y-%m-%d %H:%M:%S")
+                })
+    submitted_papers_json = json.dumps(submitted_papers, ensure_ascii=False) if submitted_papers else None
+
+    if not report_number and case_id:
         report_number = f"REP-{case_id}-{int(time.time())}"
 
     effective_report_status = "draft" if action_type == "draft" else report_status
 
     new_hearing = LawHearings(
-
         case_id=case_id,
-
         office_id=office_id,
-
         title=title,
-
         hearing_at=formatted_hearing_at,
-
         next_hearing_date=next_hearing_date,
-
         status_key=status_key,
-
         chamber_number=chamber_number,
-
         floor_number=floor_number,
-
-        show_in_client_portal=1 if str(show_in_client_portal) in ("1", "true", "True") else 0,
-
+        show_in_client_portal=show_in_client_portal,
         attachment_path=attachment_path,
-
         report_number=report_number,
-
         court_name=court_name,
-
         court_case_number=court_case_number,
-
         litigation_level=litigation_level,
-
         hearing_time=hearing_time,
-
         judge_name=judge_name,
-
         hearing_type=hearing_type,
-
         attendees_json=attendees_json,
-
         hearing_summary=hearing_summary,
-
         client_requests=client_requests,
-
         opponent_requests=opponent_requests,
-
         pleadings_submitted=pleadings_submitted,
-
         evidence_submitted=evidence_submitted,
-
         internal_notes=internal_notes,
-
         has_court_decision=has_court_decision,
-
         decision_type=decision_type,
-
         decision_text=decision_text,
-
         has_judgment=has_judgment,
-
         judgment_number=judgment_number,
-
         judgment_date=judgment_date,
-
         post_hearing_actions=post_hearing_actions,
-
         has_next_hearing=has_next_hearing,
-
         postponement_reason=postponement_reason,
-
         next_hearing_requirements=next_hearing_requirements,
-
         attachments_json=attachments_json,
-
-        report_status=effective_report_status
-
+        report_status=effective_report_status,
+        minutes_type=minutes_type,
+        minutes_date=minutes_date,
+        session_type=session_type,
+        court_decision=court_decision,
+        judge_head=judge_head,
+        court_secretary=court_secretary,
+        prosecutor_name=prosecutor_name,
+        bench_judges_json=bench_judges_json,
+        prosecution_details_json=prosecution_details_json,
+        submitted_papers_json=submitted_papers_json,
+        decision_attachments_json=decision_attachments_json,
+        attendees_list_json=attendees_list_json
     )
 
     db.add(new_hearing)
-
     db.commit()
 
     # Trigger smart workflow rule on hearing creation
@@ -2335,8 +2314,7 @@ async def add_hearing(
     if action_type == "save_and_add_another":
         return RedirectResponse(url=f"/hearings?action=new&case_id={case_id}&msg=saved", status_code=303)
 
-    if redirect_to_case == "true":
-
+    if redirect_to_case == "true" and case_id:
         return RedirectResponse(url=f"/cases/{case_id}", status_code=303)
 
     return RedirectResponse(url="/hearings?msg=saved", status_code=303)
@@ -3028,77 +3006,201 @@ async def get_hearing_details(
     }
 
 @app.post("/hearings/edit")
-
 async def edit_hearing(
-
     request: Request,
-
-    hearing_id: int = Form(...),
-
-    title: str = Form(...),
-
-    hearing_at: str = Form(...),
-
-    next_hearing_date: str = Form(None),
-
-    status_key: str = Form(...),
-
-    chamber_number: str = Form(None),
-
-    floor_number: str = Form(None),
-
-    show_in_client_portal: int = Form(1),
-
-    attachment: UploadFile = File(None),
-
-    redirect_to_case: str = Form(None),
-
-    case_id: int = Form(None),
-
     db: Session = Depends(get_db),
-
     user: AccessProfiles = Depends(get_current_user)
-
 ):
-
-    if not user: return RedirectResponse(url="/", status_code=303)
+    if not user:
+        return RedirectResponse(url="/", status_code=303)
 
     if not check_user_permission(user, 'hearings', 'edit'):
-
         raise HTTPException(status_code=403, detail="غير مصرح لك بتعديل جلسة")
 
     office_id = user.office_id
+    form = await request.form()
+    hearing_id_raw = form.get("hearing_id")
+    if not hearing_id_raw:
+        return RedirectResponse(url="/hearings", status_code=303)
+    hearing_id = int(hearing_id_raw)
 
     hearing = db.query(LawHearings).filter(LawHearings.id == hearing_id, LawHearings.office_id == office_id).first()
+    if not hearing:
+        return RedirectResponse(url="/hearings", status_code=303)
 
-    if hearing:
+    if form.get("title"):
+        hearing.title = form.get("title").strip()
+    if form.get("hearing_at"):
+        hearing.hearing_at = form.get("hearing_at").replace('T', ' ')
+    if "next_hearing_date" in form:
+        hearing.next_hearing_date = form.get("next_hearing_date") or None
+    if form.get("status_key"):
+        hearing.status_key = form.get("status_key")
+    if "chamber_number" in form:
+        hearing.chamber_number = form.get("chamber_number") or None
+    if "floor_number" in form:
+        hearing.floor_number = form.get("floor_number") or None
+    if "show_in_client_portal" in form:
+        hearing.show_in_client_portal = 1 if str(form.get("show_in_client_portal")) in ("1", "true", "True") else 0
 
-        hearing.title = title
+    if "minutes_type" in form:
+        hearing.minutes_type = form.get("minutes_type") or "primary"
+    if "minutes_date" in form:
+        hearing.minutes_date = form.get("minutes_date") or None
+    if "session_type" in form:
+        hearing.session_type = form.get("session_type") or None
+    if "court_decision" in form:
+        hearing.court_decision = form.get("court_decision") or None
+        if hearing.court_decision:
+            hearing.has_court_decision = 1
+            hearing.decision_text = hearing.court_decision
+    if "judge_head" in form:
+        hearing.judge_head = form.get("judge_head") or None
+        if hearing.judge_head:
+            hearing.judge_name = hearing.judge_head
+    if "court_secretary" in form:
+        hearing.court_secretary = form.get("court_secretary") or None
+    if "prosecutor_name" in form:
+        hearing.prosecutor_name = form.get("prosecutor_name") or None
+    if "bench_judges_json" in form:
+        hearing.bench_judges_json = form.get("bench_judges_json") or None
+    if "prosecution_details_json" in form:
+        hearing.prosecution_details_json = form.get("prosecution_details_json") or None
+    if "attendees_list_json" in form:
+        hearing.attendees_list_json = form.get("attendees_list_json") or None
 
-        hearing.hearing_at = hearing_at.replace('T', ' ') if hearing_at else None
+    import os, time, shutil, json
+    upload_dir = "static/uploads/hearings"
+    os.makedirs(upload_dir, exist_ok=True)
 
-        hearing.next_hearing_date = next_hearing_date
-
-        hearing.status_key = status_key
-
-        hearing.chamber_number = chamber_number
-
-        hearing.floor_number = floor_number
-
-        hearing.show_in_client_portal = 1 if str(show_in_client_portal) in ("1", "true", "True") else 0
-
-        if attachment and attachment.filename:
-            upload_dir = "static/uploads/hearings"
-            safe_filename = save_upload(attachment, upload_dir)
+    attachment = form.get("attachment")
+    if attachment and hasattr(attachment, "filename") and attachment.filename:
+        clean_name = "".join(c for c in attachment.filename if c.isalnum() or c in ' ._-')
+        if clean_name:
+            safe_filename = f"{int(time.time())}_{clean_name}"
             attachment_path = f"{upload_dir}/{safe_filename}"
+            with open(attachment_path, "wb") as buffer:
+                shutil.copyfileobj(attachment.file, buffer)
             hearing.attachment_path = attachment_path
 
-        db.commit()
+    # Merge decision files
+    new_dec_files = []
+    for f in form.getlist("decision_files"):
+        if hasattr(f, "filename") and f.filename:
+            clean_name = "".join(c for c in f.filename if c.isalnum() or c in ' ._-')
+            if clean_name:
+                safe_filename = f"dec_{int(time.time())}_{clean_name}"
+                dest_path = f"{upload_dir}/{safe_filename}"
+                with open(dest_path, "wb") as buffer:
+                    shutil.copyfileobj(f.file, buffer)
+                new_dec_files.append({
+                    "name": f.filename,
+                    "url": f"/{dest_path}",
+                    "uploaded_at": time.strftime("%Y-%m-%d %H:%M:%S")
+                })
+    if new_dec_files:
+        existing = []
+        try:
+            if hearing.decision_attachments_json:
+                existing = json.loads(hearing.decision_attachments_json)
+        except Exception:
+            existing = []
+        hearing.decision_attachments_json = json.dumps(existing + new_dec_files, ensure_ascii=False)
 
+    # Merge papers files
+    new_papers_files = []
+    for f in form.getlist("papers_files"):
+        if hasattr(f, "filename") and f.filename:
+            clean_name = "".join(c for c in f.filename if c.isalnum() or c in ' ._-')
+            if clean_name:
+                safe_filename = f"paper_{int(time.time())}_{clean_name}"
+                dest_path = f"{upload_dir}/{safe_filename}"
+                with open(dest_path, "wb") as buffer:
+                    shutil.copyfileobj(f.file, buffer)
+                new_papers_files.append({
+                    "name": f.filename,
+                    "url": f"/{dest_path}",
+                    "uploaded_at": time.strftime("%Y-%m-%d %H:%M:%S")
+                })
+    if new_papers_files:
+        existing = []
+        try:
+            if hearing.submitted_papers_json:
+                existing = json.loads(hearing.submitted_papers_json)
+        except Exception:
+            existing = []
+        hearing.submitted_papers_json = json.dumps(existing + new_papers_files, ensure_ascii=False)
+
+    db.commit()
+
+    redirect_to_case = form.get("redirect_to_case")
+    case_id = form.get("case_id")
     if redirect_to_case == "true" and case_id:
-
         return RedirectResponse(url=f"/cases/{case_id}", status_code=303)
 
+    return RedirectResponse(url="/hearings", status_code=303)
+
+@app.get("/hearings/details/{hearing_id}")
+async def get_hearing_minutes_details(
+    hearing_id: int,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    if not user:
+        return JSONResponse({"success": False, "error": "غير مصرح"}, status_code=401)
+    office_id = user.office_id
+    if not office_id:
+        office_id = 1
+    h = db.query(LawHearings).filter(LawHearings.id == hearing_id, LawHearings.office_id == office_id).first()
+    if not h:
+        return JSONResponse({"success": False, "error": "المحضر غير موجود"}, status_code=404)
+    
+    import json
+    return JSONResponse({
+        "success": True,
+        "hearing": {
+            "id": h.id,
+            "case_id": h.case_id,
+            "case_number": h.law_case.case_number if h.law_case else "",
+            "case_title": h.law_case.title if h.law_case else "",
+            "case_type": getattr(h.law_case, 'case_type_key', '') or getattr(h.law_case, 'case_type', '') if h.law_case else "",
+            "title": h.title,
+            "hearing_at": h.hearing_at,
+            "next_hearing_date": h.next_hearing_date or "",
+            "status_key": h.status_key,
+            "chamber_number": h.chamber_number or "",
+            "floor_number": h.floor_number or "",
+            "show_in_client_portal": h.show_in_client_portal,
+            "attachment_path": h.attachment_path or "",
+            "minutes_type": getattr(h, 'minutes_type', 'primary') or "primary",
+            "minutes_date": getattr(h, 'minutes_date', '') or "",
+            "session_type": getattr(h, 'session_type', '') or getattr(h, 'hearing_type', '') or "",
+            "court_decision": getattr(h, 'court_decision', '') or getattr(h, 'decision_text', '') or "",
+            "judge_head": getattr(h, 'judge_head', '') or getattr(h, 'judge_name', '') or "",
+            "court_secretary": getattr(h, 'court_secretary', '') or "",
+            "prosecutor_name": getattr(h, 'prosecutor_name', '') or "",
+            "bench_judges": json.loads(h.bench_judges_json) if getattr(h, 'bench_judges_json', None) else {},
+            "prosecution_details": json.loads(h.prosecution_details_json) if getattr(h, 'prosecution_details_json', None) else {},
+            "submitted_papers": json.loads(h.submitted_papers_json) if getattr(h, 'submitted_papers_json', None) else [],
+            "decision_attachments": json.loads(h.decision_attachments_json) if getattr(h, 'decision_attachments_json', None) else [],
+            "attendees_list": json.loads(h.attendees_list_json) if getattr(h, 'attendees_list_json', None) else (json.loads(h.attendees_json) if getattr(h, 'attendees_json', None) else []),
+            "result_summary": getattr(h, 'result_summary', '') or getattr(h, 'hearing_summary', '') or ""
+        }
+    })
+
+@app.post("/hearings/delete/{hearing_id}")
+async def delete_hearing(
+    hearing_id: int,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    if not user or not check_user_permission(user, 'hearings', 'delete'):
+        return HTMLResponse("<script>alert('غير مصرح لك بحذف الجلسة'); window.history.back();</script>", status_code=403)
+    office_id = user.office_id or 1
+    h = db.query(LawHearings).filter(LawHearings.id == hearing_id, LawHearings.office_id == office_id).first()
+    if h:
+        db.delete(h)
+        db.commit()
     return RedirectResponse(url="/hearings", status_code=303)
 
 # الأدوار المسموح لها بإدارة المستخدمين

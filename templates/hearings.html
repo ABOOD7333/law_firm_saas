@@ -1,109 +1,137 @@
 {% extends "base.html" %}
 
-{% block title %}الجلسات والمهام | LawSaaS{% endblock %}
+{% block title %}محاضر الجلسات والتحقيقات | LawSaaS{% endblock %}
 
 {% block content %}
-<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 25px;">
     <div>
-        <h1 style="font-size: 1.6rem; color: #1e293b; margin: 0 0 5px 0; font-weight: 800;">سجل الجلسات القضائية ومحاضر الجلسات</h1>
-        <p style="color: #64748b; margin: 0; font-size: 0.95rem;">إدارة ومتابعة وقائع الجلسات، حضور الأطراف، القرارات والأحكام، ومواعيد التأجيل</p>
+        <h1 style="font-size: 1.6rem; color: #0f172a; margin: 0 0 6px 0; font-weight: 800; display: flex; align-items: center; gap: 10px;">
+            <i class="fa-solid fa-file-signature" style="color: var(--primary-color);"></i>
+            محاضر الجلسات والتحقيقات القضائية
+        </h1>
+        <p style="color: #64748b; margin: 0; font-size: 0.95rem;">توثيق ومتابعة محاضر المحكمة الابتدائية، النيابة العامة، محكمة الاستئناف، والمحكمة العليا</p>
     </div>
-    <div style="display:flex; gap:10px; flex-wrap: wrap; align-items: center;">
+    <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
         {% if has_perm(user, 'hearings', 'add') %}
-        <button class="btn" style="background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; padding: 10px 16px; border-radius: 8px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-family: 'Cairo', sans-serif;" onclick="addCustomRefData('hearing_status', 'select[name=\'status_key\']', 'أدخل حالة الجلسة الجديدة (مثال: محجوزة للحكم):')">
-            <i class="fa-solid fa-plus-circle"></i> إضافة حالة جلسة
+        <!-- أزرار المحاضر الأربعة المطلوبة -->
+        <button type="button" class="btn-primary" style="background: #1e40af; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-family: 'Cairo', sans-serif;" onclick="openHearingModal('primary')">
+            <i class="fa-solid fa-gavel"></i> إضافة محضر جلسة المحكمة الابتدائية
         </button>
-        <button class="btn-primary" style="padding: 10px 20px; font-family: 'Cairo', sans-serif; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; border-radius: 8px; cursor: pointer;" onclick="openAddHearingModal()">
-            <i class="fa-solid fa-file-signature"></i> إضافة محضر جلسة جديدة
+        <button type="button" class="btn-primary" style="background: #047857; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-family: 'Cairo', sans-serif;" onclick="openHearingModal('prosecution')">
+            <i class="fa-solid fa-scale-balanced"></i> إضافة محضر جلسة النيابة
+        </button>
+        <button type="button" class="btn-primary" style="background: #6d28d9; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-family: 'Cairo', sans-serif;" onclick="openHearingModal('appeal')">
+            <i class="fa-solid fa-landmark"></i> إضافة محضر جلسة المحكمة الاستئنافية
+        </button>
+        <button type="button" class="btn-primary" style="background: #b45309; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-family: 'Cairo', sans-serif;" onclick="openHearingModal('supreme')">
+            <i class="fa-solid fa-building-columns"></i> إضافة محضر جلسة المحكمة العليا
+        </button>
+        <button type="button" class="btn" style="background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; padding: 10px 14px; border-radius: 8px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-family: 'Cairo', sans-serif;" onclick="addCustomRefData('hearing_status', 'select[name=\'status_key\']', 'أدخل حالة الجلسة الجديدة:')">
+            <i class="fa-solid fa-plus-circle"></i> إضافة حالة
         </button>
         {% endif %}
     </div>
 </div>
 
+<!-- جدول عرض المحاضر والجلسات -->
 <div class="card" style="margin-top: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; background: #fff;">
     <div style="overflow-x: auto;">
         <table class="data-table" style="width: 100%; border-collapse: collapse;">
             <thead>
                 <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; text-align: right;">
-                    <th style="padding: 14px 16px;">رقم المحضر / الموضوع</th>
+                    <th style="padding: 14px 16px;">موضوع الجلسة / المحضر</th>
+                    <th style="padding: 14px 16px;">الجهة القضائية</th>
+                    <th style="padding: 14px 16px;">رقم ونوع القضية</th>
                     <th style="padding: 14px 16px;">القضية المرتبطة</th>
-                    <th style="padding: 14px 16px;">المحكمة / الدرجة</th>
-                    <th style="padding: 14px 16px;">تاريخ ووقت الجلسة</th>
+                    <th style="padding: 14px 16px;">تاريخ المحضر / الجلسة</th>
                     <th style="padding: 14px 16px;">الجلسة القادمة</th>
-                    <th style="padding: 14px 16px;">حالة المحضر</th>
-                    <th style="padding: 14px 16px;">حالة الجلسة</th>
-                    <th style="padding: 14px 16px; text-align: center;">إجراءات</th>
+                    <th style="padding: 14px 16px;">الحالة</th>
+                    <th style="padding: 14px 16px; text-align: center;">الإجراءات</th>
                 </tr>
             </thead>
             <tbody>
                 {% for hearing in hearings %}
-                <tr style="border-bottom: 1px solid #f1f5f9;">
+                <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.15s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
                     <td style="padding: 14px 16px;">
-                        {% if hearing.report_number %}
-                        <div style="font-size: 0.8rem; color: #64748b; font-family: monospace; font-weight: 700;">{{ hearing.report_number }}</div>
+                        <strong style="color: #0f172a; font-size: 0.95rem;">{{ hearing.title }}</strong>
+                        {% if hearing.session_type %}
+                        <div style="font-size: 0.8rem; color: #64748b; margin-top: 3px;">
+                            <i class="fa-regular fa-bookmark"></i> {{ hearing.session_type }}
+                        </div>
                         {% endif %}
-                        <strong style="color: #1e293b; font-size: 0.95rem;">{{ hearing.title }}</strong>
-                        {% if hearing.hearing_type %}
-                        <span style="display: inline-block; background: #f1f5f9; color: #475569; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; margin-top: 4px;">{{ hearing.hearing_type }}</span>
+                    </td>
+                    <td style="padding: 14px 16px;">
+                        {% if hearing.minutes_type == 'prosecution' %}
+                        <span style="background: #ecfdf5; color: #047857; padding: 4px 10px; border-radius: 20px; font-size: 0.82rem; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; border: 1px solid #a7f3d0;">
+                            <i class="fa-solid fa-scale-balanced"></i> النيابة العامة
+                        </span>
+                        {% elif hearing.minutes_type == 'appeal' %}
+                        <span style="background: #f5f3ff; color: #6d28d9; padding: 4px 10px; border-radius: 20px; font-size: 0.82rem; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; border: 1px solid #ddd6fe;">
+                            <i class="fa-solid fa-landmark"></i> المحكمة الاستئنافية
+                        </span>
+                        {% elif hearing.minutes_type == 'supreme' %}
+                        <span style="background: #fffbeb; color: #b45309; padding: 4px 10px; border-radius: 20px; font-size: 0.82rem; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; border: 1px solid #fde68a;">
+                            <i class="fa-solid fa-building-columns"></i> المحكمة العليا
+                        </span>
+                        {% else %}
+                        <span style="background: #eff6ff; color: #1e40af; padding: 4px 10px; border-radius: 20px; font-size: 0.82rem; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; border: 1px solid #bfdbfe;">
+                            <i class="fa-solid fa-gavel"></i> المحكمة الابتدائية
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 14px 16px;">
+                        <span style="font-weight: 600; color: #334155;">{{ hearing.law_case.case_number if hearing.law_case else 'غير مقيدة' }}</span>
+                        {% if hearing.law_case and hearing.law_case.case_type_key %}
+                        <div style="font-size: 0.78rem; color: #64748b;">{{ hearing.law_case.case_type_key }}</div>
                         {% endif %}
                     </td>
                     <td style="padding: 14px 16px;">
                         {% if hearing.law_case %}
-                        <a href="/cases/{{ hearing.case_id }}" style="color: #1e40af; font-weight: 600; text-decoration: none; display: block;">
+                        <a href="/cases/{{ hearing.case_id }}" style="color: var(--primary-color); text-decoration: none; font-weight: 600;">
                             {{ hearing.law_case.title }}
                         </a>
-                        <small style="color: #64748b;">رقم: {{ hearing.law_case.case_number }}</small>
                         {% else %}
                         <span style="color: #94a3b8;">-</span>
                         {% endif %}
                     </td>
-                    <td style="padding: 14px 16px;">
-                        <div style="color: #334155; font-size: 0.9rem;">{{ hearing.court_name or (hearing.law_case.court_name if hearing.law_case else '-') }}</div>
-                        <small style="color: #64748b;">{{ hearing.litigation_level or '-' }}</small>
+                    <td style="padding: 14px 16px;" dir="ltr">
+                        <div style="text-align: right;">
+                            <div style="font-weight: 600; color: #0f172a;">{{ hearing.hearing_at }}</div>
+                            {% if hearing.minutes_date %}
+                            <div style="font-size: 0.8rem; color: #64748b;">تحرير: {{ hearing.minutes_date }}</div>
+                            {% endif %}
+                        </div>
                     </td>
-                    <td dir="ltr" style="padding: 14px 16px; text-align: right; color: #334155; font-weight: 500;">
-                        {{ hearing.hearing_at }}
-                    </td>
-                    <td dir="ltr" style="padding: 14px 16px; text-align: right;">
-                        {% if hearing.next_hearing_date %}
-                        <span style="color: #0f766e; font-weight: 600;">{{ hearing.next_hearing_date }}</span>
-                        {% else %}
-                        <span style="color: #94a3b8;">-</span>
-                        {% endif %}
+                    <td style="padding: 14px 16px;" dir="ltr">
+                        <div style="text-align: right; color: #334155;">{{ hearing.next_hearing_date or '-' }}</div>
                     </td>
                     <td style="padding: 14px 16px;">
-                        {% if hearing.report_status == 'draft' %}
-                        <span style="background: #fef3c7; color: #92400e; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700;"><i class="fa-regular fa-file-lines"></i> مسودة</span>
-                        {% elif hearing.report_status == 'under_review' %}
-                        <span style="background: #e0f2fe; color: #075985; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700;"><i class="fa-solid fa-hourglass-half"></i> قيد المراجعة</span>
+                        {% if hearing.status_key in ['pending', 'قادمة'] %}
+                        <span style="background: #fef3c7; color: #d97706; padding: 4px 10px; border-radius: 20px; font-size: 0.82rem; font-weight: 700;">قادمة</span>
+                        {% elif hearing.status_key in ['completed', 'منعقدة'] %}
+                        <span style="background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 20px; font-size: 0.82rem; font-weight: 700;">منعقدة</span>
+                        {% elif hearing.status_key in ['postponed', 'مؤجلة'] %}
+                        <span style="background: #fee2e2; color: #b91c1c; padding: 4px 10px; border-radius: 20px; font-size: 0.82rem; font-weight: 700;">مؤجلة</span>
                         {% else %}
-                        <span style="background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700;"><i class="fa-solid fa-circle-check"></i> معتمد</span>
-                        {% endif %}
-                    </td>
-                    <td style="padding: 14px 16px;">
-                        {% if hearing.status_key == 'pending' or hearing.status_key == 'قادمة' %}
-                        <span style="background: #eff6ff; color: #1d4ed8; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700;">قادمة</span>
-                        {% elif hearing.status_key == 'completed' or hearing.status_key == 'منعقدة' %}
-                        <span style="background: #ecfdf5; color: #047857; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700;">منعقدة</span>
-                        {% elif hearing.status_key == 'postponed' or hearing.status_key == 'مؤجلة' %}
-                        <span style="background: #fee2e2; color: #b91c1c; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700;">مؤجلة</span>
-                        {% else %}
-                        <span style="background: #f1f5f9; color: #475569; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700;">{{ hearing.status_key }}</span>
+                        <span style="background: #e2e8f0; color: #475569; padding: 4px 10px; border-radius: 20px; font-size: 0.82rem; font-weight: 700;">{{ hearing.status_key }}</span>
                         {% endif %}
                     </td>
                     <td style="padding: 14px 16px; text-align: center;">
-                        <div style="display:flex; gap:6px; justify-content: center;">
-                            <button class="action-btn" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 6px; padding: 6px 10px; cursor: pointer;" title="عرض تفاصيل المحضر" onclick="viewHearingDetails({{ hearing.id }})">
-                                <i class="fa-solid fa-eye"></i> عرض
+                        <div style="display: inline-flex; gap: 6px; align-items: center;">
+                            <!-- زر استعراض المحضر الرسمي والطباعة -->
+                            <button type="button" class="btn" style="background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; font-family: 'Cairo', sans-serif;" onclick="viewHearingMinutes('{{ hearing.id }}')" title="عرض المحضر الرسمي">
+                                <i class="fa-solid fa-eye" style="color: #2563eb;"></i> عرض
                             </button>
-                            {% if hearing.attachment_path and has_perm(user, 'hearings', 'view') %}
-                            <a class="action-btn" href="/hearings/{{ hearing.id }}/attachment" title="تنزيل المرفق" style="background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; text-decoration: none;">
-                                <i class="fa-solid fa-paperclip"></i>
-                            </a>
-                            {% endif %}
+
                             {% if has_perm(user, 'hearings', 'edit') %}
-                            <button class="action-btn" style="background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; cursor: pointer;" title="تعديل سريع" onclick="openEditHearingModal({{ hearing.id|tojson|forceescape }}, {{ hearing.title|tojson|forceescape }}, {{ hearing.hearing_at|tojson|forceescape }}, {{ (hearing.next_hearing_date or '')|tojson|forceescape }}, {{ hearing.status_key|tojson|forceescape }}, {{ (hearing.case_id or '')|tojson|forceescape }}, {{ (hearing.chamber_number or '')|tojson|forceescape }}, {{ (hearing.floor_number or '')|tojson|forceescape }}, {{ hearing.show_in_client_portal|tojson|forceescape }})">
+                            <button type="button" class="btn" style="background: #fff; color: #0284c7; border: 1px solid #bae6fd; padding: 6px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; cursor: pointer;" onclick="loadAndEditHearing('{{ hearing.id }}')" title="تعديل">
                                 <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            {% endif %}
+
+                            {% if has_perm(user, 'hearings', 'delete') %}
+                            <button type="button" class="btn" style="background: #fff; color: #e11d48; border: 1px solid #fecdd3; padding: 6px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; cursor: pointer;" onclick="confirmDeleteHearing('{{ hearing.id }}')" title="حذف">
+                                <i class="fa-solid fa-trash-can"></i>
                             </button>
                             {% endif %}
                         </div>
@@ -112,9 +140,9 @@
                 {% else %}
                 <tr>
                     <td colspan="8" style="text-align: center; padding: 50px 20px; color: var(--text-muted);">
-                        <i class="fa-solid fa-calendar-xmark" style="font-size: 3.5rem; margin-bottom: 12px; opacity: 0.4; color: #94a3b8;"></i>
-                        <p style="font-size: 1.1rem; font-weight: 600; margin-bottom: 5px;">لا توجد محاضر أو جلسات مسجلة حتى الآن</p>
-                        <p style="color: #94a3b8; font-size: 0.9rem;">اضغط على زر «إضافة محضر جلسة جديدة» لتوثيق وقائع الجلسة القضائية الأولى</p>
+                        <i class="fa-solid fa-file-circle-xmark" style="font-size: 3.5rem; margin-bottom: 15px; opacity: 0.4;"></i>
+                        <h3 style="margin: 0 0 8px 0; color: #475569; font-weight: 700;">لا توجد محاضر جلسات مسجلة حتى الآن</h3>
+                        <p style="margin: 0; color: #94a3b8; font-size: 0.95rem;">اختر أحد الأزرار بالأعلى لإنشاء محضر جلسة مخصص للمحكمة الابتدائية أو النيابة أو الاستئناف أو العليا</p>
                     </td>
                 </tr>
                 {% endfor %}
@@ -123,795 +151,1082 @@
     </div>
 </div>
 
-<!-- ========================================== -->
-<!-- MODAL: إضافة محضر جلسة جديدة (الشامل) -->
-<!-- ========================================== -->
-<div id="addHearingModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.65); align-items: center; justify-content: center; z-index: 1100; backdrop-filter: blur(4px);">
-    <div class="modal-content" style="background: white; border-radius: 16px; width: 950px; max-width: 95%; max-height: 92vh; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); overflow: hidden;">
+<!-- ========================================================================= -->
+<!-- النافذة الموحدة الشاملة لإضافة وتعديل محاضر الجلسات (Unified Modal)      -->
+<!-- ========================================================================= -->
+<div id="hearingMinutesModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); align-items: center; justify-content: center; z-index: 1000; padding: 20px;">
+    <div class="modal-content" style="background: white; border-radius: 16px; width: 880px; max-width: 96%; max-height: 92vh; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); border: 1px solid #e2e8f0; overflow: hidden;">
         
-        <!-- Header -->
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <div style="width: 44px; height: 44px; background: #eff6ff; color: #1d4ed8; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
-                    <i class="fa-solid fa-file-signature"></i>
-                </div>
-                <div>
-                    <h2 style="margin: 0; font-size: 1.25rem; color: #0f172a; font-weight: 700;">إضافة محضر جلسة جديدة</h2>
-                    <p style="margin: 2px 0 0 0; font-size: 0.85rem; color: #64748b;">توثيق وقائع الجلسة، الحضور والغياب، القرارات والأحكام الصادرة</p>
-                </div>
-            </div>
-            <button type="button" onclick="closeAddHearingModal()" style="background: none; border: none; font-size: 1.6rem; cursor: pointer; color: #94a3b8; line-height: 1; padding: 4px 8px; border-radius: 6px;">&times;</button>
-        </div>
-
-        <!-- Scrollable Form Body -->
-        <div style="padding: 24px; overflow-y: auto; flex: 1;">
-            <form id="addHearingForm" action="/hearings/add" method="post" enctype="multipart/form-data">
-                <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
-                <input type="hidden" name="action_type" id="add_action_type" value="save">
-                <input type="hidden" name="attendees_json" id="attendees_json_input" value="[]">
-                <input type="hidden" name="post_hearing_actions" id="post_hearing_actions_input" value="[]">
-
-                <!-- 1. بيانات الجلسة الأساسية -->
-                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px 20px; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
-                    <div style="font-weight: 700; color: #1e3a8a; margin-bottom: 16px; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
-                        <i class="fa-solid fa-scale-balanced"></i> أولاً: بيانات الجلسة والمحكمة
-                    </div>
-                    
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 14px;">
-                        <div class="form-group">
-                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">رقم المحضر</label>
-                            <input type="text" name="report_number" id="add_report_number" readonly placeholder="يُنشأ تلقائياً" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; font-family: monospace; font-weight: 700; color: #475569;">
-                        </div>
-
-                        <div class="form-group">
-                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">القضية المرتبطة <span style="color: #ef4444;">*</span></label>
-                            <select name="case_id" id="add_case_id" required onchange="onCaseSelected(this.value)" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
-                                <option value="">-- اختر القضية المسجلة --</option>
-                                {% for case in cases %}
-                                <option value="{{ case.id }}" {% if selected_case_id and selected_case_id == case.id %}selected{% endif %}>
-                                    {{ case.case_number }} - {{ case.title }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">رقم القضية لدى المحكمة</label>
-                            <input type="text" name="court_case_number" id="add_court_case_number" placeholder="مثال: 142/ق/2026" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
-                        </div>
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 14px;">
-                        <div class="form-group">
-                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">اسم المحكمة</label>
-                            <input type="text" name="court_name" id="add_court_name" placeholder="مثال: محكمة جنوب الأمانة الابتدائية" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
-                        </div>
-
-                        <div class="form-group">
-                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">درجة التقاضي</label>
-                            <select name="litigation_level" id="add_litigation_level" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
-                                <option value="ابتدائي">ابتدائي</option>
-                                <option value="استئناف">استئناف</option>
-                                <option value="المحكمة العليا">المحكمة العليا</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">اسم القاضي / الدائرة القضائية</label>
-                            <input type="text" name="judge_name" placeholder="مثال: فضيلة القاضي أحمد علي / الدائرة التجارية الثالثة" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
-                        </div>
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
-                        <div class="form-group">
-                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">تاريخ ووقت انعقاد الجلسة <span style="color: #ef4444;">*</span></label>
-                            <input type="datetime-local" name="hearing_at" id="add_hearing_at" required style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
-                        </div>
-
-                        <div class="form-group">
-                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">نوع الجلسة</label>
-                            <select name="hearing_type" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
-                                <option value="جلسة مرافعة">جلسة مرافعة</option>
-                                <option value="جلسة استماع">جلسة استماع</option>
-                                <option value="جلسة نطق بالحكم">جلسة نطق بالحكم</option>
-                                <option value="جلسة تحقيق">جلسة تحقيق</option>
-                                <option value="جلسة خبرة / معاينة">جلسة خبرة / معاينة</option>
-                                <option value="جلسة صلح وتوفيق">جلسة صلح وتوفيق</option>
-                                <option value="أخرى">أخرى</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">موضوع / عنوان الجلسة <span style="color: #ef4444;">*</span></label>
-                            <input type="text" name="title" id="add_hearing_title" required placeholder="مثال: الجلسة الثانية - تقديم الرد ومذكرة الدفاع" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 2. الحضور والغياب -->
-                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px 20px; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-                        <div style="font-weight: 700; color: #1e3a8a; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
-                            <i class="fa-solid fa-users"></i> ثانياً: كشف الحضور والغياب
-                        </div>
-                        <button type="button" onclick="addAttendeeRow()" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-family: 'Cairo', sans-serif;">
-                            <i class="fa-solid fa-user-plus"></i> إضافة حاضر / غائب
-                        </button>
-                    </div>
-
-                    <div style="overflow-x: auto;">
-                        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;" id="attendeesTable">
-                            <thead>
-                                <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; text-align: right; color: #475569;">
-                                    <th style="padding: 10px 12px;">الصفة / الطرف</th>
-                                    <th style="padding: 10px 12px;">الاسم الكامل</th>
-                                    <th style="padding: 10px 12px;">حالة الحضور</th>
-                                    <th style="padding: 10px 12px;">سبب الغياب (إن وُجد)</th>
-                                    <th style="padding: 10px 12px; width: 50px; text-align: center;">حذف</th>
-                                </tr>
-                            </thead>
-                            <tbody id="attendeesTableBody">
-                                <!-- Default rows added via JS -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- 3. تفاصيل الجلسة والطلبات والدفوع -->
-                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px 20px; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
-                    <div style="font-weight: 700; color: #1e3a8a; margin-bottom: 16px; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
-                        <i class="fa-solid fa-file-lines"></i> ثالثاً: وقائع الجلسة والطلبات والدفوع
-                    </div>
-
-                    <div class="form-group" style="margin-bottom: 14px;">
-                        <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">ملخص ما جرى في الجلسة</label>
-                        <textarea name="hearing_summary" rows="3" placeholder="سرد تفصيلي لمجريات الجلسة وما دار بين الهيئة القضائية والأطراف..." style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; resize: vertical;"></textarea>
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 14px;">
-                        <div class="form-group">
-                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">طلبات الموكل (طرفنا)</label>
-                            <textarea name="client_requests" rows="2" placeholder="الطلبات الأصلية والاحتياطية المقدمة من جانبنا..." style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; resize: vertical;"></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">طلبات الطرف الآخر (الخصم)</label>
-                            <textarea name="opponent_requests" rows="2" placeholder="طلبات ودفاع الخصم أو محاميه..." style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; resize: vertical;"></textarea>
-                        </div>
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 14px;">
-                        <div class="form-group">
-                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">الدفوع والمذكرات المقدمة</label>
-                            <textarea name="pleadings_submitted" rows="2" placeholder="مذكرات الجواب، الدفوع الشكلية أو الموضوعية..." style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; resize: vertical;"></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">المستندات والأدلة المقدمة</label>
-                            <textarea name="evidence_submitted" rows="2" placeholder="حوافظ المستندات، تقارير الخبراء، الوثائق المبرزة..." style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; resize: vertical;"></textarea>
-                        </div>
-                    </div>
-
-                    <!-- ملاحظات المحامي الداخلية (سرية) -->
-                    <div class="form-group" style="background: #fffbeb; border: 1px dashed #f59e0b; padding: 14px; border-radius: 8px;">
-                        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
-                            <i class="fa-solid fa-lock" style="color: #b45309; font-size: 0.9rem;"></i>
-                            <label style="font-weight: 700; color: #92400e; font-size: 0.9rem; margin: 0;">ملاحظات المحامي الداخلية (سرية لا تظهر للأطراف الخارجية)</label>
-                        </div>
-                        <textarea name="internal_notes" rows="2" placeholder="ملاحظات قانونية خاصة بالمكتب واستراتيجية الترافع..." style="width: 100%; padding: 10px 12px; border: 1px solid #fde68a; border-radius: 8px; font-family: 'Cairo', sans-serif; resize: vertical; background: #fff;"></textarea>
-                    </div>
-                </div>
-
-                <!-- 4. قرارات المحكمة والأحكام -->
-                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px 20px; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
-                    <div style="font-weight: 700; color: #1e3a8a; margin-bottom: 16px; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
-                        <i class="fa-solid fa-gavel"></i> رابعاً: قرارات المحكمة والأحكام
-                    </div>
-
-                    <!-- هل صدر قرار؟ -->
-                    <div style="margin-bottom: 16px;">
-                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 600; color: #334155;">
-                            <input type="checkbox" name="has_court_decision" id="has_court_decision" value="1" onchange="toggleCourtDecisionSection(this.checked)" style="width: 18px; height: 18px; accent-color: #1e40af;">
-                            <span>هل صدر قرار أو أمر قضائي خلال الجلسة؟</span>
-                        </label>
-                    </div>
-
-                    <div id="court_decision_fields" style="display: none; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
-                        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 14px; margin-bottom: 10px;">
-                            <div>
-                                <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.85rem;">نوع القرار</label>
-                                <select name="decision_type" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Cairo', sans-serif;">
-                                    <option value="قرار تمهيدي">قرار تمهيدي</option>
-                                    <option value="ندب خبير">ندب خبير</option>
-                                    <option value="تكليف بالرد">تكليف بالرد أو تقديم بينة</option>
-                                    <option value="إلزام بتقديم مستندات">إلزام بتقديم مستندات</option>
-                                    <option value="أمر ولائي / وقتي">أمر ولائي / وقتي</option>
-                                    <option value="قرار حجز للحكم">قرار حجز للحكم</option>
-                                    <option value="أخرى">أخرى</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.85rem;">نص القرار أو ملخصه</label>
-                                <input type="text" name="decision_text" placeholder="نص منطوق القرار الصادر في محضر الجلسة..." style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Cairo', sans-serif;">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- هل صدر حكم؟ -->
-                    <div style="margin-bottom: 16px;">
-                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 600; color: #334155;">
-                            <input type="checkbox" name="has_judgment" id="has_judgment" value="1" onchange="toggleJudgmentSection(this.checked)" style="width: 18px; height: 18px; accent-color: #1e40af;">
-                            <span>هل صدر حكم قضائي فاصل أو قطعي في الدعوى؟</span>
-                        </label>
-                    </div>
-
-                    <div id="judgment_fields" style="display: none; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
-                            <div>
-                                <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.85rem;">رقم الحكم</label>
-                                <input type="text" name="judgment_number" placeholder="رقم صك / مسودة الحكم" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Cairo', sans-serif;">
-                            </div>
-                            <div>
-                                <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.85rem;">تاريخ صدور الحكم</label>
-                                <input type="date" name="judgment_date" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Cairo', sans-serif;">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- الإجراءات المطلوب اتخاذها بعد الجلسة -->
-                    <div style="border-top: 1px solid #e2e8f0; padding-top: 14px; margin-top: 14px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <label style="font-weight: 700; color: #334155; font-size: 0.9rem;">الإجراءات والمهام المطلوب اتخاذها بعد الجلسة</label>
-                            <button type="button" onclick="addActionRow()" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer;">
-                                <i class="fa-solid fa-plus"></i> إضافة مهمة
-                            </button>
-                        </div>
-                        <div id="actionsContainer">
-                            <!-- Action rows added via JS -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 5. الجلسة القادمة (مواعيد التأجيل) -->
-                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px 20px; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
-                    <div style="font-weight: 700; color: #1e3a8a; margin-bottom: 16px; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
-                        <i class="fa-solid fa-calendar-day"></i> خامساً: الجلسة القادمة والتأجيل
-                    </div>
-
-                    <div style="margin-bottom: 14px;">
-                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 600; color: #334155;">
-                            <input type="checkbox" name="has_next_hearing" id="has_next_hearing" value="1" checked onchange="toggleNextHearingSection(this.checked)" style="width: 18px; height: 18px; accent-color: #1e40af;">
-                            <span>تم تحديد موعد لجلسة قادمة</span>
-                        </label>
-                    </div>
-
-                    <div id="next_hearing_fields">
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 14px;">
-                            <div class="form-group">
-                                <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">تاريخ الجلسة القادمة</label>
-                                <input type="date" name="next_hearing_date" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
-                            </div>
-                            <div class="form-group">
-                                <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">سبب التأجيل</label>
-                                <input type="text" name="postponement_reason" placeholder="مثال: لرد المدعى عليه / لورود تقرير الخبير" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">المطلوب تقديمه أو تجهيزه للجلسة القادمة</label>
-                            <input type="text" name="next_hearing_requirements" placeholder="المذكرات أو المستندات أو الشهود المطلوب إحضارهم..." style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 6. المرفقات وحالة المحضر وبوابة العميل -->
-                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px 20px; margin-bottom: 24px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
-                    <div style="font-weight: 700; color: #1e3a8a; margin-bottom: 16px; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
-                        <i class="fa-solid fa-paperclip"></i> سادساً: المرفقات وحالة المحضر
-                    </div>
-
-                    <!-- رفع الملفات -->
-                    <div class="form-group" style="margin-bottom: 16px;">
-                        <div style="border: 2px dashed #cbd5e1; border-radius: 12px; padding: 20px 15px; text-align: center; background: #f8fafc; cursor: pointer; transition: 0.2s;" onclick="document.getElementById('add_hearing_file').click();" ondragover="event.preventDefault(); this.style.borderColor='#1d4ed8';" ondragleave="this.style.borderColor='#cbd5e1';" ondrop="event.preventDefault(); this.style.borderColor='#cbd5e1'; document.getElementById('add_hearing_file').files = event.dataTransfer.files; updateAddFileName(event.dataTransfer.files[0]?.name);">
-                            <div style="width: 44px; height: 44px; background: #eff6ff; color: #1d4ed8; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 1.25rem; margin-bottom: 8px;">
-                                <i class="fa-solid fa-cloud-arrow-up"></i>
-                            </div>
-                            <p style="margin: 0; font-weight: 600; color: #1e3a8a; font-size: 0.95rem;">انقر لاختيار ملف محضر الجلسة أو المذكرات المرفقة أو اسحبها هنا</p>
-                            <input type="file" name="attachment" id="add_hearing_file" style="display: none;" onchange="updateAddFileName(this.files[0]?.name)">
-                            <small id="add_file_name_display" style="display: block; margin-top: 8px; color: #047857; font-weight: 700; font-size: 0.85rem;"></small>
-                        </div>
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 16px;">
-                        <div class="form-group">
-                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">حالة المحضر (سير الاعتماد)</label>
-                            <select name="report_status" id="add_report_status" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; font-weight: 600;">
-                                <option value="approved">معتمد (نهائي)</option>
-                                <option value="under_review">قيد المراجعة والتدقيق</option>
-                                <option value="draft">مسودة أولية</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #334155; font-size: 0.9rem;">حالة انعقاد الجلسة</label>
-                            <select name="status_key" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
-                                <option value="منعقدة">منعقدة</option>
-                                <option value="مؤجلة">مؤجلة</option>
-                                <option value="قادمة">قادمة</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- عرض في بوابة العميل -->
-                    <div style="display: flex; align-items: center; justify-content: space-between; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                        <div>
-                            <label for="add_show_in_client_portal" style="font-weight: 700; color: #334155; cursor: pointer; margin: 0; display: block;">إتاحة الاطلاع على خلاصة المحضر في بوابة العميل</label>
-                            <small style="color: #64748b;">(لن تظهر الملاحظات السرية أو المعطيات الخاصة بالمكتب للموكل)</small>
-                        </div>
-                        <input type="checkbox" name="show_in_client_portal" id="add_show_in_client_portal" value="1" checked style="width: 20px; height: 20px; cursor: pointer; accent-color: #1e40af;">
-                    </div>
-                </div>
-
-                <!-- Footer Buttons (Fixed at bottom) -->
-                <div style="display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; padding-top: 10px; border-top: 1px solid #e2e8f0;">
-                    <button type="button" onclick="closeAddHearingModal()" style="padding: 10px 20px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer; font-family: 'Cairo', sans-serif; font-weight: 700;">
-                        إلغاء
-                    </button>
-                    
-                    <button type="button" onclick="submitHearingForm('draft')" style="padding: 10px 20px; background: #fef3c7; color: #92400e; border: 1px solid #fde68a; border-radius: 8px; cursor: pointer; font-family: 'Cairo', sans-serif; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
-                        <i class="fa-regular fa-file-lines"></i> حفظ كمسودة
-                    </button>
-
-                    <button type="button" onclick="submitHearingForm('save_and_add_another')" style="padding: 10px 20px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 8px; cursor: pointer; font-family: 'Cairo', sans-serif; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
-                        <i class="fa-solid fa-plus-circle"></i> حفظ وإضافة محضر آخر
-                    </button>
-
-                    <button type="button" onclick="submitHearingForm('save')" class="btn-primary" style="padding: 10px 24px; font-family: 'Cairo', sans-serif; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; border-radius: 8px;">
-                        <i class="fa-solid fa-check"></i> حفظ المحضر
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- ========================================== -->
-<!-- MODAL: عرض تفاصيل المحضر الشامل (View) -->
-<!-- ========================================== -->
-<div id="viewHearingModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.65); align-items: center; justify-content: center; z-index: 1200; backdrop-filter: blur(4px);">
-    <div class="modal-content" style="background: white; border-radius: 16px; width: 850px; max-width: 95%; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); overflow: hidden;">
+        <!-- الترويسة -->
         <div style="display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
             <div style="display: flex; align-items: center; gap: 10px;">
-                <div style="width: 40px; height: 40px; background: #eff6ff; color: #1d4ed8; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
-                    <i class="fa-solid fa-eye"></i>
-                </div>
+                <span id="modal_type_badge" style="width: 38px; height: 38px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; font-size: 1.2rem; color: #fff; background: var(--primary-color);">
+                    <i class="fa-solid fa-file-signature"></i>
+                </span>
                 <div>
-                    <h3 style="margin: 0; font-size: 1.2rem; color: #0f172a; font-weight: 700;" id="view_modal_title">تفاصيل محضر الجلسة</h3>
-                    <p style="margin: 2px 0 0 0; font-size: 0.85rem; color: #64748b;" id="view_modal_subtitle">محضر جلسة قضائية</p>
+                    <h2 id="modal_title" style="margin: 0; font-size: 1.3rem; color: #0f172a; font-weight: 800;">إضافة محضر جلسة</h2>
+                    <span id="modal_subtitle" style="font-size: 0.85rem; color: #64748b;">توثيق الإجراءات القضائية الرسمية</span>
                 </div>
             </div>
-            <button type="button" onclick="document.getElementById('viewHearingModal').style.display='none'" style="background: none; border: none; font-size: 1.6rem; cursor: pointer; color: #94a3b8; line-height: 1;">&times;</button>
-        </div>
-        
-        <div style="padding: 24px; overflow-y: auto; flex: 1;" id="viewHearingDetailsContent">
-            <div style="text-align: center; padding: 40px; color: #64748b;">
-                <i class="fa-solid fa-spinner fa-spin" style="font-size: 2rem;"></i>
-                <p style="margin-top: 10px;">جاري تحميل بيانات المحضر...</p>
-            </div>
+            <button type="button" onclick="closeHearingModal()" style="background: none; border: none; font-size: 1.6rem; cursor: pointer; color: #94a3b8; padding: 4px 8px; border-radius: 6px; line-height: 1;" onmouseover="this.style.color='#0f172a'" onmouseout="this.style.color='#94a3b8'">&times;</button>
         </div>
 
-        <div style="padding: 14px 24px; border-top: 1px solid #e2e8f0; background: #f8fafc; display: flex; justify-content: flex-end; gap: 10px;">
-            <button type="button" onclick="document.getElementById('viewHearingModal').style.display='none'" style="padding: 8px 18px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 8px; font-weight: 700; cursor: pointer; font-family: 'Cairo', sans-serif;">
-                إغلاق
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- ========================================== -->
-<!-- MODAL: التعديل السريع (Legacy Edit Compatible) -->
-<!-- ========================================== -->
-<div id="editHearingModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000;">
-    <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; width: 550px; max-width: 90%; max-height: 90vh; overflow-y: auto;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h2 style="margin: 0; font-size: 1.3rem; color: #1e3a8a; font-weight: 700;">تعديل موعد الجلسة</h2>
-            <button onclick="document.getElementById('editHearingModal').style.display='none'" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #94a3b8;">&times;</button>
-        </div>
-        
-        <form action="/hearings/edit" method="post" enctype="multipart/form-data">
+        <!-- جسم النموذج القابل للتمرير -->
+        <form id="hearingMinutesForm" action="/hearings/add" method="post" enctype="multipart/form-data" style="overflow-y: auto; padding: 24px; flex: 1;">
             <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
-            <input type="hidden" name="hearing_id" id="edit_hearing_id">
-            <input type="hidden" name="case_id" id="edit_hearing_case_id">
+            <input type="hidden" name="hearing_id" id="form_hearing_id">
+            <input type="hidden" name="minutes_type" id="form_minutes_type" value="primary">
             
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #334155;">موضوع الجلسة <span style="color: red;">*</span></label>
-                <input type="text" name="title" id="edit_hearing_title" required style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+            <!-- حقول JSON مخفية للأطراف وتفاصيل الشعبة/النيابة -->
+            <input type="hidden" name="bench_judges_json" id="form_bench_judges_json" value="{}">
+            <input type="hidden" name="prosecution_details_json" id="form_prosecution_details_json" value="{}">
+            <input type="hidden" name="attendees_list_json" id="form_attendees_list_json" value="[]">
+
+            <!-- 1. القسم المشترك: القضية وموضوع الجلسة والتواريخ -->
+            <div style="background: #f8fafc; padding: 18px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 22px;">
+                <h4 style="margin: 0 0 14px 0; color: #1e293b; font-size: 1rem; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-folder-open" style="color: var(--primary-color);"></i> البيانات الأساسية والقضية المرتبطة
+                </h4>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                    <!-- القضية المرتبطة مع حفظ نوع القضية كـ data attribute -->
+                    <div class="form-group">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #334155; font-size: 0.9rem;">
+                            القضية المرتبطة <span style="color: red;">*</span>
+                        </label>
+                        <select name="case_id" id="form_case_id" required onchange="handleCaseSelectionChange(this)" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.9rem;">
+                            <option value="">-- اختر القضية من النظام --</option>
+                            {% for case in cases %}
+                            <option value="{{ case.id }}" data-case-type="{{ case.case_type_key or '' }}">
+                                {{ case.case_number }} - {{ case.title }} ({{ case.case_type_key or 'عام' }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <small id="selected_case_type_badge" style="display: none; margin-top: 5px; color: #2563eb; font-weight: 600; font-size: 0.8rem;"></small>
+                    </div>
+
+                    <!-- موضوع الجلسة / المحضر -->
+                    <div class="form-group">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #334155; font-size: 0.9rem;">
+                            موضوع الجلسة / التحقيق <span style="color: red;">*</span>
+                        </label>
+                        <input type="text" name="title" id="form_title" required placeholder="مثال: جلسة الرد وتقديم مذكرة الدفاع" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.9rem;">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+                    <!-- تاريخ محضر الجلسة (الحقل المستقل للتحقق من تاريخ تحرير المحضر) -->
+                    <div class="form-group">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #334155; font-size: 0.9rem;">
+                            تاريخ محضر الجلسة (التحرير)
+                        </label>
+                        <input type="date" name="minutes_date" id="form_minutes_date" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.9rem;">
+                    </div>
+
+                    <!-- تاريخ ووقت انعقاد الجلسة -->
+                    <div class="form-group">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #334155; font-size: 0.9rem;">
+                            تاريخ ووقت انعقاد الجلسة <span style="color: red;">*</span>
+                        </label>
+                        <input type="datetime-local" name="hearing_at" id="form_hearing_at" required style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.9rem;">
+                    </div>
+
+                    <!-- تاريخ الجلسة القادمة -->
+                    <div class="form-group">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #334155; font-size: 0.9rem;">
+                            تاريخ الجلسة القادمة
+                        </label>
+                        <input type="date" name="next_hearing_date" id="form_next_hearing_date" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.9rem;">
+                    </div>
+                </div>
             </div>
 
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #334155;">تاريخ ووقت الجلسة <span style="color: red;">*</span></label>
-                <input type="text" name="hearing_at" id="edit_hearing_at" required placeholder="YYYY-MM-DD HH:MM" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;" dir="ltr">
-            </div>
-            
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #334155;">تاريخ الجلسة القادمة</label>
-                <input type="date" name="next_hearing_date" id="edit_hearing_next" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
-            </div>
-            
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #334155;">حالة الجلسة</label>
-                <select name="status_key" id="edit_hearing_status" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
-                    <option value="pending">قادمة</option>
-                    <option value="completed">منعقدة</option>
-                    <option value="postponed">مؤجلة</option>
-                </select>
+            <!-- ======================================================== -->
+            <!-- 2. قسم المحكمة الابتدائية (Primary Court Fields)         -->
+            <!-- ======================================================== -->
+            <div id="section_primary" class="specific-section" style="display: none; background: #eff6ff; padding: 18px; border-radius: 12px; border: 1px solid #bfdbfe; margin-bottom: 22px;">
+                <h4 style="margin: 0 0 14px 0; color: #1e40af; font-size: 1rem; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-gavel"></i> بيانات هيئة وإجراءات المحكمة الابتدائية
+                </h4>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                    <!-- نوع الجلسة (القائمة الخماسية المعتمدة) -->
+                    <div class="form-group">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #1e3a8a; font-size: 0.9rem;">نوع الجلسة الإجرائي</label>
+                        <select name="primary_session_type" id="form_primary_session_type" style="width: 100%; padding: 10px 12px; border: 1px solid #bfdbfe; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.9rem; background: #fff;">
+                            <option value="جلسة تقديم الدعوى">جلسة تقديم الدعوى</option>
+                            <option value="جلسة المواجهة بالدعوى">جلسة المواجهة بالدعوى</option>
+                            <option value="جلسة الرد على الدعوى">جلسة الرد على الدعوى</option>
+                            <option value="جلسة الرد على أدلة الدعوى">جلسة الرد على أدلة الدعوى</option>
+                            <option value="جلسة حجز القضية للحكم">جلسة حجز القضية للحكم</option>
+                        </select>
+                    </div>
+
+                    <!-- القاضي رئيس الجلسة -->
+                    <div class="form-group">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #1e3a8a; font-size: 0.9rem;">القاضي رئيس الجلسة</label>
+                        <input type="text" name="primary_judge_head" id="form_primary_judge_head" list="staff_judges_list" placeholder="اسم القاضي الفرد / رئيس الجلسة" style="width: 100%; padding: 10px 12px; border: 1px solid #bfdbfe; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.9rem; background: #fff;">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <!-- أمين سر الجلسة -->
+                    <div class="form-group">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #1e3a8a; font-size: 0.9rem;">أمين سر الجلسة (الكاتب)</label>
+                        <input type="text" name="primary_court_secretary" id="form_primary_court_secretary" list="staff_clerks_list" placeholder="اسم كاتب الجلسة" style="width: 100%; padding: 10px 12px; border: 1px solid #bfdbfe; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.9rem; background: #fff;">
+                    </div>
+
+                    <!-- عضو النيابة الحاضر (يخفى تماماً إذا كانت القضية مدنية) -->
+                    <div class="form-group" id="container_primary_prosecutor">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #1e3a8a; font-size: 0.9rem;">عضو النيابة الحاضر في الجلسة</label>
+                        <input type="text" name="primary_prosecutor_name" id="form_primary_prosecutor_name" placeholder="اسم وكيل/عضو النيابة الحاضر" style="width: 100%; padding: 10px 12px; border: 1px solid #bfdbfe; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.9rem; background: #fff;">
+                        <small style="color: #64748b; font-size: 0.78rem;">* يُخفى تلقائياً إذا كانت القضية مصنفة كمدنية</small>
+                    </div>
+                </div>
             </div>
 
-            <div style="margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #cbd5e1;">
-                <label for="edit_show_in_client_portal" style="font-weight: 600; color: #334155; cursor: pointer; margin: 0;">عرض تفاصيل الجلسة في بوابة العميل</label>
-                <input type="checkbox" name="show_in_client_portal" id="edit_show_in_client_portal" value="1" style="width: 20px; height: 20px; cursor: pointer; accent-color: #1e40af;">
+            <!-- ======================================================== -->
+            <!-- 3. قسم المحكمة الاستئنافية (Appeals Court Fields)        -->
+            <!-- ======================================================== -->
+            <div id="section_appeal" class="specific-section" style="display: none; background: #f5f3ff; padding: 18px; border-radius: 12px; border: 1px solid #ddd6fe; margin-bottom: 22px;">
+                <h4 style="margin: 0 0 14px 0; color: #6d28d9; font-size: 1rem; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-landmark"></i> تشكيل الشعبة الاستئنافية ومجريات الاستئناف
+                </h4>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                    <div class="form-group">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #5b21b6; font-size: 0.9rem;">نوع الجلسة الاستئنافية</label>
+                        <select name="appeal_session_type" id="form_appeal_session_type" style="width: 100%; padding: 10px 12px; border: 1px solid #ddd6fe; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.9rem; background: #fff;">
+                            <option value="جلسة قيد وعريضة أسباب الاستئناف">جلسة قيد وعريضة أسباب الاستئناف</option>
+                            <option value="جلسة الرد على أسباب الاستئناف">جلسة الرد على أسباب الاستئناف</option>
+                            <option value="جلسة تقديم الدفوع وحوافظ المستندات">جلسة تقديم الدفوع وحوافظ المستندات</option>
+                            <option value="جلسة استيضاح ومناقشة تقرير الخبرة">جلسة استيضاح ومناقشة تقرير الخبرة</option>
+                            <option value="جلسة حجز الاستئناف للحكم">جلسة حجز الاستئناف للحكم</option>
+                        </select>
+                    </div>
+
+                    <!-- القاضي رئيس الشعبة -->
+                    <div class="form-group">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #5b21b6; font-size: 0.9rem;">القاضي رئيس الشعبة <span style="color: red;">*</span></label>
+                        <input type="text" name="appeal_judge_head" id="form_appeal_judge_head" placeholder="اسم رئيس الشعبة الاستئنافية" style="width: 100%; padding: 10px 12px; border: 1px solid #ddd6fe; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.9rem; background: #fff;">
+                    </div>
+                </div>
+
+                <!-- أعضاء الشعبة الأربعة المستقلون -->
+                <div style="background: rgba(255,255,255,0.7); padding: 14px; border-radius: 8px; border: 1px dashed #c4b5fd; margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 10px; font-weight: 700; color: #5b21b6; font-size: 0.88rem;">
+                        <i class="fa-solid fa-users-rectangle"></i> قضاة أعضاء الشعبة (بحسب التشكيل الفعلي):
+                    </label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <input type="text" id="appeal_judge_1" placeholder="القاضي عضو الشعبة الأول" style="width: 100%; padding: 9px 12px; border: 1px solid #ddd6fe; border-radius: 6px; font-family: 'Cairo', sans-serif; font-size: 0.85rem;">
+                        <input type="text" id="appeal_judge_2" placeholder="القاضي عضو الشعبة الثاني" style="width: 100%; padding: 9px 12px; border: 1px solid #ddd6fe; border-radius: 6px; font-family: 'Cairo', sans-serif; font-size: 0.85rem;">
+                        <input type="text" id="appeal_judge_3" placeholder="القاضي عضو الشعبة الثالث (اختياري)" style="width: 100%; padding: 9px 12px; border: 1px solid #ddd6fe; border-radius: 6px; font-family: 'Cairo', sans-serif; font-size: 0.85rem;">
+                        <input type="text" id="appeal_judge_4" placeholder="القاضي عضو الشعبة الرابع (اختياري)" style="width: 100%; padding: 9px 12px; border: 1px solid #ddd6fe; border-radius: 6px; font-family: 'Cairo', sans-serif; font-size: 0.85rem;">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #5b21b6; font-size: 0.9rem;">أمين سر الشعبة الاستئنافية</label>
+                        <input type="text" name="appeal_court_secretary" id="form_appeal_court_secretary" placeholder="اسم أمين سر الشعبة" style="width: 100%; padding: 10px 12px; border: 1px solid #ddd6fe; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.9rem; background: #fff;">
+                    </div>
+                    <div class="form-group" id="container_appeal_prosecutor">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #5b21b6; font-size: 0.9rem;">عضو نيابة الاستئناف الحاضر</label>
+                        <input type="text" name="appeal_prosecutor_name" id="form_appeal_prosecutor_name" placeholder="ممثل نيابة الاستئناف" style="width: 100%; padding: 10px 12px; border: 1px solid #ddd6fe; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.9rem; background: #fff;">
+                    </div>
+                </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px;">
+            <!-- ======================================================== -->
+            <!-- 4. قسم النيابة العامة (Prosecution Investigation Fields) -->
+            <!-- ======================================================== -->
+            <div id="section_prosecution" class="specific-section" style="display: none; background: #ecfdf5; padding: 18px; border-radius: 12px; border: 1px solid #a7f3d0; margin-bottom: 22px;">
+                <h4 style="margin: 0 0 14px 0; color: #047857; font-size: 1rem; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-scale-balanced"></i> بيانات النيابة العامة وإجراءات التحقيق (وفق التعليمات العامة)
+                </h4>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                    <div class="form-group">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #065f46; font-size: 0.88rem;">اسم النيابة المختصة <span style="color: red;">*</span></label>
+                        <input type="text" id="pros_office_name" placeholder="مثال: نيابة غرب الأمانة الجزئية" style="width: 100%; padding: 9px 12px; border: 1px solid #a7f3d0; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.9rem; background: #fff;">
+                    </div>
+                    <div class="form-group">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #065f46; font-size: 0.88rem;">رقم القضية / التحقيق لدى النيابة</label>
+                        <input type="text" id="pros_investigation_number" placeholder="رقم التحقيق أو القيد" style="width: 100%; padding: 9px 12px; border: 1px solid #a7f3d0; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.9rem; background: #fff;">
+                    </div>
+                    <div class="form-group">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #065f46; font-size: 0.88rem;">مكان التحقيق أو الإجراء</label>
+                        <input type="text" id="pros_location" placeholder="مقر النيابة / غرفة التحقيق / معاينة" style="width: 100%; padding: 9px 12px; border: 1px solid #a7f3d0; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.9rem; background: #fff;">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; margin-bottom: 15px;">
+                    <div class="form-group">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #065f46; font-size: 0.85rem;">اسم عضو النيابة المحقق <span style="color: red;">*</span></label>
+                        <input type="text" id="pros_investigator_name" placeholder="اسم المحقق" style="width: 100%; padding: 9px 12px; border: 1px solid #a7f3d0; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.88rem; background: #fff;">
+                    </div>
+                    <div class="form-group">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #065f46; font-size: 0.85rem;">وظيفة المحقق القضائية</label>
+                        <select id="pros_investigator_title" style="width: 100%; padding: 9px 10px; border: 1px solid #a7f3d0; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.88rem; background: #fff;">
+                            <option value="وكيل نيابة">وكيل نيابة</option>
+                            <option value="رئيس نيابة">رئيس نيابة</option>
+                            <option value="مساعد نيابة">مساعد نيابة</option>
+                            <option value="عضو نيابة منتدب">عضو نيابة منتدب</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #065f46; font-size: 0.85rem;">النيابة الأصلية</label>
+                        <input type="text" id="pros_original_office" placeholder="جهة العمل الأصلية" style="width: 100%; padding: 9px 12px; border: 1px solid #a7f3d0; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.88rem; background: #fff;">
+                    </div>
+                    <div class="form-group">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #065f46; font-size: 0.85rem;">النيابة المنتدب إليها (إن وجد)</label>
+                        <input type="text" id="pros_seconded_office" placeholder="إذا كان منتدباً" style="width: 100%; padding: 9px 12px; border: 1px solid #a7f3d0; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.88rem; background: #fff;">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                    <div class="form-group">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #065f46; font-size: 0.88rem;">اسم كاتب التحقيق</label>
+                        <input type="text" id="pros_clerk_name" placeholder="أمين سر التحقيق" style="width: 100%; padding: 9px 12px; border: 1px solid #a7f3d0; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.9rem; background: #fff;">
+                    </div>
+                    <div class="form-group">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #065f46; font-size: 0.88rem;">نوع الإجراء لدى النيابة</label>
+                        <select id="pros_session_type" style="width: 100%; padding: 9px 12px; border: 1px solid #a7f3d0; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.9rem; background: #fff;">
+                            <option value="استجواب وتحقيق مع متهم">استجواب وتحقيق مع متهم</option>
+                            <option value="سماع أقوال الشاكي / المجني عليه">سماع أقوال الشاكي / المجني عليه</option>
+                            <option value="سماع أقوال شهود إثبات / نفي">سماع أقوال شهود إثبات / نفي</option>
+                            <option value="مواجهة بين الخصوم">مواجهة بين الخصوم</option>
+                            <option value="معاينة مسرح الواقعة وضبط أحراز">معاينة مسرح الواقعة وضبط أحراز</option>
+                            <option value="جلسة نظر الحبس الاحتياطي والتجديد">جلسة نظر الحبس الاحتياطي والتجديد</option>
+                            <option value="تحقيق تكميلي بناءً على طلب المحامي">تحقيق تكميلي بناءً على طلب المحامي</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #065f46; font-size: 0.88rem;">بيانات البلاغ وتاريخ/ساعة وروده</label>
+                        <input type="text" id="pros_report_details" placeholder="رقم محضر الشرطة وتاريخ وروده" style="width: 100%; padding: 9px 12px; border: 1px solid #a7f3d0; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.9rem; background: #fff;">
+                    </div>
+                </div>
+
+                <!-- توثيق أقوال الأشخاص المستجوبين في النيابة -->
+                <div style="background: rgba(255,255,255,0.75); padding: 15px; border-radius: 10px; border: 1px dashed #6ee7b7; margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <span style="font-weight: 700; color: #065f46; font-size: 0.9rem;">
+                            <i class="fa-solid fa-user-pen"></i> بيانات الأشخاص المستجوبين وملخص الأقوال:
+                        </span>
+                        <button type="button" class="btn" style="background: #047857; color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; cursor: pointer; border: none;" onclick="addProsecutionPersonRow()">
+                            <i class="fa-solid fa-plus"></i> إضافة شخص مستجوب
+                        </button>
+                    </div>
+                    <div id="prosecution_persons_container" style="display: flex; flex-direction: column; gap: 10px;">
+                        <!-- تُضاف الحقول ديناميكياً بواسطة JavaScript -->
+                    </div>
+                </div>
+
+                <!-- خيارات التوثيق والتوقيع -->
+                <div style="background: #fff; padding: 12px; border-radius: 8px; border: 1px solid #a7f3d0;">
+                    <label style="font-weight: 700; color: #065f46; font-size: 0.85rem; display: block; margin-bottom: 6px;">
+                        <i class="fa-solid fa-signature"></i> التوثيق وإثبات التوقيع / البصمة:
+                    </label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <select id="pros_signature_status" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Cairo', sans-serif; font-size: 0.85rem;">
+                            <option value="تم التوقيع بعد تلاوة الأقوال">تم التوقيع بعد تلاوة الأقوال</option>
+                            <option value="تم أخذ البصمة لتعذر التوقيع كتابة">تم أخذ البصمة لتعذر التوقيع كتابة</option>
+                            <option value="امتنع الماثل عن التوقيع أو البصم">امتنع الماثل عن التوقيع أو البصم</option>
+                            <option value="تعذر التوقيع لعذر صحي/مادي مع ذكر السبب">تعذر التوقيع لعذر صحي/مادي مع ذكر السبب</option>
+                        </select>
+                        <input type="text" id="pros_signature_notes" placeholder="ملاحظات التوثيق إن وجدت" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Cairo', sans-serif; font-size: 0.85rem;">
+                    </div>
+                </div>
+            </div>
+
+            <!-- ======================================================== -->
+            <!-- 5. قسم المحكمة العليا (Supreme Court Fields)             -->
+            <!-- ======================================================== -->
+            <div id="section_supreme" class="specific-section" style="display: none; background: #fffbeb; padding: 18px; border-radius: 12px; border: 1px solid #fde68a; margin-bottom: 22px;">
+                <h4 style="margin: 0 0 14px 0; color: #b45309; font-size: 1rem; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-building-columns"></i> بيانات الدائرة المختصة وهيئة المحكمة العليا
+                </h4>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                    <div class="form-group">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #92400e; font-size: 0.9rem;">الدائرة المختصة بالمحكمة العليا</label>
+                        <select name="supreme_chamber_type" id="form_supreme_chamber_type" style="width: 100%; padding: 10px 12px; border: 1px solid #fde68a; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.9rem; background: #fff;">
+                            <option value="الدائرة المدنية">الدائرة المدنية</option>
+                            <option value="الدائرة التجارية">الدائرة التجارية</option>
+                            <option value="الدائرة الجزائية">الدائرة الجزائية</option>
+                            <option value="دائرة الأحوال الشخصية">دائرة الأحوال الشخصية</option>
+                            <option value="الدائرة الدستورية">الدائرة الدستورية</option>
+                            <option value="الدائرة العمالية والإدارية">الدائرة العمالية والإدارية</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #92400e; font-size: 0.9rem;">نوع الجلسة أمام المحكمة العليا</label>
+                        <select name="supreme_session_type" id="form_supreme_session_type" style="width: 100%; padding: 10px 12px; border: 1px solid #fde68a; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.9rem; background: #fff;">
+                            <option value="جلسة فحص قبول الطعن بالنقض شكلاً">جلسة فحص قبول الطعن بالنقض شكلاً</option>
+                            <option value="جلسة نظر موضوع الطعن وأوجه البطلان">جلسة نظر موضوع الطعن وأوجه البطلان</option>
+                            <option value="جلسة المداولة والنطق بقرار المحكمة العليا">جلسة المداولة والنطق بقرار المحكمة العليا</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                    <div class="form-group">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #92400e; font-size: 0.9rem;">القاضي رئيس الدائرة بالمحكمة العليا</label>
+                        <input type="text" name="supreme_judge_head" id="form_supreme_judge_head" placeholder="اسم رئيس الدائرة" style="width: 100%; padding: 10px 12px; border: 1px solid #fde68a; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.9rem; background: #fff;">
+                    </div>
+                    <div class="form-group">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #92400e; font-size: 0.9rem;">أمين سر الدائرة بالمحكمة العليا</label>
+                        <input type="text" name="supreme_court_secretary" id="form_supreme_court_secretary" placeholder="أمين سر الدائرة" style="width: 100%; padding: 10px 12px; border: 1px solid #fde68a; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.9rem; background: #fff;">
+                    </div>
+                </div>
+
+                <div style="background: rgba(255,255,255,0.7); padding: 12px; border-radius: 8px; border: 1px dashed #f59e0b; margin-bottom: 12px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 700; color: #92400e; font-size: 0.85rem;">قضاة أعضاء الدائرة بالمحكمة العليا (بحسب نصاب الدائرة):</label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <input type="text" id="supreme_judge_1" placeholder="القاضي عضو الدائرة الأول" style="width: 100%; padding: 8px 10px; border: 1px solid #fde68a; border-radius: 6px; font-family: 'Cairo', sans-serif; font-size: 0.85rem;">
+                        <input type="text" id="supreme_judge_2" placeholder="القاضي عضو الدائرة الثاني" style="width: 100%; padding: 8px 10px; border: 1px solid #fde68a; border-radius: 6px; font-family: 'Cairo', sans-serif; font-size: 0.85rem;">
+                        <input type="text" id="supreme_judge_3" placeholder="القاضي عضو الدائرة الثالث" style="width: 100%; padding: 8px 10px; border: 1px solid #fde68a; border-radius: 6px; font-family: 'Cairo', sans-serif; font-size: 0.85rem;">
+                        <input type="text" id="supreme_judge_4" placeholder="القاضي عضو الدائرة الرابع" style="width: 100%; padding: 8px 10px; border: 1px solid #fde68a; border-radius: 6px; font-family: 'Cairo', sans-serif; font-size: 0.85rem;">
+                    </div>
+                </div>
+            </div>
+
+            <!-- ======================================================== -->
+            <!-- 6. قرارات المحكمة / أوامر النيابة ومرفقاتها المتعددة      -->
+            <!-- ======================================================== -->
+            <div style="background: #fff; padding: 18px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 22px;">
+                <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 1rem; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-scroll" style="color: #ea580c;"></i> قرارات المحكمة في هذه الجلسة / أوامر النيابة
+                </h4>
+                
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <textarea name="court_decision" id="form_court_decision" rows="3" placeholder="اكتب منطوق قرار المحكمة أو قرار النيابة الصادر في الجلسة بالتفصيل..." style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.9rem; resize: vertical;"></textarea>
+                </div>
+
+                <!-- مرفقات القرارات (صور + PDF + دعم التقاط الكاميرا للجوال) -->
+                <div style="background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 10px; padding: 16px; text-align: center;">
+                    <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 8px;">
+                        <button type="button" class="btn" style="background: #ea580c; color: white; padding: 8px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 6px;" onclick="document.getElementById('decision_files_input').click();">
+                            <i class="fa-solid fa-file-arrow-up"></i> رفع مستندات القرارات (صور / PDF)
+                        </button>
+                        <!-- زر التقاط الكاميرا المباشرة للموبايل -->
+                        <button type="button" class="btn" style="background: #0284c7; color: white; padding: 8px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 6px;" onclick="document.getElementById('decision_camera_input').click();">
+                            <i class="fa-solid fa-camera"></i> التقاط بالكاميرا
+                        </button>
+                    </div>
+                    <input type="file" name="decision_files" id="decision_files_input" multiple accept="image/*,application/pdf" style="display: none;" onchange="handleMultipleFileSelect(this, 'decision_files_preview')">
+                    <input type="file" name="decision_files" id="decision_camera_input" accept="image/*" capture="environment" style="display: none;" onchange="handleMultipleFileSelect(this, 'decision_files_preview')">
+                    <p style="margin: 0; font-size: 0.82rem; color: #64748b;">يمكنك رفع عدة ملفات للقرارات، وسحبها أو تصويرها من الجوال مباشرة</p>
+                    <div id="decision_files_preview" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; justify-content: center;"></div>
+                </div>
+            </div>
+
+            <!-- ======================================================== -->
+            <!-- 7. الأوراق المقدمة في الجلسة (بدل وقائع الجلسة السابقة)    -->
+            <!-- ======================================================== -->
+            <div style="background: #fff; padding: 18px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 22px;">
+                <h4 style="margin: 0 0 12px 0; color: #0f172a; font-size: 1rem; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-paperclip" style="color: #2563eb;"></i> الأوراق والمذكرات المقدمة في الجلسة
+                </h4>
+
+                <!-- إظهار النصوص المحفوظة سابقاً إن وجدت تحت وقائع الجلسة دون ضياع -->
+                <div id="old_proceedings_display" style="display: none; background: #fffbeb; border: 1px solid #fde68a; padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; font-size: 0.88rem; color: #92400e;">
+                    <strong><i class="fa-solid fa-clock-rotate-left"></i> وقائع الجلسة المسجلة سابقاً:</strong>
+                    <div id="old_proceedings_text" style="margin-top: 4px; white-space: pre-wrap;"></div>
+                </div>
+
+                <div style="background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 10px; padding: 16px; text-align: center;">
+                    <button type="button" class="btn" style="background: #2563eb; color: white; padding: 8px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 6px; margin-bottom: 6px;" onclick="document.getElementById('papers_files_input').click();">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> إرفاق المستندات والأوراق المقدمة (صور / PDF)
+                    </button>
+                    <input type="file" name="papers_files" id="papers_files_input" multiple accept="image/*,application/pdf" style="display: none;" onchange="handleMultipleFileSelect(this, 'papers_files_preview')">
+                    <p style="margin: 0; font-size: 0.82rem; color: #64748b;">تتيح هذه الخانة أرشفة المذكرات وحوافظ المستندات المسلمة لهيئة المحكمة بالجلسة</p>
+                    <div id="papers_files_preview" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; justify-content: center;"></div>
+                </div>
+            </div>
+
+            <!-- ======================================================== -->
+            <!-- 8. كشف الحضور والغياب (مع حذف "الخبير" من القائمة)       -->
+            <!-- ======================================================== -->
+            <div id="section_attendance" style="background: #fff; padding: 18px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 22px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <h4 style="margin: 0; color: #0f172a; font-size: 1rem; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-clipboard-user" style="color: #059669;"></i> كشف الحضور والغياب في الجلسة
+                    </h4>
+                    <button type="button" class="btn" style="background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; padding: 5px 12px; border-radius: 6px; font-size: 0.82rem; font-weight: 700; cursor: pointer;" onclick="addAttendanceRow()">
+                        <i class="fa-solid fa-user-plus"></i> إضافة حاضر
+                    </button>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.88rem;" id="attendance_table">
+                        <thead>
+                            <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; text-align: right;">
+                                <th style="padding: 8px;">اسم الشخص الحاضر</th>
+                                <th style="padding: 8px;">الصفة أو الطرف</th>
+                                <th style="padding: 8px;">ملاحظات وسند الوكالة</th>
+                                <th style="padding: 8px; width: 40px; text-align: center;">إجراء</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendance_tbody">
+                            <!-- صفوف الحضور ديناميكية -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 9. إعدادات القاعة وبوابة العميل والحالة -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px;">
                 <div class="form-group">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #334155;">رقم الغرفة</label>
-                    <input type="text" name="chamber_number" id="edit_hearing_chamber" placeholder="رقم الغرفة" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                    <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #334155; font-size: 0.88rem;">رقم القاعة / الغرفة</label>
+                    <input type="text" name="chamber_number" id="form_chamber_number" placeholder="مثال: القاعة رقم 2" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.9rem;">
                 </div>
                 <div class="form-group">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #334155;">رقم الدور</label>
-                    <input type="text" name="floor_number" id="edit_hearing_floor" placeholder="رقم الدور" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                    <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #334155; font-size: 0.88rem;">رقم الدور / المبنى</label>
+                    <input type="text" name="floor_number" id="form_floor_number" placeholder="مثال: الدور الأول" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.9rem;">
+                </div>
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #334155; font-size: 0.88rem;">حالة الجلسة</label>
+                    <select name="status_key" id="form_status_key" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.9rem;">
+                        <option value="قادمة">قادمة</option>
+                        <option value="منعقدة">منعقدة</option>
+                        <option value="مؤجلة">مؤجلة</option>
+                        <option value="محجوزة للحكم">محجوزة للحكم</option>
+                        <option value="منتهية">منتهية</option>
+                    </select>
                 </div>
             </div>
-            
-            <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                <button type="button" onclick="document.getElementById('editHearingModal').style.display='none'" style="padding: 10px 20px; background: #e2e8f0; color: #475569; border: none; border-radius: 8px; cursor: pointer; font-family: 'Cairo', sans-serif; font-weight: 600;">إلغاء</button>
-                <button type="submit" class="btn-primary" style="padding: 10px 20px; font-family: 'Cairo', sans-serif;">حفظ التعديلات</button>
+
+            <!-- خيار البوابة للعميل -->
+            <div style="background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; margin-bottom: 25px;">
+                <div>
+                    <label for="form_show_in_client_portal" style="font-weight: 700; color: #0f172a; cursor: pointer; margin: 0; font-size: 0.92rem;">
+                        <i class="fa-solid fa-users-viewfinder" style="color: var(--primary-color);"></i> إتاحة عرض تفاصيل المحضر في بوابة العميل
+                    </label>
+                    <p style="margin: 3px 0 0 0; font-size: 0.8rem; color: #64748b;">تتيح للموكل الاطلاع على موعد وقرارات الجلسة من حسابه الشخصي</p>
+                </div>
+                <input type="checkbox" name="show_in_client_portal" id="form_show_in_client_portal" value="1" checked style="width: 22px; height: 22px; cursor: pointer; accent-color: var(--primary-color);">
+            </div>
+
+            <!-- أزرار الحفظ والإلغاء -->
+            <div style="display: flex; gap: 12px; justify-content: flex-end; padding-top: 15px; border-top: 1px solid #e2e8f0;">
+                <button type="button" onclick="closeHearingModal()" style="padding: 11px 22px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer; font-family: 'Cairo', sans-serif; font-weight: 700;">
+                    إلغاء
+                </button>
+                <button type="submit" id="submit_hearing_btn" class="btn-primary" style="padding: 11px 28px; font-family: 'Cairo', sans-serif; font-weight: 800; border-radius: 8px; display: inline-flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-floppy-disk"></i> حفظ واعتماد المحضر
+                </button>
             </div>
         </form>
     </div>
 </div>
+
+<!-- ========================================================================= -->
+<!-- نافذة عرض وطباعة المحضر القضائي الرسمي (Official Minutes View & Print)   -->
+<!-- ========================================================================= -->
+<div id="viewMinutesModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); align-items: center; justify-content: center; z-index: 1050; padding: 20px;">
+    <div class="modal-content" style="background: white; border-radius: 16px; width: 900px; max-width: 96%; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3);">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 1.4rem; color: #1e3a8a;"><i class="fa-solid fa-file-invoice"></i></span>
+                <h3 style="margin: 0; font-size: 1.2rem; color: #0f172a; font-weight: 800;">المحضر القضائي الرسمي</h3>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <button type="button" class="btn" style="background: #1e293b; color: white; padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 6px;" onclick="printMinutesContent()">
+                    <i class="fa-solid fa-print"></i> طباعة المحضر
+                </button>
+                <button type="button" onclick="document.getElementById('viewMinutesModal').style.display='none'" style="background: none; border: none; font-size: 1.6rem; cursor: pointer; color: #94a3b8;">&times;</button>
+            </div>
+        </div>
+        <div id="minutes_print_area" style="overflow-y: auto; padding: 30px; flex: 1; font-family: 'Cairo', sans-serif;">
+            <!-- يتم تعبئة بيانات المحضر للعرض والطباعة عبر JavaScript -->
+        </div>
+    </div>
+</div>
+
+<!-- قوائم مقترحة للموظفين المساعدين والقضاة -->
+<datalist id="staff_judges_list">
+    {% for s in staff %}
+    <option value="{{ s.name }}">{{ s.role or 'عضو مكتب' }}</option>
+    {% endfor %}
+</datalist>
+<datalist id="staff_clerks_list">
+    {% for s in staff %}
+    <option value="{{ s.name }}">{{ s.role or 'عضو مكتب' }}</option>
+    {% endfor %}
+</datalist>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
-    const registeredCases = {{ (cases_json or [])|tojson }};
-    let attendeesList = [];
-    let actionItemsList = [];
+    // بيانات ومصفوفات التحكم في الواجهة
+    let currentMinutesType = 'primary';
+    let selectedDecisionFiles = [];
+    let selectedPaperFiles = [];
 
-    function updateAddFileName(name) {
-        const display = document.getElementById('add_file_name_display');
-        if (display) display.textContent = name ? 'الملف المختار: ' + name : '';
-    }
-
-    function openAddHearingModal() {
-        const modal = document.getElementById('addHearingModal');
-        modal.style.display = 'flex';
+    // عند تغيير اختيار القضية: فحص نوع القضية لإخفاء/إظهار عضو النيابة فوراً
+    function handleCaseSelectionChange(selectElem) {
+        const selectedOpt = selectElem.options[selectElem.selectedIndex];
+        const caseType = (selectedOpt.getAttribute('data-case-type') || '').trim();
+        const badge = document.getElementById('selected_case_type_badge');
         
-        // Auto-generate report number if empty
-        const repField = document.getElementById('add_report_number');
-        if (!repField.value) {
-            const timestamp = Date.now().toString().slice(-6);
-            repField.value = 'REP-' + (new Date().getFullYear()) + '-' + timestamp;
-        }
-
-        // Set default datetime if empty
-        const atField = document.getElementById('add_hearing_at');
-        if (!atField.value) {
-            const now = new Date();
-            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-            atField.value = now.toISOString().slice(0, 16);
-        }
-
-        // Initialize default attendees if empty
-        if (attendeesList.length === 0) {
-            attendeesList = [
-                { role: 'الموكل / ممثل الموكل', name: '', status: 'حاضر', reason: '' },
-                { role: 'الطرف الآخر (الخصم)', name: '', status: 'حاضر', reason: '' },
-                { role: 'محامي المكتب الحاضر', name: '', status: 'حاضر', reason: '' }
-            ];
-            renderAttendeesTable();
-        }
-
-        // If case pre-selected from query param
-        const currentCaseId = document.getElementById('add_case_id').value;
-        if (currentCaseId) {
-            onCaseSelected(currentCaseId);
-        }
-    }
-
-    function closeAddHearingModal() {
-        document.getElementById('addHearingModal').style.display = 'none';
-    }
-
-    function onCaseSelected(caseId) {
-        if (!caseId) return;
-        const selected = registeredCases.find(c => String(c.id) === String(caseId));
-        if (selected) {
-            if (selected.court_name) document.getElementById('add_court_name').value = selected.court_name;
-            if (selected.court_case_number) document.getElementById('add_court_case_number').value = selected.court_case_number;
-            if (selected.litigation_level_key) {
-                const levelSelect = document.getElementById('add_litigation_level');
-                for (let i = 0; i < levelSelect.options.length; i++) {
-                    if (levelSelect.options[i].value === selected.litigation_level_key) {
-                        levelSelect.selectedIndex = i;
-                        break;
-                    }
-                }
-            }
-            // Auto fill client name in attendees
-            if (selected.client_name && attendeesList.length > 0) {
-                attendeesList[0].name = selected.client_name;
-                renderAttendeesTable();
-            }
-        }
-    }
-
-    function renderAttendeesTable() {
-        const tbody = document.getElementById('attendeesTableBody');
-        tbody.innerHTML = '';
-        attendeesList.forEach((att, index) => {
-            const tr = document.createElement('tr');
-            tr.style.borderBottom = '1px solid #f1f5f9';
-            tr.innerHTML = `
-                <td style="padding: 8px 10px;">
-                    <select onchange="updateAttendee(${index}, 'role', this.value)" style="width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Cairo', sans-serif; font-size: 0.85rem;">
-                        <option value="الموكل / ممثل الموكل" ${att.role === 'الموكل / ممثل الموكل' ? 'selected' : ''}>الموكل / ممثل الموكل</option>
-                        <option value="الطرف الآخر (الخصم)" ${att.role === 'الطرف الآخر (الخصم)' ? 'selected' : ''}>الطرف الآخر (الخصم)</option>
-                        <option value="محامي المكتب الحاضر" ${att.role === 'محامي المكتب الحاضر' ? 'selected' : ''}>محامي المكتب الحاضر</option>
-                        <option value="محامي الخصم" ${att.role === 'محامي الخصم' ? 'selected' : ''}>محامي الخصم</option>
-                        <option value="شاهد" ${att.role === 'شاهد' ? 'selected' : ''}>شاهد</option>
-                        <option value="خبير قضائي" ${att.role === 'خبير قضائي' ? 'selected' : ''}>خبير قضائي</option>
-                        <option value="حاضر آخر" ${att.role === 'حاضر آخر' ? 'selected' : ''}>حاضر آخر</option>
-                    </select>
-                </td>
-                <td style="padding: 8px 10px;">
-                    <input type="text" value="${escapeHtml(att.name)}" oninput="updateAttendee(${index}, 'name', this.value)" placeholder="الاسم الكامل" style="width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Cairo', sans-serif; font-size: 0.85rem;">
-                </td>
-                <td style="padding: 8px 10px;">
-                    <select onchange="updateAttendee(${index}, 'status', this.value)" style="width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Cairo', sans-serif; font-size: 0.85rem;">
-                        <option value="حاضر" ${att.status === 'حاضر' ? 'selected' : ''}>حاضر</option>
-                        <option value="غائب" ${att.status === 'غائب' ? 'selected' : ''}>غائب</option>
-                        <option value="حاضر بوكالة" ${att.status === 'حاضر بوكالة' ? 'selected' : ''}>حاضر بوكالة</option>
-                    </select>
-                </td>
-                <td style="padding: 8px 10px;">
-                    <input type="text" value="${escapeHtml(att.reason)}" oninput="updateAttendee(${index}, 'reason', this.value)" placeholder="سبب الغياب إن وُجد" style="width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Cairo', sans-serif; font-size: 0.85rem;">
-                </td>
-                <td style="padding: 8px 10px; text-align: center;">
-                    <button type="button" onclick="removeAttendeeRow(${index})" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 1rem;">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
-    }
-
-    function addAttendeeRow() {
-        attendeesList.push({ role: 'حاضر آخر', name: '', status: 'حاضر', reason: '' });
-        renderAttendeesTable();
-    }
-
-    function removeAttendeeRow(index) {
-        attendeesList.splice(index, 1);
-        renderAttendeesTable();
-    }
-
-    function updateAttendee(index, field, value) {
-        if (attendeesList[index]) {
-            attendeesList[index][field] = value;
-        }
-    }
-
-    function addActionRow() {
-        actionItemsList.push({ action: '', assignee: '', deadline: '' });
-        renderActionsContainer();
-    }
-
-    function removeActionRow(index) {
-        actionItemsList.splice(index, 1);
-        renderActionsContainer();
-    }
-
-    function updateAction(index, field, value) {
-        if (actionItemsList[index]) {
-            actionItemsList[index][field] = value;
-        }
-    }
-
-    function renderActionsContainer() {
-        const container = document.getElementById('actionsContainer');
-        container.innerHTML = '';
-        if (actionItemsList.length === 0) {
-            container.innerHTML = '<div style="color: #94a3b8; font-size: 0.85rem; padding: 6px 0;">لا توجد مهام إجرائية مضافة حالياً.</div>';
-            return;
-        }
-        actionItemsList.forEach((act, index) => {
-            const div = document.createElement('div');
-            div.style.cssText = 'display: grid; grid-template-columns: 2fr 1fr 1fr 40px; gap: 10px; margin-bottom: 8px; align-items: center;';
-            div.innerHTML = `
-                <input type="text" value="${escapeHtml(act.action)}" oninput="updateAction(${index}, 'action', this.value)" placeholder="وصف الإجراء المطلوب اتخاذه..." style="padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Cairo', sans-serif; font-size: 0.85rem;">
-                <input type="text" value="${escapeHtml(act.assignee)}" oninput="updateAction(${index}, 'assignee', this.value)" placeholder="الشخص المسؤول" style="padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Cairo', sans-serif; font-size: 0.85rem;">
-                <input type="date" value="${escapeHtml(act.deadline)}" onchange="updateAction(${index}, 'deadline', this.value)" style="padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Cairo', sans-serif; font-size: 0.85rem;">
-                <button type="button" onclick="removeActionRow(${index})" style="background: none; border: none; color: #ef4444; cursor: pointer; text-align: center;">
-                    <i class="fa-solid fa-trash"></i>
-                </button>
-            `;
-            container.appendChild(div);
-        });
-    }
-
-    function toggleCourtDecisionSection(checked) {
-        document.getElementById('court_decision_fields').style.display = checked ? 'block' : 'none';
-    }
-
-    function toggleJudgmentSection(checked) {
-        document.getElementById('judgment_fields').style.display = checked ? 'block' : 'none';
-    }
-
-    function toggleNextHearingSection(checked) {
-        document.getElementById('next_hearing_fields').style.display = checked ? 'block' : 'none';
-    }
-
-    function submitHearingForm(actionType) {
-        document.getElementById('add_action_type').value = actionType;
-        if (actionType === 'draft') {
-            document.getElementById('add_report_status').value = 'draft';
-        }
-        document.getElementById('attendees_json_input').value = JSON.stringify(attendeesList);
-        document.getElementById('post_hearing_actions_input').value = JSON.stringify(actionItemsList);
-
-        const form = document.getElementById('addHearingForm');
-        if (form.checkValidity()) {
-            form.submit();
+        if (caseType) {
+            badge.style.display = 'block';
+            badge.textContent = 'تصنيف القضية: ' + caseType;
         } else {
-            form.reportValidity();
+            badge.style.display = 'none';
+        }
+
+        // فحص هل القضية مدنية؟
+        const isCivil = caseType.includes('مدن'); // يغطي مدنية، مدني، تجاري مدني
+        
+        // إخفاء أو إظهار عضو النيابة في نموذج الابتدائية
+        const primProsCont = document.getElementById('container_primary_prosecutor');
+        if (primProsCont) {
+            if (isCivil) {
+                primProsCont.style.display = 'none';
+                document.getElementById('form_primary_prosecutor_name').value = '';
+            } else {
+                primProsCont.style.display = 'block';
+            }
+        }
+
+        // إخفاء أو إظهار عضو النيابة في نموذج الاستئناف
+        const appProsCont = document.getElementById('container_appeal_prosecutor');
+        if (appProsCont) {
+            if (isCivil) {
+                appProsCont.style.display = 'none';
+                document.getElementById('form_appeal_prosecutor_name').value = '';
+            } else {
+                appProsCont.style.display = 'block';
+            }
         }
     }
 
-    function viewHearingDetails(hearingId) {
-        const modal = document.getElementById('viewHearingModal');
-        const content = document.getElementById('viewHearingDetailsContent');
-        modal.style.display = 'flex';
-        content.innerHTML = '<div style="text-align: center; padding: 40px; color: #64748b;"><i class="fa-solid fa-spinner fa-spin" style="font-size: 2rem;"></i><p style="margin-top: 10px;">جاري تحميل بيانات المحضر...</p></div>';
+    // فتح النموذج لنوع محدد من المحاضر
+    function openHearingModal(type, isEdit = false) {
+        currentMinutesType = type || 'primary';
+        document.getElementById('form_minutes_type').value = currentMinutesType;
+        
+        // إخفاء كل الأقسام المخصصة أولاً
+        document.querySelectorAll('.specific-section').forEach(sec => sec.style.display = 'none');
+        
+        const badge = document.getElementById('modal_type_badge');
+        const title = document.getElementById('modal_title');
+        const subtitle = document.getElementById('modal_subtitle');
 
-        fetch('/api/hearings/' + hearingId)
-            .then(res => res.json())
-            .then(data => {
-                document.getElementById('view_modal_title').textContent = data.title || 'تفاصيل المحضر';
-                document.getElementById('view_modal_subtitle').textContent = (data.report_number || '') + ' - ' + (data.court_name || '');
-                
-                let attendees = [];
-                try { attendees = JSON.parse(data.attendees_json || '[]'); } catch(e){}
-                let actions = [];
-                try { actions = JSON.parse(data.post_hearing_actions || '[]'); } catch(e){}
+        if (currentMinutesType === 'prosecution') {
+            document.getElementById('section_prosecution').style.display = 'block';
+            badge.style.background = '#047857';
+            badge.innerHTML = '<i class="fa-solid fa-scale-balanced"></i>';
+            title.textContent = isEdit ? 'تعديل محضر جلسة النيابة' : 'إضافة محضر جلسة النيابة العامة';
+            subtitle.textContent = 'تحقيق ابتدائي وسماع أقوال وفق قانون الإجراءات الجزائية';
+            // إضافة سطر مستجوب افتراضي إذا كان فارغاً
+            if (document.getElementById('prosecution_persons_container').children.length === 0) {
+                addProsecutionPersonRow();
+            }
+        } else if (currentMinutesType === 'appeal') {
+            document.getElementById('section_appeal').style.display = 'block';
+            badge.style.background = '#6d28d9';
+            badge.innerHTML = '<i class="fa-solid fa-landmark"></i>';
+            title.textContent = isEdit ? 'تعديل محضر جلسة المحكمة الاستئنافية' : 'إضافة محضر جلسة المحكمة الاستئنافية';
+            subtitle.textContent = 'تشكيل الشعبة الاستئنافية ومجريات الطعن بالاستئناف';
+        } else if (currentMinutesType === 'supreme') {
+            document.getElementById('section_supreme').style.display = 'block';
+            badge.style.background = '#b45309';
+            badge.innerHTML = '<i class="fa-solid fa-building-columns"></i>';
+            title.textContent = isEdit ? 'تعديل محضر جلسة المحكمة العليا' : 'إضافة محضر جلسة المحكمة العليا';
+            subtitle.textContent = 'دوائر وهيئات المحكمة العليا وفحص الطعن بالنقض';
+        } else {
+            // المحكمة الابتدائية (الافتراضي)
+            document.getElementById('section_primary').style.display = 'block';
+            badge.style.background = '#1e40af';
+            badge.innerHTML = '<i class="fa-solid fa-gavel"></i>';
+            title.textContent = isEdit ? 'تعديل محضر جلسة المحكمة الابتدائية' : 'إضافة محضر جلسة المحكمة الابتدائية';
+            subtitle.textContent = 'قضاء الدرجة الأولى ومرافعات ومواجهات الدعوى';
+        }
 
-                let attendeesHtml = '';
-                if (attendees.length > 0) {
-                    attendeesHtml = `
-                        <table style="width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 0.85rem;">
-                            <thead>
-                                <tr style="background: #f1f5f9; text-align: right;">
-                                    <th style="padding: 6px 10px;">الصفة</th>
-                                    <th style="padding: 6px 10px;">الاسم</th>
-                                    <th style="padding: 6px 10px;">الحالة</th>
-                                    <th style="padding: 6px 10px;">السبب</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${attendees.map(a => `
-                                    <tr style="border-bottom: 1px solid #f1f5f9;">
-                                        <td style="padding: 6px 10px; font-weight: 600;">${escapeHtml(a.role)}</td>
-                                        <td style="padding: 6px 10px;">${escapeHtml(a.name || '-')}</td>
-                                        <td style="padding: 6px 10px;"><span style="color: ${a.status === 'حاضر' ? '#059669' : '#dc2626'}; font-weight: 700;">${escapeHtml(a.status)}</span></td>
-                                        <td style="padding: 6px 10px; color: #64748b;">${escapeHtml(a.reason || '-')}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    `;
-                } else {
-                    attendeesHtml = '<p style="color: #94a3b8; font-size: 0.85rem; margin: 4px 0;">لم يتم تسجيل حضور محدد.</p>';
+        // إضافة سطر حضور افتراضي إذا لم يوجد
+        if (document.getElementById('attendance_tbody').children.length === 0) {
+            addAttendanceRow();
+        }
+
+        if (!isEdit) {
+            document.getElementById('hearingMinutesForm').action = '/hearings/add';
+            document.getElementById('form_hearing_id').value = '';
+            document.getElementById('form_title').value = '';
+            document.getElementById('form_hearing_at').value = '';
+            document.getElementById('form_next_hearing_date').value = '';
+            document.getElementById('form_court_decision').value = '';
+            document.getElementById('old_proceedings_display').style.display = 'none';
+            document.getElementById('decision_files_preview').innerHTML = '';
+            document.getElementById('papers_files_preview').innerHTML = '';
+            
+            // تاريخ المحضر اليوم افتراضياً
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('form_minutes_date').value = today;
+        }
+
+        document.getElementById('hearingMinutesModal').style.display = 'flex';
+    }
+
+    function closeHearingModal() {
+        document.getElementById('hearingMinutesModal').style.display = 'none';
+    }
+
+    // إدارة صفوف كشف الحضور والغياب (حذف "الخبير" من القائمة المنسدلة كما هو مطلوب)
+    function addAttendanceRow(name = '', role = 'مدعي', notes = '') {
+        const tbody = document.getElementById('attendance_tbody');
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid #f1f5f9';
+        
+        tr.innerHTML = `
+            <td style="padding: 6px;">
+                <input type="text" class="att_name" value="${escapeHtml(name)}" placeholder="اسم الحاضر" style="width: 100%; padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Cairo', sans-serif; font-size: 0.85rem;">
+            </td>
+            <td style="padding: 6px;">
+                <select class="att_role" style="width: 100%; padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Cairo', sans-serif; font-size: 0.85rem;">
+                    <option value="مدعي" ${role === 'مدعي' ? 'selected' : ''}>مدعي</option>
+                    <option value="مدعى عليه" ${role === 'مدعى عليه' ? 'selected' : ''}>مدعى عليه</option>
+                    <option value="وكيل / محامي المدعي" ${role === 'وكيل / محامي المدعي' ? 'selected' : ''}>وكيل / محامي المدعي</option>
+                    <option value="وكيل / محامي المدعى عليه" ${role === 'وكيل / محامي المدعى عليه' ? 'selected' : ''}>وكيل / محامي المدعى عليه</option>
+                    <option value="مستأنف" ${role === 'مستأنف' ? 'selected' : ''}>مستأنف</option>
+                    <option value="مستأنف ضده" ${role === 'مستأنف ضده' ? 'selected' : ''}>مستأنف ضده</option>
+                    <option value="شاهد إثبات" ${role === 'شاهد إثبات' ? 'selected' : ''}>شاهد إثبات</option>
+                    <option value="شاهد نفي" ${role === 'شاهد نفي' ? 'selected' : ''}>شاهد نفي</option>
+                    <option value="حاضر عن الشاكي" ${role === 'حاضر عن الشاكي' ? 'selected' : ''}>حاضر عن الشاكي</option>
+                    <option value="حاضر عن المتهم" ${role === 'حاضر عن المتهم' ? 'selected' : ''}>حاضر عن المتهم</option>
+                </select>
+            </td>
+            <td style="padding: 6px;">
+                <input type="text" class="att_notes" value="${escapeHtml(notes)}" placeholder="رقم وسند الوكالة أو الملاحظة" style="width: 100%; padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Cairo', sans-serif; font-size: 0.85rem;">
+            </td>
+            <td style="padding: 6px; text-align: center;">
+                <button type="button" onclick="this.closest('tr').remove()" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 1rem;" title="حذف السطر">&times;</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    }
+
+    // إدارة صفوف الأشخاص المستجوبين بالنيابة
+    function addProsecutionPersonRow(name = '', role = 'متهم', idInfo = '', notes = '') {
+        const container = document.getElementById('prosecution_persons_container');
+        const row = document.createElement('div');
+        row.className = 'pros_person_row';
+        row.style.cssText = 'background: #fff; padding: 12px; border-radius: 8px; border: 1px solid #a7f3d0; display: grid; grid-template-columns: 1.2fr 1fr 1fr 1.5fr auto; gap: 8px; align-items: center;';
+        
+        row.innerHTML = `
+            <input type="text" class="pros_p_name" value="${escapeHtml(name)}" placeholder="اسم الشخص كاملاً" style="padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem; font-family: 'Cairo';">
+            <select class="pros_p_role" style="padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem; font-family: 'Cairo';">
+                <option value="متهم" ${role === 'متهم' ? 'selected' : ''}>متهم</option>
+                <option value="شاكي / مجني عليه" ${role === 'شاكي / مجني عليه' ? 'selected' : ''}>شاكي / مجني عليه</option>
+                <option value="شاهد إثبات" ${role === 'شاهد إثبات' ? 'selected' : ''}>شاهد إثبات</option>
+                <option value="شاهد نفي" ${role === 'شاهد نفي' ? 'selected' : ''}>شاهد نفي</option>
+                <option value="خبير فني / طبيب شرعي" ${role === 'خبير فني / طبيب شرعي' ? 'selected' : ''}>خبير فني / طبيب شرعي</option>
+            </select>
+            <input type="text" class="pros_p_id" value="${escapeHtml(idInfo)}" placeholder="الهوية ومحل الإقامة" style="padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem; font-family: 'Cairo';">
+            <input type="text" class="pros_p_notes" value="${escapeHtml(notes)}" placeholder="ملخص الأسئلة والأقوال" style="padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem; font-family: 'Cairo';">
+            <button type="button" onclick="this.closest('.pros_person_row').remove()" style="background: none; border: none; color: #ef4444; font-size: 1.2rem; cursor: pointer;">&times;</button>
+        `;
+        container.appendChild(row);
+    }
+
+    // معاينة الملفات المتعددة المختارة
+    function handleMultipleFileSelect(input, previewId) {
+        const preview = document.getElementById(previewId);
+        if (!input.files || input.files.length === 0) return;
+        
+        for (let i = 0; i < input.files.length; i++) {
+            const file = input.files[i];
+            const pill = document.createElement('span');
+            pill.style.cssText = 'background: #e2e8f0; color: #1e293b; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;';
+            const icon = file.type.includes('pdf') ? 'fa-file-pdf' : 'fa-file-image';
+            pill.innerHTML = `<i class="fa-solid ${icon}"></i> ${escapeHtml(file.name)} <span style="cursor: pointer; color: #ef4444;" onclick="this.parentElement.remove()">&times;</span>`;
+            preview.appendChild(pill);
+        }
+    }
+
+    // تجميع الحقول في JSON قبل الإرسال
+    document.getElementById('hearingMinutesForm').addEventListener('submit', function(e) {
+        // 1. تجميع كشف الحضور
+        const attendance = [];
+        document.querySelectorAll('#attendance_tbody tr').forEach(row => {
+            const name = row.querySelector('.att_name')?.value.trim();
+            const role = row.querySelector('.att_role')?.value;
+            const notes = row.querySelector('.att_notes')?.value.trim();
+            if (name) {
+                attendance.push({ name, role, notes });
+            }
+        });
+        document.getElementById('form_attendees_list_json').value = JSON.stringify(attendance);
+
+        // 2. تجميع أعضاء الشعبة / الدائرة بحسب نوع المحضر
+        let benchJudges = {};
+        if (currentMinutesType === 'appeal') {
+            benchJudges = {
+                judge_head: document.getElementById('form_appeal_judge_head').value.trim(),
+                judge_1: document.getElementById('appeal_judge_1').value.trim(),
+                judge_2: document.getElementById('appeal_judge_2').value.trim(),
+                judge_3: document.getElementById('appeal_judge_3').value.trim(),
+                judge_4: document.getElementById('appeal_judge_4').value.trim(),
+                court_secretary: document.getElementById('form_appeal_court_secretary').value.trim(),
+                prosecutor_name: document.getElementById('form_appeal_prosecutor_name').value.trim()
+            };
+        } else if (currentMinutesType === 'supreme') {
+            benchJudges = {
+                chamber: document.getElementById('form_supreme_chamber_type').value,
+                judge_head: document.getElementById('form_supreme_judge_head').value.trim(),
+                judge_1: document.getElementById('supreme_judge_1').value.trim(),
+                judge_2: document.getElementById('supreme_judge_2').value.trim(),
+                judge_3: document.getElementById('supreme_judge_3').value.trim(),
+                judge_4: document.getElementById('supreme_judge_4').value.trim(),
+                court_secretary: document.getElementById('form_supreme_court_secretary').value.trim()
+            };
+        }
+        document.getElementById('form_bench_judges_json').value = JSON.stringify(benchJudges);
+
+        // 3. تجميع تفاصيل النيابة
+        if (currentMinutesType === 'prosecution') {
+            const persons = [];
+            document.querySelectorAll('.pros_person_row').forEach(row => {
+                const name = row.querySelector('.pros_p_name')?.value.trim();
+                const role = row.querySelector('.pros_p_role')?.value;
+                const idInfo = row.querySelector('.pros_p_id')?.value.trim();
+                const notes = row.querySelector('.pros_p_notes')?.value.trim();
+                if (name) {
+                    persons.push({ name, role, idInfo, notes });
                 }
-
-                let actionsHtml = '';
-                if (actions.length > 0) {
-                    actionsHtml = `
-                        <div style="margin-top: 8px;">
-                            ${actions.map(act => `
-                                <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 8px 12px; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 6px; font-size: 0.85rem;">
-                                    <div><strong>${escapeHtml(act.action)}</strong> <span style="color: #64748b;">(المسؤول: ${escapeHtml(act.assignee || 'غير محدد')})</span></div>
-                                    <div style="color: #d97706; font-weight: 600;">${escapeHtml(act.deadline || '')}</div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    `;
-                }
-
-                content.innerHTML = `
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; background: #f8fafc; padding: 16px; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 18px;">
-                        <div><strong style="color: #64748b; font-size: 0.8rem; display: block;">رقم المحضر:</strong> <span style="font-family: monospace; font-weight: 700;">${escapeHtml(data.report_number)}</span></div>
-                        <div><strong style="color: #64748b; font-size: 0.8rem; display: block;">رقم قضية المحكمة:</strong> ${escapeHtml(data.court_case_number || '-')}</div>
-                        <div><strong style="color: #64748b; font-size: 0.8rem; display: block;">المحكمة:</strong> ${escapeHtml(data.court_name || '-')}</div>
-                        <div><strong style="color: #64748b; font-size: 0.8rem; display: block;">درجة التقاضي:</strong> ${escapeHtml(data.litigation_level || '-')}</div>
-                        <div><strong style="color: #64748b; font-size: 0.8rem; display: block;">تاريخ ووقت الجلسة:</strong> ${escapeHtml(data.hearing_at || '-')}</div>
-                        <div><strong style="color: #64748b; font-size: 0.8rem; display: block;">القاضي / الدائرة:</strong> ${escapeHtml(data.judge_name || '-')}</div>
-                        <div><strong style="color: #64748b; font-size: 0.8rem; display: block;">نوع الجلسة:</strong> ${escapeHtml(data.hearing_type || '-')}</div>
-                        <div><strong style="color: #64748b; font-size: 0.8rem; display: block;">حالة المحضر:</strong> <span style="font-weight: 700; color: #1e40af;">${escapeHtml(data.report_status)}</span></div>
-                    </div>
-
-                    <div style="margin-bottom: 16px;">
-                        <h4 style="margin: 0 0 6px 0; color: #1e3a8a; font-size: 0.95rem;"><i class="fa-solid fa-users"></i> كشف الحضور والغياب</h4>
-                        ${attendeesHtml}
-                    </div>
-
-                    ${data.hearing_summary ? `
-                    <div style="margin-bottom: 16px;">
-                        <h4 style="margin: 0 0 6px 0; color: #1e3a8a; font-size: 0.95rem;"><i class="fa-solid fa-file-lines"></i> ملخص ما جرى في الجلسة</h4>
-                        <div style="background: #fff; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; font-size: 0.9rem; line-height: 1.6; color: #1e293b;">${escapeHtml(data.hearing_summary)}</div>
-                    </div>` : ''}
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
-                        ${data.client_requests ? `<div><h5 style="margin: 0 0 4px 0; color: #334155; font-size: 0.85rem;">طلبات الموكل:</h5><div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; border-radius: 6px; font-size: 0.85rem;">${escapeHtml(data.client_requests)}</div></div>` : ''}
-                        ${data.opponent_requests ? `<div><h5 style="margin: 0 0 4px 0; color: #334155; font-size: 0.85rem;">طلبات الخصم:</h5><div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; border-radius: 6px; font-size: 0.85rem;">${escapeHtml(data.opponent_requests)}</div></div>` : ''}
-                        ${data.pleadings_submitted ? `<div><h5 style="margin: 0 0 4px 0; color: #334155; font-size: 0.85rem;">الدفوع المقدمة:</h5><div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; border-radius: 6px; font-size: 0.85rem;">${escapeHtml(data.pleadings_submitted)}</div></div>` : ''}
-                        ${data.evidence_submitted ? `<div><h5 style="margin: 0 0 4px 0; color: #334155; font-size: 0.85rem;">المستندات والأدلة:</h5><div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; border-radius: 6px; font-size: 0.85rem;">${escapeHtml(data.evidence_submitted)}</div></div>` : ''}
-                    </div>
-
-                    ${data.internal_notes ? `
-                    <div style="margin-bottom: 16px; background: #fffbeb; border: 1px dashed #f59e0b; padding: 12px; border-radius: 8px;">
-                        <h4 style="margin: 0 0 6px 0; color: #92400e; font-size: 0.9rem;"><i class="fa-solid fa-lock"></i> ملاحظات المحامي الداخلية (سرية):</h4>
-                        <div style="font-size: 0.85rem; color: #78350f; line-height: 1.5;">${escapeHtml(data.internal_notes)}</div>
-                    </div>` : ''}
-
-                    ${(data.has_court_decision || data.has_judgment) ? `
-                    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
-                        <h4 style="margin: 0 0 8px 0; color: #166534; font-size: 0.95rem;"><i class="fa-solid fa-gavel"></i> القرارات والأحكام</h4>
-                        ${data.has_court_decision ? `<div><strong>قرار قضائي (${escapeHtml(data.decision_type || 'تمهيدي')}):</strong> ${escapeHtml(data.decision_text || '-')}</div>` : ''}
-                        ${data.has_judgment ? `<div style="margin-top: 6px;"><strong>حكم قضائي صادر:</strong> صك رقم ${escapeHtml(data.judgment_number || '-')} بتاريخ ${escapeHtml(data.judgment_date || '-')}</div>` : ''}
-                    </div>` : ''}
-
-                    ${actionsHtml ? `
-                    <div style="margin-bottom: 16px;">
-                        <h4 style="margin: 0 0 6px 0; color: #1e3a8a; font-size: 0.95rem;"><i class="fa-solid fa-list-check"></i> المهام والإجراءات المطلوبة</h4>
-                        ${actionsHtml}
-                    </div>` : ''}
-
-                    ${data.next_hearing_date ? `
-                    <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 12px; border-radius: 8px;">
-                        <div style="color: #1e40af; font-weight: 700;"><i class="fa-solid fa-calendar-day"></i> موعد الجلسة القادمة: ${escapeHtml(data.next_hearing_date)}</div>
-                        ${data.postponement_reason ? `<div style="font-size: 0.85rem; color: #1e3a8a; margin-top: 4px;">سبب التأجيل: ${escapeHtml(data.postponement_reason)}</div>` : ''}
-                        ${data.next_hearing_requirements ? `<div style="font-size: 0.85rem; color: #1e3a8a; margin-top: 4px;">المطلوب: ${escapeHtml(data.next_hearing_requirements)}</div>` : ''}
-                    </div>` : ''}
-                `;
-            })
-            .catch(err => {
-                content.innerHTML = '<div style="color: #dc2626; padding: 20px; text-align: center;">تعذر جلب تفاصيل المحضر. يرجى إعادة المحاولة.</div>';
             });
+
+            const prosDetails = {
+                office_name: document.getElementById('pros_office_name').value.trim(),
+                investigation_number: document.getElementById('pros_investigation_number').value.trim(),
+                location: document.getElementById('pros_location').value.trim(),
+                investigator_name: document.getElementById('pros_investigator_name').value.trim(),
+                investigator_title: document.getElementById('pros_investigator_title').value,
+                original_office: document.getElementById('pros_original_office').value.trim(),
+                seconded_office: document.getElementById('pros_seconded_office').value.trim(),
+                clerk_name: document.getElementById('pros_clerk_name').value.trim(),
+                session_type: document.getElementById('pros_session_type').value,
+                report_details: document.getElementById('pros_report_details').value.trim(),
+                signature_status: document.getElementById('pros_signature_status').value,
+                signature_notes: document.getElementById('pros_signature_notes').value.trim(),
+                persons: persons
+            };
+            document.getElementById('form_prosecution_details_json').value = JSON.stringify(prosDetails);
+        }
+    });
+
+    // تحميل وتعديل المحضر
+    async function loadAndEditHearing(hearingId) {
+        try {
+            const res = await fetch(`/hearings/details/${hearingId}`);
+            const data = await res.json();
+            if (!data.success) {
+                alert(data.error || 'فشل تحميل بيانات المحضر');
+                return;
+            }
+            const h = data.hearing;
+            openHearingModal(h.minutes_type || 'primary', true);
+            
+            document.getElementById('hearingMinutesForm').action = '/hearings/edit';
+            document.getElementById('form_hearing_id').value = h.id;
+            document.getElementById('form_case_id').value = h.case_id;
+            handleCaseSelectionChange(document.getElementById('form_case_id'));
+
+            document.getElementById('form_title').value = h.title || '';
+            document.getElementById('form_minutes_date').value = h.minutes_date || '';
+            document.getElementById('form_hearing_at').value = (h.hearing_at || '').replace(' ', 'T').substring(0, 16);
+            document.getElementById('form_next_hearing_date').value = h.next_hearing_date || '';
+            document.getElementById('form_court_decision').value = h.court_decision || '';
+            document.getElementById('form_chamber_number').value = h.chamber_number || '';
+            document.getElementById('form_floor_number').value = h.floor_number || '';
+            document.getElementById('form_status_key').value = h.status_key || 'قادمة';
+            document.getElementById('form_show_in_client_portal').checked = (h.show_in_client_portal !== 0);
+
+            // عرض وقائع الجلسة القديمة إن وجدت
+            if (h.result_summary) {
+                document.getElementById('old_proceedings_display').style.display = 'block';
+                document.getElementById('old_proceedings_text').textContent = h.result_summary;
+            }
+
+            // تعبئة حقول الابتدائية
+            if (h.minutes_type === 'primary') {
+                document.getElementById('form_primary_session_type').value = h.session_type || 'جلسة تقديم الدعوى';
+                document.getElementById('form_primary_judge_head').value = h.judge_head || '';
+                document.getElementById('form_primary_court_secretary').value = h.court_secretary || '';
+                document.getElementById('form_primary_prosecutor_name').value = h.prosecutor_name || '';
+            }
+            // تعبئة حقول الاستئناف
+            else if (h.minutes_type === 'appeal') {
+                document.getElementById('form_appeal_session_type').value = h.session_type || 'جلسة قيد وعريضة أسباب الاستئناف';
+                document.getElementById('form_appeal_judge_head').value = h.judge_head || '';
+                document.getElementById('form_appeal_court_secretary').value = h.court_secretary || '';
+                document.getElementById('form_appeal_prosecutor_name').value = h.prosecutor_name || '';
+                if (h.bench_judges) {
+                    document.getElementById('appeal_judge_1').value = h.bench_judges.judge_1 || '';
+                    document.getElementById('appeal_judge_2').value = h.bench_judges.judge_2 || '';
+                    document.getElementById('appeal_judge_3').value = h.bench_judges.judge_3 || '';
+                    document.getElementById('appeal_judge_4').value = h.bench_judges.judge_4 || '';
+                }
+            }
+            // تعبئة حقول النيابة
+            else if (h.minutes_type === 'prosecution') {
+                const pd = h.prosecution_details || {};
+                document.getElementById('pros_office_name').value = pd.office_name || '';
+                document.getElementById('pros_investigation_number').value = pd.investigation_number || '';
+                document.getElementById('pros_location').value = pd.location || '';
+                document.getElementById('pros_investigator_name').value = pd.investigator_name || h.judge_head || '';
+                document.getElementById('pros_investigator_title').value = pd.investigator_title || 'وكيل نيابة';
+                document.getElementById('pros_original_office').value = pd.original_office || '';
+                document.getElementById('pros_seconded_office').value = pd.seconded_office || '';
+                document.getElementById('pros_clerk_name').value = pd.clerk_name || h.court_secretary || '';
+                document.getElementById('pros_session_type').value = pd.session_type || h.session_type || 'استجواب وتحقيق مع متهم';
+                document.getElementById('pros_report_details').value = pd.report_details || '';
+                document.getElementById('pros_signature_status').value = pd.signature_status || 'تم التوقيع بعد تلاوة الأقوال';
+                document.getElementById('pros_signature_notes').value = pd.signature_notes || '';
+
+                const pCont = document.getElementById('prosecution_persons_container');
+                pCont.innerHTML = '';
+                if (pd.persons && pd.persons.length > 0) {
+                    pd.persons.forEach(p => addProsecutionPersonRow(p.name, p.role, p.idInfo, p.notes));
+                } else {
+                    addProsecutionPersonRow();
+                }
+            }
+            // تعبئة حقول العليا
+            else if (h.minutes_type === 'supreme') {
+                document.getElementById('form_supreme_session_type').value = h.session_type || 'جلسة فحص قبول الطعن بالنقض شكلاً';
+                document.getElementById('form_supreme_judge_head').value = h.judge_head || '';
+                document.getElementById('form_supreme_court_secretary').value = h.court_secretary || '';
+                if (h.bench_judges) {
+                    document.getElementById('form_supreme_chamber_type').value = h.bench_judges.chamber || 'الدائرة المدنية';
+                    document.getElementById('supreme_judge_1').value = h.bench_judges.judge_1 || '';
+                    document.getElementById('supreme_judge_2').value = h.bench_judges.judge_2 || '';
+                    document.getElementById('supreme_judge_3').value = h.bench_judges.judge_3 || '';
+                    document.getElementById('supreme_judge_4').value = h.bench_judges.judge_4 || '';
+                }
+            }
+
+            // كشف الحضور
+            const tbody = document.getElementById('attendance_tbody');
+            tbody.innerHTML = '';
+            if (h.attendees_list && h.attendees_list.length > 0) {
+                h.attendees_list.forEach(att => addAttendanceRow(att.name, att.role, att.notes));
+            } else {
+                addAttendanceRow();
+            }
+
+        } catch (err) {
+            console.error(err);
+            alert('حدث خطأ أثناء جلب بيانات المحضر');
+        }
     }
 
-    function openEditHearingModal(id, title, hearingAt, nextHearing, statusKey, caseId, chamber, floor, showInPortal) {
-        document.getElementById('edit_hearing_id').value = id;
-        document.getElementById('edit_hearing_title').value = title;
-        document.getElementById('edit_hearing_at').value = hearingAt;
-        document.getElementById('edit_hearing_next').value = nextHearing || '';
-        document.getElementById('edit_hearing_status').value = statusKey || 'pending';
-        document.getElementById('edit_hearing_case_id').value = caseId || '';
-        document.getElementById('edit_hearing_chamber').value = chamber || '';
-        document.getElementById('edit_hearing_floor').value = floor || '';
-        document.getElementById('edit_show_in_client_portal').checked = (showInPortal !== '0' && showInPortal !== 0 && showInPortal !== false);
-        document.getElementById('editHearingModal').style.display = 'flex';
+    // عرض المحضر الرسمي بتنسيق قضائي فاخر
+    async function viewHearingMinutes(hearingId) {
+        try {
+            const res = await fetch(`/hearings/details/${hearingId}`);
+            const data = await res.json();
+            if (!data.success) {
+                alert('فشل تحميل المحضر');
+                return;
+            }
+            const h = data.hearing;
+            const printArea = document.getElementById('minutes_print_area');
+
+            let entityTitle = 'المحكمة الابتدائية';
+            if (h.minutes_type === 'prosecution') entityTitle = 'النيابة العامة';
+            else if (h.minutes_type === 'appeal') entityTitle = 'محكمة الاستئناف';
+            else if (h.minutes_type === 'supreme') entityTitle = 'المحكمة العليا';
+
+            let benchHtml = '';
+            if (h.minutes_type === 'primary') {
+                benchHtml = `
+                    <div style="margin-bottom: 15px;">
+                        <strong>الهيئة القضائية:</strong> فضيلة القاضي / ${escapeHtml(h.judge_head || 'غير محدد')}<br>
+                        <strong>أمين السر:</strong> ${escapeHtml(h.court_secretary || 'غير محدد')}<br>
+                        ${h.prosecutor_name ? `<strong>ممثل النيابة العامة:</strong> ${escapeHtml(h.prosecutor_name)}` : ''}
+                    </div>
+                `;
+            } else if (h.minutes_type === 'appeal') {
+                const bj = h.bench_judges || {};
+                benchHtml = `
+                    <div style="margin-bottom: 15px;">
+                        <strong>رئيس الشعبة:</strong> فضيلة القاضي / ${escapeHtml(h.judge_head || bj.judge_head || 'غير محدد')}<br>
+                        <strong>أعضاء الشعبة:</strong> ${[bj.judge_1, bj.judge_2, bj.judge_3, bj.judge_4].filter(Boolean).map(escapeHtml).join(' | ') || 'هيئة ثلاثية'}<br>
+                        <strong>أمين سر الشعبة:</strong> ${escapeHtml(h.court_secretary || bj.court_secretary || 'غير محدد')}
+                    </div>
+                `;
+            } else if (h.minutes_type === 'prosecution') {
+                const pd = h.prosecution_details || {};
+                benchHtml = `
+                    <div style="margin-bottom: 15px;">
+                        <strong>النيابة المختصة:</strong> ${escapeHtml(pd.office_name || 'النيابة العامة')}<br>
+                        <strong>المحقق:</strong> ${escapeHtml(pd.investigator_title || 'وكيل نيابة')} / ${escapeHtml(pd.investigator_name || h.judge_head || 'غير محدد')}<br>
+                        <strong>كاتب التحقيق:</strong> ${escapeHtml(pd.clerk_name || h.court_secretary || 'غير محدد')}<br>
+                        <strong>مكان التحقيق:</strong> ${escapeHtml(pd.location || 'مقر النيابة')} | <strong>بيانات البلاغ:</strong> ${escapeHtml(pd.report_details || 'محال رسمياً')}
+                    </div>
+                `;
+            } else if (h.minutes_type === 'supreme') {
+                const bj = h.bench_judges || {};
+                benchHtml = `
+                    <div style="margin-bottom: 15px;">
+                        <strong>الدائرة المختصة:</strong> ${escapeHtml(bj.chamber || 'المحكمة العليا')}<br>
+                        <strong>رئيس الدائرة:</strong> فضيلة القاضي / ${escapeHtml(h.judge_head || 'غير محدد')}<br>
+                        <strong>أعضاء الدائرة:</strong> ${[bj.judge_1, bj.judge_2, bj.judge_3, bj.judge_4].filter(Boolean).map(escapeHtml).join(' | ') || 'هيئة المحكمة العليا'}
+                    </div>
+                `;
+            }
+
+            // كشف الحضور
+            let attendeesHtml = '';
+            if (h.attendees_list && h.attendees_list.length > 0) {
+                attendeesHtml = `
+                    <h4 style="margin: 20px 0 8px 0; color: #1e3a8a; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">كشف إثبات الحضور والوكالات</h4>
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 0.9rem;">
+                        <tr style="background: #f8fafc; border-bottom: 1px solid #cbd5e1;">
+                            <th style="padding: 6px; text-align: right;">الاسم</th>
+                            <th style="padding: 6px; text-align: right;">الصفة</th>
+                            <th style="padding: 6px; text-align: right;">سند الوكالة / ملاحظات</th>
+                        </tr>
+                        ${h.attendees_list.map(a => `
+                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                <td style="padding: 6px;"><strong>${escapeHtml(a.name)}</strong></td>
+                                <td style="padding: 6px;">${escapeHtml(a.role)}</td>
+                                <td style="padding: 6px;">${escapeHtml(a.notes || '-')}</td>
+                            </tr>
+                        `).join('')}
+                    </table>
+                `;
+            }
+
+            // قائمة المرفقات
+            let filesHtml = '';
+            const allFiles = [...(h.decision_attachments || []), ...(h.submitted_papers || [])];
+            if (allFiles.length > 0 || h.attachment_path) {
+                filesHtml = `
+                    <h4 style="margin: 20px 0 8px 0; color: #1e3a8a; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">المستندات والمرفقات المحفوظة بالمحضر</h4>
+                    <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
+                        ${allFiles.map(f => `
+                            <a href="${escapeHtml(f.url)}" target="_blank" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 6px 12px; border-radius: 6px; text-decoration: none; color: #1e40af; font-weight: 700; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 6px;">
+                                <i class="fa-solid fa-file-arrow-down"></i> ${escapeHtml(f.name)}
+                            </a>
+                        `).join('')}
+                        ${h.attachment_path ? `
+                            <a href="/${escapeHtml(h.attachment_path)}" target="_blank" style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 6px 12px; border-radius: 6px; text-decoration: none; color: #1e40af; font-weight: 700; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 6px;">
+                                <i class="fa-solid fa-paperclip"></i> مرفق الجلسة الأساسي
+                            </a>
+                        ` : ''}
+                    </div>
+                `;
+            }
+
+            printArea.innerHTML = `
+                <div style="border: 2px solid #0f172a; padding: 30px; border-radius: 8px; background: #fff; line-height: 1.8;">
+                    <div style="text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 15px; margin-bottom: 20px;">
+                        <h2 style="margin: 0 0 5px 0; font-weight: 800; font-size: 1.5rem;">الجمهورية اليمنية</h2>
+                        <h3 style="margin: 0 0 5px 0; font-weight: 700; font-size: 1.25rem;">وزارة العدل — ${entityTitle}</h3>
+                        <h4 style="margin: 5px 0 0 0; color: #475569; font-weight: 600;">محضر رسمي — ${escapeHtml(h.session_type || h.title)}</h4>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 0.95rem; background: #f8fafc; padding: 10px 14px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                        <div><strong>رقم القضية:</strong> ${escapeHtml(h.case_number || 'غير محدد')} | <strong>نوعها:</strong> ${escapeHtml(h.case_type || 'عام')}</div>
+                        <div><strong>تاريخ الانعقاد:</strong> ${escapeHtml(h.hearing_at)}</div>
+                    </div>
+
+                    ${benchHtml}
+
+                    <div style="margin-bottom: 15px;">
+                        <strong>موضوع الجلسة والإجراء:</strong> ${escapeHtml(h.title)}
+                    </div>
+
+                    ${attendeesHtml}
+
+                    <div style="margin-top: 15px; margin-bottom: 20px;">
+                        <h4 style="margin: 0 0 8px 0; color: #1e3a8a; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">قرارات المحكمة / أوامر الجلسة</h4>
+                        <div style="background: #f8fafc; padding: 14px; border-radius: 8px; border: 1px solid #cbd5e1; font-weight: 600; white-space: pre-wrap;">
+                            ${escapeHtml(h.court_decision || 'لم تدون قرارات كتابية')}
+                        </div>
+                    </div>
+
+                    ${filesHtml}
+
+                    <div style="display: flex; justify-content: space-between; margin-top: 40px; padding-top: 20px; border-top: 1px dashed #94a3b8; text-align: center;">
+                        <div style="width: 30%;">
+                            <strong>أمين السر / كاتب التحقيق</strong><br><br>
+                            ...................................
+                        </div>
+                        <div style="width: 30%;">
+                            <strong>ختم القيد والمكتب</strong><br><br>
+                            ...................................
+                        </div>
+                        <div style="width: 30%;">
+                            <strong>رئيس الجلسة / عضو النيابة</strong><br><br>
+                            ...................................
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('viewMinutesModal').style.display = 'flex';
+        } catch (err) {
+            console.error(err);
+            alert('حدث خطأ أثناء عرض المحضر');
+        }
     }
 
+    function printMinutesContent() {
+        const printContent = document.getElementById('minutes_print_area').innerHTML;
+        const win = window.open('', '_blank');
+        win.document.write(`
+            <html dir="rtl">
+            <head>
+                <title>طباعة المحضر القضائي</title>
+                <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+                <style>
+                    body { font-family: 'Cairo', sans-serif; padding: 20px; color: #000; }
+                    @media print { body { padding: 0; } }
+                </style>
+            </head>
+            <body>
+                ${printContent}
+            </body>
+            </html>
+        `);
+        win.document.close();
+        win.focus();
+        setTimeout(() => { win.print(); win.close(); }, 500);
+    }
+
+    // تأكيد الحذف
+    function confirmDeleteHearing(hearingId) {
+        if (confirm('هل أنت متأكد من حذف محضر هذه الجلسة نهائياً من النظام؟ لا يمكن التراجع عن هذه الخطوة.')) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/hearings/delete/${hearingId}`;
+            const csrf = document.createElement('input');
+            csrf.type = 'hidden';
+            csrf.name = 'csrf_token';
+            csrf.value = "{{ request.cookies.get('csrf_token', '') }}";
+            form.appendChild(csrf);
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+
+    // هروب آمن للنصوص HTML لمنع ثغرات XSS
     function escapeHtml(text) {
         if (!text) return '';
-        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
         return String(text).replace(/[&<>"']/g, m => map[m]);
     }
-
-    document.addEventListener("DOMContentLoaded", () => {
-        loadRefDataDropdown('hearing_status', 'select[name="status_key"]');
-        {% if open_new_modal %}
-        openAddHearingModal();
-        {% endif %}
-    });
 </script>
 {% endblock %}
