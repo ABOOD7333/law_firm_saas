@@ -177,6 +177,11 @@ def generate_internal_number(db: Session, office_id: int, section_key: str = Non
 @router.get("/", response_class=HTMLResponse)
 async def incoming_cases_hub(
     request: Request,
+    q: Optional[str] = None,
+    section_filter: Optional[str] = None,
+    status_filter: Optional[str] = None,
+    page: int = 1,
+    per_page: int = 15,
     db: Session = Depends(get_db),
     user: AccessProfiles = Depends(get_current_user),
 ):
@@ -185,7 +190,7 @@ async def incoming_cases_hub(
     if not user.office_id:
         raise HTTPException(status_code=403, detail="المستخدم غير مرتبط بمكتب")
 
-    # إحصائيات الأقسام الخمسة
+    # إحصائيات الأقسام الستة
     section_stats = {}
     for sec_key in SECTION_CONFIG.keys():
         count = (
@@ -229,7 +234,7 @@ async def incoming_cases_hub(
         .count()
     )
 
-    # إجمالي القضايا الفريدة المسجلة بالنظام (لتوضيح الفرق الإحصائي للوثيقة)
+    # إجمالي القضايا الفريدة المسجلة بالنظام
     unique_cases_count = (
         db.query(LawCases)
         .filter(
@@ -237,6 +242,47 @@ async def incoming_cases_hub(
             LawCases.is_deleted == 0,
         )
         .count()
+    )
+
+    # استعلام السجل الشامل لكافة القضايا الواردة بالمكتب
+    query = db.query(LawIncomingCases).filter(
+        LawIncomingCases.office_id == user.office_id,
+        LawIncomingCases.is_deleted == 0,
+    )
+
+    if section_filter and section_filter.strip():
+        query = query.filter(LawIncomingCases.section_key == section_filter.strip())
+
+    if status_filter and status_filter.strip():
+        query = query.filter(LawIncomingCases.status_key == status_filter.strip())
+
+    if q and q.strip():
+        term = f"%{q.strip()}%"
+        query = query.filter(
+            or_(
+                LawIncomingCases.internal_number.ilike(term),
+                LawIncomingCases.client_name.ilike(term),
+                LawIncomingCases.police_report_number.ilike(term),
+                LawIncomingCases.prosecution_file_number.ilike(term),
+                LawIncomingCases.court_case_number.ilike(term),
+                LawIncomingCases.appeal_case_number.ilike(term),
+                LawIncomingCases.enforcement_file_number.ilike(term),
+                LawIncomingCases.court_name.ilike(term),
+                LawIncomingCases.supreme_court_name.ilike(term),
+                LawIncomingCases.enforcement_authority.ilike(term),
+                LawIncomingCases.case_subject.ilike(term),
+            )
+        )
+
+    all_records_count = query.count()
+    total_pages = max(1, (all_records_count + per_page - 1) // per_page)
+    page = max(1, min(page, total_pages))
+
+    all_records = (
+        query.order_by(desc(LawIncomingCases.id))
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+        .all()
     )
 
     return templates.TemplateResponse(
@@ -252,6 +298,13 @@ async def incoming_cases_hub(
             "incomplete_count": incomplete_count,
             "unique_cases_count": unique_cases_count,
             "sections": SECTION_CONFIG,
+            "all_records": all_records,
+            "all_records_count": all_records_count,
+            "current_page": page,
+            "total_pages": total_pages,
+            "q": q or "",
+            "section_filter": section_filter or "",
+            "status_filter": status_filter or "",
         },
     )
 
