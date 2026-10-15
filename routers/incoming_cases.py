@@ -598,24 +598,25 @@ async def create_incoming_case(
 
         file_path_str = f"{DOCUMENTS_UPLOAD_DIR}/{saved_name}"
 
-        doc_code = f"REC-{internal_number}-{len(attachments_list)+1}"
-        law_doc = LawDocuments(
-            office_id=user.office_id,
-            case_id=case_id,
-            client_id=final_client_id,
-            name=f"[{doc_tag}] {orig_name}" if doc_tag else orig_name,
-            document_type_key="incoming_file",
-            doc_code=doc_code,
-            doc_date=document_date or final_reception_date,
-            received_date=final_reception_date,
-            description=f"مستند مرفق باستقبال ملف وارد #{internal_number} ({SECTION_CONFIG[section_key]['title']})",
-            file_path=file_path_str,
-            file_size=len(file_bytes),
-            file_type=ext,
-            is_archived=0,
-            created_by_user_id=user.id,
-        )
-        db.add(law_doc)
+        if case_id:
+            doc_code = f"REC-{internal_number}-{len(attachments_list)+1}"
+            law_doc = LawDocuments(
+                office_id=user.office_id,
+                case_id=case_id,
+                client_id=final_client_id,
+                name=f"[{doc_tag}] {orig_name}" if doc_tag else orig_name,
+                document_type_key="incoming_file",
+                doc_code=doc_code,
+                doc_date=document_date or final_reception_date,
+                received_date=final_reception_date,
+                description=f"مستند مرفق باستقبال ملف وارد #{internal_number} ({SECTION_CONFIG[section_key]['title']})",
+                file_path=file_path_str,
+                file_size=len(file_bytes),
+                file_type=ext,
+                is_archived=0,
+                created_by_user_id=user.id,
+            )
+            db.add(law_doc)
 
         attachments_list.append(
             {

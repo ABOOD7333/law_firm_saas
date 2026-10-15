@@ -734,7 +734,7 @@ def _hash_pin(pin: str) -> str:
     return f"pbkdf2:sha256:{iterations}${salt_b64}${hash_b64}"
 
 @app.post("/")
-
+@app.post("/login")
 async def login_submit(
 
     request: Request,
