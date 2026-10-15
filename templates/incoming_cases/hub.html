@@ -68,110 +68,131 @@
         </div>
     </div>
 
-    <!-- The 5 Main Cards Section (Exactly matching the design in user's image) -->
-    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 18px; margin-top: 10px;" class="hub-cards-grid">
+    <!-- The 6 Main Cards Section (Exactly matching judicial and enforcement sections) -->
+    <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; margin-top: 10px;" class="hub-cards-grid">
 
         <!-- 1. الشرطة -->
-        <div class="incoming-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 28px 18px 24px 18px; text-align: center; box-shadow: 0 8px 25px rgba(0,0,0,0.04); display: flex; flex-direction: column; justify-content: space-between; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); min-height: 290px;">
+        <div class="incoming-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 24px 14px 20px 14px; text-align: center; box-shadow: 0 8px 25px rgba(0,0,0,0.04); display: flex; flex-direction: column; justify-content: space-between; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); min-height: 290px;">
             <div>
                 <!-- Circular Icon -->
-                <div style="width: 74px; height: 74px; margin: 0 auto 20px auto; border-radius: 50%; background: #0284c7; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 2rem; box-shadow: 0 8px 20px rgba(2, 132, 199, 0.25);">
+                <div style="width: 68px; height: 68px; margin: 0 auto 16px auto; border-radius: 50%; background: #0284c7; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; box-shadow: 0 8px 20px rgba(2, 132, 199, 0.25);">
                     <i class="fa-solid fa-shield-halved"></i>
                 </div>
                 <!-- Title -->
-                <h2 style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin-bottom: 8px; line-height: 1.4;">
-                    القضايا الواردة<br>من الشرطة
+                <h2 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin-bottom: 8px; line-height: 1.4;">
+                    القضايا المعروضة<br>أمام الشرطة
                 </h2>
-                <div style="display: inline-block; background: #e0f2fe; color: #0369a1; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; margin-bottom: 18px;">
+                <div style="display: inline-block; background: #e0f2fe; color: #0369a1; padding: 4px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; margin-bottom: 16px;">
                     {{ section_stats['police'] }} ملف مسجل
                 </div>
             </div>
             <!-- Enter Button -->
-            <a href="/incoming-cases/police" style="display: block; width: 100%; background: #0284c7; color: #ffffff; text-decoration: none; padding: 11px 0; border-radius: 10px; font-weight: 800; font-size: 0.95rem; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25); transition: all 0.2s ease;">
+            <a href="/incoming-cases/police" style="display: block; width: 100%; background: #0284c7; color: #ffffff; text-decoration: none; padding: 10px 0; border-radius: 10px; font-weight: 800; font-size: 0.92rem; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25); transition: all 0.2s ease;">
                 دخول
             </a>
         </div>
 
         <!-- 2. النيابة العامة -->
-        <div class="incoming-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 28px 18px 24px 18px; text-align: center; box-shadow: 0 8px 25px rgba(0,0,0,0.04); display: flex; flex-direction: column; justify-content: space-between; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); min-height: 290px;">
+        <div class="incoming-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 24px 14px 20px 14px; text-align: center; box-shadow: 0 8px 25px rgba(0,0,0,0.04); display: flex; flex-direction: column; justify-content: space-between; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); min-height: 290px;">
             <div>
                 <!-- Circular Icon -->
-                <div style="width: 74px; height: 74px; margin: 0 auto 20px auto; border-radius: 50%; background: #059669; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 2rem; box-shadow: 0 8px 20px rgba(5, 150, 105, 0.25);">
+                <div style="width: 68px; height: 68px; margin: 0 auto 16px auto; border-radius: 50%; background: #059669; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; box-shadow: 0 8px 20px rgba(5, 150, 105, 0.25);">
                     <i class="fa-solid fa-scale-balanced"></i>
                 </div>
                 <!-- Title -->
-                <h2 style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin-bottom: 8px; line-height: 1.4;">
-                    القضايا الواردة<br>من النيابة العامة
+                <h2 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin-bottom: 8px; line-height: 1.4;">
+                    القضايا المنظورة<br>أمام النيابة
                 </h2>
-                <div style="display: inline-block; background: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; margin-bottom: 18px;">
+                <div style="display: inline-block; background: #d1fae5; color: #065f46; padding: 4px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; margin-bottom: 16px;">
                     {{ section_stats['prosecution'] }} ملف مسجل
                 </div>
             </div>
             <!-- Enter Button -->
-            <a href="/incoming-cases/prosecution" style="display: block; width: 100%; background: #059669; color: #ffffff; text-decoration: none; padding: 11px 0; border-radius: 10px; font-weight: 800; font-size: 0.95rem; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25); transition: all 0.2s ease;">
+            <a href="/incoming-cases/prosecution" style="display: block; width: 100%; background: #059669; color: #ffffff; text-decoration: none; padding: 10px 0; border-radius: 10px; font-weight: 800; font-size: 0.92rem; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25); transition: all 0.2s ease;">
                 دخول
             </a>
         </div>
 
         <!-- 3. المحكمة الابتدائية -->
-        <div class="incoming-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 28px 18px 24px 18px; text-align: center; box-shadow: 0 8px 25px rgba(0,0,0,0.04); display: flex; flex-direction: column; justify-content: space-between; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); min-height: 290px;">
+        <div class="incoming-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 24px 14px 20px 14px; text-align: center; box-shadow: 0 8px 25px rgba(0,0,0,0.04); display: flex; flex-direction: column; justify-content: space-between; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); min-height: 290px;">
             <div>
                 <!-- Circular Icon -->
-                <div style="width: 74px; height: 74px; margin: 0 auto 20px auto; border-radius: 50%; background: #6366f1; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 2rem; box-shadow: 0 8px 20px rgba(99, 102, 241, 0.25);">
+                <div style="width: 68px; height: 68px; margin: 0 auto 16px auto; border-radius: 50%; background: #1d4ed8; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; box-shadow: 0 8px 20px rgba(29, 78, 216, 0.25);">
                     <i class="fa-solid fa-landmark"></i>
                 </div>
                 <!-- Title -->
-                <h2 style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin-bottom: 8px; line-height: 1.4;">
-                    القضايا الواردة<br>من المحكمة الابتدائية
+                <h2 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin-bottom: 8px; line-height: 1.4;">
+                    القضايا المنظورة<br>أمام المحكمة الابتدائية
                 </h2>
-                <div style="display: inline-block; background: #ede9fe; color: #5b21b6; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; margin-bottom: 18px;">
+                <div style="display: inline-block; background: #dbeafe; color: #1e40af; padding: 4px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; margin-bottom: 16px;">
                     {{ section_stats['first_instance'] }} ملف مسجل
                 </div>
             </div>
             <!-- Enter Button -->
-            <a href="/incoming-cases/first-instance" style="display: block; width: 100%; background: #6366f1; color: #ffffff; text-decoration: none; padding: 11px 0; border-radius: 10px; font-weight: 800; font-size: 0.95rem; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25); transition: all 0.2s ease;">
+            <a href="/incoming-cases/first_instance" style="display: block; width: 100%; background: #1d4ed8; color: #ffffff; text-decoration: none; padding: 10px 0; border-radius: 10px; font-weight: 800; font-size: 0.92rem; box-shadow: 0 4px 12px rgba(29, 78, 216, 0.25); transition: all 0.2s ease;">
                 دخول
             </a>
         </div>
 
-        <!-- 4. المحكمة الاستئنافية -->
-        <div class="incoming-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 28px 18px 24px 18px; text-align: center; box-shadow: 0 8px 25px rgba(0,0,0,0.04); display: flex; flex-direction: column; justify-content: space-between; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); min-height: 290px;">
+        <!-- 4. محكمة الاستئناف -->
+        <div class="incoming-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 24px 14px 20px 14px; text-align: center; box-shadow: 0 8px 25px rgba(0,0,0,0.04); display: flex; flex-direction: column; justify-content: space-between; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); min-height: 290px;">
             <div>
                 <!-- Circular Icon -->
-                <div style="width: 74px; height: 74px; margin: 0 auto 20px auto; border-radius: 50%; background: #d97706; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 2rem; box-shadow: 0 8px 20px rgba(217, 119, 6, 0.25);">
-                    <i class="fa-solid fa-scale-unbalanced"></i>
+                <div style="width: 68px; height: 68px; margin: 0 auto 16px auto; border-radius: 50%; background: #7c3aed; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; box-shadow: 0 8px 20px rgba(124, 58, 237, 0.25);">
+                    <i class="fa-solid fa-building-columns"></i>
                 </div>
                 <!-- Title -->
-                <h2 style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin-bottom: 8px; line-height: 1.4;">
-                    القضايا الواردة<br>من المحكمة الاستئنافية
+                <h2 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin-bottom: 8px; line-height: 1.4;">
+                    القضايا المنظورة<br>أمام محكمة الاستئناف
                 </h2>
-                <div style="display: inline-block; background: #fef3c7; color: #92400e; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; margin-bottom: 18px;">
+                <div style="display: inline-block; background: #ede9fe; color: #5b21b6; padding: 4px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; margin-bottom: 16px;">
                     {{ section_stats['appeal'] }} ملف مسجل
                 </div>
             </div>
             <!-- Enter Button -->
-            <a href="/incoming-cases/appeal" style="display: block; width: 100%; background: #d97706; color: #ffffff; text-decoration: none; padding: 11px 0; border-radius: 10px; font-weight: 800; font-size: 0.95rem; box-shadow: 0 4px 12px rgba(217, 119, 6, 0.25); transition: all 0.2s ease;">
+            <a href="/incoming-cases/appeal" style="display: block; width: 100%; background: #7c3aed; color: #ffffff; text-decoration: none; padding: 10px 0; border-radius: 10px; font-weight: 800; font-size: 0.92rem; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25); transition: all 0.2s ease;">
                 دخول
             </a>
         </div>
 
-        <!-- 5. التنفيذ -->
-        <div class="incoming-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 28px 18px 24px 18px; text-align: center; box-shadow: 0 8px 25px rgba(0,0,0,0.04); display: flex; flex-direction: column; justify-content: space-between; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); min-height: 290px;">
+        <!-- 5. المحكمة العليا / الطعون بالنقض -->
+        <div class="incoming-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 24px 14px 20px 14px; text-align: center; box-shadow: 0 8px 25px rgba(0,0,0,0.04); display: flex; flex-direction: column; justify-content: space-between; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); min-height: 290px;">
             <div>
                 <!-- Circular Icon -->
-                <div style="width: 74px; height: 74px; margin: 0 auto 20px auto; border-radius: 50%; background: #0d9488; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 2rem; box-shadow: 0 8px 20px rgba(13, 148, 136, 0.25);">
+                <div style="width: 68px; height: 68px; margin: 0 auto 16px auto; border-radius: 50%; background: #b45309; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; box-shadow: 0 8px 20px rgba(180, 83, 9, 0.25);">
                     <i class="fa-solid fa-gavel"></i>
                 </div>
                 <!-- Title -->
-                <h2 style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin-bottom: 8px; line-height: 1.4;">
-                    القضايا الواردة<br>من التنفيذ
+                <h2 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin-bottom: 8px; line-height: 1.4;">
+                    القضايا المنظورة<br>أمام المحكمة العليا
                 </h2>
-                <div style="display: inline-block; background: #ccfbf1; color: #115e59; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; margin-bottom: 18px;">
+                <div style="display: inline-block; background: #fef3c7; color: #92400e; padding: 4px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; margin-bottom: 16px;">
+                    {{ section_stats['supreme'] }} ملف مسجل
+                </div>
+            </div>
+            <!-- Enter Button -->
+            <a href="/incoming-cases/supreme" style="display: block; width: 100%; background: #b45309; color: #ffffff; text-decoration: none; padding: 10px 0; border-radius: 10px; font-weight: 800; font-size: 0.92rem; box-shadow: 0 4px 12px rgba(180, 83, 9, 0.25); transition: all 0.2s ease;">
+                دخول
+            </a>
+        </div>
+
+        <!-- 6. التنفيذ -->
+        <div class="incoming-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 24px 14px 20px 14px; text-align: center; box-shadow: 0 8px 25px rgba(0,0,0,0.04); display: flex; flex-direction: column; justify-content: space-between; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); min-height: 290px;">
+            <div>
+                <!-- Circular Icon -->
+                <div style="width: 68px; height: 68px; margin: 0 auto 16px auto; border-radius: 50%; background: #dc2626; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; box-shadow: 0 8px 20px rgba(220, 38, 38, 0.25);">
+                    <i class="fa-solid fa-stamp"></i>
+                </div>
+                <!-- Title -->
+                <h2 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin-bottom: 8px; line-height: 1.4;">
+                    القضايا المنظورة<br>أمام التنفيذ
+                </h2>
+                <div style="display: inline-block; background: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; margin-bottom: 16px;">
                     {{ section_stats['enforcement'] }} ملف مسجل
                 </div>
             </div>
             <!-- Enter Button -->
-            <a href="/incoming-cases/enforcement" style="display: block; width: 100%; background: #0d9488; color: #ffffff; text-decoration: none; padding: 11px 0; border-radius: 10px; font-weight: 800; font-size: 0.95rem; box-shadow: 0 4px 12px rgba(13, 148, 136, 0.25); transition: all 0.2s ease;">
+            <a href="/incoming-cases/enforcement" style="display: block; width: 100%; background: #dc2626; color: #ffffff; text-decoration: none; padding: 10px 0; border-radius: 10px; font-weight: 800; font-size: 0.92rem; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25); transition: all 0.2s ease;">
                 دخول
             </a>
         </div>
@@ -182,19 +203,24 @@
     <div style="margin-top: 36px; background: #f8fafc; border-right: 4px solid #4f46e5; border-radius: 12px; padding: 16px 20px; display: flex; align-items: center; gap: 14px; border: 1px solid #e2e8f0;">
         <i class="fa-solid fa-circle-info" style="font-size: 1.4rem; color: #4f46e5; flex-shrink: 0;"></i>
         <div style="font-size: 0.9rem; color: #475569; line-height: 1.7;">
-            <strong>توجيه إداري:</strong> هذه الواجهة مخصصة لتنظيم وتوثيق استقبال الملفات والمستندات الورقية التي يحضر بها الموكلون إلى المكتب وفرزها فورياً بحسب الجهة. تسجيل ملف الاستقبال لا يُعد قبولاً نهائياً للدعوى أو تعاقداً، وتتم مراجعة وفحص السندات لاحقاً بمعرفة المحامي المختص.
+            <strong>توجيه إداري:</strong> هذه الواجهة مخصصة لتنظيم وتوثيق استقبال الملفات والمستندات الورقية التي يحضر بها الموكلون إلى المكتب وفرزها فورياً بحسب الجهة القضائية أو التنفيذية. تسجيل ملف الاستقبال يولد تسلسلاً هجرياً تلقائياً لكل سنة، ولا يُعد قبولاً نهائياً للدعوى أو تعاقداً حتى تتم مراجعة السندات وتعيين المحامي المختص.
         </div>
     </div>
 
 </div>
 
 <style>
-@media (max-width: 1200px) {
+@media (max-width: 1400px) {
     .hub-cards-grid {
         grid-template-columns: repeat(3, 1fr) !important;
     }
 }
-@media (max-width: 768px) {
+@media (max-width: 900px) {
+    .hub-cards-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
+@media (max-width: 600px) {
     .hub-cards-grid {
         grid-template-columns: repeat(1, 1fr) !important;
     }

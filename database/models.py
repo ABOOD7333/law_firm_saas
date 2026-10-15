@@ -992,37 +992,76 @@ class LawIncomingCases(Base):
     created_by_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey('access_profiles.id', ondelete='SET NULL'), nullable=True)
     assigned_lawyer_id: Mapped[Optional[int]] = mapped_column(ForeignKey('access_profiles.id', ondelete='SET NULL'), nullable=True)
 
-    # 1. Police section fields
+    # Hijri Number Components
+    hijri_year: Mapped[Optional[str]] = mapped_column(Text)
+    incoming_sequence: Mapped[Optional[int]] = mapped_column(Integer)
+
+    # Shared Classifications & Roles
+    case_subject: Mapped[Optional[str]] = mapped_column(Text)
+    crime_classification: Mapped[Optional[str]] = mapped_column(Text)
+    client_capacity: Mapped[Optional[str]] = mapped_column(Text)
+
+    # 1. Police section fields (القضايا المعروضة أمام الشرطة)
     police_station: Mapped[Optional[str]] = mapped_column(Text)
     police_report_number: Mapped[Optional[str]] = mapped_column(Text, index=True)
     document_date: Mapped[Optional[str]] = mapped_column(Text)
     police_referral_status: Mapped[Optional[str]] = mapped_column(Text)
+    incoming_status_at_reception: Mapped[Optional[str]] = mapped_column(Text)
 
-    # 2. Prosecution section fields
+    # 2. Prosecution section fields (القضايا المنظورة أمام النيابة)
     prosecution_name: Mapped[Optional[str]] = mapped_column(Text)
     prosecution_file_number: Mapped[Optional[str]] = mapped_column(Text, index=True)
     prosecution_decision_date: Mapped[Optional[str]] = mapped_column(Text)
+    prosecutor_member_name: Mapped[Optional[str]] = mapped_column(Text)
+    prosecution_disposition: Mapped[Optional[str]] = mapped_column(Text)
+    office_position_on_prosecution: Mapped[Optional[str]] = mapped_column(Text)
+    final_case_path: Mapped[Optional[str]] = mapped_column(Text)
 
-    # 3. First instance court section fields
+    # 3. First instance court section fields (القضايا المنظورة أمام المحكمة الابتدائية)
     court_name: Mapped[Optional[str]] = mapped_column(Text)
     court_case_number: Mapped[Optional[str]] = mapped_column(Text, index=True)
     case_year: Mapped[Optional[str]] = mapped_column(Text)
     judicial_document_type: Mapped[Optional[str]] = mapped_column(Text)
-    client_capacity: Mapped[Optional[str]] = mapped_column(Text)
+    court_judge_name: Mapped[Optional[str]] = mapped_column(Text)
+    hearing_start_date: Mapped[Optional[str]] = mapped_column(Text)
+    case_reserved_for_judgment_date: Mapped[Optional[str]] = mapped_column(Text)
+    judgment_date: Mapped[Optional[str]] = mapped_column(Text)
+    office_position_on_court: Mapped[Optional[str]] = mapped_column(Text)
+    office_position_attachment_path: Mapped[Optional[str]] = mapped_column(Text)
 
-    # 4. Appeal court section fields
+    # 4. Appeal court section fields (القضايا المنظورة أمام محكمة الاستئناف)
     appeal_court_name: Mapped[Optional[str]] = mapped_column(Text)
     appeal_case_number: Mapped[Optional[str]] = mapped_column(Text, index=True)
     appeal_year: Mapped[Optional[str]] = mapped_column(Text)
     primary_case_number: Mapped[Optional[str]] = mapped_column(Text)
     primary_judgment_date: Mapped[Optional[str]] = mapped_column(Text)
+    appeal_judgment_decision: Mapped[Optional[str]] = mapped_column(Text)
+    office_position_on_appeal: Mapped[Optional[str]] = mapped_column(Text)
+    appeal_decision_attachment_path: Mapped[Optional[str]] = mapped_column(Text)
 
-    # 5. Enforcement section fields
+    # 5. Supreme court section fields (القضايا المنظورة أمام المحكمة العليا / الطعون بالنقض)
+    supreme_court_name: Mapped[Optional[str]] = mapped_column(Text)
+    supreme_chamber: Mapped[Optional[str]] = mapped_column(Text)
+    cassation_date: Mapped[Optional[str]] = mapped_column(Text)
+    appeal_file_dispatch_date: Mapped[Optional[str]] = mapped_column(Text)
+    supreme_court_decision: Mapped[Optional[str]] = mapped_column(Text)
+    supreme_court_decision_attachment_path: Mapped[Optional[str]] = mapped_column(Text)
+    challenged_appeal_judgment: Mapped[Optional[str]] = mapped_column(Text)
+    office_position_on_supreme: Mapped[Optional[str]] = mapped_column(Text)
+    office_position_supreme_attachment_path: Mapped[Optional[str]] = mapped_column(Text)
+
+    # 6. Enforcement section fields (القضايا المنظورة أمام التنفيذ)
     enforcement_authority: Mapped[Optional[str]] = mapped_column(Text)
     enforcement_file_number: Mapped[Optional[str]] = mapped_column(Text, index=True)
     enforcement_document_type: Mapped[Optional[str]] = mapped_column(Text)
     enforcement_parties: Mapped[Optional[str]] = mapped_column(Text)
     enforcement_document_date: Mapped[Optional[str]] = mapped_column(Text)
+    execution_type: Mapped[Optional[str]] = mapped_column(Text)
+    execution_subject: Mapped[Optional[str]] = mapped_column(Text)
+    execution_authority_name: Mapped[Optional[str]] = mapped_column(Text)
+    execution_actions_taken: Mapped[Optional[str]] = mapped_column(Text)
+    office_position_on_execution: Mapped[Optional[str]] = mapped_column(Text)
+    execution_attachment_path: Mapped[Optional[str]] = mapped_column(Text)
 
     # Attachments & Lifecycle
     attachments_json: Mapped[Optional[str]] = mapped_column(Text)  # JSON string of uploaded documents list

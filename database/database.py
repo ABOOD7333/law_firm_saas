@@ -243,6 +243,52 @@ def init_db():
         except Exception:
             pass
 
+    # Add judicial section fields to law_incoming_cases if not exists
+    new_incoming_cols = [
+        ('hijri_year', 'TEXT'),
+        ('incoming_sequence', 'INTEGER'),
+        ('case_subject', 'TEXT'),
+        ('crime_classification', 'TEXT'),
+        ('client_capacity', 'TEXT'),
+        ('incoming_status_at_reception', 'TEXT'),
+        ('prosecutor_member_name', 'TEXT'),
+        ('prosecution_disposition', 'TEXT'),
+        ('office_position_on_prosecution', 'TEXT'),
+        ('final_case_path', 'TEXT'),
+        ('court_judge_name', 'TEXT'),
+        ('hearing_start_date', 'TEXT'),
+        ('case_reserved_for_judgment_date', 'TEXT'),
+        ('judgment_date', 'TEXT'),
+        ('office_position_on_court', 'TEXT'),
+        ('office_position_attachment_path', 'TEXT'),
+        ('appeal_judgment_decision', 'TEXT'),
+        ('office_position_on_appeal', 'TEXT'),
+        ('appeal_decision_attachment_path', 'TEXT'),
+        ('supreme_court_name', 'TEXT'),
+        ('supreme_chamber', 'TEXT'),
+        ('cassation_date', 'TEXT'),
+        ('appeal_file_dispatch_date', 'TEXT'),
+        ('supreme_court_decision', 'TEXT'),
+        ('supreme_court_decision_attachment_path', 'TEXT'),
+        ('challenged_appeal_judgment', 'TEXT'),
+        ('office_position_on_supreme', 'TEXT'),
+        ('office_position_supreme_attachment_path', 'TEXT'),
+        ('execution_type', 'TEXT'),
+        ('execution_subject', 'TEXT'),
+        ('execution_authority_name', 'TEXT'),
+        ('execution_actions_taken', 'TEXT'),
+        ('office_position_on_execution', 'TEXT'),
+        ('execution_attachment_path', 'TEXT'),
+        ('assigned_lawyer_id', 'INTEGER')
+    ]
+    for col_name, col_type in new_incoming_cols:
+        try:
+            from sqlalchemy import text
+            with engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE law_incoming_cases ADD COLUMN {col_name} {col_type};"))
+        except Exception:
+            pass
+
     # Add comprehensive DMS fields to law_documents if not exists
     new_document_cols = [
         ('doc_code', 'TEXT'),

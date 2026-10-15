@@ -46,52 +46,62 @@ SECTION_CONFIG = {
     "police": {
         "key": "police",
         "num": "1",
-        "title": "القضايا الواردة من الشرطة",
-        "badge_color": "#2563eb",
+        "title": "القضايا المعروضة أمام الشرطة",
+        "badge_color": "#0284c7",
         "icon": "fa-solid fa-shield-halved",
-        "ref_field_label": "رقم المحضر / البلاغ",
+        "ref_field_label": "رقم الوارد",
         "authority_field_label": "الجهة الشرطية",
         "base_number": 1000,
     },
     "prosecution": {
         "key": "prosecution",
         "num": "2",
-        "title": "القضايا الواردة من النيابة العامة",
+        "title": "القضايا المنظورة أمام النيابة",
         "badge_color": "#059669",
         "icon": "fa-solid fa-scale-balanced",
-        "ref_field_label": "رقم الملف لدى النيابة",
+        "ref_field_label": "رقم القضية في النيابة",
         "authority_field_label": "اسم النيابة",
         "base_number": 2000,
     },
     "first_instance": {
         "key": "first_instance",
         "num": "3",
-        "title": "القضايا الواردة من المحكمة الابتدائية",
-        "badge_color": "#7c3aed",
+        "title": "القضايا المنظورة أمام المحكمة الابتدائية",
+        "badge_color": "#1d4ed8",
         "icon": "fa-solid fa-landmark",
-        "ref_field_label": "رقم القضية",
-        "authority_field_label": "اسم المحكمة",
+        "ref_field_label": "رقم القضية بالمحكمة الابتدائية",
+        "authority_field_label": "اسم المحكمة الابتدائية",
         "base_number": 3000,
     },
     "appeal": {
         "key": "appeal",
         "num": "4",
-        "title": "القضايا الواردة من المحكمة الاستئنافية",
-        "badge_color": "#ea580c",
-        "icon": "fa-solid fa-scale-unbalanced",
+        "title": "القضايا المنظورة أمام محكمة الاستئناف",
+        "badge_color": "#7c3aed",
+        "icon": "fa-solid fa-building-columns",
         "ref_field_label": "رقم القضية الاستئنافية",
-        "authority_field_label": "محكمة الاستئناف",
+        "authority_field_label": "محكمة الاستئناف والشعبة",
         "base_number": 4000,
+    },
+    "supreme": {
+        "key": "supreme",
+        "num": "5",
+        "title": "القضايا المنظورة أمام المحكمة العليا / القضايا المطعونة بالنقض",
+        "badge_color": "#b45309",
+        "icon": "fa-solid fa-gavel",
+        "ref_field_label": "رقم الطعن بالنقض",
+        "authority_field_label": "الدائرة بالمحكمة العليا",
+        "base_number": 5000,
     },
     "enforcement": {
         "key": "enforcement",
-        "num": "5",
-        "title": "القضايا الواردة من التنفيذ",
-        "badge_color": "#0d9488",
-        "icon": "fa-solid fa-gavel",
+        "num": "6",
+        "title": "القضايا المنظورة أمام التنفيذ",
+        "badge_color": "#dc2626",
+        "icon": "fa-solid fa-stamp",
         "ref_field_label": "رقم ملف التنفيذ",
         "authority_field_label": "جهة التنفيذ",
-        "base_number": 5000,
+        "base_number": 6000,
     },
 }
 
@@ -121,28 +131,42 @@ def log_incoming_audit(
         print(f"[Audit Log Error] {e}")
 
 
-def generate_internal_number(db: Session, office_id: int, section_key: str) -> str:
-    """توليد رقم داخلي فريد ومتسلسل وفق نطاق القسم (1001, 2001, 3001, 4001, 5001)"""
-    cfg = SECTION_CONFIG.get(section_key, {"base_number": 1000})
-    base_num = cfg["base_number"]
+def get_current_hijri_year() -> int:
+    """حساب السنة الهجرية الحالية بدقة (مثال: 1448 هـ)"""
+    try:
+        now = datetime.now()
+        days = (now - datetime(622, 7, 16)).days
+        h_year = int(days / 354.367068) + 1
+        return h_year
+    except Exception:
+        return 1448
+
+
+def generate_internal_number(db: Session, office_id: int, section_key: str = None) -> str:
+    """
+    توليد رقم الوارد السنوي الهجري المتسلسل خلال السنة الهجرية الحالية
+    مثال: 1448-1 كأول وارد في أول سنة، ثم 1448-2، 1448-3، وهكذا
+    """
+    h_year = get_current_hijri_year()
+    prefix = f"{h_year}-"
 
     existing = (
         db.query(LawIncomingCases.internal_number)
         .filter(
             LawIncomingCases.office_id == office_id,
-            LawIncomingCases.section_key == section_key,
+            LawIncomingCases.internal_number.like(f"{prefix}%"),
         )
         .all()
     )
 
-    max_num = base_num
+    max_num = 0
     for (val,) in existing:
-        if val and str(val).isdigit():
-            v_int = int(val)
-            if v_int > max_num:
-                max_num = v_int
+        if val and val.startswith(prefix):
+            seq_part = val[len(prefix):]
+            if seq_part.isdigit():
+                max_num = max(max_num, int(seq_part))
 
-    return str(max_num + 1)
+    return f"{prefix}{max_num + 1}"
 
 
 # ============================================================================
@@ -252,10 +276,23 @@ async def incoming_cases_section_view(
     if not user.office_id:
         raise HTTPException(status_code=403, detail="المستخدم غير مرتبط بمكتب")
 
+    section_key = section_key.replace("-", "_")
     if section_key not in SECTION_CONFIG:
         raise HTTPException(status_code=404, detail="قسم الاستقبال غير معروف")
 
     cfg = SECTION_CONFIG[section_key]
+
+    # جلب المحامين في المكتب
+    lawyers = (
+        db.query(AccessProfiles)
+        .filter(
+            AccessProfiles.office_id == user.office_id,
+            AccessProfiles.is_active == 1,
+            AccessProfiles.is_deleted == 0,
+        )
+        .order_by(AccessProfiles.name.asc())
+        .all()
+    )
 
     # جلب الموكلين لربطهم في النموذج
     clients = (
@@ -304,6 +341,8 @@ async def incoming_cases_section_view(
                 LawIncomingCases.enforcement_file_number.ilike(term),
                 LawIncomingCases.enforcement_authority.ilike(term),
                 LawIncomingCases.subject_description.ilike(term),
+                LawIncomingCases.case_subject.ilike(term),
+                LawIncomingCases.supreme_court_name.ilike(term),
             )
         )
 
@@ -336,6 +375,7 @@ async def incoming_cases_section_view(
             "cfg": cfg,
             "records": records,
             "clients": clients,
+            "lawyers": lawyers,
             "cases": cases,
             "total_records": total_records,
             "current_page": page,
@@ -360,10 +400,15 @@ async def create_incoming_case(
     client_id: Optional[int] = Form(None),
     client_name_input: Optional[str] = Form(None),
     case_id: Optional[int] = Form(None),
+    assigned_lawyer_id: Optional[int] = Form(None),
     reception_date: Optional[str] = Form(None),
     status_key: str = Form("under_review"),
     subject_description: Optional[str] = Form(None),
     notes: Optional[str] = Form(None),
+    case_subject: Optional[str] = Form(None),
+    crime_classification: Optional[str] = Form(None),
+    client_capacity: Optional[str] = Form(None),
+    incoming_status_at_reception: Optional[str] = Form(None),
     # Police fields
     police_station: Optional[str] = Form(None),
     police_report_number: Optional[str] = Form(None),
@@ -373,26 +418,52 @@ async def create_incoming_case(
     prosecution_name: Optional[str] = Form(None),
     prosecution_file_number: Optional[str] = Form(None),
     prosecution_decision_date: Optional[str] = Form(None),
+    prosecutor_member_name: Optional[str] = Form(None),
+    prosecution_disposition: Optional[str] = Form(None),
+    office_position_on_prosecution: Optional[str] = Form(None),
+    final_case_path: Optional[str] = Form(None),
     # First instance fields
     court_name: Optional[str] = Form(None),
     court_case_number: Optional[str] = Form(None),
     case_year: Optional[str] = Form(None),
     judicial_document_type: Optional[str] = Form(None),
-    client_capacity: Optional[str] = Form(None),
+    court_judge_name: Optional[str] = Form(None),
+    hearing_start_date: Optional[str] = Form(None),
+    case_reserved_for_judgment_date: Optional[str] = Form(None),
+    judgment_date: Optional[str] = Form(None),
+    office_position_on_court: Optional[str] = Form(None),
     # Appeal fields
     appeal_court_name: Optional[str] = Form(None),
     appeal_case_number: Optional[str] = Form(None),
     appeal_year: Optional[str] = Form(None),
     primary_case_number: Optional[str] = Form(None),
     primary_judgment_date: Optional[str] = Form(None),
+    appeal_judgment_decision: Optional[str] = Form(None),
+    office_position_on_appeal: Optional[str] = Form(None),
+    # Supreme fields
+    supreme_court_name: Optional[str] = Form(None),
+    supreme_chamber: Optional[str] = Form(None),
+    cassation_date: Optional[str] = Form(None),
+    appeal_file_dispatch_date: Optional[str] = Form(None),
+    supreme_court_decision: Optional[str] = Form(None),
+    challenged_appeal_judgment: Optional[str] = Form(None),
+    office_position_on_supreme: Optional[str] = Form(None),
     # Enforcement fields
     enforcement_authority: Optional[str] = Form(None),
     enforcement_file_number: Optional[str] = Form(None),
     enforcement_document_type: Optional[str] = Form(None),
     enforcement_parties: Optional[str] = Form(None),
     enforcement_document_date: Optional[str] = Form(None),
+    execution_type: Optional[str] = Form(None),
+    execution_subject: Optional[str] = Form(None),
+    execution_authority_name: Optional[str] = Form(None),
+    execution_actions_taken: Optional[str] = Form(None),
+    office_position_on_execution: Optional[str] = Form(None),
     # Uploaded files
     files: List[UploadFile] = File(None),
+    office_position_file: Optional[UploadFile] = File(None),
+    decision_file: Optional[UploadFile] = File(None),
+    execution_file: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db),
     user: AccessProfiles = Depends(get_current_user),
 ):
@@ -401,6 +472,7 @@ async def create_incoming_case(
     if not user.office_id:
         raise HTTPException(status_code=403, detail="المستخدم غير مرتبط بمكتب")
 
+    section_key = section_key.replace("-", "_")
     if section_key not in SECTION_CONFIG:
         raise HTTPException(status_code=400, detail="القسم غير صالح")
 
@@ -436,67 +508,88 @@ async def create_incoming_case(
     # تاريخ الاستلام
     final_reception_date = reception_date or datetime.now().strftime("%Y-%m-%d")
 
-    # توليد الرقم الداخلي الفريد
+    # توليد الرقم الداخلي الفريد (مثال: 1448-1)
     internal_number = generate_internal_number(db, user.office_id, section_key)
+    hijri_year_val = None
+    incoming_seq_val = None
+    if "-" in internal_number:
+        p = internal_number.split("-", 1)
+        hijri_year_val = p[0]
+        if p[1].isdigit():
+            incoming_seq_val = int(p[1])
 
     # معالجة الملفات المرفقة
     attachments_list = []
+    allowed_exts = {"pdf", "doc", "docx", "jpg", "jpeg", "png", "txt"}
+    MAX_SIZE_BYTES = 25 * 1024 * 1024  # 25 MB
+
+    async def _process_upload(f, doc_tag: str):
+        if not f or not f.filename:
+            return None
+        orig_name = os.path.basename(f.filename)
+        clean_fn = "".join(c for c in orig_name if c.isalnum() or c in " ._-")
+        ext = clean_fn.split(".")[-1].lower() if "." in clean_fn else ""
+        if ext not in allowed_exts:
+            return None
+
+        file_bytes = await f.read(MAX_SIZE_BYTES + 1)
+        if len(file_bytes) > MAX_SIZE_BYTES:
+            return None
+        if not validate_file_signature(file_bytes, ext):
+            return None
+
+        saved_name = f"{uuid.uuid4().hex}.{ext}"
+        saved_path = os.path.join(DOCUMENTS_UPLOAD_DIR, saved_name)
+        with open(saved_path, "wb") as f_out:
+            f_out.write(file_bytes)
+
+        file_path_str = f"{DOCUMENTS_UPLOAD_DIR}/{saved_name}"
+
+        doc_code = f"REC-{internal_number}-{len(attachments_list)+1}"
+        law_doc = LawDocuments(
+            office_id=user.office_id,
+            case_id=case_id,
+            client_id=final_client_id,
+            name=f"[{doc_tag}] {orig_name}" if doc_tag else orig_name,
+            document_type_key="incoming_file",
+            doc_code=doc_code,
+            doc_date=document_date or final_reception_date,
+            received_date=final_reception_date,
+            description=f"مستند مرفق باستقبال ملف وارد #{internal_number} ({SECTION_CONFIG[section_key]['title']})",
+            file_path=file_path_str,
+            file_size=len(file_bytes),
+            file_type=ext,
+            is_archived=0,
+            created_by_user_id=user.id,
+        )
+        db.add(law_doc)
+
+        attachments_list.append(
+            {
+                "name": f"[{doc_tag}] {orig_name}" if doc_tag else orig_name,
+                "path": file_path_str,
+                "size": len(file_bytes),
+                "type": ext,
+                "uploaded_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            }
+        )
+        return file_path_str
+
     if files:
-        allowed_exts = {"pdf", "doc", "docx", "jpg", "jpeg", "png", "txt"}
-        MAX_SIZE_BYTES = 25 * 1024 * 1024  # 25 MB
-
         for f in files:
-            if not f or not f.filename:
-                continue
-            orig_name = os.path.basename(f.filename)
-            clean_fn = "".join(c for c in orig_name if c.isalnum() or c in " ._-")
-            ext = clean_fn.split(".")[-1].lower() if "." in clean_fn else ""
-            if ext not in allowed_exts:
-                continue
+            await _process_upload(f, "مرفق عام")
 
-            file_bytes = await f.read(MAX_SIZE_BYTES + 1)
-            if len(file_bytes) > MAX_SIZE_BYTES:
-                continue
+    office_position_path = None
+    if office_position_file:
+        office_position_path = await _process_upload(office_position_file, "موقف المكتب")
 
-            if not validate_file_signature(file_bytes, ext):
-                continue
+    decision_attachment_path = None
+    if decision_file:
+        decision_attachment_path = await _process_upload(decision_file, "قرار / منطوق الحكم")
 
-            saved_name = f"{uuid.uuid4().hex}.{ext}"
-            saved_path = os.path.join(DOCUMENTS_UPLOAD_DIR, saved_name)
-            with open(saved_path, "wb") as f_out:
-                f_out.write(file_bytes)
-
-            file_path_str = f"{DOCUMENTS_UPLOAD_DIR}/{saved_name}"
-
-            # إدراج في المستندات العامة للنظام أيضاً للتكامل التام
-            doc_code = f"REC-{internal_number}-{len(attachments_list)+1}"
-            law_doc = LawDocuments(
-                office_id=user.office_id,
-                case_id=case_id,
-                client_id=final_client_id,
-                name=orig_name,
-                document_type_key="incoming_file",
-                doc_code=doc_code,
-                doc_date=document_date or final_reception_date,
-                received_date=final_reception_date,
-                description=f"مستند مرفق باستقبال ملف وارد #{internal_number} ({SECTION_CONFIG[section_key]['title']})",
-                file_path=file_path_str,
-                file_size=len(file_bytes),
-                file_type=ext,
-                is_archived=0,
-                created_by_user_id=user.id,
-            )
-            db.add(law_doc)
-
-            attachments_list.append(
-                {
-                    "name": orig_name,
-                    "path": file_path_str,
-                    "size": len(file_bytes),
-                    "type": ext,
-                    "uploaded_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                }
-            )
+    execution_file_path = None
+    if execution_file:
+        execution_file_path = await _process_upload(execution_file, "مستند التنفيذ")
 
     attachments_json_str = json.dumps(attachments_list, ensure_ascii=False) if attachments_list else None
 
@@ -505,13 +598,20 @@ async def create_incoming_case(
         office_id=user.office_id,
         section_key=section_key,
         internal_number=internal_number,
+        hijri_year=hijri_year_val,
+        incoming_sequence=incoming_seq_val,
         client_id=final_client_id,
         client_name=final_client_name,
         case_id=case_id,
+        assigned_lawyer_id=assigned_lawyer_id,
         reception_date=final_reception_date,
         status_key=status_key or "under_review",
         subject_description=subject_description,
         notes=notes,
+        case_subject=case_subject,
+        crime_classification=crime_classification,
+        client_capacity=client_capacity,
+        incoming_status_at_reception=incoming_status_at_reception,
         created_by_user_id=user.id,
         # Police
         police_station=police_station,
@@ -522,24 +622,52 @@ async def create_incoming_case(
         prosecution_name=prosecution_name,
         prosecution_file_number=prosecution_file_number,
         prosecution_decision_date=prosecution_decision_date,
+        prosecutor_member_name=prosecutor_member_name,
+        prosecution_disposition=prosecution_disposition,
+        office_position_on_prosecution=office_position_on_prosecution,
+        final_case_path=final_case_path,
         # First instance
         court_name=court_name,
         court_case_number=court_case_number,
         case_year=case_year,
         judicial_document_type=judicial_document_type,
-        client_capacity=client_capacity,
+        court_judge_name=court_judge_name,
+        hearing_start_date=hearing_start_date,
+        case_reserved_for_judgment_date=case_reserved_for_judgment_date,
+        judgment_date=judgment_date,
+        office_position_on_court=office_position_on_court,
+        office_position_attachment_path=office_position_path if section_key == "first_instance" else None,
         # Appeal
         appeal_court_name=appeal_court_name,
         appeal_case_number=appeal_case_number,
         appeal_year=appeal_year,
         primary_case_number=primary_case_number,
         primary_judgment_date=primary_judgment_date,
+        appeal_judgment_decision=appeal_judgment_decision,
+        office_position_on_appeal=office_position_on_appeal,
+        appeal_decision_attachment_path=decision_attachment_path if section_key == "appeal" else None,
+        # Supreme
+        supreme_court_name=supreme_court_name,
+        supreme_chamber=supreme_chamber,
+        cassation_date=cassation_date,
+        appeal_file_dispatch_date=appeal_file_dispatch_date,
+        supreme_court_decision=supreme_court_decision,
+        supreme_court_decision_attachment_path=decision_attachment_path if section_key == "supreme" else None,
+        challenged_appeal_judgment=challenged_appeal_judgment,
+        office_position_on_supreme=office_position_on_supreme,
+        office_position_supreme_attachment_path=office_position_path if section_key == "supreme" else None,
         # Enforcement
-        enforcement_authority=enforcement_authority,
+        enforcement_authority=enforcement_authority or execution_authority_name,
         enforcement_file_number=enforcement_file_number,
         enforcement_document_type=enforcement_document_type,
         enforcement_parties=enforcement_parties,
-        enforcement_document_date=enforcement_document_date,
+        enforcement_document_date=enforcement_document_date or document_date,
+        execution_type=execution_type,
+        execution_subject=execution_subject,
+        execution_authority_name=execution_authority_name or enforcement_authority,
+        execution_actions_taken=execution_actions_taken,
+        office_position_on_execution=office_position_on_execution,
+        execution_attachment_path=execution_file_path or office_position_path,
         # Attachments
         attachments_json=attachments_json_str,
     )
@@ -604,14 +732,22 @@ async def get_incoming_case_details(
         "section_key": item.section_key,
         "section_title": cfg.get("title", ""),
         "internal_number": item.internal_number,
+        "hijri_year": item.hijri_year or "",
+        "incoming_sequence": item.incoming_sequence or "",
         "client_id": item.client_id,
         "client_name": item.client_name or (item.law_client.name if item.law_client else ""),
         "case_id": item.case_id,
         "case_number": item.law_case.case_number if item.law_case else "",
+        "assigned_lawyer_id": item.assigned_lawyer_id,
+        "assigned_lawyer_name": item.assigned_lawyer.name if item.assigned_lawyer else "غير معين",
         "reception_date": item.reception_date,
         "status_key": item.status_key,
         "subject_description": item.subject_description or "",
         "notes": item.notes or "",
+        "case_subject": item.case_subject or "",
+        "crime_classification": item.crime_classification or "",
+        "client_capacity": item.client_capacity or "",
+        "incoming_status_at_reception": item.incoming_status_at_reception or "",
         "created_by": item.created_by.name if item.created_by else "النظام",
         "created_at": item.created_at,
         "is_cancelled": item.is_cancelled,
@@ -625,24 +761,52 @@ async def get_incoming_case_details(
         "prosecution_name": item.prosecution_name or "",
         "prosecution_file_number": item.prosecution_file_number or "",
         "prosecution_decision_date": item.prosecution_decision_date or "",
+        "prosecutor_member_name": item.prosecutor_member_name or "",
+        "prosecution_disposition": item.prosecution_disposition or "",
+        "office_position_on_prosecution": item.office_position_on_prosecution or "",
+        "final_case_path": item.final_case_path or "",
         # First instance
         "court_name": item.court_name or "",
         "court_case_number": item.court_case_number or "",
         "case_year": item.case_year or "",
         "judicial_document_type": item.judicial_document_type or "",
-        "client_capacity": item.client_capacity or "",
+        "court_judge_name": item.court_judge_name or "",
+        "hearing_start_date": item.hearing_start_date or "",
+        "case_reserved_for_judgment_date": item.case_reserved_for_judgment_date or "",
+        "judgment_date": item.judgment_date or "",
+        "office_position_on_court": item.office_position_on_court or "",
+        "office_position_attachment_path": item.office_position_attachment_path or "",
         # Appeal
         "appeal_court_name": item.appeal_court_name or "",
         "appeal_case_number": item.appeal_case_number or "",
         "appeal_year": item.appeal_year or "",
         "primary_case_number": item.primary_case_number or "",
         "primary_judgment_date": item.primary_judgment_date or "",
+        "appeal_judgment_decision": item.appeal_judgment_decision or "",
+        "office_position_on_appeal": item.office_position_on_appeal or "",
+        "appeal_decision_attachment_path": item.appeal_decision_attachment_path or "",
+        # Supreme
+        "supreme_court_name": item.supreme_court_name or "",
+        "supreme_chamber": item.supreme_chamber or "",
+        "cassation_date": item.cassation_date or "",
+        "appeal_file_dispatch_date": item.appeal_file_dispatch_date or "",
+        "supreme_court_decision": item.supreme_court_decision or "",
+        "supreme_court_decision_attachment_path": item.supreme_court_decision_attachment_path or "",
+        "challenged_appeal_judgment": item.challenged_appeal_judgment or "",
+        "office_position_on_supreme": item.office_position_on_supreme or "",
+        "office_position_supreme_attachment_path": item.office_position_supreme_attachment_path or "",
         # Enforcement
-        "enforcement_authority": item.enforcement_authority or "",
+        "enforcement_authority": item.enforcement_authority or item.execution_authority_name or "",
         "enforcement_file_number": item.enforcement_file_number or "",
         "enforcement_document_type": item.enforcement_document_type or "",
         "enforcement_parties": item.enforcement_parties or "",
         "enforcement_document_date": item.enforcement_document_date or "",
+        "execution_type": item.execution_type or "",
+        "execution_subject": item.execution_subject or "",
+        "execution_authority_name": item.execution_authority_name or item.enforcement_authority or "",
+        "execution_actions_taken": item.execution_actions_taken or "",
+        "office_position_on_execution": item.office_position_on_execution or "",
+        "execution_attachment_path": item.execution_attachment_path or "",
         # Attachments
         "attachments": attachments,
     }
@@ -657,6 +821,9 @@ async def update_incoming_case(
     notes: Optional[str] = Form(None),
     client_id: Optional[int] = Form(None),
     case_id: Optional[int] = Form(None),
+    assigned_lawyer_id: Optional[int] = Form(None),
+    case_subject: Optional[str] = Form(None),
+    client_capacity: Optional[str] = Form(None),
     # Section specific updates
     ref_number: Optional[str] = Form(None),
     authority_name: Optional[str] = Form(None),
@@ -691,6 +858,15 @@ async def update_incoming_case(
         if cl:
             item.client_name = cl.name
 
+    if assigned_lawyer_id is not None:
+        item.assigned_lawyer_id = assigned_lawyer_id if assigned_lawyer_id > 0 else None
+
+    if case_subject:
+        item.case_subject = case_subject
+
+    if client_capacity:
+        item.client_capacity = client_capacity
+
     if case_id is not None:
         item.case_id = case_id if case_id > 0 else None
 
@@ -719,11 +895,19 @@ async def update_incoming_case(
             item.appeal_case_number = ref_number
         if authority_name:
             item.appeal_court_name = authority_name
+    elif item.section_key == "supreme":
+        if ref_number:
+            item.court_case_number = ref_number
+        if authority_name:
+            item.supreme_court_name = authority_name
+        if doc_date:
+            item.cassation_date = doc_date
     elif item.section_key == "enforcement":
         if ref_number:
             item.enforcement_file_number = ref_number
         if authority_name:
             item.enforcement_authority = authority_name
+            item.execution_authority_name = authority_name
         if doc_date:
             item.enforcement_document_date = doc_date
 
@@ -795,6 +979,7 @@ async def check_duplicate_incoming_case(
     if not user or not user.office_id or not ref_number or not ref_number.strip():
         return JSONResponse({"duplicate": False})
 
+    section_key = section_key.replace("-", "_")
     ref = ref_number.strip()
     query = db.query(LawIncomingCases).filter(
         LawIncomingCases.office_id == user.office_id,
@@ -810,6 +995,8 @@ async def check_duplicate_incoming_case(
         query = query.filter(LawIncomingCases.court_case_number == ref)
     elif section_key == "appeal":
         query = query.filter(LawIncomingCases.appeal_case_number == ref)
+    elif section_key == "supreme":
+        query = query.filter(LawIncomingCases.court_case_number == ref)
     elif section_key == "enforcement":
         query = query.filter(LawIncomingCases.enforcement_file_number == ref)
 

@@ -373,19 +373,22 @@ input[type="date"].custom-input {
             <i class="fa-solid fa-arrow-right"></i> كافة الأقسام (الرئيسية)
         </a>
         <a href="/incoming-cases/police" class="section-nav-tab {% if section_key == 'police' %}active{% endif %}">
-            <i class="fa-solid fa-shield-halved"></i> 1. الشرطة
+            <i class="fa-solid fa-shield-halved"></i> 1. المعروضة أمام الشرطة
         </a>
         <a href="/incoming-cases/prosecution" class="section-nav-tab {% if section_key == 'prosecution' %}active{% endif %}">
-            <i class="fa-solid fa-scale-balanced"></i> 2. النيابة العامة
+            <i class="fa-solid fa-scale-balanced"></i> 2. المنظورة أمام النيابة
         </a>
-        <a href="/incoming-cases/first-instance" class="section-nav-tab {% if section_key == 'first_instance' %}active{% endif %}">
-            <i class="fa-solid fa-landmark"></i> 3. المحكمة الابتدائية
+        <a href="/incoming-cases/first_instance" class="section-nav-tab {% if section_key == 'first_instance' %}active{% endif %}">
+            <i class="fa-solid fa-landmark"></i> 3. المنظورة أمام المحكمة الابتدائية
         </a>
         <a href="/incoming-cases/appeal" class="section-nav-tab {% if section_key == 'appeal' %}active{% endif %}">
-            <i class="fa-solid fa-scale-unbalanced"></i> 4. المحكمة الاستئنافية
+            <i class="fa-solid fa-building-columns"></i> 4. المنظورة أمام محكمة الاستئناف
+        </a>
+        <a href="/incoming-cases/supreme" class="section-nav-tab {% if section_key == 'supreme' %}active{% endif %}">
+            <i class="fa-solid fa-gavel"></i> 5. المنظورة أمام المحكمة العليا / النقض
         </a>
         <a href="/incoming-cases/enforcement" class="section-nav-tab {% if section_key == 'enforcement' %}active{% endif %}">
-            <i class="fa-solid fa-gavel"></i> 5. التنفيذ
+            <i class="fa-solid fa-stamp"></i> 6. المنظورة أمام التنفيذ
         </a>
     </div>
 
@@ -464,7 +467,8 @@ input[type="date"].custom-input {
                     <thead>
                         <tr>
                             <th>الرقم الداخلي</th>
-                            <th>اسم الموكل</th>
+                            <th>الموكل / صفته</th>
+                            <th>المحامي المختص</th>
                             <th>{{ cfg.ref_field_label }}</th>
                             <th>{{ cfg.authority_field_label }}</th>
                             <th>تاريخ الاستلام</th>
@@ -482,8 +486,18 @@ input[type="date"].custom-input {
                                     </strong>
                                 </td>
                                 <td>
-                                    <span style="font-weight: 700; color: #1e293b;">
+                                    <div style="font-weight: 700; color: #1e293b;">
                                         {{ r.client_name or (r.law_client.name if r.law_client else 'غير محدد') }}
+                                    </div>
+                                    {% if r.client_capacity %}
+                                    <span style="display: inline-block; font-size: 0.75rem; background: #eff6ff; color: #1d4ed8; padding: 1px 6px; border-radius: 4px; font-weight: 600; margin-top: 2px;">
+                                        {{ r.client_capacity }}
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span style="font-size: 0.85rem; color: #334155; font-weight: 600;">
+                                        {{ r.assigned_lawyer.name if r.assigned_lawyer else 'غير محدد' }}
                                     </span>
                                 </td>
                                 <td>
@@ -495,6 +509,8 @@ input[type="date"].custom-input {
                                         {{ r.court_case_number or '-' }}
                                     {% elif section_key == 'appeal' %}
                                         {{ r.appeal_case_number or '-' }}
+                                    {% elif section_key == 'supreme' %}
+                                        {{ r.court_case_number or '-' }}
                                     {% elif section_key == 'enforcement' %}
                                         {{ r.enforcement_file_number or '-' }}
                                     {% endif %}
@@ -508,8 +524,10 @@ input[type="date"].custom-input {
                                         {{ r.court_name or '-' }}
                                     {% elif section_key == 'appeal' %}
                                         {{ r.appeal_court_name or '-' }}
+                                    {% elif section_key == 'supreme' %}
+                                        {{ r.supreme_court_name or (r.supreme_chamber if r.supreme_chamber else '-') }}
                                     {% elif section_key == 'enforcement' %}
-                                        {{ r.enforcement_authority or '-' }}
+                                        {{ r.enforcement_authority or r.execution_authority_name or '-' }}
                                     {% endif %}
                                 </td>
                                 <td>
@@ -540,7 +558,7 @@ input[type="date"].custom-input {
                             {% endfor %}
                         {% else %}
                             <tr>
-                                <td colspan="7" style="text-align: center; padding: 36px; color: #94a3b8;">
+                                <td colspan="8" style="text-align: center; padding: 36px; color: #94a3b8;">
                                     <i class="fa-regular fa-folder-open" style="font-size: 2.5rem; margin-bottom: 10px; display: block;"></i>
                                     لا توجد ملفات واردة مسجلة في هذا القسم حالياً. يمكنك استخدام النموذج المقابل لتسجيل أول ملف.
                                 </td>
@@ -592,7 +610,24 @@ input[type="date"].custom-input {
             <form id="incomingCreateForm" action="/incoming-cases/{{ section_key }}/create" method="post" enctype="multipart/form-data">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
-                <!-- 1. الموكل (مع زر فتح واجهة إضافة موكل الرسمية للنظام) -->
+                <!-- الحقول الأساسية: رقم الوارد والمحامي المختص -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+                    <div class="form-group-custom" style="margin-bottom: 0;">
+                        <label>رقم الوارد (تسلسلي هجري) <span style="color: #0284c7;">*</span></label>
+                        <input type="text" value="{{ suggested_internal_number }}" readonly class="form-control-custom" style="background: #f1f5f9; font-weight: 800; font-family: monospace; color: #0f172a; border-color: #cbd5e1;">
+                    </div>
+                    <div class="form-group-custom" style="margin-bottom: 0;">
+                        <label>المحامي المختص للقضية <span style="color: #e11d48;">*</span></label>
+                        <select name="assigned_lawyer_id" class="form-control-custom" required>
+                            <option value="">-- اختر المحامي المسؤول --</option>
+                            {% for l in lawyers %}
+                            <option value="{{ l.id }}">{{ l.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <!-- الموكل + زر إضافة موكل جديد رسمي -->
                 <div class="form-group-custom">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                         <label style="margin: 0;">الموكل <span style="color: #e11d48;">*</span></label>
@@ -600,75 +635,196 @@ input[type="date"].custom-input {
                             <i class="fa-solid fa-user-plus"></i> + إضافة موكل جديد
                         </button>
                     </div>
-                    <select name="client_id" id="clientSelect" class="form-control-custom">
+                    <select name="client_id" id="clientSelect" class="form-control-custom" onchange="onClientFieldChanged()">
                         <option value="">-- اختر موكلاً مسجلاً أو أدخل اسماً أدناه --</option>
                         {% for c in clients %}
                         <option value="{{ c.id }}">{{ c.name }} {% if c.phone %}({{ c.phone }}){% endif %}</option>
                         {% endfor %}
                     </select>
-                    <!-- بديل كتابة اسم موكل جديد مباشرة لمنع التعطيل -->
                     <div style="margin-top: 6px;">
-                        <input type="text" name="client_name_input" id="clientNameInput" placeholder="أو أدخل اسم الموكل مباشرة إذا لم يكن بالقائمة..." class="form-control-custom" style="font-size: 0.85rem; padding: 8px 12px;">
+                        <input type="text" name="client_name_input" id="clientNameInput" placeholder="أو أدخل اسم الموكل مباشرة إذا لم يكن بالقائمة..." class="form-control-custom" style="font-size: 0.85rem; padding: 8px 12px;" oninput="onClientFieldChanged()">
                     </div>
+                </div>
+
+                <!-- مركز الموكل (يظهر/يتحدد فور اختيار الموكل بالخيارات المناسبة للجهة) -->
+                <div class="form-group-custom" id="clientCapacityWrapper">
+                    <label>مركز الموكل في القضية <span style="color: #e11d48;">*</span></label>
+                    <select name="client_capacity" id="clientCapacitySelect" class="form-control-custom" required>
+                        {% if section_key == 'police' %}
+                            <option value="شاكي" selected>شاكي</option>
+                            <option value="مشكو في حقه">مشكو في حقه</option>
+                            <option value="مدعي">مدعي</option>
+                            <option value="مدعى عليه">مدعى عليه</option>
+                        {% elif section_key == 'prosecution' %}
+                            <option value="مجني عليه" selected>مجني عليه</option>
+                            <option value="متهم">متهم</option>
+                            <option value="مدعي بالحق الشخصي / المدني">مدعي بالحق الشخصي / المدني</option>
+                            <option value="مبلغ">مبلغ</option>
+                        {% elif section_key == 'first_instance' %}
+                            <option value="مدعي" selected>مدعي</option>
+                            <option value="مدعى عليه">مدعى عليه</option>
+                            <option value="متدخل في الدعوى">متدخل في الدعوى</option>
+                        {% elif section_key == 'appeal' %}
+                            <option value="مستأنف" selected>مستأنف</option>
+                            <option value="مستأنف ضده">مستأنف ضده</option>
+                        {% elif section_key == 'supreme' %}
+                            <option value="طاعن" selected>طاعن</option>
+                            <option value="مطعون ضده">مطعون ضده</option>
+                        {% elif section_key == 'enforcement' %}
+                            <option value="طالب التنفيذ" selected>طالب التنفيذ</option>
+                            <option value="المنفذ ضده">المنفذ ضده</option>
+                        {% endif %}
+                    </select>
                 </div>
 
                 <!-- ================== الحقول الخاصة بكل قسم ================== -->
 
                 {% if section_key == 'police' %}
-                    <!-- 1. الشرطة -->
-                    <div class="form-group-custom">
-                        <label>الجهة الشرطية</label>
-                        <input type="text" name="police_station" placeholder="قسم شرطة المدينة / قسم شرطة الشعب..." class="form-control-custom">
+                    <!-- 1. القضايا المعروضة أمام الشرطة -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="form-group-custom">
+                            <label>تاريخ الوارد (متى وصلت إلى الشرطة) <span style="color: #e11d48;">*</span></label>
+                            <input type="date" name="document_date" required class="form-control-custom" onclick="this.showPicker()" onfocus="this.showPicker()">
+                        </div>
+                        <div class="form-group-custom">
+                            <label>موضوع القضية</label>
+                            <select name="case_subject" class="form-control-custom">
+                                <option value="سرقة">سرقة</option>
+                                <option value="نزاع">نزاع</option>
+                                <option value="تجارية">تجارية</option>
+                                <option value="اعتداء / مشاجرة">اعتداء / مشاجرة</option>
+                                <option value="خيانة أمانة / نصب">خيانة أمانة / نصب</option>
+                                <option value="أخرى">أخرى</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                         <div class="form-group-custom">
                             <label>رقم المحضر / البلاغ <span style="color: #e11d48;">*</span></label>
-                            <input type="text" name="police_report_number" id="refNumberInput" onblur="checkDuplicateNumber()" placeholder="أدخل رقم المحضر أو البلاغ" required class="form-control-custom">
+                            <input type="text" name="police_report_number" id="refNumberInput" onblur="checkDuplicateNumber()" placeholder="أدخل رقم المحضر بالشرطة" required class="form-control-custom">
                         </div>
                         <div class="form-group-custom">
-                            <label>تاريخ المستند <span style="color: #e11d48;">*</span></label>
-                            <input type="date" name="document_date" required class="form-control-custom" onclick="this.showPicker()" onfocus="this.showPicker()" style="cursor: pointer;">
+                            <label>الجهة الشرطية</label>
+                            <input type="text" name="police_station" placeholder="قسم شرطة المدينة / قسم شرطة الشعب..." class="form-control-custom">
                         </div>
+                    </div>
+
+                    <div class="form-group-custom">
+                        <label>حالة الدعوى عند ورودها في المكتب</label>
+                        <select name="incoming_status_at_reception" class="form-control-custom">
+                            <option value="مبتدأة" selected>مبتدأة</option>
+                            <option value="منظورة أمام الشرطة">منظورة أمام الشرطة</option>
+                            <option value="مجهزة للإحالة للنيابة">مجهزة للإحالة للنيابة</option>
+                        </select>
                     </div>
 
                 {% elif section_key == 'prosecution' %}
-                    <!-- 2. النيابة العامة -->
-                    <div class="form-group-custom">
-                        <label>اسم النيابة المختصة</label>
-                        <input type="text" name="prosecution_name" placeholder="نيابة غرب أمانة العاصمة / نيابة بني الحارث..." class="form-control-custom">
+                    <!-- 2. القضايا المنظورة أمام النيابة -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="form-group-custom">
+                            <label>تاريخ الوارد (متى وصلت إلى النيابة) <span style="color: #e11d48;">*</span></label>
+                            <input type="date" name="prosecution_decision_date" required class="form-control-custom" onclick="this.showPicker()" onfocus="this.showPicker()">
+                        </div>
+                        <div class="form-group-custom">
+                            <label>رقم القضية في النيابة <span style="color: #e11d48;">*</span></label>
+                            <input type="text" name="prosecution_file_number" id="refNumberInput" onblur="checkDuplicateNumber()" placeholder="أدخل رقم القضية بالنيابة" required class="form-control-custom">
+                        </div>
                     </div>
 
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                         <div class="form-group-custom">
-                            <label>رقم الملف لدى النيابة <span style="color: #e11d48;">*</span></label>
-                            <input type="text" name="prosecution_file_number" id="refNumberInput" onblur="checkDuplicateNumber()" placeholder="أدخل رقم الملف" required class="form-control-custom">
+                            <label>اسم النيابة المختصة</label>
+                            <input type="text" name="prosecution_name" placeholder="نيابة غرب الأمانة / نيابة الأموال العامة..." class="form-control-custom">
                         </div>
                         <div class="form-group-custom">
-                            <label>تاريخ قرار الإحالة / المستند</label>
-                            <input type="date" name="prosecution_decision_date" class="form-control-custom" onclick="this.showPicker()" onfocus="this.showPicker()" style="cursor: pointer;">
+                            <label>نوع القضية</label>
+                            <select name="case_subject" class="form-control-custom">
+                                <option value="سرقة">سرقة</option>
+                                <option value="نزاع">نزاع</option>
+                                <option value="تجارية">تجارية</option>
+                                <option value="قتل">قتل</option>
+                                <option value="أموال عامة">أموال عامة</option>
+                                <option value="أخرى">أخرى</option>
+                            </select>
                         </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="form-group-custom">
+                            <label>وصف الجريمة / التكييف</label>
+                            <select name="crime_classification" class="form-control-custom">
+                                <option value="جريمة جسيمة">جريمة جسيمة</option>
+                                <option value="غير جسيمة">غير جسيمة</option>
+                                <option value="مخالفة">مخالفة</option>
+                            </select>
+                        </div>
+                        <div class="form-group-custom">
+                            <label>عضو النيابة المحقق</label>
+                            <input type="text" name="prosecutor_member_name" placeholder="اسم وكيل أو عضو النيابة المحقق" class="form-control-custom">
+                        </div>
+                    </div>
+
+                    <div class="form-group-custom">
+                        <label>التصرف في القضية</label>
+                        <select name="prosecution_disposition" class="form-control-custom">
+                            <option value="قيد التحقيق">قيد التحقيق</option>
+                            <option value="إحالة إلى المحكمة الابتدائية">إحالة إلى المحكمة الابتدائية</option>
+                            <option value="حفظ أوراق / مؤقت">حفظ أوراق / مؤقت</option>
+                            <option value="قرار بأن لا وجه لإقامة الدعوى">قرار بأن لا وجه لإقامة الدعوى</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group-custom">
+                        <label>موقف المكتب من تصرف النيابة (مع إمكانية إرفاق ملف أو صورة)</label>
+                        <textarea name="office_position_on_prosecution" rows="2" placeholder="موقف المكتب القانوني والدفوع المقدمة..." class="form-control-custom"></textarea>
+                        <div style="margin-top: 6px;">
+                            <input type="file" name="office_position_file" class="form-control-custom" style="font-size: 0.82rem; padding: 6px;">
+                        </div>
+                    </div>
+
+                    <div class="form-group-custom">
+                        <label>المسار النهائي للقضية</label>
+                        <input type="text" name="final_case_path" placeholder="تحديد المسار الإجرائي المتوقع أو المنتهي إليه" class="form-control-custom">
                     </div>
 
                 {% elif section_key == 'first_instance' %}
-                    <!-- 3. المحكمة الابتدائية -->
-                    <div class="form-group-custom">
-                        <label>اسم المحكمة <span style="color: #e11d48;">*</span></label>
-                        <input type="text" name="court_name" placeholder="المحكمة الابتدائية - أمانة العاصمة / تعز..." required class="form-control-custom">
-                    </div>
-
+                    <!-- 3. القضايا المنظورة أمام المحكمة الابتدائية -->
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                         <div class="form-group-custom">
-                            <label>رقم القضية <span style="color: #e11d48;">*</span></label>
-                            <input type="text" name="court_case_number" id="refNumberInput" onblur="checkDuplicateNumber()" placeholder="أدخل رقم القضية" required class="form-control-custom">
+                            <label>تاريخ الوارد (متى قيدت بالمحكمة) <span style="color: #e11d48;">*</span></label>
+                            <input type="date" name="document_date" required class="form-control-custom" onclick="this.showPicker()" onfocus="this.showPicker()">
                         </div>
                         <div class="form-group-custom">
-                            <label>السنة</label>
-                            <input type="text" name="case_year" value="2025" placeholder="مثال: 2025" class="form-control-custom">
+                            <label>رقم القضية بالمحكمة الابتدائية <span style="color: #e11d48;">*</span></label>
+                            <input type="text" name="court_case_number" id="refNumberInput" onblur="checkDuplicateNumber()" placeholder="أدخل رقم القضية الابتدائية" required class="form-control-custom">
                         </div>
                     </div>
 
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="form-group-custom">
+                            <label>اسم المحكمة المنظورة أمامها <span style="color: #e11d48;">*</span></label>
+                            <input type="text" name="court_name" placeholder="محكمة جنوب الأمانة / محكمة غرب تعز..." required class="form-control-custom">
+                        </div>
+                        <div class="form-group-custom">
+                            <label>القاضي المنظورة أمامه</label>
+                            <input type="text" name="court_judge_name" placeholder="فضيلة القاضي..." class="form-control-custom">
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="form-group-custom">
+                            <label>نوع القضية</label>
+                            <select name="case_subject" class="form-control-custom">
+                                <option value="مدني">مدني</option>
+                                <option value="تجاري">تجاري</option>
+                                <option value="جنائي">جنائي</option>
+                                <option value="أحوال شخصية">أحوال شخصية</option>
+                                <option value="إداري">إداري</option>
+                                <option value="عمالي">عمالي</option>
+                                <option value="أخرى">أخرى</option>
+                            </select>
+                        </div>
                         <div class="form-group-custom">
                             <label>المستند القضائي</label>
                             <select name="judicial_document_type" class="form-control-custom">
@@ -679,80 +835,213 @@ input[type="date"].custom-input {
                                 <option value="أخرى">أخرى</option>
                             </select>
                         </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
                         <div class="form-group-custom">
-                            <label>صفة الموكل</label>
-                            <select name="client_capacity" class="form-control-custom">
-                                <option value="مدعٍ">مدعٍ</option>
-                                <option value="مدعى عليه">مدعى عليه</option>
-                                <option value="متدخل">متدخل في الدعوى</option>
-                                <option value="طاعن">طاعن</option>
-                                <option value="مطعون ضده">مطعون ضده</option>
-                            </select>
+                            <label>تاريخ بداية الجلسات</label>
+                            <input type="date" name="hearing_start_date" class="form-control-custom" onclick="this.showPicker()" onfocus="this.showPicker()">
+                        </div>
+                        <div class="form-group-custom">
+                            <label>حجز القضية للحكم</label>
+                            <input type="date" name="case_reserved_for_judgment_date" class="form-control-custom" onclick="this.showPicker()" onfocus="this.showPicker()">
+                        </div>
+                        <div class="form-group-custom">
+                            <label>تاريخ صدور الحكم</label>
+                            <input type="date" name="judgment_date" class="form-control-custom" onclick="this.showPicker()" onfocus="this.showPicker()">
+                        </div>
+                    </div>
+
+                    <div class="form-group-custom">
+                        <label>منطوق الحكم الابتدائي (مع إمكانية إضافة ملف أو صورة)</label>
+                        <textarea name="subject_description" rows="2" placeholder="ملخص ومنطوق الحكم الصادر..." class="form-control-custom"></textarea>
+                        <div style="margin-top: 6px;">
+                            <input type="file" name="decision_file" class="form-control-custom" style="font-size: 0.82rem; padding: 6px;">
+                        </div>
+                    </div>
+
+                    <div class="form-group-custom">
+                        <label>موقف المكتب من الحكم الابتدائي (مع إمكانية إضافة ملف أو صورة)</label>
+                        <textarea name="office_position_on_court" rows="2" placeholder="موقف المكتب من الحكم (قبول / استئناف / طعن)..." class="form-control-custom"></textarea>
+                        <div style="margin-top: 6px;">
+                            <input type="file" name="office_position_file" class="form-control-custom" style="font-size: 0.82rem; padding: 6px;">
                         </div>
                     </div>
 
                 {% elif section_key == 'appeal' %}
-                    <!-- 4. المحكمة الاستئنافية -->
-                    <div class="form-group-custom">
-                        <label>اسم محكمة الاستئناف <span style="color: #e11d48;">*</span></label>
-                        <input type="text" name="appeal_court_name" placeholder="محكمة الاستئناف - أمانة العاصمة / الشعبة المدنية..." required class="form-control-custom">
-                    </div>
-
+                    <!-- 4. القضايا المنظورة أمام محكمة الاستئناف -->
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="form-group-custom">
+                            <label>تاريخ الوارد (متى قيد الاستئناف) <span style="color: #e11d48;">*</span></label>
+                            <input type="date" name="document_date" required class="form-control-custom" onclick="this.showPicker()" onfocus="this.showPicker()">
+                        </div>
                         <div class="form-group-custom">
                             <label>رقم القضية الاستئنافية <span style="color: #e11d48;">*</span></label>
                             <input type="text" name="appeal_case_number" id="refNumberInput" onblur="checkDuplicateNumber()" placeholder="أدخل رقم الاستئناف" required class="form-control-custom">
                         </div>
+                    </div>
+
+                    <div class="form-group-custom">
+                        <label>محكمة الاستئناف والشعبة المنظورة أمامها <span style="color: #e11d48;">*</span></label>
+                        <input type="text" name="appeal_court_name" placeholder="محكمة استئناف الأمانة - الشعبة المدنية الأولى..." required class="form-control-custom">
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                         <div class="form-group-custom">
-                            <label>السنة</label>
-                            <input type="text" name="appeal_year" value="2025" class="form-control-custom">
+                            <label>رقم القضية الابتدائية السابقة</label>
+                            <input type="text" name="primary_case_number" placeholder="رقم الحكم / القضية الابتدائية" class="form-control-custom">
+                        </div>
+                        <div class="form-group-custom">
+                            <label>تاريخ الحكم الابتدائي السابق</label>
+                            <input type="date" name="primary_judgment_date" class="form-control-custom" onclick="this.showPicker()" onfocus="this.showPicker()">
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                        <div class="form-group-custom">
+                            <label>تاريخ الجلسات</label>
+                            <input type="date" name="hearing_start_date" class="form-control-custom" onclick="this.showPicker()" onfocus="this.showPicker()">
+                        </div>
+                        <div class="form-group-custom">
+                            <label>حجز القضية للحكم</label>
+                            <input type="date" name="case_reserved_for_judgment_date" class="form-control-custom" onclick="this.showPicker()" onfocus="this.showPicker()">
+                        </div>
+                        <div class="form-group-custom">
+                            <label>صدور الحكم الاستئنافي</label>
+                            <input type="date" name="judgment_date" class="form-control-custom" onclick="this.showPicker()" onfocus="this.showPicker()">
+                        </div>
+                    </div>
+
+                    <div class="form-group-custom">
+                        <label>منطوق الحكم الاستئنافي (مع إمكانية إضافة ملف أو صورة)</label>
+                        <textarea name="appeal_judgment_decision" rows="2" placeholder="تأييد الحكم الابتدائي / تعديله / إلغاؤه..." class="form-control-custom"></textarea>
+                        <div style="margin-top: 6px;">
+                            <input type="file" name="decision_file" class="form-control-custom" style="font-size: 0.82rem; padding: 6px;">
+                        </div>
+                    </div>
+
+                    <div class="form-group-custom">
+                        <label>موقف المكتب من الحكم الاستئنافي (مع إمكانية إضافة ملف أو صورة)</label>
+                        <textarea name="office_position_on_appeal" rows="2" placeholder="موقف المكتب (الطعن بالنقض / الرضا بالحكم)..." class="form-control-custom"></textarea>
+                        <div style="margin-top: 6px;">
+                            <input type="file" name="office_position_file" class="form-control-custom" style="font-size: 0.82rem; padding: 6px;">
+                        </div>
+                    </div>
+
+                {% elif section_key == 'supreme' %}
+                    <!-- 5. القضايا المنظورة أمام المحكمة العليا / الطعون بالنقض -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="form-group-custom">
+                            <label>تاريخ الوارد (متى قيد الطعن بالنقض) <span style="color: #e11d48;">*</span></label>
+                            <input type="date" name="document_date" required class="form-control-custom" onclick="this.showPicker()" onfocus="this.showPicker()">
+                        </div>
+                        <div class="form-group-custom">
+                            <label>رقم الطعن بالنقض <span style="color: #e11d48;">*</span></label>
+                            <input type="text" name="court_case_number" id="refNumberInput" onblur="checkDuplicateNumber()" placeholder="أدخل رقم الطعن بالنقض" required class="form-control-custom">
                         </div>
                     </div>
 
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                         <div class="form-group-custom">
-                            <label>رقم القضية الابتدائية (إن وجد)</label>
-                            <input type="text" name="primary_case_number" placeholder="رقم القضية الابتدائية السابقة" class="form-control-custom">
+                            <label>المحكمة العليا والدائرة المنظورة أمامها <span style="color: #e11d48;">*</span></label>
+                            <input type="text" name="supreme_court_name" placeholder="المحكمة العليا - الدائرة المدنية / التجارية..." required class="form-control-custom">
                         </div>
                         <div class="form-group-custom">
-                            <label>تاريخ الحكم الابتدائي (إن وجد)</label>
-                            <input type="date" name="primary_judgment_date" class="form-control-custom" onclick="this.showPicker()" onfocus="this.showPicker()" style="cursor: pointer;">
+                            <label>الدائرة القضائية</label>
+                            <input type="text" name="supreme_chamber" placeholder="الدائرة الأولى / الدائرة الثانية..." class="form-control-custom">
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="form-group-custom">
+                            <label>تاريخ تقديم الطعن بالنقض</label>
+                            <input type="date" name="cassation_date" class="form-control-custom" onclick="this.showPicker()" onfocus="this.showPicker()">
+                        </div>
+                        <div class="form-group-custom">
+                            <label>تاريخ إرسال الملف للمحكمة العليا</label>
+                            <input type="date" name="appeal_file_dispatch_date" class="form-control-custom" onclick="this.showPicker()" onfocus="this.showPicker()">
+                        </div>
+                    </div>
+
+                    <div class="form-group-custom">
+                        <label>الحكم الاستئنافي المطعون فيه</label>
+                        <input type="text" name="challenged_appeal_judgment" placeholder="رقم وتاريخ الحكم الاستئنافي المطعون ضده بالنقض" class="form-control-custom">
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 12px;">
+                        <div class="form-group-custom">
+                            <label>تاريخ صدور قرار المحكمة العليا</label>
+                            <input type="date" name="judgment_date" class="form-control-custom" onclick="this.showPicker()" onfocus="this.showPicker()">
+                        </div>
+                    </div>
+
+                    <div class="form-group-custom">
+                        <label>منطوق قرار المحكمة العليا (مع إمكانية إضافة ملف أو صورة)</label>
+                        <textarea name="supreme_court_decision" rows="2" placeholder="قبول الطعن شكلاً وموضوعاً ونقض الحكم / رفض الطعن..." class="form-control-custom"></textarea>
+                        <div style="margin-top: 6px;">
+                            <input type="file" name="decision_file" class="form-control-custom" style="font-size: 0.82rem; padding: 6px;">
+                        </div>
+                    </div>
+
+                    <div class="form-group-custom">
+                        <label>موقف المكتب من قرار المحكمة العليا (مع إمكانية إضافة ملف أو صورة)</label>
+                        <textarea name="office_position_on_supreme" rows="2" placeholder="موقف المكتب من قرار المحكمة العليا والإجراءات القادمة..." class="form-control-custom"></textarea>
+                        <div style="margin-top: 6px;">
+                            <input type="file" name="office_position_file" class="form-control-custom" style="font-size: 0.82rem; padding: 6px;">
                         </div>
                     </div>
 
                 {% elif section_key == 'enforcement' %}
-                    <!-- 5. التنفيذ -->
-                    <div class="form-group-custom">
-                        <label>جهة التنفيذ المختصة <span style="color: #e11d48;">*</span></label>
-                        <input type="text" name="enforcement_authority" placeholder="إدارة التنفيذ - أمانة العاصمة / محكمة التنفيذ..." required class="form-control-custom">
-                    </div>
-
+                    <!-- 6. القضايا المنظورة أمام التنفيذ -->
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="form-group-custom">
+                            <label>نوع التنفيذ <span style="color: #e11d48;">*</span></label>
+                            <select name="execution_type" class="form-control-custom" required>
+                                <option value="تنفيذ حكم قضائي" selected>تنفيذ حكم قضائي</option>
+                                <option value="تنفيذ سند لأمر">تنفيذ سند لأمر</option>
+                                <option value="شيك بنكي">شيك بنكي</option>
+                                <option value="كمبيالة">كمبيالة</option>
+                                <option value="إخلاء عقار">إخلاء عقار</option>
+                                <option value="قرار تحكيمي معتمد">قرار تحكيمي معتمد</option>
+                                <option value="عقد موثق">عقد موثق</option>
+                                <option value="أخرى">أخرى</option>
+                            </select>
+                        </div>
                         <div class="form-group-custom">
                             <label>رقم ملف التنفيذ <span style="color: #e11d48;">*</span></label>
                             <input type="text" name="enforcement_file_number" id="refNumberInput" onblur="checkDuplicateNumber()" placeholder="أدخل رقم ملف التنفيذ" required class="form-control-custom">
                         </div>
-                        <div class="form-group-custom">
-                            <label>السند التنفيذي / الحكم</label>
-                            <select name="enforcement_document_type" class="form-control-custom">
-                                <option value="حكم قضائي واجب النفاذ">حكم قضائي واجب النفاذ</option>
-                                <option value="سند لأمر">سند لأمر</option>
-                                <option value="شيك بنكي">شيك بنكي</option>
-                                <option value="عقد موثق">عقد موثق</option>
-                                <option value="قرار تحكيمي">قرار تحكيمي معتمد</option>
-                                <option value="أخرى">أخرى</option>
-                            </select>
-                        </div>
                     </div>
 
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                         <div class="form-group-custom">
-                            <label>أطراف التنفيذ</label>
-                            <input type="text" name="enforcement_parties" placeholder="طالب التنفيذ والمنفذ ضده..." class="form-control-custom">
+                            <label>الجهة المنظورة أمامها بالتنفيذ <span style="color: #e11d48;">*</span></label>
+                            <input type="text" name="enforcement_authority" placeholder="دائرة التنفيذ - محكمة جنوب الأمانة..." required class="form-control-custom">
                         </div>
                         <div class="form-group-custom">
-                            <label>تاريخ السند</label>
-                            <input type="date" name="enforcement_document_date" class="form-control-custom" onclick="this.showPicker()" onfocus="this.showPicker()" style="cursor: pointer;">
+                            <label>تاريخ السند / الوارد</label>
+                            <input type="date" name="enforcement_document_date" class="form-control-custom" onclick="this.showPicker()" onfocus="this.showPicker()">
+                        </div>
+                    </div>
+
+                    <div class="form-group-custom">
+                        <label>موضوع التنفيذ (مع إمكانية إضافة ملف أو صورة)</label>
+                        <textarea name="execution_subject" rows="2" placeholder="موضوع طلب التنفيذ والمبالغ أو الالتزامات المطالب بها..." class="form-control-custom"></textarea>
+                        <div style="margin-top: 6px;">
+                            <input type="file" name="execution_file" class="form-control-custom" style="font-size: 0.82rem; padding: 6px;">
+                        </div>
+                    </div>
+
+                    <div class="form-group-custom">
+                        <label>ما تم بشأنه (الإجراءات المتخذة)</label>
+                        <textarea name="execution_actions_taken" rows="2" placeholder="إعلان تنفيذي، حجز تحفظي، منع من السفر، ضبط وإحضار..." class="form-control-custom"></textarea>
+                    </div>
+
+                    <div class="form-group-custom">
+                        <label>موقف المكتب من التنفيذ (مع إمكانية إضافة ملف أو صورة)</label>
+                        <textarea name="office_position_on_execution" rows="2" placeholder="موقف المكتب القانوني والمذكرات المرفوعة..." class="form-control-custom"></textarea>
+                        <div style="margin-top: 6px;">
+                            <input type="file" name="office_position_file" class="form-control-custom" style="font-size: 0.82rem; padding: 6px;">
                         </div>
                     </div>
 
@@ -762,7 +1051,7 @@ input[type="date"].custom-input {
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                     <div class="form-group-custom">
                         <label>تاريخ الاستلام في المكتب <span style="color: #e11d48;">*</span></label>
-                        <input type="date" name="reception_date" value="{{ today_date }}" required class="form-control-custom" onclick="this.showPicker()" onfocus="this.showPicker()" style="cursor: pointer;">
+                        <input type="date" name="reception_date" value="{{ today_date }}" required class="form-control-custom" onclick="this.showPicker()" onfocus="this.showPicker()">
                     </div>
                     <div class="form-group-custom">
                         <label>حالة اكتمال الملف</label>
@@ -774,13 +1063,13 @@ input[type="date"].custom-input {
                     </div>
                 </div>
 
-                <!-- المستندات المرفقة (زر رفع الملفات كما في الصورة) -->
+                <!-- المستندات المرفقة (رفع الملفات المتعددة) -->
                 <div class="form-group-custom">
-                    <label>المستندات المرفقة</label>
+                    <label>المستندات والصور المرفقة</label>
                     <div style="border: 2px dashed #cbd5e1; border-radius: 10px; padding: 14px; text-align: center; background: #f8fafc;">
                         <input type="file" name="files" id="fileUploadInput" multiple style="display: none;" onchange="updateSelectedFiles(this)">
                         <button type="button" onclick="document.getElementById('fileUploadInput').click()" style="background: #0284c7; color: #ffffff; border: none; padding: 8px 18px; border-radius: 8px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem;">
-                            <i class="fa-solid fa-cloud-arrow-up"></i> رفع الملفات
+                            <i class="fa-solid fa-cloud-arrow-up"></i> رفع المستندات أو الصور
                         </button>
                         <p style="font-size: 0.8rem; color: #64748b; margin: 8px 0 0 0;">
                             PDF, Word (DOCX), الصور (JPG, PNG) - حتى 25 ميغابايت لكل ملف
@@ -791,14 +1080,14 @@ input[type="date"].custom-input {
 
                 <!-- الملاحظات والوصف -->
                 <div class="form-group-custom">
-                    <label>ملاحظات الاستقبال</label>
+                    <label>ملاحظات أخرى</label>
                     <textarea name="notes" rows="2" placeholder="أدخل أي ملاحظات إضافية حول الملف المستلم..." class="form-control-custom"></textarea>
                 </div>
 
-                <!-- أزرار الإجراء (حفظ وإلغاء في الأسفل كما في الصورة) -->
+                <!-- أزرار الإجراء (حفظ وإلغاء في الأسفل) -->
                 <div style="display: flex; gap: 10px; margin-top: 24px;">
                     <button type="submit" class="btn" style="flex: 2; background: #2563eb; color: #ffffff; border: none; padding: 11px; border-radius: 8px; font-weight: 800; cursor: pointer; font-size: 0.95rem;">
-                        <i class="fa-solid fa-check"></i> حفظ
+                        <i class="fa-solid fa-check"></i> حفظ الملف الوارد
                     </button>
                     <button type="reset" class="btn" style="flex: 1; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 11px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.95rem;">
                         إلغاء
@@ -1115,6 +1404,19 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+// Dynamically handle client selection to ensure capacity is visible and highlighted
+function onClientFieldChanged() {
+    const wrapper = document.getElementById('clientCapacityWrapper');
+    const capSelect = document.getElementById('clientCapacitySelect');
+    if (wrapper) {
+        wrapper.style.display = 'block';
+    }
+    if (capSelect) {
+        capSelect.style.borderColor = '#2563eb';
+        setTimeout(() => { capSelect.style.borderColor = '#cbd5e1'; }, 1000);
+    }
+}
+
 // 2. Focus the create form when "+ إضافة ملف جديد" clicked
 function focusCreateForm() {
     const formCard = document.getElementById('receptionFormCard');
@@ -1321,61 +1623,97 @@ function openDetailsModal(id) {
             if (data.section_key === 'police') {
                 sectionSpecificHtml = `
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #f8fafc; padding: 12px; border-radius: 10px; margin-bottom: 12px;">
-                        <div><strong>الجهة الشرطية:</strong> ${data.police_station || '-'}</div>
+                        <div><strong>تاريخ الوارد:</strong> ${data.document_date || '-'}</div>
                         <div><strong>رقم المحضر / البلاغ:</strong> ${data.police_report_number || '-'}</div>
-                        <div><strong>تاريخ المستند:</strong> ${data.document_date || '-'}</div>
-                        <div><strong>حالة الإحالة:</strong> ${data.police_referral_status || 'غير محددة'}</div>
+                        <div><strong>الجهة الشرطية:</strong> ${data.police_station || '-'}</div>
+                        <div><strong>موضوع القضية:</strong> ${data.case_subject || '-'}</div>
+                        <div><strong>حالة الدعوى عند الورود:</strong> ${data.incoming_status_at_reception || 'مبتدأة'}</div>
                     </div>
                 `;
             } else if (data.section_key === 'prosecution') {
                 sectionSpecificHtml = `
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #f8fafc; padding: 12px; border-radius: 10px; margin-bottom: 12px;">
-                        <div><strong>اسم النيابة:</strong> ${data.prosecution_name || '-'}</div>
+                        <div><strong>تاريخ الوارد:</strong> ${data.prosecution_decision_date || '-'}</div>
                         <div><strong>رقم ملف النيابة:</strong> ${data.prosecution_file_number || '-'}</div>
-                        <div><strong>تاريخ القرار / المستند:</strong> ${data.prosecution_decision_date || '-'}</div>
+                        <div><strong>اسم النيابة:</strong> ${data.prosecution_name || '-'}</div>
+                        <div><strong>نوع القضية:</strong> ${data.case_subject || '-'}</div>
+                        <div><strong>التكييف القانوني:</strong> ${data.crime_classification || '-'}</div>
+                        <div><strong>عضو النيابة المحقق:</strong> ${data.prosecutor_member_name || '-'}</div>
+                        <div><strong>التصرف في القضية:</strong> ${data.prosecution_disposition || 'قيد التحقيق'}</div>
+                        <div><strong>المسار النهائي:</strong> ${data.final_case_path || '-'}</div>
                     </div>
+                    ${data.office_position_on_prosecution ? `<div style="background: #f0fdf4; border-right: 4px solid #16a34a; padding: 10px; border-radius: 6px; margin-bottom: 12px;"><strong>موقف المكتب من تصرف النيابة:</strong><p style="margin: 4px 0 0 0;">${data.office_position_on_prosecution}</p></div>` : ''}
                 `;
             } else if (data.section_key === 'first_instance') {
                 sectionSpecificHtml = `
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #f8fafc; padding: 12px; border-radius: 10px; margin-bottom: 12px;">
-                        <div><strong>المحكمة:</strong> ${data.court_name || '-'}</div>
-                        <div><strong>رقم القضية:</strong> ${data.court_case_number || '-'}</div>
-                        <div><strong>السنة:</strong> ${data.case_year || '-'}</div>
+                        <div><strong>تاريخ الوارد:</strong> ${data.document_date || '-'}</div>
+                        <div><strong>رقم القضية الابتدائية:</strong> ${data.court_case_number || '-'}</div>
+                        <div><strong>اسم المحكمة:</strong> ${data.court_name || '-'}</div>
+                        <div><strong>القاضي:</strong> ${data.court_judge_name || '-'}</div>
+                        <div><strong>نوع القضية:</strong> ${data.case_subject || '-'}</div>
                         <div><strong>المستند القضائي:</strong> ${data.judicial_document_type || '-'}</div>
-                        <div><strong>صفة الموكل:</strong> ${data.client_capacity || '-'}</div>
+                        <div><strong>بداية الجلسات:</strong> ${data.hearing_start_date || '-'}</div>
+                        <div><strong>حجز للحكم:</strong> ${data.case_reserved_for_judgment_date || '-'}</div>
+                        <div><strong>تاريخ صدور الحكم:</strong> ${data.judgment_date || '-'}</div>
                     </div>
+                    ${data.subject_description ? `<div style="background: #eff6ff; border-right: 4px solid #2563eb; padding: 10px; border-radius: 6px; margin-bottom: 12px;"><strong>منطوق الحكم الابتدائي:</strong><p style="margin: 4px 0 0 0;">${data.subject_description}</p></div>` : ''}
+                    ${data.office_position_on_court ? `<div style="background: #f0fdf4; border-right: 4px solid #16a34a; padding: 10px; border-radius: 6px; margin-bottom: 12px;"><strong>موقف المكتب من الحكم:</strong><p style="margin: 4px 0 0 0;">${data.office_position_on_court}</p></div>` : ''}
                 `;
             } else if (data.section_key === 'appeal') {
                 sectionSpecificHtml = `
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #f8fafc; padding: 12px; border-radius: 10px; margin-bottom: 12px;">
-                        <div><strong>محكمة الاستئناف:</strong> ${data.appeal_court_name || '-'}</div>
+                        <div><strong>تاريخ الوارد:</strong> ${data.document_date || '-'}</div>
                         <div><strong>رقم الاستئناف:</strong> ${data.appeal_case_number || '-'}</div>
-                        <div><strong>السنة:</strong> ${data.appeal_year || '-'}</div>
-                        <div><strong>رقم القضية الابتدائية:</strong> ${data.primary_case_number || '-'}</div>
-                        <div><strong>تاريخ الحكم الابتدائي:</strong> ${data.primary_judgment_date || '-'}</div>
+                        <div><strong>محكمة الاستئناف:</strong> ${data.appeal_court_name || '-'}</div>
+                        <div><strong>القضية الابتدائية السابقة:</strong> ${data.primary_case_number || '-'} (${data.primary_judgment_date || '-'})</div>
+                        <div><strong>تاريخ الجلسات:</strong> ${data.hearing_start_date || '-'}</div>
+                        <div><strong>حجز للحكم:</strong> ${data.case_reserved_for_judgment_date || '-'}</div>
+                        <div><strong>صدور الحكم الاستئنافي:</strong> ${data.judgment_date || '-'}</div>
                     </div>
+                    ${data.appeal_judgment_decision ? `<div style="background: #eff6ff; border-right: 4px solid #7c3aed; padding: 10px; border-radius: 6px; margin-bottom: 12px;"><strong>منطوق الحكم الاستئنافي:</strong><p style="margin: 4px 0 0 0;">${data.appeal_judgment_decision}</p></div>` : ''}
+                    ${data.office_position_on_appeal ? `<div style="background: #f0fdf4; border-right: 4px solid #16a34a; padding: 10px; border-radius: 6px; margin-bottom: 12px;"><strong>موقف المكتب من الحكم الاستئنافي:</strong><p style="margin: 4px 0 0 0;">${data.office_position_on_appeal}</p></div>` : ''}
+                `;
+            } else if (data.section_key === 'supreme') {
+                sectionSpecificHtml = `
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #f8fafc; padding: 12px; border-radius: 10px; margin-bottom: 12px;">
+                        <div><strong>تاريخ الوارد:</strong> ${data.document_date || '-'}</div>
+                        <div><strong>رقم الطعن بالنقض:</strong> ${data.court_case_number || '-'}</div>
+                        <div><strong>المحكمة والدائرة:</strong> ${data.supreme_court_name || '-'} (${data.supreme_chamber || '-'})</div>
+                        <div><strong>الحكم المطعون فيه:</strong> ${data.challenged_appeal_judgment || '-'}</div>
+                        <div><strong>تاريخ تقديم الطعن:</strong> ${data.cassation_date || '-'}</div>
+                        <div><strong>تاريخ إرسال الملف:</strong> ${data.appeal_file_dispatch_date || '-'}</div>
+                        <div><strong>صدور قرار العليا:</strong> ${data.judgment_date || '-'}</div>
+                    </div>
+                    ${data.supreme_court_decision ? `<div style="background: #fef3c7; border-right: 4px solid #b45309; padding: 10px; border-radius: 6px; margin-bottom: 12px;"><strong>منطوق قرار المحكمة العليا:</strong><p style="margin: 4px 0 0 0;">${data.supreme_court_decision}</p></div>` : ''}
+                    ${data.office_position_on_supreme ? `<div style="background: #f0fdf4; border-right: 4px solid #16a34a; padding: 10px; border-radius: 6px; margin-bottom: 12px;"><strong>موقف المكتب من قرار المحكمة العليا:</strong><p style="margin: 4px 0 0 0;">${data.office_position_on_supreme}</p></div>` : ''}
                 `;
             } else if (data.section_key === 'enforcement') {
                 sectionSpecificHtml = `
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #f8fafc; padding: 12px; border-radius: 10px; margin-bottom: 12px;">
-                        <div><strong>جهة التنفيذ:</strong> ${data.enforcement_authority || '-'}</div>
+                        <div><strong>نوع التنفيذ:</strong> ${data.execution_type || '-'}</div>
                         <div><strong>رقم ملف التنفيذ:</strong> ${data.enforcement_file_number || '-'}</div>
-                        <div><strong>السند التنفيذي:</strong> ${data.enforcement_document_type || '-'}</div>
-                        <div><strong>أطراف التنفيذ:</strong> ${data.enforcement_parties || '-'}</div>
+                        <div><strong>جهة التنفيذ:</strong> ${data.enforcement_authority || '-'}</div>
                         <div><strong>تاريخ السند:</strong> ${data.enforcement_document_date || '-'}</div>
                     </div>
+                    ${data.execution_subject ? `<div style="background: #f8fafc; padding: 10px; border-radius: 6px; margin-bottom: 10px;"><strong>موضوع التنفيذ:</strong> ${data.execution_subject}</div>` : ''}
+                    ${data.execution_actions_taken ? `<div style="background: #f8fafc; padding: 10px; border-radius: 6px; margin-bottom: 10px;"><strong>ما تم بشأنه (الإجراءات المتخذة):</strong> ${data.execution_actions_taken}</div>` : ''}
+                    ${data.office_position_on_execution ? `<div style="background: #f0fdf4; border-right: 4px solid #16a34a; padding: 10px; border-radius: 6px; margin-bottom: 12px;"><strong>موقف المكتب من التنفيذ:</strong><p style="margin: 4px 0 0 0;">${data.office_position_on_execution}</p></div>` : ''}
                 `;
             }
 
             body.innerHTML = `
                 <div style="margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;">
-                    <div><strong>الموكل:</strong> <span style="font-weight: 800; color: #0f172a; font-size: 1.05rem;">${data.client_name || '-'}</span></div>
+                    <div><strong>الموكل:</strong> <span style="font-weight: 800; color: #0f172a; font-size: 1.05rem;">${data.client_name || '-'}</span> ${data.client_capacity ? `<span style="font-size: 0.8rem; background: #eff6ff; color: #1d4ed8; padding: 2px 8px; border-radius: 4px; font-weight: 700; margin-right: 6px;">(${data.client_capacity})</span>` : ''}</div>
                     <div><strong>الحالة:</strong> <span class="badge-status ${statusClass}">${statusLabel}</span></div>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; font-size: 0.88rem; color: #475569;">
+                    <div><strong>المحامي المختص:</strong> <span style="font-weight: 700; color: #0f172a;">${data.assigned_lawyer_name || 'غير محدد'}</span></div>
                     <div><strong>تاريخ الاستلام في المكتب:</strong> ${data.reception_date}</div>
-                    <div><strong>سجل بواسطة:</strong> ${data.created_by} (${data.created_at})</div>
+                </div>
+                <div style="font-size: 0.84rem; color: #64748b; margin-bottom: 12px;">
+                    سجل بواسطة: ${data.created_by} (${data.created_at})
                 </div>
 
                 ${sectionSpecificHtml}
