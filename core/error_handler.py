@@ -259,7 +259,7 @@ def render_error_page(
 
         {debug_section}
 
-        <div class="error-actions" style="margin-top: 24px;">
+        <div class="error-actions" style="margin-top: 24px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
             <button onclick="window.location.reload()" class="btn-action btn-primary">
                 <i class="fa-solid fa-rotate-right"></i> تحديث الصفحة والمحاولة مجدداً
             </button>
@@ -268,6 +268,12 @@ def render_error_page(
             </button>
             <a href="/dashboard" class="btn-action btn-secondary">
                 <i class="fa-solid fa-house"></i> لوحة التحكم
+            </a>
+            <a href="/api/superadmin/exit-impersonate" class="btn-action" style="background: #e11d48; color: #ffffff; text-decoration: none;">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i> إنهاء الدعم الفني والعودة للمنصة
+            </a>
+            <a href="/logout" class="btn-action btn-secondary" style="color: #64748b;">
+                <i class="fa-solid fa-right-from-bracket"></i> تسجيل الخروج
             </a>
         </div>
     </div>

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, Depends, HTTPException
+from fastapi import APIRouter, Request, Depends, HTTPException, status
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -169,6 +169,9 @@ async def impersonate_office(office_id: int, request: Request, db: Session = Dep
         if not target_user:
             return JSONResponse({"success": False, "error": "لا يوجد مستخدمون نشطون في هذا المكتب لتسجيل الدخول كبديل لهم"}, status_code=404)
             
+        # Preserve current superadmin session token
+        existing_admin_token = request.cookies.get("session_token")
+            
         # Create a new active session for the target user
         token = str(uuid.uuid4())
         expires = datetime.now(timezone.utc) + timedelta(hours=4)  # 4 hours support session
@@ -189,6 +192,26 @@ async def impersonate_office(office_id: int, request: Request, db: Session = Dep
             "redirect_url": "/dashboard"
         })
         is_secure = not (request.url.hostname in ["127.0.0.1", "localhost"])
+        
+        # Save original superadmin session token so it can be restored on exit
+        if existing_admin_token:
+            response.set_cookie(
+                key="superadmin_session_token",
+                value=existing_admin_token,
+                httponly=True,
+                secure=is_secure,
+                samesite="Lax",
+                max_age=14400
+            )
+
+        response.set_cookie(
+            key="is_support_session",
+            value="1",
+            httponly=False,
+            secure=is_secure,
+            samesite="Lax",
+            max_age=14400
+        )
         response.set_cookie(
             key="session_token",
             value=token,
@@ -202,6 +225,46 @@ async def impersonate_office(office_id: int, request: Request, db: Session = Dep
         db.rollback()
         app_logger.error(f"Superadmin impersonate error: {e}")
         return JSONResponse({"success": False, "error": "حدث خطأ أثناء إنشاء جلسة الدخول"}, status_code=500)
+
+@router.api_route("/api/superadmin/exit-impersonate", methods=["GET", "POST"])
+async def exit_impersonate(request: Request, db: Session = Depends(get_db)):
+    """إنهاء جلسة الدعم الفني واستعادة جلسة المدير العام (SuperAdmin) فوراً"""
+    superadmin_token = request.cookies.get("superadmin_session_token")
+    redirect_url = "/superadmin"
+    response = RedirectResponse(url=redirect_url, status_code=status.HTTP_303_SEE_OTHER)
+    
+    is_secure = not (request.url.hostname in ["127.0.0.1", "localhost"])
+    
+    if superadmin_token:
+        token_hash = hash_session_token(superadmin_token)
+        now_str = datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%d %H:%M:%S")
+        admin_session = db.query(AuthSessions).filter(
+            AuthSessions.session_token.in_([superadmin_token, token_hash]),
+            AuthSessions.is_active == 1,
+            AuthSessions.expires_at > now_str
+        ).first()
+        
+        if admin_session:
+            response.set_cookie(
+                key="session_token",
+                value=superadmin_token,
+                httponly=True,
+                secure=is_secure,
+                samesite="Lax",
+                max_age=86400 * 7
+            )
+        else:
+            response = RedirectResponse(url="/login?msg=session_expired", status_code=status.HTTP_303_SEE_OTHER)
+            response.delete_cookie("session_token")
+    else:
+        response = RedirectResponse(url="/login?msg=support_ended", status_code=status.HTTP_303_SEE_OTHER)
+        response.delete_cookie("session_token")
+        
+    response.delete_cookie("superadmin_session_token")
+    response.delete_cookie("is_support_session")
+    
+    app_logger.info("SUPERADMIN_EXIT_IMPERSONATE | Support session ended, returning to superadmin.")
+    return response
 
 @router.post("/api/superadmin/update-plan/{office_id}")
 async def update_office_plan(office_id: int, request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):

@@ -143,6 +143,26 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
         if user.is_active == 0:
             return None
             
+        # Check if this is an impersonated technical support session
+        is_support_session = False
+        superadmin_token = request.cookies.get("superadmin_session_token")
+        if superadmin_token:
+            superadmin_token_hash = hash_session_token(superadmin_token)
+            admin_session = db.query(AuthSessions).filter(
+                AuthSessions.session_token.in_([superadmin_token, superadmin_token_hash]),
+                AuthSessions.is_active == 1,
+                AuthSessions.expires_at > now_str
+            ).first()
+            if admin_session:
+                admin_user = db.query(AccessProfiles).filter(
+                    AccessProfiles.id == admin_session.user_id,
+                    AccessProfiles.is_active == 1
+                ).first()
+                if admin_user and getattr(admin_user, 'is_superadmin', 0) == 1:
+                    is_support_session = True
+        
+        user.is_support_session = is_support_session
+
         # Superadmins bypass office blocks
         if getattr(user, 'is_superadmin', 0) == 1:
             return user
@@ -153,7 +173,7 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
             
         if user.office_id:
             office = db.query(LawOffices).filter(LawOffices.id == user.office_id).first()
-            if office and office.is_active == 0:
+            if office and office.is_active == 0 and not is_support_session:
                 return None
             if office:
                 user.subscription_plan = getattr(office, 'subscription_plan', 'trial')
@@ -185,6 +205,10 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
         
         from fastapi.exceptions import HTTPException
         from fastapi import status
+
+        # جلسات الدعم الفني بالنيابة تعبر دون قفل انتهاء الاشتراك أو حظر الأدوار لتتمكن الإدارة من فحص وحل مشاكل المكتب
+        if is_support_session:
+            return user
 
         # Subscription Lock Check
         is_api = path.startswith('/api/')

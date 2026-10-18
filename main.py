@@ -243,6 +243,13 @@ def _safe_error(tb_str: str = "") -> HTMLResponse:
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     accept = request.headers.get("accept", "")
     app_logger.warning(f"[HTTP_{exc.status_code}] Path: {request.url.path} | Detail: {exc.detail}")
+    # تحويلات إعادة التوجيه 3xx لا يجب إطلاقاً أن تظهر كصفحة خطأ
+    if 300 <= exc.status_code < 400:
+        redirect_url = "/"
+        if hasattr(exc, "headers") and exc.headers:
+            redirect_url = exc.headers.get("Location") or exc.headers.get("location") or "/"
+        return RedirectResponse(url=redirect_url, status_code=exc.status_code)
+
     if "text/html" in accept:
         return render_error_page(
             status_code=exc.status_code,

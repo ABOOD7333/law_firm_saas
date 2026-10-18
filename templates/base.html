@@ -435,6 +435,11 @@
             {% endif %}
         </ul>
         <div class="sidebar-footer">
+            {% if request.cookies.get('is_support_session') == '1' or (user and getattr(user, 'is_support_session', False)) %}
+            <a href="/api/superadmin/exit-impersonate" class="logout-btn" style="width: 100%; display: flex; align-items: center; gap: 8px; justify-content: center; background: #dc2626; color: #fff; text-decoration: none; padding: 10px; border-radius: 8px; font-weight: bold; margin-bottom: 8px; box-sizing: border-box;">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i> إنهاء الدعم الفني
+            </a>
+            {% endif %}
             <form action="/logout" method="POST" style="margin: 0; padding: 0;">
                 <button type="submit" class="logout-btn" style="width: 100%; border: none; background-color: transparent; text-align: right; font-family: inherit; font-size: inherit; cursor: pointer;">
                     <i class="fa-solid fa-arrow-right-from-bracket"></i> تسجيل خروج
@@ -445,6 +450,20 @@
 
     <!-- Main Content -->
     <main class="main-content">
+        <!-- Technical Support Active Banner -->
+        {% if request.cookies.get('is_support_session') == '1' or (user and getattr(user, 'is_support_session', False)) %}
+        <div style="background: linear-gradient(90deg, #991b1b, #dc2626); color: white; padding: 12px 24px; position: sticky; top: 0; z-index: 99999; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(220, 38, 38, 0.35); font-family: 'Cairo', sans-serif;">
+            <div style="display: flex; align-items: center; gap: 12px; font-size: 0.95rem;">
+                <i class="fa-solid fa-headset" style="font-size: 1.3rem;"></i>
+                <span><strong>وضع الدعم الفني النشط:</strong> أنت تتصفح هذا المكتب الآن كمدير عام / دعم فني.</span>
+            </div>
+            <a href="/api/superadmin/exit-impersonate" style="background: white; color: #dc2626; padding: 7px 18px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 0.9rem; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: inline-flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                إنهاء الدعم الفني والعودة للإدارة
+            </a>
+        </div>
+        {% endif %}
+
         <!-- Topbar -->
         <header class="topbar" style="flex-wrap: wrap; height: auto; min-height: 80px; padding-top: 10px; padding-bottom: 10px;">
             <button class="mobile-menu-btn" onclick="toggleSidebar()" aria-label="القائمة الجانبية" title="القائمة الجانبية" style="cursor: pointer; margin-left: 10px;">
