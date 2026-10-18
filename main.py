@@ -4225,6 +4225,11 @@ async def view_subscription(request: Request, db: Session = Depends(get_db)):
     user = get_current_user(request, db)
     if not user:
         return RedirectResponse(url="/", status_code=303)
+        
+    # جلسات الدعم الفني لا يتم حبسها في صفحة الاشتراكات
+    if (getattr(user, 'is_support_session', False) or request.cookies.get('is_support_session') == '1') and request.query_params.get("view") != "1":
+        return RedirectResponse(url="/dashboard", status_code=303)
+
     office = db.query(LawOffices).filter(LawOffices.id == user.office_id).first() if user.office_id else None
 
     payment_requests = []

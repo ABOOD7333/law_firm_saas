@@ -176,6 +176,16 @@ def init_db():
             conn.execute(text("ALTER TABLE law_offices ADD COLUMN disabled_modules_json TEXT DEFAULT '[]';"))
     except Exception:
         pass
+
+    # تجديد خطط المكاتب التجريبية المنتهية لضمان عمل واجهات النظام والمستخدمين التجريبيين دون حظر
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text(
+                "UPDATE law_offices SET subscription_plan = 'yearly', subscription_end = '2030-01-01 00:00:00', is_active = 1 WHERE is_active = 1 AND (subscription_plan = 'trial' OR subscription_end IS NULL OR subscription_end < '2027-01-01');"
+            ))
+    except Exception as e:
+        print(f"[Database Auto-Renew] {e}")
     # Add new litigation and outcome fields to law_cases if not exists
     new_case_cols = [
         ('litigation_level_key', 'TEXT'),

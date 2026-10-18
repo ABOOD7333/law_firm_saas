@@ -36,6 +36,7 @@ def _safe_template_response(*args, **kwargs):
 
 templates.TemplateResponse = _safe_template_response
 templates.env.globals["get_csrf_token"] = lambda req: (getattr(req.state, "csrf_token", None) or req.cookies.get("csrf_token", "")) if req else ""
+templates.env.globals["getattr"] = getattr
 
 
 def check_user_permission(user, module: str, action: str = "view") -> bool:
@@ -145,21 +146,31 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
             
         # Check if this is an impersonated technical support session
         is_support_session = False
-        superadmin_token = request.cookies.get("superadmin_session_token")
-        if superadmin_token:
-            superadmin_token_hash = hash_session_token(superadmin_token)
-            admin_session = db.query(AuthSessions).filter(
-                AuthSessions.session_token.in_([superadmin_token, superadmin_token_hash]),
-                AuthSessions.is_active == 1,
-                AuthSessions.expires_at > now_str
-            ).first()
-            if admin_session:
-                admin_user = db.query(AccessProfiles).filter(
-                    AccessProfiles.id == admin_session.user_id,
-                    AccessProfiles.is_active == 1
+        
+        # 1. Direct database-backed check via device_id on the session record
+        if getattr(session_record, 'device_id', None) and str(session_record.device_id).startswith("impersonated_by_admin"):
+            is_support_session = True
+            
+        # 2. Token-backed check via superadmin_session_token cookie
+        if not is_support_session:
+            superadmin_token = request.cookies.get("superadmin_session_token")
+            if superadmin_token:
+                superadmin_token_hash = hash_session_token(superadmin_token)
+                admin_session = db.query(AuthSessions).filter(
+                    AuthSessions.session_token.in_([superadmin_token, superadmin_token_hash]),
+                    AuthSessions.is_active == 1
                 ).first()
-                if admin_user and getattr(admin_user, 'is_superadmin', 0) == 1:
-                    is_support_session = True
+                if admin_session:
+                    admin_user = db.query(AccessProfiles).filter(
+                        AccessProfiles.id == admin_session.user_id,
+                        AccessProfiles.is_active == 1
+                    ).first()
+                    if admin_user and getattr(admin_user, 'is_superadmin', 0) == 1:
+                        is_support_session = True
+                        
+        # 3. Fallback cookie flag check
+        if not is_support_session and request.cookies.get("is_support_session") == "1":
+            is_support_session = True
         
         user.is_support_session = is_support_session
 
@@ -206,8 +217,9 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
         from fastapi.exceptions import HTTPException
         from fastapi import status
 
-        # جلسات الدعم الفني بالنيابة تعبر دون قفل انتهاء الاشتراك أو حظر الأدوار لتتمكن الإدارة من فحص وحل مشاكل المكتب
-        if is_support_session:
+        # جلسات الدعم الفني بالنيابة وحسابات الإدارة تعبر دون قفل انتهاء الاشتراك أو حظر الأدوار لتتمكن من فحص وتجربة النظام
+        if is_support_session or getattr(user, 'is_superadmin', 0) == 1:
+            user.subscription_expired = False
             return user
 
         # Subscription Lock Check

@@ -435,7 +435,7 @@
             {% endif %}
         </ul>
         <div class="sidebar-footer">
-            {% if request.cookies.get('is_support_session') == '1' or (user and getattr(user, 'is_support_session', False)) %}
+            {% if request.cookies.get('is_support_session') == '1' or (user and user.is_support_session) %}
             <a href="/api/superadmin/exit-impersonate" class="logout-btn" style="width: 100%; display: flex; align-items: center; gap: 8px; justify-content: center; background: #dc2626; color: #fff; text-decoration: none; padding: 10px; border-radius: 8px; font-weight: bold; margin-bottom: 8px; box-sizing: border-box;">
                 <i class="fa-solid fa-arrow-right-from-bracket"></i> إنهاء الدعم الفني
             </a>
@@ -451,7 +451,7 @@
     <!-- Main Content -->
     <main class="main-content">
         <!-- Technical Support Active Banner -->
-        {% if request.cookies.get('is_support_session') == '1' or (user and getattr(user, 'is_support_session', False)) %}
+        {% if request.cookies.get('is_support_session') == '1' or (user and user.is_support_session) %}
         <div style="background: linear-gradient(90deg, #991b1b, #dc2626); color: white; padding: 12px 24px; position: sticky; top: 0; z-index: 99999; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(220, 38, 38, 0.35); font-family: 'Cairo', sans-serif;">
             <div style="display: flex; align-items: center; gap: 12px; font-size: 0.95rem;">
                 <i class="fa-solid fa-headset" style="font-size: 1.3rem;"></i>

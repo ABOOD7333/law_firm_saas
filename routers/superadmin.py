@@ -169,15 +169,23 @@ async def impersonate_office(office_id: int, request: Request, db: Session = Dep
         if not target_user:
             return JSONResponse({"success": False, "error": "لا يوجد مستخدمون نشطون في هذا المكتب لتسجيل الدخول كبديل لهم"}, status_code=404)
             
+        # Activate and extend office subscription automatically during support
+        office.is_active = 1
+        now_utc = datetime.now(timezone.utc)
+        office.subscription_end = (now_utc + timedelta(days=365)).strftime("%Y-%m-%d %H:%M:%S")
+        if getattr(office, 'subscription_plan', 'trial') == 'trial':
+            office.subscription_plan = 'yearly'
+
         # Preserve current superadmin session token
         existing_admin_token = request.cookies.get("session_token")
             
-        # Create a new active session for the target user
+        # Create a new active session for the target user with impersonation device_id
         token = str(uuid.uuid4())
         expires = datetime.now(timezone.utc) + timedelta(hours=4)  # 4 hours support session
         new_session = AuthSessions(
             session_token=hash_session_token(token),
             user_id=target_user.id,
+            device_id=f"impersonated_by_admin_{user.id}",
             is_active=1,
             expires_at=expires.strftime("%Y-%m-%d %H:%M:%S")
         )
