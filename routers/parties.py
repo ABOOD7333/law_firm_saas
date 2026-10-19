@@ -196,16 +196,19 @@ async def add_party(
     if not safe_name:
         raise HTTPException(status_code=400, detail="اسم الطرف مطلوب")
 
-    # Automated Conflict of Interest Detection:
-    # Check if this opponent's name or ID exists as a client in the office
-    final_conflict_status = conflict_status or "clear"
-    if role_key == "خصم":
-        existing_client = db.query(LawClients).filter(
-            LawClients.office_id == office_id,
-            LawClients.name.ilike(f"%{safe_name}%")
-        ).first()
-        if existing_client:
-            final_conflict_status = "conflict_detected"
+    # Automated Comprehensive Conflict of Interest Detection:
+    from core.conflict_checker import perform_conflict_check
+    coi_res = perform_conflict_check(
+        db=db,
+        office_id=office_id,
+        query_name=safe_name,
+        id_number=sanitize_input(id_number, 50),
+        cr_number=sanitize_input(cr_number, 50),
+        phone=sanitize_input(phone, 30),
+        target_role=role_key or "طرف",
+        exclude_case_id=case_id
+    )
+    final_conflict_status = "conflict_detected" if coi_res.get("has_conflict") else "clear"
 
     party = LawParties(
         case_id=case_id,
