@@ -204,9 +204,6 @@ async def test_incoming_cases_flow():
                 case_number=f"CASE-TEST-{rec_fi.internal_number}",
                 title=f"قضية محولة من ملف وارد #{rec_fi.internal_number}",
                 status_key="new",
-                litigation_level_key="first_instance",
-                court_name=rec_fi.court_name,
-                court_case_number=rec_fi.court_case_number,
             )
             db.add(new_case)
             db.commit()

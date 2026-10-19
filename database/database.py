@@ -186,22 +186,21 @@ def init_db():
             ))
     except Exception as e:
         print(f"[Database Auto-Renew] {e}")
-    # Add new litigation and outcome fields to law_cases if not exists
-    new_case_cols = [
-        ('litigation_level_key', 'TEXT'),
-        ('court_name', 'TEXT'),
-        ('court_case_number', 'TEXT'),
-        ('judgment_number', 'TEXT'),
-        ('judgment_date', 'TEXT'),
-        ('appeal_status', 'TEXT'),
-        ('stage_start_date', 'TEXT'),
-        ('outcome_key', 'TEXT')
+    # إزالة حقول درجات التقاضي وبيانات المحكمة والنتائج من جدول law_cases نهائياً
+    cols_to_drop = [
+        'litigation_level_key',
+        'court_name',
+        'court_case_number',
+        'judgment_number',
+        'judgment_date',
+        'appeal_status',
+        'stage_start_date',
+        'outcome_key'
     ]
-    for col_name, col_type in new_case_cols:
+    for col_name in cols_to_drop:
         try:
-            from sqlalchemy import text
             with engine.begin() as conn:
-                conn.execute(text(f"ALTER TABLE law_cases ADD COLUMN {col_name} {col_type};"))
+                conn.execute(_sql_text(f"ALTER TABLE law_cases DROP COLUMN {col_name};"))
         except Exception:
             pass
     # Add new comprehensive hearing report fields to law_hearings if not exists

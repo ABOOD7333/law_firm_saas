@@ -1322,9 +1322,6 @@ async def convert_incoming_to_case(
         visibility_mode="private",
         open_date=datetime.now().strftime("%Y-%m-%d"),
         created_by_user_id=user.id,
-        court_name=court_name_val,
-        litigation_level_key=litigation_map.get(item.section_key, "first_instance"),
-        court_case_number=item.court_case_number or item.appeal_case_number or item.enforcement_file_number or item.prosecution_file_number or item.police_report_number,
     )
     db.add(new_case)
     db.commit()

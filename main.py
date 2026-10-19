@@ -1662,22 +1662,6 @@ async def add_case(
 
     status_key: str = Form("new"),
 
-    litigation_level_key: str = Form("first_instance"),
-
-    court_name: str = Form(None),
-
-    court_case_number: str = Form(None),
-
-    judgment_number: str = Form(None),
-
-    judgment_date: str = Form(None),
-
-    appeal_status: str = Form(None),
-
-    stage_start_date: str = Form(None),
-
-    outcome_key: str = Form("not_determined"),
-
     db: Session = Depends(get_db),
 
     user: AccessProfiles = Depends(get_current_user)
@@ -1715,22 +1699,6 @@ async def add_case(
         case_type_key=case_type_key,
 
         status_key=status_key,
-
-        litigation_level_key=litigation_level_key,
-
-        court_name=court_name,
-
-        court_case_number=court_case_number,
-
-        judgment_number=judgment_number,
-
-        judgment_date=judgment_date,
-
-        appeal_status=appeal_status,
-
-        stage_start_date=stage_start_date,
-
-        outcome_key=outcome_key,
 
         lead_lawyer_id=lead_lawyer_id,
 
@@ -1947,22 +1915,6 @@ async def edit_case(
 
     status_key: str = Form("new"),
 
-    litigation_level_key: str = Form(None),
-
-    court_name: str = Form(None),
-
-    court_case_number: str = Form(None),
-
-    judgment_number: str = Form(None),
-
-    judgment_date: str = Form(None),
-
-    appeal_status: str = Form(None),
-
-    stage_start_date: str = Form(None),
-
-    outcome_key: str = Form(None),
-
     db: Session = Depends(get_db),
 
     user: AccessProfiles = Depends(get_current_user)
@@ -1997,30 +1949,6 @@ async def edit_case(
             case.case_type_key = case_type_key
 
         case.status_key = status_key
-
-        if litigation_level_key:
-            case.litigation_level_key = litigation_level_key
-
-        if court_name is not None:
-            case.court_name = court_name
-
-        if court_case_number is not None:
-            case.court_case_number = court_case_number
-
-        if judgment_number is not None:
-            case.judgment_number = judgment_number
-
-        if judgment_date is not None:
-            case.judgment_date = judgment_date
-
-        if appeal_status is not None:
-            case.appeal_status = appeal_status
-
-        if stage_start_date is not None:
-            case.stage_start_date = stage_start_date
-
-        if outcome_key is not None:
-            case.outcome_key = outcome_key
 
         db.commit()
 
@@ -2088,9 +2016,6 @@ async def hearings_page(
                 "case_number": c.case_number,
                 "title": c.title,
                 "case_type": getattr(c, 'case_type_key', '') or getattr(c, 'case_type', '') or '',
-                "court_name": getattr(c, 'court_name', '') or '',
-                "court_case_number": getattr(c, 'court_case_number', '') or '',
-                "litigation_level_key": getattr(c, 'litigation_level_key', '') or '',
                 "client_name": c.law_clients[0].name if c.law_clients else ''
             }
             for c in cases
