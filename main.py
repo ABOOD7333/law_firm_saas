@@ -1623,6 +1623,26 @@ async def cases_page(request: Request, db: Session = Depends(get_db), user: Acce
         custom_statuses = [r.ref_name for r in custom_ref_data if r.ref_type in ['case_status', 'حالة_قضية', 'status']]
         custom_levels = [r.ref_name for r in custom_ref_data if r.ref_type in ['litigation_level', 'درجة_تقاضي', 'litigation']]
 
+        # Fetch opponents from LawParties
+        from database.models import LawParties
+        from sqlalchemy import or_
+
+        all_opponents = db.query(LawParties).filter(
+            LawParties.office_id == office_id,
+            LawParties.is_deleted == 0,
+            or_(
+                LawParties.role_key.in_(['خصم', 'defendant', 'الخصم', 'الطرف المقابل', 'opponent']),
+                LawParties.legal_capacity.in_(['مدعى عليه', 'مستأنف ضده', 'مطعون ضده', 'متهم'])
+            )
+        ).all()
+        unique_opponents = []
+        seen_names = set()
+        for p in all_opponents:
+            c_name = p.name.strip() if p.name else ''
+            if c_name and c_name.lower() not in seen_names:
+                seen_names.add(c_name.lower())
+                unique_opponents.append(p)
+
         return templates.TemplateResponse(
 
             request=request,
@@ -1630,10 +1650,11 @@ async def cases_page(request: Request, db: Session = Depends(get_db), user: Acce
             name="cases.html",
 
             context={
-                "user": user, 
-                "cases": cases, 
-                "clients": clients, 
-                "lawyers": lawyers, 
+                "user": user,
+                "cases": cases,
+                "clients": clients,
+                "opponents": unique_opponents,
+                "lawyers": lawyers,
                 "custom_statuses": custom_statuses,
                 "custom_levels": custom_levels,
                 "active_page": "cases"
@@ -1658,6 +1679,10 @@ async def add_case(
     case_number: str = Form(...),
 
     client_id: int = Form(...),
+
+    opponent_id: Optional[str] = Form(None),
+
+    new_opponent_name: Optional[str] = Form(None),
 
     lead_lawyer_id: int = Form(None),
 
@@ -1725,6 +1750,47 @@ async def add_case(
 
         client.case_number = new_case.case_number
 
+        db.commit()
+
+    # Automatically register Opponent Party (خصم الموكل) in LawParties
+    from database.models import LawParties
+    opp_name = None
+    opp_type = "individual"
+    opp_phone = None
+    opp_id_num = None
+    opp_cr = None
+
+    if opponent_id and opponent_id != "new" and opponent_id.strip():
+        try:
+            opp_rec = db.query(LawParties).filter(
+                LawParties.id == int(opponent_id),
+                LawParties.office_id == office_id
+            ).first()
+            if opp_rec:
+                opp_name = opp_rec.name
+                opp_type = opp_rec.party_type or "individual"
+                opp_phone = opp_rec.phone
+                opp_id_num = opp_rec.id_number
+                opp_cr = opp_rec.cr_number
+        except Exception:
+            pass
+
+    if not opp_name and new_opponent_name and new_opponent_name.strip():
+        opp_name = new_opponent_name.strip()
+
+    if opp_name:
+        opp_party = LawParties(
+            case_id=new_case.id,
+            office_id=office_id,
+            name=opp_name,
+            role_key="خصم",
+            party_type=opp_type,
+            phone=opp_phone,
+            id_number=opp_id_num,
+            cr_number=opp_cr,
+            legal_capacity="مدعى عليه"
+        )
+        db.add(opp_party)
         db.commit()
 
     return RedirectResponse(url="/cases", status_code=303)

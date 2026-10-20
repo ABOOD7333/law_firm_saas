@@ -168,6 +168,26 @@
                     </div>
                 </div>
 
+                <!-- حقل خصم الموكل (الطرف المقابل في الدعوى) -->
+                <div class="form-row" style="margin-bottom: 16px;">
+                    <div class="form-group" style="width: 100%;">
+                        <label style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-weight: 700; color: #0f172a;">
+                            <span><i class="fa-solid fa-user-ninja" style="color: #dc2626;"></i> خصم الموكل (الطرف المقابل في القضية)</span>
+                            <span style="font-size: 0.78rem; font-weight: 600; background: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 6px;">
+                                <i class="fa-solid fa-people-arrows"></i> مستورد من سجل الأطراف والمتقاضين (الدور: خصم)
+                            </span>
+                        </label>
+                        <select name="opponent_id" id="add_case_opponent_id" class="form-control" onchange="toggleOpponentInput(this)" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                            <option value="">-- اختر الخصم من قائمة الخصوم المسجلين في أطراف الدعوى --</option>
+                            {% for opp in (opponents or []) %}
+                            <option value="{{ opp.id }}">{{ opp.name }} ({{ opp.role_key }}{% if opp.legal_capacity %} - {{ opp.legal_capacity }}{% endif %})</option>
+                            {% endfor %}
+                            <option value="new" style="color: #2563eb; font-weight: 800;">+ إدخال اسم خصم جديد غير مسجل في السجل...</option>
+                        </select>
+                        <input type="text" name="new_opponent_name" id="new_opponent_name_field" class="form-control" placeholder="اكتب اسم الخصم الجديد كاملاً هنا..." style="display: none; margin-top: 8px; border: 2px dashed #3b82f6; background: #eff6ff; padding: 10px 12px; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                    </div>
+                </div>
+
                 <!-- تصنيفات وحالات القضية -->
                 <div style="background: #f8fafc; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
                     <div style="font-weight: 700; color: #1e293b; margin-bottom: 12px; font-size: 0.95rem;">
@@ -437,6 +457,17 @@
 </style>
 
 <script>
+    function toggleOpponentInput(sel) {
+        const fld = document.getElementById('new_opponent_name_field');
+        if (sel.value === 'new') {
+            fld.style.display = 'block';
+            fld.focus();
+        } else {
+            fld.style.display = 'none';
+            fld.value = '';
+        }
+    }
+
     function openAddCaseModal() { document.getElementById('addCaseModal').classList.add('active'); }
     function closeAddCaseModal() { document.getElementById('addCaseModal').classList.remove('active'); }
     
