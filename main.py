@@ -4072,6 +4072,8 @@ from routers import matters_route
 app.include_router(matters_route.router)
 from routers import trust_accounts_route
 app.include_router(trust_accounts_route.router)
+from routers import client_profile_route
+app.include_router(client_profile_route.router)
 
 app.include_router(mobile_api.router)
 

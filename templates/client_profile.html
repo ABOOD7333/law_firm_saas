@@ -1,0 +1,667 @@
+{% extends "base.html" %}
+{% block title %}الملف التعريفي: {{ client.name }} | LawSaaS{% endblock %}
+
+{% block content %}
+<!-- Client Header Banner -->
+<div style="background: white; border-radius: 14px; border: 1px solid #e2e8f0; padding: 22px 26px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+        <div style="display: flex; gap: 18px; align-items: center;">
+            <div style="width: 64px; height: 64px; border-radius: 14px; background: {% if client.client_type in ['company', 'شركة', 'مؤسسة'] %}#059669{% else %}#1e40af{% endif %}; color: white; display: flex; align-items: center; justify-content: center; font-size: 1.8rem;">
+                {% if client.client_type in ['company', 'شركة', 'مؤسسة'] %}
+                <i class="fa-solid fa-building"></i>
+                {% else %}
+                <i class="fa-solid fa-user"></i>
+                {% endif %}
+            </div>
+            <div>
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                    <h1 style="margin: 0; font-size: 1.5rem; font-weight: 800; color: #0f172a;">
+                        {{ client.name }}
+                    </h1>
+                    {% if client.client_type in ['company', 'شركة', 'مؤسسة'] %}
+                    <span style="background: #dcfce7; color: #166534; font-weight: 700; font-size: 0.82rem; padding: 3px 10px; border-radius: 12px; display: inline-flex; align-items: center; gap: 5px;">
+                        <i class="fa-solid fa-building"></i> شركة / كيان اعتباري
+                    </span>
+                    {% else %}
+                    <span style="background: #dbeafe; color: #1e40af; font-weight: 700; font-size: 0.82rem; padding: 3px 10px; border-radius: 12px; display: inline-flex; align-items: center; gap: 5px;">
+                        <i class="fa-solid fa-user"></i> فرد
+                    </span>
+                    {% endif %}
+                    {% if client.parent_company %}
+                    <span style="background: #f5f3ff; color: #6d28d9; font-weight: 700; font-size: 0.8rem; padding: 3px 10px; border-radius: 12px;">
+                        تابعة لـ: {{ client.parent_company.name }}
+                    </span>
+                    {% endif %}
+                </div>
+
+                <div style="display: flex; gap: 20px; flex-wrap: wrap; font-size: 0.88rem; color: #64748b;">
+                    {% if client.phone %}
+                    <div><i class="fa-solid fa-phone" style="color: #64748b;"></i> <span dir="ltr">{{ client.phone }}</span></div>
+                    {% endif %}
+                    {% if client.email %}
+                    <div><i class="fa-regular fa-envelope" style="color: #64748b;"></i> {{ client.email }}</div>
+                    {% endif %}
+                    {% if client.city %}
+                    <div><i class="fa-solid fa-location-dot" style="color: #64748b;"></i> {{ client.city }}</div>
+                    {% endif %}
+                    {% if client.cr_number %}
+                    <div><strong style="color: #334155;">السجل التجاري:</strong> <span style="font-family: monospace; font-weight: 700; color: #0f172a;">{{ client.cr_number }}</span></div>
+                    {% endif %}
+                    {% if client.national_id %}
+                    <div><strong style="color: #334155;">الهوية:</strong> <span style="font-family: monospace; font-weight: 700; color: #0f172a;">{{ client.national_id }}</span></div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div style="display: flex; gap: 8px;">
+            {% if client.client_type in ['company', 'شركة', 'مؤسسة'] and has_perm(user, 'clients', 'edit') %}
+            <button type="button" onclick="openEditCorporateModal()" style="padding: 9px 16px; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 8px; font-weight: 700; font-size: 0.88rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-pen-to-square"></i> تعديل بيانات الشركة
+            </button>
+            {% endif %}
+            <a href="/clients" style="padding: 9px 14px; background: #f1f5f9; color: #475569; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 5px;">
+                <i class="fa-solid fa-arrow-right"></i> عودة لقائمة العملاء
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Alerts -->
+{% if request.query_params.get('msg') == 'rep_added' %}
+<div style="background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; padding: 12px 18px; border-radius: 8px; margin-bottom: 20px; font-weight: 700;">
+    <i class="fa-solid fa-circle-check"></i> تم تسجيل الممثل القانوني / المفوض للشركة بنجاح!
+</div>
+{% elif request.query_params.get('msg') == 'corporate_updated' %}
+<div style="background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; padding: 12px 18px; border-radius: 8px; margin-bottom: 20px; font-weight: 700;">
+    <i class="fa-solid fa-circle-check"></i> تم تحديث البيانات المؤسسية للشركة بنجاح!
+</div>
+{% endif %}
+
+<!-- Financial & Legal KPI Cards for this Client -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
+    <!-- القضايا والمسائل -->
+    <div style="background: white; border-radius: 12px; padding: 16px 20px; border: 1px solid #e2e8f0;">
+        <span style="font-size: 0.82rem; color: #64748b; font-weight: 600; display: block;">الملفات والقضايا</span>
+        <span style="font-size: 1.6rem; font-weight: 800; color: #1e40af;">{{ cases|length }}</span>
+    </div>
+
+    <!-- الممثلون القانونيون -->
+    <div style="background: white; border-radius: 12px; padding: 16px 20px; border: 1px solid #e2e8f0;">
+        <span style="font-size: 0.82rem; color: #64748b; font-weight: 600; display: block;">الممثلون والمفوضون</span>
+        <span style="font-size: 1.6rem; font-weight: 800; color: #059669;">{{ representatives|length }}</span>
+    </div>
+
+    <!-- رصيد الأمانات -->
+    <div style="background: white; border-radius: 12px; padding: 16px 20px; border: 1px solid #e2e8f0;">
+        <span style="font-size: 0.82rem; color: #047857; font-weight: 700; display: block;">رصيد الأمانات الفعلي</span>
+        <span style="font-size: 1.6rem; font-weight: 800; color: #065f46;">{{ "{:,.2f}".format(trust_total_balance) }} <small style="font-size: 0.75rem;">ريال</small></span>
+    </div>
+
+    <!-- الفواتير والمستحقات -->
+    <div style="background: white; border-radius: 12px; padding: 16px 20px; border: 1px solid #e2e8f0;">
+        <span style="font-size: 0.82rem; color: #64748b; font-weight: 600; display: block;">إجمالي الفواتير</span>
+        <span style="font-size: 1.6rem; font-weight: 800; color: #0f172a;">{{ "{:,.2f}".format(total_invoiced) }} <small style="font-size: 0.75rem;">ريال</small></span>
+    </div>
+</div>
+
+<!-- Tabs -->
+<div style="display: flex; gap: 8px; border-bottom: 2px solid #e2e8f0; margin-bottom: 24px; overflow-x: auto;">
+    <button type="button" class="tab-btn active" onclick="switchClientTab('corporate')" id="tab_btn_corporate" style="padding: 12px 20px; font-weight: 800; font-size: 0.95rem; border: none; background: none; border-bottom: 3px solid #2563eb; color: #2563eb; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-family: 'Cairo', sans-serif;">
+        <i class="fa-solid fa-id-card-clip"></i> بيانات الكيان والممثلون القانونيون ({{ representatives|length }})
+    </button>
+    <button type="button" class="tab-btn" onclick="switchClientTab('cases')" id="tab_btn_cases" style="padding: 12px 20px; font-weight: 700; font-size: 0.95rem; border: none; background: none; color: #64748b; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-family: 'Cairo', sans-serif;">
+        <i class="fa-solid fa-gavel"></i> القضايا والمسائل ({{ cases|length }})
+    </button>
+    <button type="button" class="tab-btn" onclick="switchClientTab('trust')" id="tab_btn_trust" style="padding: 12px 20px; font-weight: 700; font-size: 0.95rem; border: none; background: none; color: #64748b; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-family: 'Cairo', sans-serif;">
+        <i class="fa-solid fa-vault"></i> حسابات الأمانات ({{ trust_accounts|length }})
+    </button>
+    <button type="button" class="tab-btn" onclick="switchClientTab('invoices')" id="tab_btn_invoices" style="padding: 12px 20px; font-weight: 700; font-size: 0.95rem; border: none; background: none; color: #64748b; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-family: 'Cairo', sans-serif;">
+        <i class="fa-solid fa-file-invoice-dollar"></i> الفواتير والمالية ({{ invoices|length }})
+    </button>
+    <button type="button" class="tab-btn" onclick="switchClientTab('docs')" id="tab_btn_docs" style="padding: 12px 20px; font-weight: 700; font-size: 0.95rem; border: none; background: none; color: #64748b; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-family: 'Cairo', sans-serif;">
+        <i class="fa-solid fa-folder-open"></i> الوثائق والعقود ({{ documents|length }})
+    </button>
+</div>
+
+<!-- ========================================== -->
+<!-- TAB 1: بيانات الكيان والممثلون القانونيون   -->
+<!-- ========================================== -->
+<div id="tab_content_corporate" class="tab-pane">
+    
+    <!-- Corporate Data Box (if company) -->
+    {% if client.client_type in ['company', 'شركة', 'مؤسسة'] %}
+    <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 22px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px;">
+            <h3 style="margin: 0; font-size: 1.15rem; color: #0f172a; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-building-circle-check" style="color: #059669;"></i> بطاقة البيانات المؤسسية والتنظيمية
+            </h3>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; font-size: 0.92rem;">
+            <div>
+                <strong style="color: #64748b; font-size: 0.8rem; display: block;">رقم السجل التجاري (CR):</strong>
+                <span style="font-family: monospace; font-weight: 800; color: #0f172a;">{{ client.cr_number or 'غير مسجل' }}</span>
+            </div>
+            <div>
+                <strong style="color: #64748b; font-size: 0.8rem; display: block;">الرقم الضريبي (VAT):</strong>
+                <span style="font-family: monospace; font-weight: 800; color: #0f172a;">{{ client.tax_number or 'غير مسجل' }}</span>
+            </div>
+            <div>
+                <strong style="color: #64748b; font-size: 0.8rem; display: block;">النشاط والقطاع:</strong>
+                <span style="font-weight: 700; color: #334155;">{{ client.industry or 'عام' }}</span>
+            </div>
+            <div>
+                <strong style="color: #64748b; font-size: 0.8rem; display: block;">رأس المال المسجل:</strong>
+                <span style="font-weight: 700; color: #047857;">{{ "{:,.2f}".format(client.capital or 0) }} ريال</span>
+            </div>
+            {% if client.website %}
+            <div>
+                <strong style="color: #64748b; font-size: 0.8rem; display: block;">الموقع الإلكتروني:</strong>
+                <a href="{{ client.website }}" target="_blank" style="color: #2563eb; text-decoration: none; font-weight: 600;" dir="ltr">{{ client.website }}</a>
+            </div>
+            {% endif %}
+            {% if client.parent_company %}
+            <div>
+                <strong style="color: #64748b; font-size: 0.8rem; display: block;">الشركة الأم / المجموعة القابضة:</strong>
+                <a href="/clients/{{ client.parent_company.id }}" style="color: #6d28d9; font-weight: 800; text-decoration: none;">
+                    <i class="fa-solid fa-sitemap"></i> {{ client.parent_company.name }}
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Legal Representatives & Authorized Signatories Card -->
+    <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 22px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 12px;">
+            <div>
+                <h3 style="margin: 0; font-size: 1.15rem; color: #0f172a; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-users-gear" style="color: #2563eb;"></i>
+                    سجل الممثلين القانونيين والمفوضين بالتوقيع (Authorized Signatories)
+                </h3>
+                <p style="margin: 3px 0 0 0; font-size: 0.82rem; color: #64748b;">
+                    المديرون التنفيذيون، الوكلاء الشرعيون، المفوضون بالتوقيع، وجهات الاتصال الرسمية للشركة
+                </p>
+            </div>
+
+            {% if has_perm(user, 'clients', 'edit') %}
+            <button type="button" onclick="openAddRepModal()" class="btn-primary" style="padding: 8px 16px; border-radius: 8px; font-weight: 700; font-size: 0.85rem; background: #2563eb; color: #fff; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-user-plus"></i> إضافة ممثل قانوني / مفوض
+            </button>
+            {% endif %}
+        </div>
+
+        {% if representatives and representatives|length > 0 %}
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; text-align: right; font-size: 0.9rem;">
+                <thead>
+                    <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; color: #475569; font-weight: 700;">
+                        <th style="padding: 12px 14px;">الاسم</th>
+                        <th style="padding: 12px 14px;">الصفة / المسمى</th>
+                        <th style="padding: 12px 14px;">الهوية الوطنية</th>
+                        <th style="padding: 12px 14px;">الهاتف المباشر</th>
+                        <th style="padding: 12px 14px;">البريد الإلكتروني</th>
+                        <th style="padding: 12px 14px;">سند التفويض / الوكالة</th>
+                        <th style="padding: 12px 14px;">الممثل الرئيسي</th>
+                        {% if has_perm(user, 'clients', 'edit') %}
+                        <th style="padding: 12px 14px; text-align: center;">إجراء</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rep in representatives %}
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 12px 14px; font-weight: 800; color: #0f172a;">
+                            {{ rep.name }}
+                        </td>
+                        <td style="padding: 12px 14px;">
+                            <span style="background: #eff6ff; color: #1d4ed8; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 0.8rem;">
+                                {{ rep.role_title }}
+                            </span>
+                        </td>
+                        <td style="padding: 12px 14px; font-family: monospace; color: #475569;">
+                            {{ rep.national_id or '-' }}
+                        </td>
+                        <td style="padding: 12px 14px; color: #334155;" dir="ltr">
+                            {{ rep.phone or '-' }}
+                        </td>
+                        <td style="padding: 12px 14px; color: #334155;">
+                            {{ rep.email or '-' }}
+                        </td>
+                        <td style="padding: 12px 14px; font-size: 0.82rem; color: #475569;">
+                            {% if rep.poa_number %}
+                            <span style="font-family: monospace; font-weight: 700;">{{ rep.poa_number }}</span>
+                            {% if rep.poa_date %}<span style="color: #64748b;"> ({{ rep.poa_date }})</span>{% endif %}
+                            {% else %}
+                            <span style="color: #94a3b8;">قرار تفويض داخلي</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 12px 14px;">
+                            {% if rep.is_primary %}
+                            <span style="background: #dcfce7; color: #166534; font-weight: 700; font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px;">
+                                <i class="fa-solid fa-star"></i> جهة الاتصال الأساسية
+                            </span>
+                            {% else %}
+                            <span style="color: #94a3b8; font-size: 0.8rem;">مفوض فرعي</span>
+                            {% endif %}
+                        </td>
+                        {% if has_perm(user, 'clients', 'edit') %}
+                        <td style="padding: 12px 14px; text-align: center;">
+                            <form action="/clients/representatives/{{ rep.id }}/delete" method="post" style="display: inline;" onsubmit="return confirm('هل أنت متأكد من حذف هذا الممثل القانوني؟');">
+                                <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+                                <button type="submit" style="background: none; border: none; color: #dc2626; cursor: pointer; padding: 4px;" title="حذف">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </form>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 35px; color: #64748b; background: #f8fafc; border-radius: 8px;">
+            <i class="fa-solid fa-users" style="font-size: 2rem; color: #cbd5e1; margin-bottom: 8px; display: block;"></i>
+            لم يتم تسجيل أي ممثل قانوني أو مفوض بالتوقيع لهذه الشركة بعد.
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Subsidiaries / Sister Companies (if any) -->
+    {% if subsidiaries and subsidiaries|length > 0 %}
+    <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 22px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+        <h3 style="margin: 0 0 14px 0; font-size: 1.1rem; color: #0f172a; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-sitemap" style="color: #7c3aed;"></i>
+            الشركات التابعة والفروع المسجلة ضمن المجموعة
+        </h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px;">
+            {% for sub in subsidiaries %}
+            <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; background: #f8fafc; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <a href="/clients/{{ sub.id }}" style="font-weight: 800; color: #0f172a; text-decoration: none;">{{ sub.name }}</a>
+                    <div style="font-size: 0.8rem; color: #64748b; margin-top: 3px;">س.ت: {{ sub.cr_number or 'غير مدون' }}</div>
+                </div>
+                <a href="/clients/{{ sub.id }}" style="padding: 5px 12px; background: #ede9fe; color: #6d28d9; border-radius: 6px; text-decoration: none; font-weight: 700; font-size: 0.8rem;">
+                    فتح الملف
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- ========================================== -->
+<!-- TAB 2: القضايا والمسائل                    -->
+<!-- ========================================== -->
+<div id="tab_content_cases" class="tab-pane" style="display: none;">
+    <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 22px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+        <h3 style="margin: 0 0 16px 0; font-size: 1.15rem; color: #0f172a; font-weight: 800;">
+            <i class="fa-solid fa-gavel" style="color: #2563eb;"></i> القضايا والمسائل المرتبطة
+        </h3>
+        {% if cases and cases|length > 0 %}
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; text-align: right; font-size: 0.9rem;">
+                <thead>
+                    <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; color: #475569; font-weight: 700;">
+                        <th style="padding: 10px 14px;">رقم الملف</th>
+                        <th style="padding: 10px 14px;">العنوان</th>
+                        <th style="padding: 10px 14px;">المسار</th>
+                        <th style="padding: 10px 14px;">الحالة</th>
+                        <th style="padding: 10px 14px; text-align: center;">إجراء</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in cases %}
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 10px 14px; font-family: monospace; font-weight: 800; color: #1e40af;">{{ c.case_number }}</td>
+                        <td style="padding: 10px 14px; font-weight: 700;">{{ c.title }}</td>
+                        <td style="padding: 10px 14px;">
+                            {% if c.matter_category == 'matter' %}
+                            <span style="background: #eff6ff; color: #1d4ed8; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 0.78rem;">استشارة / عقد</span>
+                            {% else %}
+                            <span style="background: #f1f5f9; color: #334155; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 0.78rem;">دعوى قضائية</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 10px 14px;">{{ c.status_key }}</td>
+                        <td style="padding: 10px 14px; text-align: center;">
+                            <a href="{% if c.matter_category == 'matter' %}/matters/{{ c.id }}{% else %}/cases/{{ c.id }}{% endif %}" style="padding: 5px 12px; background: #2563eb; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 700; font-size: 0.8rem;">
+                                عرض الملف
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 35px; color: #64748b;">لا توجد قضايا أو مسائل مرتبطة حالياً.</div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- TAB 3: حسابات الأمانات                    -->
+<!-- ========================================== -->
+<div id="tab_content_trust" class="tab-pane" style="display: none;">
+    <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 22px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+        <h3 style="margin: 0 0 16px 0; font-size: 1.15rem; color: #0f172a; font-weight: 800;">
+            <i class="fa-solid fa-vault" style="color: #059669;"></i> حسابات أمانات الموكل المستقلة
+        </h3>
+        {% if trust_accounts and trust_accounts|length > 0 %}
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; text-align: right; font-size: 0.9rem;">
+                <thead>
+                    <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; color: #475569; font-weight: 700;">
+                        <th style="padding: 10px 14px;">رقم الحساب</th>
+                        <th style="padding: 10px 14px;">المسمى</th>
+                        <th style="padding: 10px 14px;">البنك</th>
+                        <th style="padding: 10px 14px;">الرصيد الفعلي</th>
+                        <th style="padding: 10px 14px; text-align: center;">إجراء</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in trust_accounts %}
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 10px 14px; font-family: monospace; font-weight: 800; color: #065f46;">{{ t.account_number }}</td>
+                        <td style="padding: 10px 14px; font-weight: 700;">{{ t.title }}</td>
+                        <td style="padding: 10px 14px;">{{ t.bank_name or '-' }}</td>
+                        <td style="padding: 10px 14px; font-weight: 800; color: #047857;">{{ "{:,.2f}".format(t.current_balance) }} {{ t.currency }}</td>
+                        <td style="padding: 10px 14px; text-align: center;">
+                            <a href="/trust-accounts/{{ t.id }}" style="padding: 5px 12px; background: #059669; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 700; font-size: 0.8rem;">
+                                كشف الحساب
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 35px; color: #64748b;">لا توجد حسابات أمانة مفتوحة لهذا العميل.</div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- TAB 4: الفواتير والمالية                   -->
+<!-- ========================================== -->
+<div id="tab_content_invoices" class="tab-pane" style="display: none;">
+    <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 22px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+        <h3 style="margin: 0 0 16px 0; font-size: 1.15rem; color: #0f172a; font-weight: 800;">
+            <i class="fa-solid fa-file-invoice-dollar" style="color: #7c3aed;"></i> الفواتير وسجل السداد
+        </h3>
+        {% if invoices and invoices|length > 0 %}
+        <table style="width: 100%; border-collapse: collapse; text-align: right; font-size: 0.9rem;">
+            <thead>
+                <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; color: #475569; font-weight: 700;">
+                    <th style="padding: 10px 14px;">رقم الفاتورة</th>
+                    <th style="padding: 10px 14px;">التاريخ</th>
+                    <th style="padding: 10px 14px;">المبلغ الإجمالي</th>
+                    <th style="padding: 10px 14px;">المسدد</th>
+                    <th style="padding: 10px 14px;">الحالة</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inv in invoices %}
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 10px 14px; font-family: monospace; font-weight: 800;">{{ inv.invoice_number or inv.id }}</td>
+                    <td style="padding: 10px 14px;">{{ inv.issue_date or '-' }}</td>
+                    <td style="padding: 10px 14px; font-weight: 700;">{{ "{:,.2f}".format(inv.total_amount or 0) }} ريال</td>
+                    <td style="padding: 10px 14px; color: #047857; font-weight: 700;">{{ "{:,.2f}".format(inv.paid_amount or 0) }} ريال</td>
+                    <td style="padding: 10px 14px;">{{ inv.status }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div style="text-align: center; padding: 35px; color: #64748b;">لا توجد فواتير مسجلة لهذا العميل.</div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- TAB 5: الوثائق والعقود                    -->
+<!-- ========================================== -->
+<div id="tab_content_docs" class="tab-pane" style="display: none;">
+    <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 22px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+        <h3 style="margin: 0 0 16px 0; font-size: 1.15rem; color: #0f172a; font-weight: 800;">
+            <i class="fa-solid fa-folder-open" style="color: #0891b2;"></i> الوثائق ومسودات العقود المرتبطة
+        </h3>
+        {% if documents and documents|length > 0 %}
+        <table style="width: 100%; border-collapse: collapse; text-align: right; font-size: 0.9rem;">
+            <thead>
+                <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; color: #475569; font-weight: 700;">
+                    <th style="padding: 10px 14px;">اسم المستند</th>
+                    <th style="padding: 10px 14px;">النوع</th>
+                    <th style="padding: 10px 14px;">تاريخ الرفع</th>
+                    <th style="padding: 10px 14px; text-align: center;">إجراء</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in documents %}
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 10px 14px; font-weight: 700;">{{ d.name }}</td>
+                    <td style="padding: 10px 14px;">{{ d.document_type_key }}</td>
+                    <td style="padding: 10px 14px; color: #64748b;">{{ d.created_at[:10] }}</td>
+                    <td style="padding: 10px 14px; text-align: center;">
+                        {% if d.file_path %}
+                        <a href="/documents/download/{{ d.file_path.split('/')[-1] }}" target="_blank" style="padding: 4px 10px; background: #ecfdf5; color: #047857; text-decoration: none; border-radius: 4px; font-weight: 700; font-size: 0.8rem;">
+                            تنزيل
+                        </a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div style="text-align: center; padding: 35px; color: #64748b;">لا توجد وثائق مرفوعة لهذا العميل.</div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- MODAL: إضافة ممثل قانوني / مفوض للشركة                         -->
+<!-- ============================================================== -->
+<div id="addRepModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.65); align-items: center; justify-content: center; z-index: 1200; backdrop-filter: blur(4px);">
+    <div class="modal-content" style="background: white; border-radius: 16px; width: 680px; max-width: 95%; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); overflow: hidden;">
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 42px; height: 42px; background: #dbeafe; color: #1d4ed8; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+                    <i class="fa-solid fa-user-plus"></i>
+                </div>
+                <div>
+                    <h2 style="margin: 0; font-size: 1.2rem; color: #0f172a; font-weight: 800;">إضافة ممثل قانوني / مفوض بالتوقيع</h2>
+                    <p style="margin: 2px 0 0 0; font-size: 0.82rem; color: #64748b;">ربط الشخص الطبيعي بالشركة مع تحديد الصفة وسند التفويض</p>
+                </div>
+            </div>
+            <button type="button" onclick="closeAddRepModal()" style="background: none; border: none; font-size: 1.6rem; cursor: pointer; color: #94a3b8;">&times;</button>
+        </div>
+
+        <form action="/clients/{{ client.id }}/representatives/add" method="post" style="margin: 0; display: flex; flex-direction: column; flex: 1; overflow: hidden;">
+            <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+
+            <div style="padding: 24px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 16px;">
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div>
+                        <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 6px; font-size: 0.88rem;">الاسم الكامل <span style="color: #ef4444;">*</span></label>
+                        <input type="text" name="name" required placeholder="مثال: أحمد عبد الله اليماني" style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                    </div>
+
+                    <div>
+                        <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 6px; font-size: 0.88rem;">الصفة / المسمى الوظيفي <span style="color: #ef4444;">*</span></label>
+                        <select name="role_title" required style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                            <option value="المدير العام المفوض">المدير العام المفوض</option>
+                            <option value="رئيس مجلس الإدارة">رئيس مجلس الإدارة</option>
+                            <option value="الممثل القانوني / مدير الإدارة القانونية">الممثل القانوني / مدير الإدارة القانونية</option>
+                            <option value="وكيل شرعي ومحامي مفوض">وكيل شرعي ومحامي مفوض</option>
+                            <option value="المدير المالي (CFO)">المدير المالي (CFO)</option>
+                            <option value="مفوض باستلام الإعلانات القضائية">مفوض باستلام الإعلانات القضائية</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px;">
+                    <div>
+                        <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 6px; font-size: 0.82rem;">رقم الهوية الوطنية / الإقامة</label>
+                        <input type="text" name="national_id" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                    </div>
+
+                    <div>
+                        <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 6px; font-size: 0.82rem;">رقم الهاتف المباشر</label>
+                        <input type="text" name="phone" dir="ltr" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                    </div>
+
+                    <div>
+                        <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 6px; font-size: 0.82rem;">البريد الإلكتروني</label>
+                        <input type="email" name="email" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div>
+                        <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 6px; font-size: 0.88rem;">رقم الوكالة أو قرار التفويض</label>
+                        <input type="text" name="poa_number" placeholder="مثال: وكالة رقم 4410294" style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                    </div>
+
+                    <div>
+                        <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 6px; font-size: 0.88rem;">تاريخ الوكالة / التفويض</label>
+                        <input type="date" name="poa_date" style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                    </div>
+                </div>
+
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; display: flex; align-items: center; gap: 10px;">
+                    <input type="checkbox" name="is_primary" value="1" id="is_primary_chk" style="width: 18px; height: 18px; cursor: pointer;">
+                    <label for="is_primary_chk" style="font-weight: 700; color: #0f172a; font-size: 0.88rem; cursor: pointer;">
+                        تعيين كـ "جهة الاتصال والممثل الرئيسي المعتمد" للشركة في المراسلات الرسمية
+                    </label>
+                </div>
+
+                <div>
+                    <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 6px; font-size: 0.88rem;">ملاحظات وحدود الصلاحيات</label>
+                    <textarea name="notes" rows="2" placeholder="حدود الصلاحيات المالية أو القانونية للمفوض..." style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; resize: vertical;"></textarea>
+                </div>
+
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; padding: 16px 24px; border-top: 1px solid #e2e8f0; background: #f8fafc;">
+                <button type="button" onclick="closeAddRepModal()" class="btn" style="background: #e2e8f0; color: #334155; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; cursor: pointer;">إلغاء</button>
+                <button type="submit" class="btn-primary" style="background: #2563eb; color: #fff; border: none; padding: 10px 24px; border-radius: 8px; font-weight: 700; cursor: pointer;">
+                    <i class="fa-solid fa-check"></i> حفظ الممثل القانوني
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- MODAL: تعديل البيانات المؤسسية للشركة                          -->
+<!-- ============================================================== -->
+<div id="editCorporateModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.65); align-items: center; justify-content: center; z-index: 1200; backdrop-filter: blur(4px);">
+    <div class="modal-content" style="background: white; border-radius: 16px; width: 680px; max-width: 95%; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); overflow: hidden;">
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
+            <h2 style="margin: 0; font-size: 1.2rem; color: #0f172a; font-weight: 800;">تعديل البيانات المؤسسية والتنظيمية</h2>
+            <button type="button" onclick="closeEditCorporateModal()" style="background: none; border: none; font-size: 1.6rem; cursor: pointer; color: #94a3b8;">&times;</button>
+        </div>
+
+        <form action="/clients/{{ client.id }}/update-corporate" method="post" style="margin: 0; display: flex; flex-direction: column; flex: 1; overflow: hidden;">
+            <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+
+            <div style="padding: 24px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 16px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div>
+                        <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 6px; font-size: 0.88rem;">رقم السجل التجاري (CR)</label>
+                        <input type="text" name="cr_number" value="{{ client.cr_number or '' }}" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 6px; font-size: 0.88rem;">الرقم الضريبي (VAT ID)</label>
+                        <input type="text" name="tax_number" value="{{ client.tax_number or '' }}" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div>
+                        <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 6px; font-size: 0.88rem;">النشاط التجاري / الصناعي</label>
+                        <input type="text" name="industry" value="{{ client.industry or '' }}" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 6px; font-size: 0.88rem;">رأس المال المسجل (ريال)</label>
+                        <input type="number" step="0.01" name="capital" value="{{ client.capital or 0 }}" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                    </div>
+                </div>
+
+                <div>
+                    <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 6px; font-size: 0.88rem;">الشركة الأم / المجموعة القابضة (إن وجدت)</label>
+                    <select name="parent_company_id" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        <option value="">-- شركة مستقلة (ليست تابعة) --</option>
+                        {% for pc in parent_candidates %}
+                        <option value="{{ pc.id }}" {% if client.parent_company_id == pc.id %}selected{% endif %}>{{ pc.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 6px; font-size: 0.88rem;">الموقع الإلكتروني</label>
+                    <input type="text" name="website" value="{{ client.website or '' }}" placeholder="https://..." dir="ltr" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; padding: 16px 24px; border-top: 1px solid #e2e8f0; background: #f8fafc;">
+                <button type="button" onclick="closeEditCorporateModal()" class="btn" style="background: #e2e8f0; color: #334155; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; cursor: pointer;">إلغاء</button>
+                <button type="submit" class="btn-primary" style="background: #059669; color: #fff; border: none; padding: 10px 24px; border-radius: 8px; font-weight: 700; cursor: pointer;">حفظ التعديلات</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function switchClientTab(tab) {
+        document.querySelectorAll('.tab-pane').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.tab-btn').forEach(el => {
+            el.style.borderBottom = 'none';
+            el.style.color = '#64748b';
+            el.style.fontWeight = '700';
+        });
+
+        const activePane = document.getElementById('tab_content_' + tab);
+        const activeBtn = document.getElementById('tab_btn_' + tab);
+        if (activePane) activePane.style.display = 'block';
+        if (activeBtn) {
+            activeBtn.style.borderBottom = '3px solid #2563eb';
+            activeBtn.style.color = '#2563eb';
+            activeBtn.style.fontWeight = '800';
+        }
+    }
+
+    function openAddRepModal() {
+        document.getElementById('addRepModal').style.display = 'flex';
+    }
+    function closeAddRepModal() {
+        document.getElementById('addRepModal').style.display = 'none';
+    }
+
+    function openEditCorporateModal() {
+        document.getElementById('editCorporateModal').style.display = 'flex';
+    }
+    function closeEditCorporateModal() {
+        document.getElementById('editCorporateModal').style.display = 'none';
+    }
+
+    // Switch to tab from URL hash if provided
+    document.addEventListener('DOMContentLoaded', () => {
+        if (window.location.hash) {
+            const h = window.location.hash.substring(1);
+            if (h === 'representatives') switchClientTab('corporate');
+        }
+    });
+</script>
+{% endblock %}

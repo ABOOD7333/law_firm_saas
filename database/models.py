@@ -192,7 +192,33 @@ class LawClients(Base):
     updated_at: Mapped[Optional[str]] = mapped_column(Text)
     is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
 
+    tax_number: Mapped[Optional[str]] = mapped_column(Text)
+    industry: Mapped[Optional[str]] = mapped_column(Text)
+    parent_company_id: Mapped[Optional[int]] = mapped_column(ForeignKey('law_clients.id', ondelete='SET NULL'), index=True)
+    website: Mapped[Optional[str]] = mapped_column(Text)
+    capital: Mapped[Optional[float]] = mapped_column(REAL, server_default=text('0.0'))
+
     law_case: Mapped[Optional['LawCases']] = relationship('LawCases', back_populates='law_clients')
+    parent_company: Mapped[Optional['LawClients']] = relationship('LawClients', remote_side=[id], foreign_keys=[parent_company_id])
+    representatives: Mapped[List['LawClientRepresentatives']] = relationship('LawClientRepresentatives', back_populates='client', cascade='all, delete-orphan')
+
+class LawClientRepresentatives(Base):
+    __tablename__ = 'law_client_representatives'
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    client_id: Mapped[int] = mapped_column(ForeignKey('law_clients.id', ondelete='CASCADE'), index=True)
+    office_id: Mapped[int] = mapped_column(ForeignKey('law_offices.id'), index=True)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    role_title: Mapped[str] = mapped_column(Text, nullable=False)
+    national_id: Mapped[Optional[str]] = mapped_column(Text)
+    phone: Mapped[Optional[str]] = mapped_column(Text)
+    email: Mapped[Optional[str]] = mapped_column(Text)
+    poa_number: Mapped[Optional[str]] = mapped_column(Text)
+    poa_date: Mapped[Optional[str]] = mapped_column(Text)
+    is_primary: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
+    notes: Mapped[Optional[str]] = mapped_column(Text)
+    created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+
+    client: Mapped['LawClients'] = relationship('LawClients', back_populates='representatives')
 
 class LawOffices(Base):
     __tablename__ = 'law_offices'

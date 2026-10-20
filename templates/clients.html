@@ -541,7 +541,7 @@
                                     {% endif %}
                                 </div>
                                 <div>
-                                    <div style="font-weight: 800; color: #0f172a; font-size: 0.95rem;">{{ client.name }}</div>
+                                    <div style="font-weight: 800; color: #0f172a; font-size: 0.95rem;"><a href="/clients/{{ client.id }}" style="text-decoration: none; color: inherit;">{{ client.name }}</a></div>
                                     <div style="color: #64748b; font-size: 0.8rem; margin-top: 2px; display: flex; gap: 6px; align-items: center;">
                                         {% if client.username %}<span class="badge-pill badge-gray" dir="ltr">{{ client.username }}</span>{% endif %}
                                         {% if client.city %}<span><i class="fa-solid fa-location-dot" style="font-size: 0.75rem;"></i> {{ client.city }}</span>{% endif %}
@@ -602,7 +602,10 @@
                         </td>
                         <td style="text-align: center;">
                             <div class="action-btn-group">
-                                <a href="/documents?client_id={{ client.id }}" class="btn-icon-action primary" title="مستندات وأرشيف الموكل">
+                                <a href="/clients/{{ client.id }}" class="btn-icon-action" style="background: #e0e7ff; color: #3730a3;" title="الملف التعريفي وسجل الممثلين">
+                                    <i class="fa-solid fa-address-card"></i>
+                                </a>
+                                <a href="/documents?client_id={{ client.id }}" class="btn-icon-action primary"  title="مستندات وأرشيف الموكل">
                                     <i class="fa-solid fa-folder-open"></i>
                                 </a>
                                 {% if has_perm(user, 'clients', 'edit') %}
