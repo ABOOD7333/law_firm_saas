@@ -369,6 +369,11 @@
                     {% endif %}
                     {% if has_perm(user, 'accounting', 'view') and is_module_enabled(user, "accounting") %}
                     <li class="nav-item {% if active_page == 'accounting' %}active{% endif %}">
+                {% if has_perm(user, 'accounting', 'view') and is_module_enabled(user, "accounting") %}
+                <li class="nav-item {% if active_page == 'trust_accounts' %}active{% endif %}">
+                    <a href="/trust-accounts"><i class="fa-solid fa-vault"></i> أمانات الموكلين</a>
+                </li>
+                {% endif %}
                         <a href="/accounting/invoices"><i class="fa-solid fa-receipt"></i> الفوترة الإلكترونية 🧾</a>
                     </li>
                     {% endif %}

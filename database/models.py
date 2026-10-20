@@ -1092,3 +1092,50 @@ class LawIncomingCases(Base):
 
 
 
+
+
+class LawTrustAccounts(Base):
+    __tablename__ = 'law_trust_accounts'
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    office_id: Mapped[int] = mapped_column(ForeignKey('law_offices.id'), index=True)
+    client_id: Mapped[int] = mapped_column(ForeignKey('law_clients.id', ondelete='CASCADE'), index=True)
+    case_id: Mapped[Optional[int]] = mapped_column(ForeignKey('law_cases.id', ondelete='SET NULL'), index=True)
+    account_number: Mapped[str] = mapped_column(Text, nullable=False, unique=True, index=True)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    bank_name: Mapped[Optional[str]] = mapped_column(Text)
+    iban: Mapped[Optional[str]] = mapped_column(Text)
+    currency: Mapped[str] = mapped_column(Text, server_default=text("'SAR'"), nullable=False)
+    current_balance: Mapped[float] = mapped_column(REAL, server_default=text('0.0'), nullable=False)
+    total_deposited: Mapped[float] = mapped_column(REAL, server_default=text('0.0'), nullable=False)
+    total_disbursed: Mapped[float] = mapped_column(REAL, server_default=text('0.0'), nullable=False)
+    status_key: Mapped[str] = mapped_column(Text, server_default=text("'active'"), nullable=False)
+    notes: Mapped[Optional[str]] = mapped_column(Text)
+    created_by_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey('access_profiles.id'))
+    created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+    updated_at: Mapped[Optional[str]] = mapped_column(Text)
+    is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
+
+    client: Mapped['LawClients'] = relationship('LawClients')
+    law_case: Mapped[Optional['LawCases']] = relationship('LawCases')
+    transactions: Mapped[List['LawTrustTransactions']] = relationship('LawTrustTransactions', back_populates='trust_account', cascade='all, delete-orphan')
+
+
+class LawTrustTransactions(Base):
+    __tablename__ = 'law_trust_transactions'
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    trust_account_id: Mapped[int] = mapped_column(ForeignKey('law_trust_accounts.id', ondelete='CASCADE'), index=True)
+    office_id: Mapped[int] = mapped_column(ForeignKey('law_offices.id'), index=True)
+    voucher_number: Mapped[str] = mapped_column(Text, nullable=False, index=True)
+    transaction_type: Mapped[str] = mapped_column(Text, nullable=False) # 'deposit', 'disbursement', 'fee_transfer'
+    amount: Mapped[float] = mapped_column(REAL, nullable=False)
+    balance_after: Mapped[float] = mapped_column(REAL, nullable=False)
+    transaction_date: Mapped[str] = mapped_column(Text, nullable=False)
+    payment_method: Mapped[Optional[str]] = mapped_column(Text, server_default=text("'bank_transfer'"))
+    reference_number: Mapped[Optional[str]] = mapped_column(Text)
+    payee_or_payer: Mapped[Optional[str]] = mapped_column(Text)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    created_by_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey('access_profiles.id'))
+    created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+
+    trust_account: Mapped['LawTrustAccounts'] = relationship('LawTrustAccounts', back_populates='transactions')
+    creator: Mapped[Optional['AccessProfiles']] = relationship('AccessProfiles', foreign_keys=[created_by_user_id])
