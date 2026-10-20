@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>ملف الاستشارة والرأي القانوني - {{ matter.case_number }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: #fff;
+            color: #0f172a;
+            margin: 0;
+            padding: 30px;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+        .header {
+            border-bottom: 3px double #1e3a8a;
+            padding-bottom: 20px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .title {
+            text-align: center;
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 18px;
+        }
+        .section-box {
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 18px;
+            margin-bottom: 20px;
+        }
+        .section-header {
+            font-weight: 800;
+            color: #1e3a8a;
+            font-size: 1.05rem;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+        }
+        .footer-sig {
+            margin-top: 50px;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 40px;
+        }
+        @media print {
+            body { padding: 0; }
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="no-print" style="margin-bottom: 20px; text-align: left;">
+        <button onclick="window.print()" style="padding: 10px 24px; background: #2563eb; color: #fff; border: none; border-radius: 6px; font-family: 'Cairo'; font-weight: 700; cursor: pointer;">
+            🖨️ طباعة المذكرة / حفظ كـ PDF
+        </button>
+    </div>
+
+    <div class="header">
+        <div>
+            <h2 style="margin: 0; color: #1e3a8a; font-weight: 900;">{{ office.name if office else 'مكتب المحاماة والاستشارات القانونية' }}</h2>
+            <div style="font-size: 0.85rem; color: #64748b;">قسم الاستشارات القانونية وصياغة العقود</div>
+        </div>
+        <div style="text-align: left;">
+            <div><strong>رقم المسألة:</strong> {{ matter.case_number }}</div>
+            <div><strong>تاريخ التقرير:</strong> {{ print_date }}</div>
+        </div>
+    </div>
+
+    <div class="title">
+        <h2 style="margin: 0; color: #0f172a; font-size: 1.3rem;">مذكرة رأي قانوني واستشارة متخصصة</h2>
+        <div style="font-size: 1rem; color: #2563eb; font-weight: 700; margin-top: 5px;">{{ matter.title }}</div>
+    </div>
+
+    <div class="meta-grid">
+        <div><strong>طالب الاستشارة / الموكل:</strong> {{ client.name if client else 'غير محدد' }}</div>
+        <div><strong>نوع المسألة:</strong> {{ matter.case_type_key }}</div>
+        <div><strong>المستشار المعد للرأي:</strong> {{ lead_lawyer.name if lead_lawyer else 'الإدارة القانونية' }}</div>
+        <div><strong>تاريخ البدء:</strong> {{ matter.open_date or '-' }}</div>
+    </div>
+
+    {% if matter.consultation_scope %}
+    <div class="section-box">
+        <div class="section-header">أولاً: نطاق العمل والاستفسارات المطلوب فحصها (Scope of Work)</div>
+        <div style="white-space: pre-wrap; color: #334155;">{{ matter.consultation_scope }}</div>
+    </div>
+    {% endif %}
+
+    <div class="section-box">
+        <div class="section-header">ثانياً: التحليل القانوني والرأي المهني وخلاصة المخرجات (Legal Opinion)</div>
+        <div style="white-space: pre-wrap; color: #0f172a; line-height: 2;">
+            {{ matter.legal_opinion or 'قيد إعداد وصياغة الرأي القانوني النهائي من قبل المستشار المسؤول.' }}
+        </div>
+    </div>
+
+    {% if documents and documents|length > 0 %}
+    <div class="section-box">
+        <div class="section-header">ثالثاً: قائمة الوثائق والمسودات المعتمدة ذات الصلة</div>
+        <ul style="margin: 0; padding-right: 20px;">
+            {% for d in documents %}
+            <li>{{ d.name }} - <span style="color: #64748b;">{{ d.document_type_key }}</span></li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <div class="footer-sig">
+        <div style="text-align: center;">
+            <strong>توقيع المستشار المسؤول</strong><br><br><br>
+            ..................................
+        </div>
+        <div style="text-align: center;">
+            <strong>ختم واعتماد المكتب</strong><br><br><br>
+            ..................................
+        </div>
+    </div>
+
+</body>
+</html>

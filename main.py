@@ -1596,7 +1596,10 @@ async def cases_page(request: Request, db: Session = Depends(get_db), user: Acce
 
         office_id = user.office_id
 
+        case_cat = request.query_params.get("category", "litigation")
         query = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0)
+        if case_cat != "all":
+            query = query.filter(LawCases.matter_category == case_cat)
 
         # تقييد المحامي برؤية قضاياه فقط
 
@@ -4065,6 +4068,8 @@ from routers import mobile_api, mobile_sync, mobile_biometrics
 
 app.include_router(parties.router)
 app.include_router(conflict_check.router)
+from routers import matters_route
+app.include_router(matters_route.router)
 
 app.include_router(mobile_api.router)
 

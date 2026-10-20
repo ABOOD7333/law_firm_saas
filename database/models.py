@@ -144,6 +144,9 @@ class LawCases(Base):
     updated_at: Mapped[Optional[str]] = mapped_column(Text)
     deleted_at: Mapped[Optional[str]] = mapped_column(Text)
     row_version: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text('1'))
+    matter_category: Mapped[str] = mapped_column(Text, nullable=False, server_default=text("'litigation'"))
+    consultation_scope: Mapped[Optional[str]] = mapped_column(Text)
+    legal_opinion: Mapped[Optional[str]] = mapped_column(Text)
 
     law_parties: Mapped[List['LawParties']] = relationship('LawParties', back_populates='law_case')
     law_hearings: Mapped[List['LawHearings']] = relationship('LawHearings', back_populates='law_case')
