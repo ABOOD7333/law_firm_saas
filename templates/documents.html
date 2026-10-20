@@ -183,6 +183,10 @@
                                 <span style="font-size: 0.78rem; font-weight: 700; color: #475569; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; display: inline-block; margin-top: 4px;">
                                     {{ d.document_type_key }}
                                 </span>
+                                {% set v_count = d.versions|length if d.versions else 1 %}
+                                <button type="button" onclick="openVersionHistoryModal({{ d.id }}, '{{ d.name|escape }}')" style="background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; padding: 2px 8px; border-radius: 12px; font-weight: 700; font-size: 0.76rem; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; font-family: 'Cairo', sans-serif;" title="عرض سجل الإصدارات والمسودات">
+                                    <i class="fa-solid fa-code-branch"></i> v{{ v_count }}.0 ({{ v_count }} مسودات)
+                                </button>
                                 {% if d.keywords %}
                                 <div style="margin-top: 4px; display: flex; gap: 4px; flex-wrap: wrap;">
                                     {% for kw in d.keywords.split(',') %}
@@ -259,6 +263,13 @@
                             <a href="/documents/download/{{ d.file_path.split('/')[-1] }}" target="_blank" class="action-btn" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; border-radius: 6px; padding: 6px 10px; text-decoration: none;" title="تنزيل الملف المرفق">
                                 <i class="fa-solid fa-download"></i>
                             </a>
+                            {% endif %}
+
+                            <!-- رفع إصدار جديد -->
+                            {% if has_perm(user, 'documents', 'edit') and not d.is_archived %}
+                            <button class="action-btn" style="background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; border-radius: 6px; padding: 6px 10px; cursor: pointer;" title="رفع مسودة / إصدار جديد" onclick="openUploadVersionModal({{ d.id }}, '{{ d.name|escape }}')">
+                                <i class="fa-solid fa-cloud-arrow-up"></i> إصدار جديد
+                            </button>
                             {% endif %}
 
                             <!-- تعديل -->
@@ -594,6 +605,93 @@
         </div>
     </div>
 </div>
+
+    <!-- ============================================================== -->
+    <!-- 3. MODAL: سجل وتاريخ المسودات والإصدارات (Version History)    -->
+    <!-- ============================================================== -->
+    <div id="versionHistoryModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.65); align-items: center; justify-content: center; z-index: 1200; backdrop-filter: blur(4px);">
+        <div class="modal-content" style="background: white; border-radius: 16px; width: 750px; max-width: 95%; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); overflow: hidden;">
+            
+            <!-- Header -->
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 42px; height: 42px; background: #e0e7ff; color: #3730a3; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+                        <i class="fa-solid fa-code-branch"></i>
+                    </div>
+                    <div>
+                        <h2 id="version_modal_title" style="margin: 0; font-size: 1.2rem; color: #0f172a; font-weight: 800;">سجل إصدارات ومسودات المستند</h2>
+                        <p id="version_modal_sub" style="margin: 2px 0 0 0; font-size: 0.82rem; color: #64748b;">تتبع تاريخ التعديلات، مقارنة المسودات، واستعادة الإصدارات السابقة</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeVersionHistoryModal()" style="background: none; border: none; font-size: 1.6rem; cursor: pointer; color: #94a3b8; line-height: 1; padding: 4px 8px;">&times;</button>
+            </div>
+
+            <!-- Body -->
+            <div id="version_modal_body" style="padding: 24px; overflow-y: auto; flex: 1;">
+                <div style="text-align: center; color: #64748b; padding: 30px;">
+                    <i class="fa-solid fa-spinner fa-spin" style="font-size: 1.8rem; color: #3b82f6;"></i>
+                    <div style="margin-top: 10px; font-weight: 700;">جاري تحميل سجل الإصدارات...</div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 24px; border-top: 1px solid #e2e8f0; background: #f8fafc;">
+                <button type="button" onclick="openUploadVersionFromHistory()" class="btn-primary" style="padding: 9px 18px; border-radius: 8px; font-weight: 700; font-size: 0.88rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; background: #2563eb; color: #fff; border: none;">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> رفع مسودة جديدة
+                </button>
+                <button type="button" onclick="closeVersionHistoryModal()" class="btn" style="background: #e2e8f0; color: #334155; border: none; padding: 9px 18px; border-radius: 8px; font-weight: 700; cursor: pointer;">
+                    إغلاق
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- 4. MODAL: رفع إصدار / مسودة جديدة (Upload New Version)         -->
+    <!-- ============================================================== -->
+    <div id="uploadVersionModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.65); align-items: center; justify-content: center; z-index: 1300; backdrop-filter: blur(4px);">
+        <div class="modal-content" style="background: white; border-radius: 16px; width: 600px; max-width: 95%; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); overflow: hidden;">
+            
+            <!-- Header -->
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 42px; height: 42px; background: #dbeafe; color: #1d4ed8; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                    </div>
+                    <div>
+                        <h2 id="upload_version_title" style="margin: 0; font-size: 1.15rem; color: #0f172a; font-weight: 800;">رفع مسودة / إصدار جديد</h2>
+                        <p style="margin: 2px 0 0 0; font-size: 0.8rem; color: #64748b;">تحديث الوثيقة بملف مسودة جديد مع الاحتفاظ بجميع الإصدارات السابقة</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeUploadVersionModal()" style="background: none; border: none; font-size: 1.6rem; cursor: pointer; color: #94a3b8; line-height: 1; padding: 4px 8px;">&times;</button>
+            </div>
+
+            <form id="uploadVersionForm" method="post" enctype="multipart/form-data" style="margin: 0;">
+                <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+                
+                <div style="padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+                    <div class="form-group">
+                        <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 6px; font-size: 0.88rem;">ملف المسودة الجديدة <span style="color: #ef4444;">*</span></label>
+                        <input type="file" name="file" required style="width: 100%; padding: 10px; border: 2px dashed #cbd5e1; border-radius: 8px; background: #f8fafc; font-family: 'Cairo', sans-serif;">
+                        <span style="font-size: 0.75rem; color: #64748b; margin-top: 4px; display: block;">الملفات المقبولة: PDF, Word (DOCX/DOC), صور (JPG/PNG). الحد الأقصى 25MB.</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 6px; font-size: 0.88rem;">ملخص التعديلات والفروقات في هذه المسودة</label>
+                        <textarea name="change_summary" rows="3" placeholder="مثال: تعديل البند الرابع الخاص بالدفعات المالية وإضافة شرط التحكيم..." style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; resize: vertical;"></textarea>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; padding: 16px 24px; border-top: 1px solid #e2e8f0; background: #f8fafc;">
+                    <button type="button" onclick="closeUploadVersionModal()" class="btn" style="background: #e2e8f0; color: #334155; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; cursor: pointer;">إلغاء</button>
+                    <button type="submit" class="btn-primary" style="background: #2563eb; color: #fff; border: none; padding: 10px 24px; border-radius: 8px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> رفع واعتماد كمسودة حالية
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -723,6 +821,120 @@
         if (!text) return '';
         const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
         return String(text).replace(/[&<>"']/g, m => map[m]);
+    }
+
+    // Phase 2: Document Versioning & History Modals
+    let activeVersionDocId = null;
+    let activeVersionDocName = '';
+
+    function openVersionHistoryModal(docId, docName) {
+        activeVersionDocId = docId;
+        activeVersionDocName = docName;
+        document.getElementById('version_modal_title').innerText = 'سجل إصدارات: ' + docName;
+        const body = document.getElementById('version_modal_body');
+        body.innerHTML = `
+            <div style="text-align: center; color: #64748b; padding: 30px;">
+                <i class="fa-solid fa-spinner fa-spin" style="font-size: 1.8rem; color: #3b82f6;"></i>
+                <div style="margin-top: 10px; font-weight: 700;">جاري تحميل سجل الإصدارات والمسودات...</div>
+            </div>`;
+        document.getElementById('versionHistoryModal').style.display = 'flex';
+
+        fetch('/api/documents/' + docId + '/versions')
+            .then(res => res.json())
+            .then(data => {
+                if (!data.versions || data.versions.length === 0) {
+                    body.innerHTML = '<div style="text-align: center; color: #64748b; padding: 25px;">لا توجد مسودات مسجلة لهذا المستند.</div>';
+                    return;
+                }
+
+                let html = '<div style="display: flex; flex-direction: column; gap: 14px;">';
+                data.versions.forEach(v => {
+                    const isCur = v.is_current;
+                    const borderStyle = isCur ? 'border: 2px solid #3b82f6; background: #eff6ff;' : 'border: 1px solid #e2e8f0; background: #ffffff;';
+                    const curBadge = isCur ? '<span style="background: #10b981; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 700;">النسخة المعتمدة الحالية</span>' : '';
+
+                    html += `
+                    <div style="${borderStyle} border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span style="background: #1e3a8a; color: white; font-weight: 800; font-size: 0.85rem; padding: 4px 10px; border-radius: 8px;">${v.version_tag}</span>
+                                ${curBadge}
+                                <span style="font-size: 0.82rem; color: #64748b;"><i class="fa-regular fa-clock"></i> ${v.created_at}</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <a href="${v.download_url}" target="_blank" style="background: #f1f5f9; color: #1e293b; padding: 6px 12px; border-radius: 6px; text-decoration: none; font-size: 0.82rem; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; border: 1px solid #cbd5e1;">
+                                    <i class="fa-solid fa-download"></i> تنزيل
+                                </a>
+                                ${!isCur ? `
+                                <button type="button" onclick="restoreVersion(${v.id}, ${docId})" style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; padding: 6px 12px; border-radius: 6px; font-size: 0.82rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+                                    <i class="fa-solid fa-rotate-left"></i> استعادة هذه المسودة
+                                </button>` : ''}
+                            </div>
+                        </div>
+
+                        <div style="font-size: 0.88rem; color: #334155; line-height: 1.5; background: rgba(255,255,255,0.7); padding: 8px 12px; border-radius: 6px;">
+                            <strong>ملخص المسودة:</strong> ${escapeHtml(v.change_summary)}
+                        </div>
+
+                        <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: #64748b; border-top: 1px dashed #cbd5e1; padding-top: 8px; margin-top: 2px;">
+                            <span><i class="fa-regular fa-user"></i> رُفعت بواسطة: <strong>${escapeHtml(v.uploaded_by)}</strong></span>
+                            <span>النوع: <strong>${escapeHtml(v.file_type)}</strong></span>
+                        </div>
+                    </div>
+                    `;
+                });
+                html += '</div>';
+                body.innerHTML = html;
+            })
+            .catch(() => {
+                body.innerHTML = '<div style="color: #dc2626; padding: 20px; text-align: center;">تعذر تحميل سجل الإصدارات. يرجى المحاولة لاحقاً.</div>';
+            });
+    }
+
+    function closeVersionHistoryModal() {
+        document.getElementById('versionHistoryModal').style.display = 'none';
+    }
+
+    function openUploadVersionModal(docId, docName) {
+        activeVersionDocId = docId;
+        activeVersionDocName = docName;
+        document.getElementById('upload_version_title').innerText = 'رفع مسودة وإصدار جديد لـ: ' + docName;
+        document.getElementById('uploadVersionForm').action = '/documents/' + docId + '/versions/upload';
+        document.getElementById('uploadVersionModal').style.display = 'flex';
+    }
+
+    function openUploadVersionFromHistory() {
+        closeVersionHistoryModal();
+        if (activeVersionDocId) {
+            openUploadVersionModal(activeVersionDocId, activeVersionDocName);
+        }
+    }
+
+    function closeUploadVersionModal() {
+        document.getElementById('uploadVersionModal').style.display = 'none';
+    }
+
+    function restoreVersion(versionId, docId) {
+        if (!confirm('هل أنت متأكد من اعتماد واستعادة هذه المسودة لتكون النسخة الرسمية الحالية للمستند؟')) return;
+
+        fetch('/documents/versions/' + versionId + '/restore', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-Token': document.querySelector('input[name="csrf_token"]')?.value || ''
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert('تمت استعادة واعتماد المسودة بنجاح!');
+                window.location.reload();
+            } else {
+                alert('حدث خطأ أثناء استعادة المسودة.');
+            }
+        })
+        .catch(() => {
+            alert('تعذر استعادة المسودة. يرجى التحقق من الصلاحيات.');
+        });
     }
 
     document.addEventListener("DOMContentLoaded", () => {

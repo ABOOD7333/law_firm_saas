@@ -12,7 +12,7 @@ import re
 
 from core.error_handler import safe_error_html
 from database.database import get_db
-from database.models import AccessProfiles, LawCases, LawDocuments, LawClients, LawAuditLog
+from database.models import AccessProfiles, LawCases, LawDocuments, LawDocumentVersions, LawClients, LawAuditLog
 from dependencies import get_current_user, templates, check_user_permission, user_can_access_case
 
 router = APIRouter()
@@ -324,6 +324,23 @@ async def add_document(
     )
     db.add(d)
     db.commit()
+    db.refresh(d)
+
+    # Automatic Initial Version Creation (v1.0)
+    if file_path_str:
+        v1 = LawDocumentVersions(
+            document_id=d.id,
+            office_id=office_id,
+            version_number=1,
+            file_path=file_path_str,
+            file_size=file_size_val or 0,
+            file_type=file_type_val or 'file',
+            change_summary="المسودة الأولية (الإصدار الأساسي v1.0)",
+            is_current=1,
+            uploaded_by_user_id=user.id
+        )
+        db.add(v1)
+        db.commit()
 
     log_document_audit(db, office_id, user, "إضافة مستند", d, f"النوع: {document_type_key}")
     return RedirectResponse(url="/documents?msg=added", status_code=303)
@@ -413,6 +430,24 @@ async def edit_document(
         d.file_path = f"{DOCUMENTS_UPLOAD_DIR}/{filename}"
         d.file_size = len(file_bytes)
         d.file_type = ext
+
+        # Auto-track new version on edit file upload
+        db.query(LawDocumentVersions).filter(LawDocumentVersions.document_id == d.id).update({"is_current": 0})
+        existing_vs = db.query(LawDocumentVersions.version_number).filter(LawDocumentVersions.document_id == d.id).all()
+        max_v = max([v[0] for v in existing_vs], default=0)
+        next_v = max_v + 1
+        new_v = LawDocumentVersions(
+            document_id=d.id,
+            office_id=office_id,
+            version_number=next_v,
+            file_path=f"{DOCUMENTS_UPLOAD_DIR}/{filename}",
+            file_size=len(file_bytes),
+            file_type=ext,
+            change_summary=f"تحديث مسودة المستند (إصدار v{next_v}.0)",
+            is_current=1,
+            uploaded_by_user_id=user.id
+        )
+        db.add(new_v)
 
     d.name = name.strip()
     d.document_type_key = document_type_key
@@ -577,3 +612,223 @@ async def download_document(
     log_document_audit(db, user.office_id, user, "تنزيل مستند", doc, f"الملف: {filename}")
 
     return FileResponse(path, filename=f"{doc.name}.{doc.file_type or 'pdf'}", headers={"Cache-Control": "private, no-store"})
+
+# ========================================================
+# Phase 2: Document Versioning & Historical Drafts System
+# ========================================================
+
+@router.get("/api/documents/{doc_id}/versions")
+async def get_document_versions(
+    doc_id: int,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    """Return JSON list of all revisions/versions for a document"""
+    if not user or not user.office_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    doc = db.query(LawDocuments).filter(
+        LawDocuments.id == doc_id,
+        LawDocuments.office_id == user.office_id,
+        LawDocuments.is_deleted == 0
+    ).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="المستند غير موجود")
+    if doc.case_id and not user_can_access_case(db, user, doc.case_id):
+        raise HTTPException(status_code=403, detail="غير مصرح بالوصول للمستند")
+
+    versions = db.query(LawDocumentVersions).filter(
+        LawDocumentVersions.document_id == doc_id
+    ).order_by(LawDocumentVersions.version_number.desc()).all()
+
+    v_list = []
+    for v in versions:
+        up_name = getattr(v.uploader, 'name', None) or getattr(v.uploader, 'username', 'مستخدم النظام')
+        v_list.append({
+            "id": v.id,
+            "version_number": v.version_number,
+            "version_tag": f"v{v.version_number}.0",
+            "file_type": (v.file_type or 'file').upper(),
+            "file_size": v.file_size or 0,
+            "change_summary": v.change_summary or ("المسودة الأولية" if v.version_number == 1 else "تعديل مسودة"),
+            "is_current": bool(v.is_current),
+            "created_at": v.created_at or "-",
+            "uploaded_by": up_name,
+            "download_url": f"/documents/versions/{v.id}/download"
+        })
+
+    return {
+        "doc_id": doc.id,
+        "doc_name": doc.name,
+        "doc_code": doc.doc_code or f"DOC-{doc.id}",
+        "total_versions": len(v_list),
+        "versions": v_list
+    }
+
+
+@router.post("/documents/{doc_id}/versions/upload")
+async def upload_document_version(
+    doc_id: int,
+    file: UploadFile = File(...),
+    change_summary: str = Form(None),
+    redirect_to: str = Form("documents"),
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    """Upload a new version/draft for a document"""
+    if not user or not user.office_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    if not check_user_permission(user, 'documents', 'edit'):
+        raise HTTPException(status_code=403, detail="غير مصرح لك برفع إصدارات جديدة")
+
+    doc = db.query(LawDocuments).filter(
+        LawDocuments.id == doc_id,
+        LawDocuments.office_id == user.office_id,
+        LawDocuments.is_deleted == 0
+    ).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="المستند غير موجود")
+    if doc.case_id and not user_can_access_case(db, user, doc.case_id):
+        raise HTTPException(status_code=403, detail="غير مصرح بالوصول")
+
+    if not file or not file.filename:
+        raise HTTPException(status_code=400, detail="يرجى اختيار ملف صالح للرفع")
+
+    clean_fn = "".join(c for c in file.filename if c.isalnum() or c in ' ._-')
+    ext = clean_fn.split('.')[-1].lower() if '.' in clean_fn else ''
+    allowed_exts = {'pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'txt'}
+    if ext not in allowed_exts:
+        raise HTTPException(status_code=400, detail=f"نوع الملف غير مسموح به ({ext})")
+
+    MAX_SIZE_BYTES = 25 * 1024 * 1024
+    file_bytes = await file.read(MAX_SIZE_BYTES + 1)
+    if len(file_bytes) > MAX_SIZE_BYTES:
+        raise HTTPException(status_code=400, detail="حجم الملف يتجاوز الحد المسموح به (25MB)")
+
+    from core.security import validate_file_signature
+    if not validate_file_signature(file_bytes, ext):
+        raise HTTPException(status_code=400, detail="فشل التحقق من أمان محتوى الملف")
+
+    filename = f"{uuid.uuid4().hex}.{ext}"
+    path = os.path.join(DOCUMENTS_UPLOAD_DIR, filename)
+    with open(path, "wb") as f_out:
+        f_out.write(file_bytes)
+
+    # Next version calculation
+    existing_v = db.query(LawDocumentVersions.version_number).filter(LawDocumentVersions.document_id == doc.id).all()
+    max_v = max([v[0] for v in existing_v], default=0)
+    next_v = max_v + 1
+
+    # Demote old versions
+    db.query(LawDocumentVersions).filter(LawDocumentVersions.document_id == doc.id).update({"is_current": 0})
+
+    summary_text = change_summary.strip() if change_summary and change_summary.strip() else f"إصدار وتعديل جديد (v{next_v}.0)"
+    new_version = LawDocumentVersions(
+        document_id=doc.id,
+        office_id=user.office_id,
+        version_number=next_v,
+        file_path=f"{DOCUMENTS_UPLOAD_DIR}/{filename}",
+        file_size=len(file_bytes),
+        file_type=ext,
+        change_summary=summary_text,
+        is_current=1,
+        uploaded_by_user_id=user.id
+    )
+    db.add(new_version)
+
+    # Update active document pointer
+    doc.file_path = f"{DOCUMENTS_UPLOAD_DIR}/{filename}"
+    doc.file_size = len(file_bytes)
+    doc.file_type = ext
+    doc.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    doc.updated_by_user_id = user.id
+
+    db.commit()
+    log_document_audit(db, user.office_id, user, "رفع إصدار مسودة جديد", doc, f"الإصدار v{next_v}.0: {summary_text}")
+
+    if redirect_to == "case" and doc.case_id:
+        return RedirectResponse(url=f"/cases/{doc.case_id}?msg=version_added", status_code=303)
+    return RedirectResponse(url="/documents?msg=version_added", status_code=303)
+
+
+@router.post("/documents/versions/{version_id}/restore")
+async def restore_document_version(
+    version_id: int,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    """Revert a document's active state to a past version"""
+    if not user or not user.office_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    if not check_user_permission(user, 'documents', 'edit'):
+        raise HTTPException(status_code=403, detail="غير مصرح لك باستعادة إصدارات سابقة")
+
+    target_v = db.query(LawDocumentVersions).filter(
+        LawDocumentVersions.id == version_id,
+        LawDocumentVersions.office_id == user.office_id
+    ).first()
+    if not target_v:
+        raise HTTPException(status_code=404, detail="الإصدار غير موجود")
+
+    doc = db.query(LawDocuments).filter(
+        LawDocuments.id == target_v.document_id,
+        LawDocuments.office_id == user.office_id,
+        LawDocuments.is_deleted == 0
+    ).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="المستند غير موجود")
+    if doc.case_id and not user_can_access_case(db, user, doc.case_id):
+        raise HTTPException(status_code=403, detail="غير مصرح لك بالوصول")
+
+    # Demote all versions and set target as current
+    db.query(LawDocumentVersions).filter(LawDocumentVersions.document_id == doc.id).update({"is_current": 0})
+    target_v.is_current = 1
+
+    doc.file_path = target_v.file_path
+    doc.file_size = target_v.file_size
+    doc.file_type = target_v.file_type
+    doc.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    doc.updated_by_user_id = user.id
+
+    db.commit()
+    log_document_audit(db, user.office_id, user, "استعادة إصدار سابق", doc, f"تمت استعادة المسودة رقم v{target_v.version_number}.0 لتكون النسخة المعتمدة")
+
+    return JSONResponse(content={"success": True, "restored_version": target_v.version_number})
+
+
+@router.get("/documents/versions/{version_id}/download")
+async def download_document_version(
+    version_id: int,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    """Download a specific historical version file"""
+    if not user or not user.office_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    if not check_user_permission(user, 'documents', 'view'):
+        raise HTTPException(status_code=403, detail="غير مصرح بتنزيل المستندات")
+
+    target_v = db.query(LawDocumentVersions).filter(
+        LawDocumentVersions.id == version_id,
+        LawDocumentVersions.office_id == user.office_id
+    ).first()
+    if not target_v:
+        raise HTTPException(status_code=404, detail="الإصدار غير موجود")
+
+    doc = db.query(LawDocuments).filter(
+        LawDocuments.id == target_v.document_id,
+        LawDocuments.office_id == user.office_id,
+        LawDocuments.is_deleted == 0
+    ).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="المستند غير موجود")
+    if doc.case_id and not user_can_access_case(db, user, doc.case_id):
+        raise HTTPException(status_code=403, detail="غير مصرح لك بالوصول")
+
+    path = os.path.realpath(target_v.file_path or "")
+    if not os.path.isfile(path):
+        raise HTTPException(status_code=404, detail="الملف غير موجود على الخادم")
+
+    fn_download = f"{doc.name}_v{target_v.version_number}.{target_v.file_type or 'pdf'}"
+    log_document_audit(db, user.office_id, user, "تنزيل مسودة إصدار", doc, f"الإصدار v{target_v.version_number}")
+    return FileResponse(path, filename=fn_download, headers={"Cache-Control": "private, no-store"})
+

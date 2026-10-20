@@ -326,6 +326,24 @@ class LawDocuments(Base):
 
     law_case: Mapped['LawCases'] = relationship('LawCases', back_populates='law_documents')
     law_client: Mapped[Optional['LawClients']] = relationship('LawClients')
+    versions: Mapped[List['LawDocumentVersions']] = relationship('LawDocumentVersions', back_populates='document', cascade='all, delete-orphan')
+
+class LawDocumentVersions(Base):
+    __tablename__ = 'law_document_versions'
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    document_id: Mapped[int] = mapped_column(ForeignKey('law_documents.id', ondelete='CASCADE'), index=True)
+    office_id: Mapped[int] = mapped_column(ForeignKey('law_offices.id'), index=True)
+    version_number: Mapped[int] = mapped_column(Integer, default=1)
+    file_path: Mapped[Optional[str]] = mapped_column(Text)
+    file_size: Mapped[Optional[int]] = mapped_column(Integer)
+    file_type: Mapped[Optional[str]] = mapped_column(Text)
+    change_summary: Mapped[Optional[str]] = mapped_column(Text)
+    is_current: Mapped[int] = mapped_column(Integer, server_default=text('1'), nullable=False)
+    uploaded_by_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey('access_profiles.id', ondelete='SET NULL'))
+    created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
+
+    document: Mapped['LawDocuments'] = relationship('LawDocuments', back_populates='versions')
+    uploader: Mapped[Optional['AccessProfiles']] = relationship('AccessProfiles', foreign_keys=[uploaded_by_user_id])
 
 class LawPleadings(Base):
     __tablename__ = 'law_pleadings'
