@@ -670,6 +670,162 @@ if (typeof Chart === 'undefined') {
             display: none !important;
         }
     }
+
+    /* Interactive Modal Filter Bar */
+    .modal-filters-bar {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 14px 18px;
+        margin-bottom: 20px;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    .modal-filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 140px;
+        flex: 1;
+    }
+    .modal-filter-group label {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: #64748b;
+    }
+    .modal-filter-input, .modal-filter-select {
+        padding: 7px 10px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        background: #ffffff;
+        color: #1e293b;
+        font-weight: 600;
+    }
+    .modal-filter-input:focus, .modal-filter-select:focus {
+        border-color: #3b82f6;
+        outline: none;
+    }
+    .btn-apply-modal-filter {
+        background: #1e3a8a;
+        color: #ffffff;
+        border: none;
+        padding: 9px 18px;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 0.88rem;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        align-self: flex-end;
+        transition: background 0.2s;
+    }
+    .btn-apply-modal-filter:hover {
+        background: #2563eb;
+    }
+
+    /* Applied Filters Tag Ribbon */
+    .applied-filters-ribbon {
+        font-size: 0.8rem;
+        color: #475569;
+        margin-bottom: 16px;
+        padding: 6px 12px;
+        background: #f1f5f9;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    /* Table Badges & Progress Bars */
+    .table-progress-wrap {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 120px;
+    }
+    .table-progress-track {
+        flex: 1;
+        height: 7px;
+        background: #e2e8f0;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    .table-progress-fill {
+        height: 100%;
+        background: #10b981;
+        border-radius: 4px;
+    }
+    .badge-gold {
+        background: #fef3c7;
+        color: #92400e;
+        border: 1px solid #fde68a;
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-weight: 800;
+        font-size: 0.8rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .badge-urgent {
+        background: #fee2e2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-weight: 800;
+        font-size: 0.8rem;
+    }
+    .badge-success {
+        background: #dcfce7;
+        color: #15803d;
+        border: 1px solid #bbf7d0;
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-weight: 800;
+        font-size: 0.8rem;
+    }
+    .badge-info {
+        background: #e0f2fe;
+        color: #0369a1;
+        border: 1px solid #bae6fd;
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-weight: 800;
+        font-size: 0.8rem;
+    }
+    .badge-neutral {
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 0.8rem;
+    }
+
+    /* Stamp Box in Print */
+    .official-seal-box {
+        width: 110px;
+        height: 110px;
+        border: 2px dashed #94a3b8;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        font-size: 0.72rem;
+        font-weight: 800;
+        color: #64748b;
+        transform: rotate(-10deg);
+        margin: 0 auto;
+    }
+
 </style>
 {% endblock %}
 
@@ -961,6 +1117,54 @@ if (typeof Chart === 'undefined') {
                 </div>
             </div>
 
+            <!-- Applied Filters Ribbon (visible in print & screen) -->
+            <div class="applied-filters-ribbon" id="modalAppliedFiltersRibbon">
+                <strong><i class="fa-solid fa-sliders text-blue"></i> محددات الاستخراج:</strong>
+                <span id="appliedFiltersText">جميع السجلات | المحامي: الكل | التخصص: جميع مجالات الممارسة</span>
+            </div>
+
+            <!-- Interactive Modal Filter Controls (Screen Only) -->
+            <div class="modal-filters-bar no-print" id="modalInteractiveFilterBar">
+                <div class="modal-filter-group">
+                    <label><i class="fa-solid fa-calendar-day"></i> التاريخ (من):</label>
+                    <input type="date" class="modal-filter-input" id="modalFilterStartDate">
+                </div>
+                <div class="modal-filter-group">
+                    <label><i class="fa-solid fa-calendar-day"></i> التاريخ (إلى):</label>
+                    <input type="date" class="modal-filter-input" id="modalFilterEndDate">
+                </div>
+                <div class="modal-filter-group" id="filterGroupLawyer">
+                    <label><i class="fa-solid fa-user-tie"></i> المحامي المسؤول:</label>
+                    <select class="modal-filter-select" id="modalFilterLawyer">
+                        <option value="">جميع المحامين</option>
+                        <option value="1">{{ user.name }} (محامٍ شريك)</option>
+                        <option value="2">المحامي المساعد أ (ممارس)</option>
+                    </select>
+                </div>
+                <div class="modal-filter-group" id="filterGroupArea">
+                    <label><i class="fa-solid fa-briefcase"></i> مجال الممارسة:</label>
+                    <select class="modal-filter-select" id="modalFilterArea">
+                        <option value="">جميع المجالات</option>
+                        <option value="commercial">القضايا التجارية والشركات</option>
+                        <option value="realestate">النزاعات العقارية والأراضي</option>
+                        <option value="labor">القضايا العمالية والتأمينات</option>
+                        <option value="arbitration">التحكيم ومشاريع المقاولات</option>
+                    </select>
+                </div>
+                <div class="modal-filter-group" id="filterGroupPriority">
+                    <label><i class="fa-solid fa-flag"></i> درجة الأولوية:</label>
+                    <select class="modal-filter-select" id="modalFilterPriority">
+                        <option value="">الكل</option>
+                        <option value="urgent">عاجل جداً</option>
+                        <option value="normal">عادي</option>
+                        <option value="low">منخفض</option>
+                    </select>
+                </div>
+                <button class="btn-apply-modal-filter" onclick="applyModalFiltersAndRefresh()">
+                    <i class="fa-solid fa-filter"></i> تطبيق الفلتر
+                </button>
+            </div>
+
             <!-- Dynamic Summary Badges -->
             <div class="report-summary-strip" id="modalSummaryStrip"></div>
 
@@ -972,10 +1176,21 @@ if (typeof Chart === 'undefined') {
                 </table>
             </div>
 
-            <!-- Printable Stamp Footer -->
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:24px; padding-top:16px; border-top:1px dashed #cbd5e1; font-size:0.82rem; color:#64748b;">
-                <div>وثيقة نظامية صادرة آلياً من منصة إدارة مكاتب المحاماة LawFirm SaaS.</div>
-                <div style="font-weight:800; color:#0f172a;">ختم وتوقيع الإدارة القانونية: _____________________</div>
+            <!-- Printable Certification & Stamp Footer -->
+            <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:20px; align-items:center; margin-top:28px; padding-top:18px; border-top:2px solid #0f172a; font-size:0.82rem; color:#475569;">
+                <div>
+                    <strong style="color:#0f172a; display:block; margin-bottom:4px;"><i class="fa-solid fa-shield-halved text-blue"></i> إقرار صحة واعتماد البيانات:</strong>
+                    تشهد الإدارة القانونية بأن هذا التقرير مستخرج وموثق آلياً من السجلات القضائية والمالية المعتمدة للمكتب، ويُعد وثيقة رسمية منتجة لآثارها النظامية.
+                </div>
+                <div style="text-align:center;">
+                    <strong style="color:#0f172a; display:block; margin-bottom:8px;">توقيع المحامي المسؤول:</strong>
+                    <div style="border-bottom:1px dashed #64748b; height:32px; width:160px; margin:0 auto;"></div>
+                </div>
+                <div style="text-align:center;">
+                    <div class="official-seal-box">
+                        ختم الاعتماد الرسمي<br>المكتب القانوني
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -1119,7 +1334,7 @@ if (typeof Chart === 'undefined') {
         const thead = document.getElementById('modalTableHead');
         thead.innerHTML = '<tr>' + (data.columns || []).map(c => `<th>${c}</th>`).join('') + '</tr>';
 
-        // Render Table Rows
+        // Render Table Rows with visual enhancements
         const tbody = document.getElementById('modalTableBody');
         tbody.innerHTML = '';
         if (!data.rows || data.rows.length === 0) {
@@ -1128,17 +1343,90 @@ if (typeof Chart === 'undefined') {
             data.rows.forEach(row => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = row.map(cell => {
-                    let formatted = cell;
-                    if (String(cell).includes('🏆') || String(cell).includes('✅')) {
-                        return `<td><span style="color:#059669; font-weight:700;">${cell}</span></td>`;
+                    const strCell = String(cell);
+                    
+                    // 1. Progress Bar for percentages
+                    if (strCell.endsWith('%') && !isNaN(parseFloat(strCell))) {
+                        const pctVal = parseFloat(strCell);
+                        const fillColor = pctVal >= 80 ? '#10b981' : (pctVal >= 50 ? '#3b82f6' : '#f59e0b');
+                        return `<td>
+                            <div class="table-progress-wrap">
+                                <div class="table-progress-track">
+                                    <div class="table-progress-fill" style="width: ${pctVal}%; background: ${fillColor};"></div>
+                                </div>
+                                <span style="font-weight:800; font-size:0.82rem; color:${fillColor};">${strCell}</span>
+                            </div>
+                        </td>`;
                     }
-                    if (String(cell).includes('⚠️') || String(cell).includes('خطر')) {
-                        return `<td><span style="color:#dc2626; font-weight:700;">${cell}</span></td>`;
+                    
+                    // 2. Gold Trophy Badge for Top Revenue / Achievements
+                    if (strCell.includes('🏆') || strCell.includes('الأعلى إيراداً')) {
+                        return `<td><span class="badge-gold">${strCell}</span></td>`;
                     }
-                    return `<td>${formatted}</td>`;
+
+                    // 3. Urgent / Overdue Badges
+                    if (strCell.includes('⚠️') || strCell.includes('عاجل') || strCell.includes('متأخر')) {
+                        return `<td><span class="badge-urgent">${strCell}</span></td>`;
+                    }
+
+                    // 4. Success / On-time / Compliant Badges
+                    if (strCell.includes('✅') || strCell.includes('ملتزم') || strCell.includes('متقدم')) {
+                        return `<td><span class="badge-success">${strCell}</span></td>`;
+                    }
+
+                    // 5. Normal / Workload Badges
+                    if (strCell.includes('متزن') || strCell.includes('طبيعي')) {
+                        return `<td><span class="badge-info">${strCell}</span></td>`;
+                    }
+
+                    // 6. Currency format or Numbers
+                    if (strCell.includes('ر.ي') || strCell.includes(',') && !isNaN(parseFloat(strCell.replace(/,/g, '')))) {
+                        return `<td><strong style="color:#0f172a; font-family:sans-serif;">${strCell}</strong></td>`;
+                    }
+
+                    return `<td>${strCell}</td>`;
                 }).join('');
                 tbody.appendChild(tr);
             });
+        }
+    }
+
+    
+    // Apply Modal Filters and Re-fetch
+    async function applyModalFiltersAndRefresh() {
+        if (!activeReportData) return;
+        const repId = activeReportData.report_id;
+        const startDate = document.getElementById('modalFilterStartDate').value;
+        const endDate = document.getElementById('modalFilterEndDate').value;
+        const lawyer = document.getElementById('modalFilterLawyer').value;
+        const area = document.getElementById('modalFilterArea').value;
+        const priority = document.getElementById('modalFilterPriority').value;
+
+        // Build active filter label for print ribbon
+        let appliedTxt = [];
+        if (startDate || endDate) appliedTxt.push(`الفترة: ${startDate || 'البداية'} إلى ${endDate || 'اليوم'}`);
+        if (lawyer) appliedTxt.push('المحامي: محدد');
+        if (area) appliedTxt.push('المجال: محدد');
+        if (priority) appliedTxt.push(`الأولوية: ${priority}`);
+        if (appliedTxt.length === 0) appliedTxt.push('جميع السجلات والملفات المتاحة بدون تقييد');
+        document.getElementById('appliedFiltersText').innerText = appliedTxt.join(' | ');
+
+        let queryParams = [];
+        if (startDate) queryParams.push(`start_date=${encodeURIComponent(startDate)}`);
+        if (endDate) queryParams.push(`end_date=${encodeURIComponent(endDate)}`);
+        if (lawyer) queryParams.push(`lawyer_id=${encodeURIComponent(lawyer)}`);
+        const queryStr = queryParams.length ? '?' + queryParams.join('&') : '';
+
+        try {
+            document.getElementById('modalTableBody').innerHTML = '<tr><td colspan="10" style="text-align:center; padding:20px;"><i class="fa-solid fa-spinner fa-spin"></i> جاري تحديث بيانات التقرير...</td></tr>';
+            const res = await fetch(`/api/reports/run/${repId}${queryStr}`);
+            const data = await res.json();
+            if (data.success) {
+                activeReportData = data;
+                renderModalReport(data);
+            }
+        } catch (err) {
+            console.error('Filter refresh error:', err);
         }
     }
 
