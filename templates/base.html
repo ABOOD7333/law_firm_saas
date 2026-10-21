@@ -617,7 +617,7 @@
                 <ul class="nav-sub-menu">
                     {% if has_perm(user, 'reports', 'view') %}
                     <li class="nav-item {% if active_page == 'reports' %}active{% endif %}">
-                        <a href="/reports"><i class="fa-solid fa-chart-bar"></i> التقارير والمؤشرات</a>
+                        <a href="/reports"><i class="fa-solid fa-chart-bar"></i> التقارير</a>
                     </li>
                     {% endif %}
                     {% if user and user.role in ['صاحب المكتب', 'صاحب مكتب', 'مدير المكتب', 'مدير مكتب', 'مدير', 'مدير النظام'] %}
