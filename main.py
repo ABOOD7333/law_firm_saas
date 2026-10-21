@@ -428,6 +428,11 @@ async def health_check(db: Session = Depends(get_db)):
     return JSONResponse(checks)
 
 
+@app.get("/api/version")
+async def get_version():
+    return JSONResponse({"version": "v2.1", "sidebar_sections": 7, "status": "deployed"})
+
+
 @app.post("/api/setup")
 async def setup_database(user: AccessProfiles = Depends(get_current_user)):
     """Privileged recovery endpoint; never expose database setup publicly."""
