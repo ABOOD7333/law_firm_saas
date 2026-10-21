@@ -726,6 +726,25 @@ if (typeof Chart === 'undefined') {
     .btn-apply-modal-filter:hover {
         background: #2563eb;
     }
+    .btn-reset-modal-filter {
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #cbd5e1;
+        padding: 9px 14px;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 0.88rem;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        align-self: flex-end;
+        transition: all 0.2s;
+    }
+    .btn-reset-modal-filter:hover {
+        background: #e2e8f0;
+        color: #0f172a;
+    }
 
     /* Applied Filters Tag Ribbon */
     .applied-filters-ribbon {
@@ -1137,32 +1156,59 @@ if (typeof Chart === 'undefined') {
                     <label><i class="fa-solid fa-user-tie"></i> المحامي المسؤول:</label>
                     <select class="modal-filter-select" id="modalFilterLawyer">
                         <option value="">جميع المحامين</option>
-                        <option value="1">{{ user.name }} (محامٍ شريك)</option>
-                        <option value="2">المحامي المساعد أ (ممارس)</option>
+                        {% for law in office_lawyers %}
+                        <option value="{{ law.id }}">{{ law.name }} ({{ law.role }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="modal-filter-group" id="filterGroupClient">
+                    <label><i class="fa-solid fa-users"></i> الموكل / الحساب:</label>
+                    <select class="modal-filter-select" id="modalFilterClient">
+                        <option value="">جميع الموكلين</option>
+                        {% for cl in office_clients %}
+                        <option value="{{ cl.id }}">{{ cl.name }}{% if cl.cr_number %} ({{ cl.cr_number }}){% endif %}</option>
+                        {% endfor %}
                     </select>
                 </div>
                 <div class="modal-filter-group" id="filterGroupArea">
                     <label><i class="fa-solid fa-briefcase"></i> مجال الممارسة:</label>
                     <select class="modal-filter-select" id="modalFilterArea">
-                        <option value="">جميع المجالات</option>
+                        <option value="">جميع مجالات الممارسة</option>
                         <option value="commercial">القضايا التجارية والشركات</option>
                         <option value="realestate">النزاعات العقارية والأراضي</option>
-                        <option value="labor">القضايا العمالية والتأمينات</option>
                         <option value="arbitration">التحكيم ومشاريع المقاولات</option>
+                        <option value="labor">القضايا العمالية والتأمينات</option>
+                        <option value="civil">القضايا المدنية والتعويضات</option>
+                        <option value="administrative">المنازعات الإدارية</option>
+                        <option value="criminal">القضايا الجزائية والجنائية</option>
                     </select>
                 </div>
                 <div class="modal-filter-group" id="filterGroupPriority">
                     <label><i class="fa-solid fa-flag"></i> درجة الأولوية:</label>
                     <select class="modal-filter-select" id="modalFilterPriority">
-                        <option value="">الكل</option>
+                        <option value="">كافة درجات الأولوية</option>
                         <option value="urgent">عاجل جداً</option>
                         <option value="normal">عادي</option>
                         <option value="low">منخفض</option>
                     </select>
                 </div>
-                <button class="btn-apply-modal-filter" onclick="applyModalFiltersAndRefresh()">
-                    <i class="fa-solid fa-filter"></i> تطبيق الفلتر
-                </button>
+                <div class="modal-filter-group" id="filterGroupStatus">
+                    <label><i class="fa-solid fa-circle-dot"></i> حالة الملف:</label>
+                    <select class="modal-filter-select" id="modalFilterStatus">
+                        <option value="">كافة الحالات</option>
+                        <option value="active">جارية / نشطة</option>
+                        <option value="closed">منتهية / مغلقة</option>
+                        <option value="draft">قيد الإعداد</option>
+                    </select>
+                </div>
+                <div style="display:flex; gap:8px; align-items:flex-end;">
+                    <button class="btn-apply-modal-filter" onclick="applyModalFiltersAndRefresh()">
+                        <i class="fa-solid fa-filter"></i> تطبيق الفلتر
+                    </button>
+                    <button class="btn-reset-modal-filter" onclick="resetModalFilters()" title="إعادة ضبط الفلاتر">
+                        <i class="fa-solid fa-rotate-right"></i> إعادة ضبط
+                    </button>
+                </div>
             </div>
 
             <!-- Dynamic Summary Badges -->
@@ -1338,7 +1384,14 @@ if (typeof Chart === 'undefined') {
         const tbody = document.getElementById('modalTableBody');
         tbody.innerHTML = '';
         if (!data.rows || data.rows.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="${data.columns.length}" style="text-align:center; padding:24px; color:#94a3b8;">لا توجد سجلات مطابقة لهذا التقرير حالياً</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="${(data.columns || []).length || 6}" style="text-align:center; padding:36px; color:#64748b;">
+                <i class="fa-solid fa-filter-circle-xmark" style="font-size:2.2rem; color:#94a3b8; display:block; margin-bottom:12px;"></i>
+                <strong style="font-size:1.05rem; color:#1e293b; display:block;">لا توجد سجلات تطابق محددات البحث والفلاتر المختارة</strong>
+                <p style="font-size:0.86rem; margin-top:6px; color:#64748b;">يرجى تغيير خيارات الفلترة أو الضغط على زر "إعادة ضبط" لعرض كافة السجلات.</p>
+                <button class="btn-hub-action" style="margin-top:12px; font-size:0.82rem; padding:6px 16px; background:#f1f5f9; color:#1e293b; border-color:#cbd5e1;" onclick="resetModalFilters()">
+                    <i class="fa-solid fa-rotate-right"></i> إعادة ضبط الفلاتر
+                </button>
+            </td></tr>`;
         } else {
             data.rows.forEach(row => {
                 const tr = document.createElement('tr');
@@ -1399,15 +1452,28 @@ if (typeof Chart === 'undefined') {
         const startDate = document.getElementById('modalFilterStartDate').value;
         const endDate = document.getElementById('modalFilterEndDate').value;
         const lawyer = document.getElementById('modalFilterLawyer').value;
+        const client = document.getElementById('modalFilterClient').value;
         const area = document.getElementById('modalFilterArea').value;
         const priority = document.getElementById('modalFilterPriority').value;
+        const status = document.getElementById('modalFilterStatus').value;
 
         // Build active filter label for print ribbon
         let appliedTxt = [];
         if (startDate || endDate) appliedTxt.push(`الفترة: ${startDate || 'البداية'} إلى ${endDate || 'اليوم'}`);
-        if (lawyer) appliedTxt.push('المحامي: محدد');
-        if (area) appliedTxt.push('المجال: محدد');
+        if (lawyer) {
+            const lawSel = document.getElementById('modalFilterLawyer');
+            appliedTxt.push(`المحامي: ${lawSel.options[lawSel.selectedIndex].text}`);
+        }
+        if (client) {
+            const clSel = document.getElementById('modalFilterClient');
+            appliedTxt.push(`الموكل: ${clSel.options[clSel.selectedIndex].text}`);
+        }
+        if (area) {
+            const areaSel = document.getElementById('modalFilterArea');
+            appliedTxt.push(`التخصص: ${areaSel.options[areaSel.selectedIndex].text}`);
+        }
         if (priority) appliedTxt.push(`الأولوية: ${priority}`);
+        if (status) appliedTxt.push(`الحالة: ${status}`);
         if (appliedTxt.length === 0) appliedTxt.push('جميع السجلات والملفات المتاحة بدون تقييد');
         document.getElementById('appliedFiltersText').innerText = appliedTxt.join(' | ');
 
@@ -1415,19 +1481,38 @@ if (typeof Chart === 'undefined') {
         if (startDate) queryParams.push(`start_date=${encodeURIComponent(startDate)}`);
         if (endDate) queryParams.push(`end_date=${encodeURIComponent(endDate)}`);
         if (lawyer) queryParams.push(`lawyer_id=${encodeURIComponent(lawyer)}`);
+        if (client) queryParams.push(`client_id=${encodeURIComponent(client)}`);
+        if (area) queryParams.push(`practice_area=${encodeURIComponent(area)}`);
+        if (priority) queryParams.push(`priority=${encodeURIComponent(priority)}`);
+        if (status) queryParams.push(`status_key=${encodeURIComponent(status)}`);
         const queryStr = queryParams.length ? '?' + queryParams.join('&') : '';
 
         try {
-            document.getElementById('modalTableBody').innerHTML = '<tr><td colspan="10" style="text-align:center; padding:20px;"><i class="fa-solid fa-spinner fa-spin"></i> جاري تحديث بيانات التقرير...</td></tr>';
+            document.getElementById('modalTableBody').innerHTML = '<tr><td colspan="10" style="text-align:center; padding:24px;"><i class="fa-solid fa-spinner fa-spin text-blue"></i> جاري تحديث وتطبيق الفلاتر على السجلات...</td></tr>';
             const res = await fetch(`/api/reports/run/${repId}${queryStr}`);
             const data = await res.json();
             if (data.success) {
                 activeReportData = data;
                 renderModalReport(data);
+            } else {
+                alert('حدث خطأ أثناء تطبيق الفلتر: ' + (data.error || 'خطأ غير معروف'));
             }
         } catch (err) {
             console.error('Filter refresh error:', err);
         }
+    }
+
+    function resetModalFilters() {
+        if (!activeReportData) return;
+        document.getElementById('modalFilterStartDate').value = '';
+        document.getElementById('modalFilterEndDate').value = '';
+        document.getElementById('modalFilterLawyer').value = '';
+        document.getElementById('modalFilterClient').value = '';
+        document.getElementById('modalFilterArea').value = '';
+        document.getElementById('modalFilterPriority').value = '';
+        document.getElementById('modalFilterStatus').value = '';
+        document.getElementById('appliedFiltersText').innerText = 'جميع السجلات والملفات المتاحة بدون تقييد';
+        applyModalFiltersAndRefresh();
     }
 
     function closeReportModal() {
