@@ -717,14 +717,14 @@ if (typeof Chart === 'undefined') {
                 <span style="font-size: 0.85rem; font-weight: 700; color: #64748b;">
                     <i class="fa-solid fa-filter"></i> عرض:
                 </span>
-                <span id="activeCategoryBadge" style="font-weight: 800; color: #1e3a8a; font-size: 0.88rem;">كل التقارير (32 تقريراً)</span>
+                <span id="activeCategoryBadge" style="font-weight: 800; color: #1e3a8a; font-size: 0.88rem;">1. المسائل والقضايا (6 تقارير)</span>
             </div>
         </div>
 
         <!-- 32 Reports Cards Grid -->
         <div class="reports-grid" id="reportsCatalogGrid">
             {% for rep_id, rep in reports_catalog.items() %}
-            <div class="report-card" data-category="{{ rep.category }}" data-report-id="{{ rep.id }}" data-search-text="{{ rep.id }} {{ rep.title }} {{ rep.code }} {{ rep.desc }} {{ rep.category_ar }}">
+            <div class="report-card" style="{% if rep.category != 'matters' %}display: none;{% endif %}" data-category="{{ rep.category }}" data-report-id="{{ rep.id }}" data-search-text="{{ rep.id }} {{ rep.title }} {{ rep.code }} {{ rep.desc }} {{ rep.category_ar }}">
                 <div>
                     <div class="report-card-header">
                         <div style="display:flex; align-items:center; gap:8px;">
@@ -824,7 +824,7 @@ if (typeof Chart === 'undefined') {
                 <button class="btn-run-report" style="max-width:240px; padding:12px 20px; font-size:1rem;" onclick="executeCustomBuilder()">
                     <i class="fa-solid fa-gear"></i> توليد التقرير المخصص
                 </button>
-                <button class="btn-hub-action" style="color:#0f172a; border-color:#cbd5e1;" onclick="switchMainTab('all')">
+                <button class="btn-hub-action" style="color:#0f172a; border-color:#cbd5e1;" onclick="switchCategoryTab('matters', document.querySelector('.report-tab-btn'))">
                     إلغاء والعودة للمكتبة
                 </button>
             </div>
@@ -1027,21 +1027,26 @@ if (typeof Chart === 'undefined') {
         const cards = document.querySelectorAll('.report-card');
         const badge = document.getElementById('activeCategoryBadge');
         
-        if (catKey === 'all') {
-            cards.forEach(c => c.style.display = 'flex');
-            badge.innerText = 'كل التقارير (32 تقريراً)';
-        } else {
-            let visibleCount = 0;
-            cards.forEach(c => {
-                if (c.getAttribute('data-category') === catKey) {
-                    c.style.display = 'flex';
-                    visibleCount++;
-                } else {
-                    c.style.display = 'none';
-                }
-            });
-            badge.innerText = `التصنيف المختار (${visibleCount} تقارير)`;
-        }
+        let visibleCount = 0;
+        cards.forEach(c => {
+            if (c.getAttribute('data-category') === catKey) {
+                c.style.display = 'flex';
+                visibleCount++;
+            } else {
+                c.style.display = 'none';
+            }
+        });
+        const catNames = {
+            'matters': '1. المسائل والقضايا (6 تقارير)',
+            'litigation': '2. الدعاوى والجلسات القضائية (6 تقارير)',
+            'conflict': '3. تضارب المصالح والشركات (4 تقارير)',
+            'time': '4. الوقت والإنتاجية (4 تقارير)',
+            'finance': '5. الفوترة والمالية والأمانات (5 تقارير)',
+            'contracts': '6. العقود والمستندات (3 تقارير)',
+            'tasks': '7. المهام والعمليات (2 تقارير)',
+            'admin': '8. الرقابة والذكاء الاصطناعي (2 تقارير)'
+        };
+        badge.innerText = catNames[catKey] || `تقارير القسم المختار (${visibleCount} تقارير)`;
     }
 
     function switchMainTab(tabKey) {

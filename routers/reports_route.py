@@ -392,7 +392,6 @@ REPORTS_CATALOG = {
 }
 
 CATEGORIES_LIST = [
-    {"key": "all", "title": "كل التقارير (32)", "icon": "fa-grip", "count": 32},
     {"key": "matters", "title": "1. المسائل والقضايا", "icon": "fa-folder-open", "count": 6},
     {"key": "litigation", "title": "2. الدعاوى والجلسات", "icon": "fa-gavel", "count": 6},
     {"key": "conflict", "title": "3. تضارب المصالح والشركات", "icon": "fa-shield-halved", "count": 4},
