@@ -430,7 +430,13 @@ async def health_check(db: Session = Depends(get_db)):
 
 @app.get("/api/version")
 async def get_version():
-    return JSONResponse({"version": "v2.1", "sidebar_sections": 7, "status": "deployed"})
+    return JSONResponse({
+        "version": "v2.2-enterprise-reports",
+        "sidebar_sections": 7,
+        "reports_count": 32,
+        "status": "deployed",
+        "deployed_at": "2026-10-22"
+    })
 
 
 @app.post("/api/setup")
