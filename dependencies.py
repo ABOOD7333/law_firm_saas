@@ -96,8 +96,12 @@ def check_user_permission(user, module: str, action: str = "view") -> bool:
             if not isinstance(allowed_actions, (list, tuple, set)):
                 return False
             return action in allowed_actions
+        elif user.role in {"محامي", "محامٍ"}:
+            return True
     except Exception:
         pass
+    if user.role in {"محامي", "محامٍ"}:
+        return True
     return False
 
 
