@@ -727,7 +727,7 @@ def _ensure_litigation_seed(db: Session, office_id: int):
         if office_id != 1:
             return
         h_cnt = db.query(LawHearings).filter(LawHearings.office_id == 1, LawHearings.is_deleted == 0).count()
-        if h_cnt == 0:
+        if h_cnt < 5:
             cases = db.query(LawCases).filter(LawCases.office_id == 1, LawCases.is_deleted == 0).all()
             c_ids = [c.id for c in cases]
             c2 = c_ids[0] if len(c_ids) > 0 else 1
@@ -804,6 +804,15 @@ def _ensure_litigation_seed(db: Session, office_id: int):
                 }
             ]
             for hd in hearings_seed:
+                exists = db.query(LawHearings).filter(
+                    LawHearings.office_id == 1,
+                    or_(
+                        LawHearings.court_case_number == hd["court_case_number"],
+                        LawHearings.title == hd["title"]
+                    )
+                ).first()
+                if exists:
+                    continue
                 h_obj = LawHearings(
                     office_id=1,
                     case_id=hd["case_id"],
