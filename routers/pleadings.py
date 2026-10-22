@@ -76,7 +76,7 @@ async def pleadings_page(
                 "id": c.id,
                 "case_number": c.case_number or "",
                 "title": c.title or "",
-                "court_name": c.court_name or "",
+                "court_name": getattr(c, 'court_name', '') or "",
                 "case_type": getattr(c, 'case_type_key', '') or "",
                 "client_name": client_name
             })
@@ -274,7 +274,7 @@ async def get_pleading_json(
         "case_id": pleading.case_id,
         "case_title": case.title if case else "",
         "case_number": case.case_number if case else "",
-        "court_name": case.court_name if case else "",
+        "court_name": getattr(case, 'court_name', '') if case else "",
         "client_name": client_name,
         "title": pleading.title,
         "pleading_type_key": pleading_type_key_label(pleading.pleading_type_key),

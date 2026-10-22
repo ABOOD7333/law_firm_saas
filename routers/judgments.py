@@ -56,7 +56,7 @@ async def judgments_page(
                 "id": c.id,
                 "case_number": c.case_number or "",
                 "title": c.title or "",
-                "court_name": c.court_name or "",
+                "court_name": getattr(c, "court_name", "") or "",
                 "case_type": getattr(c, "case_type_key", "") or "",
                 "client_name": client_name
             })
