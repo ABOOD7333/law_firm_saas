@@ -75,6 +75,9 @@ templates.env.globals["SYSTEM_PERM_MODULES"] = SYSTEM_PERM_MODULES
 def check_user_permission(user, module: str, action: str = "view") -> bool:
     if not user:
         return False
+    # جلسات الدعم الفني بالنيابة وحسابات المشرف العام تتجاوز كافة قيود الصلاحيات
+    if getattr(user, 'is_support_session', False) or getattr(user, 'is_superadmin', 0) == 1:
+        return True
     # Owner and Office Manager bypass all checks — covers all role name variants
     _ADMIN_ROLES = {
         "صاحب المكتب", "صاحب مكتب",

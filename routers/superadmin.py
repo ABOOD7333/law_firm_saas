@@ -159,15 +159,60 @@ async def impersonate_office(office_id: int, request: Request, db: Session = Dep
         if not office:
             return JSONResponse({"success": False, "error": "المكتب غير موجود"}, status_code=404)
         
-        # Get office owner or any active admin user in that office
+        # 1. البحث عن صاحب المكتب أو مدير المكتب أو المحامين أولاً (يمنع قطعياً اختيار حسابات الموكلين)
+        ADMIN_AND_LAWYER_ROLES = [
+            'صاحب المكتب', 'صاحب مكتب', 'مدير المكتب', 'مدير مكتب',
+            'مدير', 'مدير النظام', 'محامٍ', 'محامي', 'شريك', 'مستشار',
+            'admin', 'owner'
+        ]
+
         target_user = None
         if office.owner_user_id:
-            target_user = db.query(AccessProfiles).filter(AccessProfiles.id == office.owner_user_id).first()
+            target_user = db.query(AccessProfiles).filter(
+                AccessProfiles.id == office.owner_user_id,
+                AccessProfiles.office_id == office.id
+            ).first()
+
+        # إذا لم يكن هناك مالك محدد أو كان الحساب المعين موكلاً، نبحث عن صاحب المكتب أو المحامي
+        if not target_user or target_user.role == 'موكل':
+            target_user = db.query(AccessProfiles).filter(
+                AccessProfiles.office_id == office.id,
+                AccessProfiles.role.in_(ADMIN_AND_LAWYER_ROLES)
+            ).order_by(AccessProfiles.is_active.desc(), AccessProfiles.id.asc()).first()
+
+        # إذا لم نجد، نبحث عن أي مستخدم في المكتب ليس موكلاً
         if not target_user:
-            target_user = db.query(AccessProfiles).filter(AccessProfiles.office_id == office.id, AccessProfiles.is_active == 1).first()
+            target_user = db.query(AccessProfiles).filter(
+                AccessProfiles.office_id == office.id,
+                AccessProfiles.role != 'موكل'
+            ).order_by(AccessProfiles.is_active.desc(), AccessProfiles.id.asc()).first()
+
+        # إذا كان المكتب جديداً أو لا يملك أي حساب محامٍ/إدارة، ننشئ له حساب صاحب مكتب تلقائياً
+        if not target_user:
+            target_user = AccessProfiles(
+                office_id=office.id,
+                name=f"صاحب مكتب {office.name}",
+                username=f"owner_office_{office.id}",
+                role="صاحب المكتب",
+                is_active=1,
+                can_view_all_cases=1,
+                permissions_json="{}"
+            )
+            db.add(target_user)
+            db.commit()
+            db.refresh(target_user)
+
+        # تفعيل حساب المستخدم المستهدف وضمان صلاحيات الإدارة الكاملة للدعم الفني
+        target_user.is_active = 1
+        if target_user.role == 'موكل':
+            target_user.role = "صاحب المكتب"
+        target_user.can_view_all_cases = 1
+        
+        # ربط مالك المكتب بالحساب الفعلي
+        if not office.owner_user_id or office.owner_user_id != target_user.id:
+            office.owner_user_id = target_user.id
             
-        if not target_user:
-            return JSONResponse({"success": False, "error": "لا يوجد مستخدمون نشطون في هذا المكتب لتسجيل الدخول كبديل لهم"}, status_code=404)
+        db.commit()
             
         # Activate and extend office subscription automatically during support
         office.is_active = 1

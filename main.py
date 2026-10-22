@@ -1193,7 +1193,8 @@ async def dashboard_page(request: Request, db: Session = Depends(get_db), user: 
         return RedirectResponse(url="/", status_code=303)
     try:
         # ── بوابة الموكلين (Client Portal) ──
-        if user.role == 'موكل':
+        # جلسات الدعم الفني النشطة تعرض لوحة التحكم التنفيذية للمكتب دائماً
+        if user.role == 'موكل' and not getattr(user, 'is_support_session', False):
             client_records = client_records_for_user(db, user)
             case_ids = list({c.case_id for c in client_records if c.case_id})
             my_cases = db.query(LawCases).filter(

@@ -371,7 +371,7 @@
             {% set is_lawyer = user and user.role in ['محامي', 'محامٍ'] %}
             {% set is_sec = user and user.role == 'سكرتير' %}
             {% set is_acc = user and user.role == 'محاسب' %}
-            {% set not_client = user and user.role != 'موكل' %}
+            {% set not_client = (user and user.role != 'موكل') or (user and getattr(user, 'is_support_session', False)) %}
 
             <!-- 1. الميدان والعمل اليومي (منسدلة) -->
             {% set field_active = active_page in ['dashboard', 'calendar', 'hearings', 'tasks', 'kanban', 'timeline'] %}
@@ -385,7 +385,7 @@
                 </button>
                 <ul class="nav-sub-menu">
                     <li class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
-                        <a href="/dashboard"><i class="fa-solid fa-chart-pie"></i> {% if user and user.role == 'موكل' %}بوابتي (الرئيسية){% else %}لوحة التحكم{% endif %}</a>
+                        <a href="/dashboard"><i class="fa-solid fa-chart-pie"></i> {% if user and user.role == 'موكل' and not getattr(user, 'is_support_session', False) %}بوابتي (الرئيسية){% else %}لوحة التحكم{% endif %}</a>
                     </li>
                     {% if not_client %}
                         {% if (is_admin or is_lawyer or is_sec) and (has_perm(user, 'cases', 'view') or has_perm(user, 'hearings', 'view')) %}
