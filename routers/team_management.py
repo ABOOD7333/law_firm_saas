@@ -7,7 +7,7 @@ from core.error_handler import safe_error_html
 
 from database.database import get_db
 from database.models import AccessProfiles, LawOffices, LawCases
-from dependencies import get_current_user, templates
+from dependencies import get_current_user, templates, SYSTEM_PERM_MODULES
 from core.logger import app_logger
 from core.audit import write_audit
 
@@ -41,7 +41,7 @@ async def team_page(request: Request, db: Session = Depends(get_db), user: Acces
         } for m in members], ensure_ascii=False)
         return templates.TemplateResponse(request=request, name="team.html", context={
             "user": user, "active_page": "team", "office": office, "owner": owner,
-            "members": members, "cases": cases, "members_json": members_json,
+            "members": members, "cases": cases, "members_json": members_json, "perm_modules": SYSTEM_PERM_MODULES,
         })
     except Exception as exc:
         return safe_error_html(exc, context="team_management.py")

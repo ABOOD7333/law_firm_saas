@@ -38,6 +38,39 @@ templates.TemplateResponse = _safe_template_response
 templates.env.globals["get_csrf_token"] = lambda req: (getattr(req.state, "csrf_token", None) or req.cookies.get("csrf_token", "")) if req else ""
 templates.env.globals["getattr"] = getattr
 
+# ==============================================================================
+# سجل الصلاحيات الموحد لكافة واجهات النظام (Central System Permissions Registry)
+# ==============================================================================
+SYSTEM_PERM_MODULES = [
+    ("cases", "إدارة القضايا"),
+    ("incoming_cases", "القضايا الواردة"),
+    ("matters", "المسائل والاستشارات"),
+    ("parties", "الأطراف والمتقاضون"),
+    ("clients", "الموكلون"),
+    ("hearings", "محاضر الجلسات"),
+    ("documents", "المستندات والأرشفة"),
+    ("pleadings", "المرافعات والمذكرات"),
+    ("judgments", "الأحكام والقرارات"),
+    ("notes", "الملاحظات والاتصالات"),
+    ("correspondences", "المراسلات الرسمية"),
+    ("tasks", "المهام والمتابعة"),
+    ("finance", "الحسابات والمالية"),
+    ("expenses", "مصاريف القضية"),
+    ("timesheet", "سجل الساعات"),
+    ("execution", "إجراءات التنفيذ"),
+    ("power_of_attorney", "الوكالات الرسمية"),
+    ("conflict_check", "فحص تضارب المصالح"),
+    ("trust_accounts", "حسابات الأمانات"),
+    ("calendar", "التقويم القضائي والمواعيد"),
+    ("intake", "استقبال واستمارة العملاء"),
+    ("reports", "التقارير"),
+    ("team", "الفريق والصلاحيات"),
+    ("legal_references", "المراجع القانونية"),
+    ("limitations", "تنبيهات التقادم"),
+    ("advanced_operations", "العمليات المتقدمة"),
+]
+templates.env.globals["SYSTEM_PERM_MODULES"] = SYSTEM_PERM_MODULES
+
 
 def check_user_permission(user, module: str, action: str = "view") -> bool:
     if not user:

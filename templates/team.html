@@ -238,31 +238,22 @@
         </div>
 
         <!-- Permissions grid -->
-        <h3 style="font-size:.95rem;font-weight:800;color:var(--secondary-color);margin:16px 0 10px;"><i class="fa-solid fa-shield-halved" style="color:#6366f1;margin-left:6px;"></i>الصلاحيات التفصيلية</h3>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin:18px 0 10px;">
+          <h3 style="font-size:.95rem; font-weight:800; color:var(--secondary-color); margin:0;">
+            <i class="fa-solid fa-shield-halved" style="color:#6366f1; margin-left:6px;"></i>الصلاحيات التفصيلية
+          </h3>
+          <div style="display:flex; gap:8px;">
+            <button type="button" onclick="selectAllPermissions()" style="background:#e0e7ff; color:#4338ca; border:1px solid #c7d2fe; border-radius:6px; padding:4px 10px; font-size:0.75rem; font-weight:700; cursor:pointer;" title="تحديد جميع الواجهات والصلاحيات">
+              <i class="fa-solid fa-check-double"></i> تحديد الكل
+            </button>
+            <button type="button" onclick="clearAllPermissions()" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; border-radius:6px; padding:4px 10px; font-size:0.75rem; font-weight:700; cursor:pointer;" title="إلغاء تحديد الكل">
+              <i class="fa-solid fa-xmark"></i> إلغاء التحديد
+            </button>
+          </div>
+        </div>
         <div id="permGrid" style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px; max-height:450px; overflow-y:auto; padding-left:10px;">
-          {% set perm_modules = [
-            ('cases', 'إدارة القضايا'),
-            ('parties', 'الأطراف والمتقاضون'),
-            ('clients', 'الموكلون'),
-            ('hearings', 'محاضر الجلسات'),
-            ('documents', 'المستندات والأرشفة'),
-            ('pleadings', 'المرافعات والمذكرات'),
-            ('judgments', 'الأحكام والقرارات'),
-            ('notes', 'الملاحظات والاتصالات'),
-            ('correspondences', 'المراسلات الرسمية'),
-            ('tasks', 'المهام والمتابعة'),
-            ('finance', 'الحسابات والمالية'),
-            ('expenses', 'مصاريف القضية'),
-            ('timesheet', 'سجل الساعات'),
-            ('execution', 'إجراءات التنفيذ'),
-            ('power_of_attorney', 'الوكالات الرسمية'),
-            ('reports', 'التقارير'),
-            ('team', 'الفريق والصلاحيات'),
-            ('advanced_operations', 'العمليات المتقدمة'),
-            ('legal_references', 'المراجع القانونية'),
-            ('limitations', 'تنبيهات التقادم')
-          ] %}
-          {% for key, label in perm_modules %}
+          {% set modules_list = perm_modules or SYSTEM_PERM_MODULES %}
+          {% for key, label in modules_list %}
           <div class="perm-module-card" style="border:1.5px solid var(--border-color); border-radius:10px; padding:12px 16px; background:#fff; transition: all 0.2s;" id="card_{{ key }}">
               <div style="display:flex; justify-content:space-between; align-items:center;">
                   <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:700; font-size:0.9rem; margin-bottom:0;">
@@ -325,6 +316,27 @@ function showAlert(msg, type='success') {
   el.textContent = msg;
   el.style.display = 'block';
   setTimeout(() => el.style.display = 'none', 4000);
+}
+
+function selectAllPermissions() {
+  document.querySelectorAll('.module-access').forEach(mainCb => {
+    mainCb.checked = true;
+    const moduleKey = mainCb.dataset.module;
+    toggleModuleActions(moduleKey, true);
+    const div = document.getElementById('actions_' + moduleKey);
+    if (div) {
+      div.querySelectorAll('.action-check').forEach(ac => ac.checked = true);
+    }
+  });
+}
+
+function clearAllPermissions() {
+  document.querySelectorAll('#permGrid input[type=checkbox]').forEach(cb => {
+    cb.checked = false;
+  });
+  document.querySelectorAll('.perm-module-card div[id^="actions_"]').forEach(div => {
+    div.style.display = 'none';
+  });
 }
 
 function toggleModuleActions(module, checked) {
@@ -419,7 +431,7 @@ function clearForm() {
   });
   
   // Default permissions for lawyer
-  ['cases', 'clients', 'hearings', 'tasks', 'notes'].forEach(mKey => {
+  ['cases', 'incoming_cases', 'clients', 'hearings', 'tasks', 'notes', 'pleadings', 'documents'].forEach(mKey => {
     const mainCb = document.querySelector(`.module-access[data-module="${mKey}"]`);
     if (mainCb) {
       mainCb.checked = true;

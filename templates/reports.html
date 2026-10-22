@@ -383,8 +383,8 @@ if (typeof Chart === 'undefined') {
     }
     .report-modal-window {
         background: #ffffff;
-        width: 100%;
-        max-width: 1100px;
+        width: 96vw;
+        max-width: 1320px;
         max-height: 92vh;
         border-radius: 16px;
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
@@ -495,27 +495,35 @@ if (typeof Chart === 'undefined') {
     .report-table-wrap {
         border: 1px solid #e2e8f0;
         border-radius: 10px;
-        overflow: hidden;
+        overflow-x: auto;
         margin-bottom: 20px;
+        background: #ffffff;
     }
     .report-data-table {
         width: 100%;
         border-collapse: collapse;
-        font-size: 0.88rem;
-        text-align: right;
+        font-size: 0.85rem;
+        text-align: center;
     }
     .report-data-table th {
         background: #f1f5f9;
         color: #1e293b;
         font-weight: 800;
-        padding: 12px 14px;
+        padding: 10px 12px;
         border-bottom: 2px solid #cbd5e1;
-        white-space: nowrap;
+        white-space: normal;
+        word-break: break-word;
+        font-size: 0.82rem;
+        min-width: 100px;
     }
     .report-data-table td {
-        padding: 11px 14px;
+        padding: 10px 12px;
         border-bottom: 1px solid #f1f5f9;
         color: #334155;
+        font-size: 0.84rem;
+        vertical-align: middle;
+        white-space: normal;
+        word-break: break-word;
     }
     .report-data-table tr:hover td {
         background: #f8fafc;
@@ -652,26 +660,297 @@ if (typeof Chart === 'undefined') {
         gap: 8px;
     }
 
-    /* Print styles */
+    /* ==========================================================================
+       Print styles (Optimized for Single-Page A4 Landscape & Clean Multi-Page)
+       ========================================================================== */
     @media print {
-        body * {
-            visibility: hidden;
+        @page {
+            size: A4 landscape;
+            margin: 6mm 6mm 6mm 6mm;
         }
-        #printableArea, #printableArea * {
-            visibility: visible;
+
+        /* 1. Eliminate background page layout and all non-printable elements */
+        html, body {
+            height: auto !important;
+            min-height: 0 !important;
+            max-height: none !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+            overflow: visible !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            font-size: 10pt !important;
         }
-        #printableArea {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-        }
-        .no-print {
+
+        .sidebar,
+        .topbar,
+        .reports-container,
+        .report-modal-header,
+        .report-modal-footer,
+        .no-print,
+        .report-card-actions,
+        nav,
+        aside,
+        header,
+        footer,
+        .btn-modal-close,
+        .modal-filters-bar {
             display: none !important;
+            height: 0 !important;
+            max-height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: hidden !important;
+        }
+
+        /* 2. Unwrap Modal Containers to Pure Static Flow */
+        .report-modal-overlay {
+            position: static !important;
+            display: block !important;
+            width: 100% !important;
+            height: auto !important;
+            min-height: 0 !important;
+            max-height: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            overflow: visible !important;
+            z-index: auto !important;
+        }
+
+        .report-modal-window {
+            position: static !important;
+            display: block !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            height: auto !important;
+            min-height: 0 !important;
+            max-height: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            overflow: visible !important;
+            background: #ffffff !important;
+        }
+
+        .report-modal-body,
+        #printableArea {
+            position: static !important;
+            display: block !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            height: auto !important;
+            min-height: 0 !important;
+            max-height: none !important;
+            overflow: visible !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            background: #ffffff !important;
+        }
+
+        /* 3. Official Letterhead */
+        .official-letterhead {
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            margin-bottom: 6px !important;
+            padding-bottom: 6px !important;
+            border-bottom: 2px solid #0f172a !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+        }
+        .official-letterhead .letterhead-brand h3 {
+            font-size: 1rem !important;
+            margin: 0 0 2px 0 !important;
+            color: #0f172a !important;
+        }
+        .official-letterhead .letterhead-brand p {
+            font-size: 0.68rem !important;
+            margin: 0 !important;
+            color: #475569 !important;
+        }
+        .official-letterhead .letterhead-meta {
+            font-size: 0.65rem !important;
+            line-height: 1.3 !important;
+            text-align: left !important;
+            color: #334155 !important;
+        }
+
+        /* 4. Applied Filters Ribbon */
+        .applied-filters-ribbon {
+            margin-bottom: 6px !important;
+            padding: 3px 8px !important;
+            font-size: 0.68rem !important;
+            border: 1px solid #cbd5e1 !important;
+            background: #f8fafc !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+        }
+
+        /* 5. Summary Strip (KPIs) */
+        .report-summary-strip {
+            display: flex !important;
+            flex-direction: row !important;
+            gap: 6px !important;
+            margin-bottom: 8px !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+        }
+        .summary-badge-item {
+            flex: 1 !important;
+            padding: 3px 6px !important;
+            border: 1px solid #94a3b8 !important;
+            background: #f8fafc !important;
+            text-align: center !important;
+        }
+        .summary-badge-label {
+            font-size: 0.62rem !important;
+            margin-bottom: 1px !important;
+            color: #475569 !important;
+        }
+        .summary-badge-val {
+            font-size: 0.82rem !important;
+            font-weight: 800 !important;
+            color: #0f172a !important;
+        }
+
+        /* 6. Table & Rows */
+        .report-table-wrap {
+            overflow: visible !important;
+            border: 1.5px solid #0f172a !important;
+            border-radius: 0 !important;
+            width: 100% !important;
+            margin-bottom: 8px !important;
+            page-break-inside: auto !important;
+        }
+        .report-data-table {
+            width: 100% !important;
+            table-layout: auto !important;
+            border-collapse: collapse !important;
+        }
+        .report-data-table th {
+            background: #f1f5f9 !important;
+            color: #0f172a !important;
+            border: 1px solid #94a3b8 !important;
+            padding: 4px 4px !important;
+            white-space: normal !important;
+            word-break: break-word !important;
+            font-size: 0.68rem !important;
+            text-align: center !important;
+            line-height: 1.2 !important;
+            font-weight: 800 !important;
+        }
+        .report-data-table td {
+            border: 1px solid #cbd5e1 !important;
+            padding: 4px 4px !important;
+            white-space: normal !important;
+            word-break: break-word !important;
+            font-size: 0.68rem !important;
+            text-align: center !important;
+            line-height: 1.2 !important;
+        }
+        .report-data-table tr {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+        }
+
+        .table-progress-wrap {
+            display: flex !important;
+            gap: 4px !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        .table-progress-track {
+            width: 36px !important;
+            height: 5px !important;
+            border: 1px solid #64748b !important;
+        }
+
+        /* 7. Certification, Signature & Official Stamp */
+        .report-print-certification {
+            display: table !important;
+            width: 100% !important;
+            table-layout: fixed !important;
+            margin-top: 8px !important;
+            padding-top: 6px !important;
+            border-top: 1.5px solid #0f172a !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+        }
+        .cert-col {
+            display: table-cell !important;
+            vertical-align: middle !important;
+        }
+        .cert-col-statement {
+            width: 52% !important;
+            text-align: right !important;
+            padding-left: 10px !important;
+        }
+        .cert-col-statement strong {
+            font-size: 0.70rem !important;
+            display: block !important;
+            margin-bottom: 2px !important;
+            color: #0f172a !important;
+        }
+        .cert-col-statement p {
+            font-size: 0.64rem !important;
+            line-height: 1.25 !important;
+            margin: 0 !important;
+            color: #475569 !important;
+        }
+        .cert-col-signature {
+            width: 28% !important;
+            text-align: center !important;
+        }
+        .cert-col-signature strong {
+            font-size: 0.70rem !important;
+            display: block !important;
+            margin-bottom: 4px !important;
+            color: #0f172a !important;
+        }
+        .signature-line {
+            border-bottom: 1px dashed #64748b !important;
+            height: 22px !important;
+            width: 130px !important;
+            margin: 0 auto !important;
+        }
+        .cert-col-stamp {
+            width: 20% !important;
+            text-align: center !important;
+        }
+        .official-seal-box {
+            width: 72px !important;
+            height: 72px !important;
+            border: 1.5px dashed #475569 !important;
+            border-radius: 50% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            text-align: center !important;
+            font-size: 0.58rem !important;
+            font-weight: 800 !important;
+            color: #475569 !important;
+            transform: rotate(-6deg) !important;
+            margin: 0 auto !important;
+            line-height: 1.2 !important;
+            background: #fafafa !important;
         }
     }
 
-    /* Interactive Modal Filter Bar */
+        /* Interactive Modal Filter Bar */
     .modal-filters-bar {
         background: #f8fafc;
         border: 1px solid #e2e8f0;
@@ -828,7 +1107,52 @@ if (typeof Chart === 'undefined') {
         font-size: 0.8rem;
     }
 
-    /* Stamp Box in Print */
+    /* Certification & Stamp Footer (Screen) */
+    .report-print-certification {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-top: 24px;
+        padding-top: 16px;
+        border-top: 2px solid #0f172a;
+    }
+    .cert-col-statement {
+        flex: 2;
+        font-size: 0.82rem;
+        color: #475569;
+    }
+    .cert-col-statement strong {
+        color: #0f172a;
+        display: block;
+        margin-bottom: 4px;
+    }
+    .cert-col-statement p {
+        margin: 0;
+        line-height: 1.5;
+    }
+    .cert-col-signature {
+        flex: 1;
+        text-align: center;
+    }
+    .cert-col-signature strong {
+        color: #0f172a;
+        display: block;
+        margin-bottom: 8px;
+        font-size: 0.82rem;
+    }
+    .signature-line {
+        border-bottom: 1px dashed #64748b;
+        height: 32px;
+        width: 150px;
+        margin: 0 auto;
+    }
+    .cert-col-stamp {
+        flex: 1;
+        text-align: center;
+    }
+
+        /* Stamp Box in Print */
     .official-seal-box {
         width: 110px;
         height: 110px;
@@ -926,13 +1250,10 @@ if (typeof Chart === 'undefined') {
                             {% endfor %}
                         </div>
                         <div class="report-meta-row">
-                            <strong><i class="fa-solid fa-table-columns"></i> المخرجات:</strong>
-                            {% for c in rep.columns[:4] %}
-                            <span class="meta-tag">{{ c }}</span>
+                            <strong><i class="fa-solid fa-table-columns"></i> المخرجات ({{ rep.columns|length }} أعمدة معتمدة للطباعة):</strong>
+                            {% for c in rep.columns %}
+                            <span class="meta-tag" style="background:#e0f2fe; color:#0369a1; border-color:#bae6fd;">{{ c }}</span>
                             {% endfor %}
-                            {% if rep.columns|length > 4 %}
-                            <span class="meta-tag">+{{ rep.columns|length - 4 }} أعمدة</span>
-                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -979,6 +1300,10 @@ if (typeof Chart === 'undefined') {
                 <div class="module-choice-btn" onclick="selectBuilderModule('tasks', this)">
                     <i class="fa-solid fa-list-check fa-2x" style="display:block; margin-bottom:8px; color:#06b6d4;"></i>
                     المهام والتكليفات
+                </div>
+                <div class="module-choice-btn" onclick="selectBuilderModule('incoming_cases', this)">
+                    <i class="fa-solid fa-inbox fa-2x" style="display:block; margin-bottom:8px; color:#ec4899;"></i>
+                    القضايا الواردة
                 </div>
             </div>
 
@@ -1170,6 +1495,17 @@ if (typeof Chart === 'undefined') {
                         {% endfor %}
                     </select>
                 </div>
+                <div class="modal-filter-group" id="filterGroupCourt">
+                    <label><i class="fa-solid fa-gavel"></i> المحكمة المختصة:</label>
+                    <select class="modal-filter-select" id="modalFilterCourt">
+                        <option value="">جميع المحاكم</option>
+                        <option value="تجارية">المحكمة التجارية الابتدائية</option>
+                        <option value="استئناف">محكمة استئناف أمانة العاصمة</option>
+                        <option value="غرب الأمانة">محكمة غرب الأمانة الابتدائية</option>
+                        <option value="جنوب شرق">محكمة جنوب شرق الأمانة</option>
+                        <option value="تحكيم">مركز التحكيم الهندسي</option>
+                    </select>
+                </div>
                 <div class="modal-filter-group" id="filterGroupArea">
                     <label><i class="fa-solid fa-briefcase"></i> مجال الممارسة:</label>
                     <select class="modal-filter-select" id="modalFilterArea">
@@ -1223,16 +1559,16 @@ if (typeof Chart === 'undefined') {
             </div>
 
             <!-- Printable Certification & Stamp Footer -->
-            <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:20px; align-items:center; margin-top:28px; padding-top:18px; border-top:2px solid #0f172a; font-size:0.82rem; color:#475569;">
-                <div>
-                    <strong style="color:#0f172a; display:block; margin-bottom:4px;"><i class="fa-solid fa-shield-halved text-blue"></i> إقرار صحة واعتماد البيانات:</strong>
-                    تشهد الإدارة القانونية بأن هذا التقرير مستخرج وموثق آلياً من السجلات القضائية والمالية المعتمدة للمكتب، ويُعد وثيقة رسمية منتجة لآثارها النظامية.
+            <div class="report-print-certification">
+                <div class="cert-col cert-col-statement">
+                    <strong><i class="fa-solid fa-shield-halved text-blue"></i> إقرار صحة واعتماد البيانات:</strong>
+                    <p>تشهد الإدارة القانونية بأن هذا التقرير مستخرج وموثق آلياً من السجلات القضائية والمالية المعتمدة للمكتب، ويُعد وثيقة رسمية منتجة لآثارها النظامية.</p>
                 </div>
-                <div style="text-align:center;">
-                    <strong style="color:#0f172a; display:block; margin-bottom:8px;">توقيع المحامي المسؤول:</strong>
-                    <div style="border-bottom:1px dashed #64748b; height:32px; width:160px; margin:0 auto;"></div>
+                <div class="cert-col cert-col-signature">
+                    <strong>توقيع المحامي المسؤول:</strong>
+                    <div class="signature-line"></div>
                 </div>
-                <div style="text-align:center;">
+                <div class="cert-col cert-col-stamp">
                     <div class="official-seal-box">
                         ختم الاعتماد الرسمي<br>المكتب القانوني
                     </div>
@@ -1305,7 +1641,9 @@ if (typeof Chart === 'undefined') {
             'finance': '5. الفوترة والمالية والأمانات (5 تقارير)',
             'contracts': '6. العقود والمستندات (3 تقارير)',
             'tasks': '7. المهام والعمليات (2 تقارير)',
-            'admin': '8. الرقابة والذكاء الاصطناعي (2 تقارير)'
+            'admin': '8. الرقابة والذكاء الاصطناعي (2 تقارير)',
+            'incoming_cases': '9. القضايا الواردة (5 تقارير)',
+            'hearings': '10. محاضر الجلسات (5 تقارير)'
         };
         badge.innerText = catNames[catKey] || `تقارير القسم المختار (${visibleCount} تقارير)`;
     }
@@ -1456,6 +1794,7 @@ if (typeof Chart === 'undefined') {
         const area = document.getElementById('modalFilterArea').value;
         const priority = document.getElementById('modalFilterPriority').value;
         const status = document.getElementById('modalFilterStatus').value;
+        const court = document.getElementById('modalFilterCourt') ? document.getElementById('modalFilterCourt').value : '';
 
         // Build active filter label for print ribbon
         let appliedTxt = [];
@@ -1467,6 +1806,10 @@ if (typeof Chart === 'undefined') {
         if (client) {
             const clSel = document.getElementById('modalFilterClient');
             appliedTxt.push(`الموكل: ${clSel.options[clSel.selectedIndex].text}`);
+        }
+        if (court) {
+            const courtSel = document.getElementById('modalFilterCourt');
+            appliedTxt.push(`المحكمة: ${courtSel.options[courtSel.selectedIndex].text}`);
         }
         if (area) {
             const areaSel = document.getElementById('modalFilterArea');
@@ -1485,6 +1828,7 @@ if (typeof Chart === 'undefined') {
         if (area) queryParams.push(`practice_area=${encodeURIComponent(area)}`);
         if (priority) queryParams.push(`priority=${encodeURIComponent(priority)}`);
         if (status) queryParams.push(`status_key=${encodeURIComponent(status)}`);
+        if (court) queryParams.push(`court_name=${encodeURIComponent(court)}`);
         const queryStr = queryParams.length ? '?' + queryParams.join('&') : '';
 
         try {
@@ -1511,6 +1855,7 @@ if (typeof Chart === 'undefined') {
         document.getElementById('modalFilterArea').value = '';
         document.getElementById('modalFilterPriority').value = '';
         document.getElementById('modalFilterStatus').value = '';
+        if (document.getElementById('modalFilterCourt')) document.getElementById('modalFilterCourt').value = '';
         document.getElementById('appliedFiltersText').innerText = 'جميع السجلات والملفات المتاحة بدون تقييد';
         applyModalFiltersAndRefresh();
     }
@@ -1520,7 +1865,11 @@ if (typeof Chart === 'undefined') {
     }
 
     function printModalReport() {
-        window.print();
+        const pArea = document.getElementById('printableArea');
+        if (pArea) pArea.scrollTop = 0;
+        setTimeout(() => {
+            window.print();
+        }, 100);
     }
 
     // Export Table as CSV with UTF-8 BOM
@@ -1592,6 +1941,14 @@ if (typeof Chart === 'undefined') {
             {val: 'priority', label: 'درجة الأولوية', chk: true},
             {val: 'status_key', label: 'حالة الإنجاز', chk: true},
             {val: 'due_date', label: 'تاريخ الاستحقاق', chk: false}
+        ],
+        incoming_cases: [
+            {val: 'internal_number', label: 'الرقم الداخلي', chk: true},
+            {val: 'client_name', label: 'اسم الموكل', chk: true},
+            {val: 'section_key', label: 'القسم الوارد منه', chk: true},
+            {val: 'case_subject', label: 'موضوع النزاع / التصنيف', chk: true},
+            {val: 'status_key', label: 'الحالة الإجرائية', chk: true},
+            {val: 'reception_date', label: 'تاريخ الاستلام', chk: false}
         ]
     };
 
