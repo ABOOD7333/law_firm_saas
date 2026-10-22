@@ -383,8 +383,8 @@ if (typeof Chart === 'undefined') {
     }
     .report-modal-window {
         background: #ffffff;
-        width: 100%;
-        max-width: 1100px;
+        width: 96vw;
+        max-width: 1320px;
         max-height: 92vh;
         border-radius: 16px;
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
@@ -495,27 +495,35 @@ if (typeof Chart === 'undefined') {
     .report-table-wrap {
         border: 1px solid #e2e8f0;
         border-radius: 10px;
-        overflow: hidden;
+        overflow-x: auto;
         margin-bottom: 20px;
+        background: #ffffff;
     }
     .report-data-table {
         width: 100%;
         border-collapse: collapse;
-        font-size: 0.88rem;
-        text-align: right;
+        font-size: 0.85rem;
+        text-align: center;
     }
     .report-data-table th {
         background: #f1f5f9;
         color: #1e293b;
         font-weight: 800;
-        padding: 12px 14px;
+        padding: 10px 12px;
         border-bottom: 2px solid #cbd5e1;
-        white-space: nowrap;
+        white-space: normal;
+        word-break: break-word;
+        font-size: 0.82rem;
+        min-width: 100px;
     }
     .report-data-table td {
-        padding: 11px 14px;
+        padding: 10px 12px;
         border-bottom: 1px solid #f1f5f9;
         color: #334155;
+        font-size: 0.84rem;
+        vertical-align: middle;
+        white-space: normal;
+        word-break: break-word;
     }
     .report-data-table tr:hover td {
         background: #f8fafc;
@@ -654,20 +662,90 @@ if (typeof Chart === 'undefined') {
 
     /* Print styles */
     @media print {
+        @page {
+            size: A4 landscape;
+            margin: 8mm 6mm;
+        }
         body * {
-            visibility: hidden;
+            visibility: hidden !important;
         }
         #printableArea, #printableArea * {
-            visibility: visible;
+            visibility: visible !important;
         }
         #printableArea {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            background: #ffffff !important;
+        }
+        .report-table-wrap {
+            overflow: visible !important;
+            border: 1.5px solid #0f172a !important;
+            border-radius: 0 !important;
+            width: 100% !important;
+            margin-bottom: 15px !important;
+        }
+        .report-data-table {
+            width: 100% !important;
+            table-layout: auto !important;
+            border-collapse: collapse !important;
+        }
+        .report-data-table th {
+            background: #f1f5f9 !important;
+            color: #0f172a !important;
+            border: 1px solid #94a3b8 !important;
+            padding: 6px 6px !important;
+            white-space: normal !important;
+            word-break: break-word !important;
+            font-size: 0.72rem !important;
+            text-align: center !important;
+            line-height: 1.25 !important;
+        }
+        .report-data-table td {
+            border: 1px solid #cbd5e1 !important;
+            padding: 6px 6px !important;
+            white-space: normal !important;
+            word-break: break-word !important;
+            font-size: 0.72rem !important;
+            text-align: center !important;
+            line-height: 1.25 !important;
         }
         .no-print {
             display: none !important;
+        }
+        .table-progress-wrap {
+            display: flex !important;
+            gap: 4px !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        .table-progress-track {
+            width: 40px !important;
+            height: 6px !important;
+            border: 1px solid #64748b !important;
+        }
+        .official-letterhead {
+            margin-bottom: 12px !important;
+            padding-bottom: 10px !important;
+            border-bottom: 2px solid #0f172a !important;
+        }
+        .report-summary-strip {
+            gap: 6px !important;
+            margin-bottom: 12px !important;
+        }
+        .summary-badge-item {
+            padding: 4px 8px !important;
+            border: 1px solid #cbd5e1 !important;
+            background: #f8fafc !important;
+        }
+        .summary-badge-label {
+            font-size: 0.65rem !important;
+        }
+        .summary-badge-val {
+            font-size: 0.85rem !important;
         }
     }
 
@@ -926,13 +1004,10 @@ if (typeof Chart === 'undefined') {
                             {% endfor %}
                         </div>
                         <div class="report-meta-row">
-                            <strong><i class="fa-solid fa-table-columns"></i> المخرجات:</strong>
-                            {% for c in rep.columns[:4] %}
-                            <span class="meta-tag">{{ c }}</span>
+                            <strong><i class="fa-solid fa-table-columns"></i> المخرجات ({{ rep.columns|length }} أعمدة معتمدة للطباعة):</strong>
+                            {% for c in rep.columns %}
+                            <span class="meta-tag" style="background:#e0f2fe; color:#0369a1; border-color:#bae6fd;">{{ c }}</span>
                             {% endfor %}
-                            {% if rep.columns|length > 4 %}
-                            <span class="meta-tag">+{{ rep.columns|length - 4 }} أعمدة</span>
-                            {% endif %}
                         </div>
                     </div>
                 </div>

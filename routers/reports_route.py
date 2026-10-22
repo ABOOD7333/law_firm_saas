@@ -739,6 +739,15 @@ async def run_specific_report(
     if not user.office_id or not check_user_permission(user, "reports", "view"):
         return JSONResponse({"error": "Forbidden"}, status_code=403)
 
+    # Sanitize Query parameters so Query(None) instances become pure None
+    start_date = start_date if (isinstance(start_date, str) and start_date.strip() and start_date != 'None') else None
+    end_date = end_date if (isinstance(end_date, str) and end_date.strip() and end_date != 'None') else None
+    lawyer_id = int(lawyer_id) if (lawyer_id and str(lawyer_id).isdigit()) else None
+    client_id = int(client_id) if (client_id and str(client_id).isdigit()) else None
+    practice_area = practice_area if (isinstance(practice_area, str) and practice_area.strip() and practice_area not in ('None', 'all')) else None
+    priority = priority if (isinstance(priority, str) and priority.strip() and priority not in ('None', 'all')) else None
+    status_key = status_key if (isinstance(status_key, str) and status_key.strip() and status_key not in ('None', 'all')) else None
+
     office_id = user.office_id
     meta = REPORTS_CATALOG.get(report_id, {"title": f"تقرير رقم {report_id}", "code": "Custom Report", "columns": []})
 
