@@ -1245,6 +1245,17 @@ if (typeof Chart === 'undefined') {
                         {% endfor %}
                     </select>
                 </div>
+                <div class="modal-filter-group" id="filterGroupCourt">
+                    <label><i class="fa-solid fa-gavel"></i> المحكمة المختصة:</label>
+                    <select class="modal-filter-select" id="modalFilterCourt">
+                        <option value="">جميع المحاكم</option>
+                        <option value="تجارية">المحكمة التجارية الابتدائية</option>
+                        <option value="استئناف">محكمة استئناف أمانة العاصمة</option>
+                        <option value="غرب الأمانة">محكمة غرب الأمانة الابتدائية</option>
+                        <option value="جنوب شرق">محكمة جنوب شرق الأمانة</option>
+                        <option value="تحكيم">مركز التحكيم الهندسي</option>
+                    </select>
+                </div>
                 <div class="modal-filter-group" id="filterGroupArea">
                     <label><i class="fa-solid fa-briefcase"></i> مجال الممارسة:</label>
                     <select class="modal-filter-select" id="modalFilterArea">
@@ -1531,6 +1542,7 @@ if (typeof Chart === 'undefined') {
         const area = document.getElementById('modalFilterArea').value;
         const priority = document.getElementById('modalFilterPriority').value;
         const status = document.getElementById('modalFilterStatus').value;
+        const court = document.getElementById('modalFilterCourt') ? document.getElementById('modalFilterCourt').value : '';
 
         // Build active filter label for print ribbon
         let appliedTxt = [];
@@ -1542,6 +1554,10 @@ if (typeof Chart === 'undefined') {
         if (client) {
             const clSel = document.getElementById('modalFilterClient');
             appliedTxt.push(`الموكل: ${clSel.options[clSel.selectedIndex].text}`);
+        }
+        if (court) {
+            const courtSel = document.getElementById('modalFilterCourt');
+            appliedTxt.push(`المحكمة: ${courtSel.options[courtSel.selectedIndex].text}`);
         }
         if (area) {
             const areaSel = document.getElementById('modalFilterArea');
@@ -1560,6 +1576,7 @@ if (typeof Chart === 'undefined') {
         if (area) queryParams.push(`practice_area=${encodeURIComponent(area)}`);
         if (priority) queryParams.push(`priority=${encodeURIComponent(priority)}`);
         if (status) queryParams.push(`status_key=${encodeURIComponent(status)}`);
+        if (court) queryParams.push(`court_name=${encodeURIComponent(court)}`);
         const queryStr = queryParams.length ? '?' + queryParams.join('&') : '';
 
         try {
@@ -1586,6 +1603,7 @@ if (typeof Chart === 'undefined') {
         document.getElementById('modalFilterArea').value = '';
         document.getElementById('modalFilterPriority').value = '';
         document.getElementById('modalFilterStatus').value = '';
+        if (document.getElementById('modalFilterCourt')) document.getElementById('modalFilterCourt').value = '';
         document.getElementById('appliedFiltersText').innerText = 'جميع السجلات والملفات المتاحة بدون تقييد';
         applyModalFiltersAndRefresh();
     }
