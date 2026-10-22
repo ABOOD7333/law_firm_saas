@@ -86,6 +86,8 @@ def check_user_permission(user, module: str, action: str = "view") -> bool:
         return True
     
     if not getattr(user, 'permissions_json', None):
+        if user.role in {"محامي", "محامٍ"}:
+            return True
         return False
         
     try:
