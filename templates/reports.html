@@ -1301,6 +1301,10 @@ if (typeof Chart === 'undefined') {
                     <i class="fa-solid fa-list-check fa-2x" style="display:block; margin-bottom:8px; color:#06b6d4;"></i>
                     المهام والتكليفات
                 </div>
+                <div class="module-choice-btn" onclick="selectBuilderModule('incoming_cases', this)">
+                    <i class="fa-solid fa-inbox fa-2x" style="display:block; margin-bottom:8px; color:#ec4899;"></i>
+                    القضايا الواردة
+                </div>
             </div>
 
             <div class="builder-step-title">
@@ -1637,7 +1641,9 @@ if (typeof Chart === 'undefined') {
             'finance': '5. الفوترة والمالية والأمانات (5 تقارير)',
             'contracts': '6. العقود والمستندات (3 تقارير)',
             'tasks': '7. المهام والعمليات (2 تقارير)',
-            'admin': '8. الرقابة والذكاء الاصطناعي (2 تقارير)'
+            'admin': '8. الرقابة والذكاء الاصطناعي (2 تقارير)',
+            'incoming_cases': '9. القضايا الواردة (5 تقارير)',
+            'hearings': '10. محاضر الجلسات (5 تقارير)'
         };
         badge.innerText = catNames[catKey] || `تقارير القسم المختار (${visibleCount} تقارير)`;
     }
@@ -1935,6 +1941,14 @@ if (typeof Chart === 'undefined') {
             {val: 'priority', label: 'درجة الأولوية', chk: true},
             {val: 'status_key', label: 'حالة الإنجاز', chk: true},
             {val: 'due_date', label: 'تاريخ الاستحقاق', chk: false}
+        ],
+        incoming_cases: [
+            {val: 'internal_number', label: 'الرقم الداخلي', chk: true},
+            {val: 'client_name', label: 'اسم الموكل', chk: true},
+            {val: 'section_key', label: 'القسم الوارد منه', chk: true},
+            {val: 'case_subject', label: 'موضوع النزاع / التصنيف', chk: true},
+            {val: 'status_key', label: 'الحالة الإجرائية', chk: true},
+            {val: 'reception_date', label: 'تاريخ الاستلام', chk: false}
         ]
     };
 
