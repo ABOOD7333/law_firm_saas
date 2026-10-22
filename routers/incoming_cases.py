@@ -189,6 +189,8 @@ async def incoming_cases_hub(
         return RedirectResponse(url="/", status_code=303)
     if not user.office_id:
         raise HTTPException(status_code=403, detail="المستخدم غير مرتبط بمكتب")
+    if not check_user_permission(user, "incoming_cases", "view"):
+        raise HTTPException(status_code=403, detail="غير مصرح لك بالوصول إلى القضايا الواردة")
 
     # إحصائيات الأقسام الستة
     section_stats = {}
@@ -328,6 +330,8 @@ async def incoming_cases_section_view(
         return RedirectResponse(url="/", status_code=303)
     if not user.office_id:
         raise HTTPException(status_code=403, detail="المستخدم غير مرتبط بمكتب")
+    if not check_user_permission(user, "incoming_cases", "view"):
+        raise HTTPException(status_code=403, detail="غير مصرح لك بعرض هذا القسم")
 
     section_key = section_key.replace("-", "_")
     if section_key not in SECTION_CONFIG:
@@ -524,6 +528,8 @@ async def create_incoming_case(
         return RedirectResponse(url="/", status_code=303)
     if not user.office_id:
         raise HTTPException(status_code=403, detail="المستخدم غير مرتبط بمكتب")
+    if not check_user_permission(user, "incoming_cases", "add"):
+        raise HTTPException(status_code=403, detail="لا تملك صلاحية إضافة قضايا واردة")
 
     section_key = section_key.replace("-", "_")
     if section_key not in SECTION_CONFIG:
@@ -758,6 +764,8 @@ async def get_incoming_case_details(
     """جلب التفاصيل الكاملة لملف الاستقبال لفتحها في نافذة العرض والتعديل"""
     if not user or not user.office_id:
         raise HTTPException(status_code=401, detail="غير مصرح")
+    if not check_user_permission(user, "incoming_cases", "view"):
+        raise HTTPException(status_code=403, detail="غير مصرح لك بعرض هذا الملف")
 
     item = (
         db.query(LawIncomingCases)
@@ -888,6 +896,8 @@ async def update_incoming_case(
     """تعديل بيانات ملف وارد قائم وفق الصلاحيات"""
     if not user or not user.office_id:
         raise HTTPException(status_code=401, detail="غير مصرح")
+    if not check_user_permission(user, "incoming_cases", "edit"):
+        return JSONResponse({"ok": False, "error": "لا تملك صلاحية تعديل القضايا الواردة"}, status_code=403)
 
     item = (
         db.query(LawIncomingCases)
@@ -989,6 +999,8 @@ async def cancel_incoming_case(
     """إلغاء ملف الاستقبال بصورة منفصلة مع توثيق السبب ودون حذف الموكل أو القضية"""
     if not user or not user.office_id:
         raise HTTPException(status_code=401, detail="غير مصرح")
+    if not check_user_permission(user, "incoming_cases", "delete"):
+        return JSONResponse({"ok": False, "error": "لا تملك صلاحية إلغاء أو حذف ملفات القضايا الواردة"}, status_code=403)
 
     item = (
         db.query(LawIncomingCases)
@@ -1267,6 +1279,8 @@ async def convert_incoming_to_case(
     """
     if not user or not user.office_id:
         raise HTTPException(status_code=401, detail="غير مصرح")
+    if not check_user_permission(user, "incoming_cases", "edit"):
+        return JSONResponse({"ok": False, "error": "لا تملك صلاحية تحويل أو ربط ملفات القضايا الواردة"}, status_code=403)
 
     item = (
         db.query(LawIncomingCases)
