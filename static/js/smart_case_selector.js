@@ -91,7 +91,7 @@
 
         // 1. اسم الموكل (طرف أول / صاحب التوكيل)
         const clientNameFields = container.querySelectorAll(
-            '#fName, input[name="client_name"], input[name="principal_name"], #principal_name, #add_client_name, input#fPrincipal'
+            '#fName, input[name="client_name"], input[name="principal_name"], #principal_name, #add_client_name, input#fPrincipal, #clientNameInput'
         );
         clientNameFields.forEach(f => {
             if (caseData.client_name) {
@@ -103,7 +103,7 @@
 
         // 2. قائمة الموكلين المنسدلة (client_id)
         if (caseData.client_id) {
-            const clientSelects = container.querySelectorAll('select[name="client_id"], #add_client_id, #client_id');
+            const clientSelects = container.querySelectorAll('select[name="client_id"], #add_client_id, #client_id, #clientSelect');
             clientSelects.forEach(s => {
                 let opt = s.querySelector(`option[value="${caseData.client_id}"]`);
                 if (opt) {
@@ -127,10 +127,10 @@
             }
         });
 
-        // قائمة المحامين المنسدلة (lead_lawyer_id / assignee_user_id)
+        // قائمة المحامين المنسدلة (lead_lawyer_id / assignee_user_id / assigned_lawyer_id)
         if (caseData.lead_lawyer_id) {
             const lawyerSelects = container.querySelectorAll(
-                'select[name="lead_lawyer_id"], select[name="assignee_user_id"], select[name="lawyer_id"]'
+                'select[name="lead_lawyer_id"], select[name="assignee_user_id"], select[name="lawyer_id"], select[name="assigned_lawyer_id"]'
             );
             lawyerSelects.forEach(s => {
                 let opt = s.querySelector(`option[value="${caseData.lead_lawyer_id}"]`);
@@ -145,7 +145,7 @@
 
         // 4. المحكمة أو جهة الاختصاص
         const courtFields = container.querySelectorAll(
-            '#addCourtName, input[name="court_name"], #court_name, #fAuth, input[name="entity_name"], #add_entity_name'
+            '#addCourtName, input[name="court_name"], #court_name, #fAuth, input[name="entity_name"], #add_entity_name, input[name="appeal_court_name"], input[name="supreme_court_name"]'
         );
         courtFields.forEach(f => {
             if (caseData.court_name) {
@@ -597,7 +597,18 @@
         // أحداث المدخلات
         searchInput.addEventListener('input', (e) => {
             clearBtn.style.display = e.target.value ? 'inline-block' : 'none';
+            if (!isSelect) {
+                elem.value = e.target.value;
+                elem.dispatchEvent(new Event('input', { bubbles: true }));
+            }
             performSearch(e.target.value);
+        });
+
+        searchInput.addEventListener('change', () => {
+            if (!isSelect) {
+                elem.value = searchInput.value;
+                elem.dispatchEvent(new Event('change', { bubbles: true }));
+            }
         });
 
         searchInput.addEventListener('focus', () => {
@@ -609,6 +620,9 @@
         searchInput.addEventListener('blur', () => {
             searchInput.style.borderColor = '#cbd5e1';
             searchInput.style.boxShadow = 'none';
+            if (!isSelect) {
+                elem.value = searchInput.value;
+            }
         });
 
         toggleBtn.addEventListener('click', (e) => {
@@ -639,9 +653,12 @@
      * المسح الشامل والتفعيل التلقائي لكافة حقول القضايا في النظام
      */
     window.autoInitAllCaseSelectors = function () {
-        // حقول Select الخاصة برقم/معرف القضية
+        // حقول Select الخاصة برقم/معرف القضية في جميع شاشات النظام
         const caseSelects = document.querySelectorAll(
-            'select[name="case_id"], select#fCaseId, select#addCaseSelect, select#form_case_id, select#addPleadingCaseId, select#add_case_id, select#edit_doc_case'
+            'select[name="case_id"], select#fCaseId, select#addCaseSelect, select#form_case_id, ' +
+            'select#addPleadingCaseId, select#add_case_id, select#edit_case_id, select#edit_doc_case, ' +
+            'select#edit_task_case_id, select#edit_party_case_id, select#incoming_case_id, select#editCaseId, ' +
+            'select#case_id, select.smart-case-select, [data-smart-case="true"]'
         );
 
         caseSelects.forEach(sel => {
@@ -650,9 +667,11 @@
             }
         });
 
-        // حقول Input الخاصة برقم القضية في شاشات التقارير أو الربط (باستثناء إنشاء قضية جديدة)
+        // حقول Input الخاصة برقم القضية في شاشات التقارير، القضايا الواردة، وبوابات العملاء
         const caseInputs = document.querySelectorAll(
-            'input#rep_case_number, input#edit_client_case_number'
+            'input#rep_case_number, input#edit_client_case_number, input.smart-case-input-field, ' +
+            'input[name="court_case_number"], input[name="appeal_case_number"], input[name="primary_case_number"], ' +
+            'input[name="prosecution_file_number"], input[name="enforcement_file_number"], input#fCaseInput'
         );
         caseInputs.forEach(inp => {
             if (!isExceptionField(inp)) {

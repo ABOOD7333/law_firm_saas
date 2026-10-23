@@ -726,6 +726,22 @@ input[type="date"].custom-input {
                         </div>
                     </div>
 
+                    <!-- القضية المرتبطة بالمكتب (اختيار من القائمة أو كتابة رقم القضية) -->
+                    <div class="form-grid-1" style="margin-bottom: 14px;">
+                        <div class="custom-form-group">
+                            <label class="custom-label" style="display: flex; justify-content: space-between; align-items: center;">
+                                <span><i class="fa-solid fa-briefcase" style="color: #0284c7;"></i> القضية المرتبطة بالمكتب (رقم القضية)</span>
+                                <span style="font-size: 0.78rem; color: #64748b; font-weight: 600;">(اختر من القائمة أو اكتب رقم القضية لتعبئة بيانات الموكل والمحامي تلقائياً)</span>
+                            </label>
+                            <select name="case_id" id="incoming_case_id" class="custom-select" data-smart-case="true">
+                                <option value="">-- بدون ربط بقضية حالية (ملف جديد) --</option>
+                                {% for c in cases %}
+                                <option value="{{ c.id }}">{{ c.case_number }} - {{ c.title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
                     <div class="form-grid-2">
                         <div class="custom-form-group">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
@@ -1496,6 +1512,16 @@ input[type="date"].custom-input {
             </div>
 
             <div class="custom-form-group" style="margin-bottom: 14px;">
+                <label class="custom-label">القضية المرتبطة بالمكتب (رقم القضية)</label>
+                <select id="editCaseId" name="case_id" class="custom-select" data-smart-case="true">
+                    <option value="">-- بدون ربط بقضية حالية --</option>
+                    {% for c in cases %}
+                    <option value="{{ c.id }}">{{ c.case_number }} - {{ c.title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="custom-form-group" style="margin-bottom: 14px;">
                 <label class="custom-label">{{ cfg.ref_field_label }}</label>
                 <input type="text" id="editRefNumber" name="ref_number" class="custom-input">
             </div>
@@ -1940,6 +1966,11 @@ function openEditModal(id) {
 
             document.getElementById('editRefNumber').value = refVal;
             document.getElementById('editAuthorityName').value = authVal;
+            const editCaseSelect = document.getElementById('editCaseId');
+            if (editCaseSelect) {
+                editCaseSelect.value = data.case_id || '';
+                editCaseSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            }
 
             modal.style.display = 'flex';
         })
