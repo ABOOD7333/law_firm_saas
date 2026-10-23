@@ -166,6 +166,9 @@
             <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.85rem;">التحكم بالاشتراكات، الدخول بالنيابة للدعم الفني، وتجميد/تفعيل الحسابات</p>
         </div>
         <div style="display: flex; gap: 10px; align-items: center;">
+            <button onclick="triggerPurgeAndReset()" style="background: linear-gradient(135deg, #b91c1c, #dc2626); color: white; border: none; padding: 8px 14px; border-radius: 8px; font-size: 0.85rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(220,38,38,0.2);" title="حصر المنصة على مكتب عبدالله العليمي ومكتب هشام دغيش فقط وشطب المكاتب التجريبية">
+                <i class="fas fa-broom"></i> تصفية المنصة للمكاتب الرسمية
+            </button>
             <input type="text" id="office-search" onkeyup="filterOfficesTable()" placeholder="🔍 بحث عن مكتب أو مدير..." style="padding: 8px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.85rem; width: 220px;">
         </div>
     </div>
@@ -252,6 +255,13 @@
                             <button onclick="toggleOffice({{ off.id }})" id="btn-toggle-{{ off.id }}" style="padding: 6px 12px; border: none; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: 0.2s; {% if off.is_active == 1 %}background: #fee2e2; color: #dc2626;{% else %}background: #dcfce7; color: #16a34a;{% endif %}">
                                 {% if off.is_active == 1 %}<i class="fas fa-ban"></i> تجميد{% else %}<i class="fas fa-check"></i> تفعيل{% endif %}
                             </button>
+
+                            <!-- Delete Office Button (Allowed for all except Office 1) -->
+                            {% if off.id != 1 %}
+                            <button onclick="deleteOffice({{ off.id }}, {{ off.name|tojson }})" style="background: #991b1b; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;" title="حذف وشطب المكتب نهائياً مع كافة مستخدميه وبياناته">
+                                <i class="fas fa-trash-alt"></i> حذف وشطب
+                            </button>
+                            {% endif %}
                         </div>
                     </td>
                 </tr>
@@ -697,6 +707,48 @@ async function toggleOffice(officeId) {
         btn.innerText = originalText;
     }
     btn.disabled = false;
+}
+
+async function deleteOffice(officeId, officeName) {
+    if(!confirm(`⚠️ تحذير شديد:\nهل أنت متأكد تماماً من حذف وشطب «${officeName}»؟\nسيتم حذف المكتب وكافة حسابات مستخدميه والقضايا والبيانات التابعة له نهائياً وبلا رجعة!`)) return;
+    
+    try {
+        const csrfToken = document.cookie.split('; ').find(r => r.startsWith('csrf_token='))?.split('=')[1] || '';
+        const res = await fetch('/api/superadmin/delete-office/' + officeId, {
+            method: 'POST',
+            headers: { 'X-CSRF-Token': csrfToken }
+        });
+        const data = await res.json();
+        if (data.success) {
+            alert(data.message);
+            window.location.reload();
+        } else {
+            alert(data.error || "فشل حذف المكتب");
+        }
+    } catch(e) {
+        alert("فشل الاتصال بالخادم");
+    }
+}
+
+async function triggerPurgeAndReset() {
+    if(!confirm("⚠️ تأكيد التصفية الشاملة:\nهل تريد حصر المنصة فقط على (مكتب عبدالله العليمي للمحاماة ومكتب هشام دغيش للمحاماة)، وحذف بقية المكاتب والبيانات التجريبية نهائياً؟")) return;
+    
+    try {
+        const csrfToken = document.cookie.split('; ').find(r => r.startsWith('csrf_token='))?.split('=')[1] || '';
+        const res = await fetch('/api/superadmin/purge-and-reset', {
+            method: 'POST',
+            headers: { 'X-CSRF-Token': csrfToken }
+        });
+        const data = await res.json();
+        if (data.success) {
+            alert(data.message);
+            window.location.reload();
+        } else {
+            alert(data.error || "فشلت عملية التصفية");
+        }
+    } catch(e) {
+        alert("فشل الاتصال بالخادم");
+    }
 }
 </script>
 {% endblock %}

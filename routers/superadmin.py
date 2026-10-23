@@ -470,3 +470,79 @@ async def update_office_modules(office_id: int, request: Request, db: Session = 
         db.rollback()
         app_logger.error(f"Superadmin modules update error: {e}")
         return JSONResponse({"success": False, "error": "فشل حفظ إعدادات الواجهات"}, status_code=500)
+
+
+@router.post("/api/superadmin/delete-office/{office_id}")
+async def delete_office(office_id: int, request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
+    """حذف وشطب مكتب بالكامل مع كافة بياناته ومستخدميه (للسوبر أدمن فقط)"""
+    if not user or not is_superadmin(user):
+        return JSONResponse({"success": False, "error": "غير مصرح"}, status_code=403)
+        
+    if office_id == 1:
+        return JSONResponse({"success": False, "error": "لا يمكن حذف مكتب إدارة المنصة الرئيسي"}, status_code=400)
+        
+    try:
+        office = db.query(LawOffices).filter(LawOffices.id == office_id).first()
+        if not office:
+            return JSONResponse({"success": False, "error": "المكتب غير موجود"}, status_code=404)
+            
+        office_name = office.name
+        
+        # 1. جلب وحذف جلسات ومستخدمي المكتب
+        users = db.query(AccessProfiles).filter(AccessProfiles.office_id == office_id).all()
+        user_ids = [u.id for u in users]
+        if user_ids:
+            db.query(AuthSessions).filter(AuthSessions.user_id.in_(user_ids)).delete(synchronize_session=False)
+            db.query(AccessProfiles).filter(AccessProfiles.id.in_(user_ids)).delete(synchronize_session=False)
+            
+        # 2. حذف كافة السجلات التابعة للمكتب من كافة الجداول
+        from sqlalchemy import text
+        tables_to_clean = [
+            'law_cases', 'law_incoming_cases', 'law_clients', 'law_parties',
+            'law_hearings', 'law_tasks', 'law_judgments', 'law_expenses',
+            'law_transactions', 'law_power_of_attorney', 'law_documents',
+            'law_timesheets', 'law_notes', 'law_correspondences',
+            'law_executions', 'law_limitations', 'law_pleadings',
+            'payment_requests', 'invoices', 'client_payments',
+            'retainer_agreements', 'client_intake_forms', 'law_trust_accounts'
+        ]
+        for tbl in tables_to_clean:
+            try:
+                db.execute(text(f"DELETE FROM {tbl} WHERE office_id = :oid"), {"oid": office_id})
+            except Exception:
+                pass
+                
+        # 3. حذف سجل المكتب نفسه
+        db.delete(office)
+        db.commit()
+        
+        app_logger.info(f"SUPERADMIN_DELETE_OFFICE | Office {office_id} ({office_name}) and all its data permanently deleted by admin {user.id}")
+        return JSONResponse({
+            "success": True,
+            "message": f"تم حذف وشطب «{office_name}» وجميع بياناته بنجاح"
+        })
+    except Exception as e:
+        db.rollback()
+        app_logger.error(f"Superadmin delete office error: {e}")
+        return JSONResponse({"success": False, "error": f"حدث خطأ أثناء الحذف: {str(e)}"}, status_code=500)
+
+
+@router.post("/api/superadmin/purge-and-reset")
+async def purge_and_reset_production(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
+    """تطهير شامل: الإبقاء فقط على مكتب عبدالله العليمي ومكتب هشام دغيش وتصفية البيانات التجريبية"""
+    if not user or not is_superadmin(user):
+        return JSONResponse({"success": False, "error": "غير مصرح"}, status_code=403)
+        
+    try:
+        from database.database import cleanup_and_keep_official_offices
+        cleanup_and_keep_official_offices(db)
+        app_logger.info(f"SUPERADMIN_PURGE_RESET | Production offices purged and reset by admin {user.id}")
+        return JSONResponse({
+            "success": True,
+            "message": "تم تصفية المنصة بنجاح وحصر المكاتب على مكتب عبدالله العليمي ومكتب هشام دغيش فقط"
+        })
+    except Exception as e:
+        db.rollback()
+        app_logger.error(f"Superadmin purge-and-reset error: {e}")
+        return JSONResponse({"success": False, "error": f"حدث خطأ أثناء التصفية: {str(e)}"}, status_code=500)
+
