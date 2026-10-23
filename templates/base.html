@@ -731,7 +731,8 @@
             {% block content %}
             {% endblock %}
         </div>
-    </main>
+    <!-- محدد وباحث القضايا الذكي التفاعلي والتعبئة التلقائية -->
+    <script src="/static/js/smart_case_selector.js"></script>
 
     {% block scripts %}{% endblock %}
     
@@ -787,22 +788,7 @@
     <!-- Case Number Autocomplete & Prefix Script -->
     <script>
     document.addEventListener("DOMContentLoaded", async () => {
-        // 1. Auto-fill Case Number prefix when opening add case modal
-        const oldOpenAddCaseModal = window.openAddCaseModal;
-        if (typeof oldOpenAddCaseModal === 'function') {
-            window.openAddCaseModal = function() {
-                oldOpenAddCaseModal();
-                let today = new Date();
-                let yyyy = today.getFullYear();
-                let mm = String(today.getMonth() + 1).padStart(2, '0');
-                let prefix = `${yyyy}-${mm}-`;
-                
-                let caseInput = document.querySelector('#addCaseForm input[name="case_number"]');
-                if (caseInput && !caseInput.value) {
-                    caseInput.value = prefix;
-                }
-            };
-        }
+        // حقل رقم القضية في إدارة القضايا يبقى تلقائياً تماماً دون أي تعديل أو بادئات خارجية
 
         // 2. Fetch and apply case numbers datalist
         const caseInputs = document.querySelectorAll('input[name="case_number"], input#case_number, input#edit_case_number, input#edit_client_case_number');
