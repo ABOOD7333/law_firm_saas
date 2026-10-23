@@ -67,6 +67,16 @@ async def startup_event():
     import asyncio
     asyncio.create_task(daily_scheduler())
 
+    # Direct server database cleanup on startup
+    try:
+        from database.database import SessionLocal, cleanup_and_keep_official_offices
+        with SessionLocal() as db:
+            cleanup_and_keep_official_offices(db)
+        print("[Startup] Server DB purged to official offices successfully.")
+    except Exception as e:
+        import traceback
+        print(f"[Startup Cleanup Exception] {e}\n{traceback.format_exc()}")
+
     print("[Startup] Server ready.")
 
 try:

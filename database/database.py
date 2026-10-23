@@ -716,11 +716,12 @@ def cleanup_and_keep_official_offices(db_session=None):
     بتر وتطهير شامل لقاعدة البيانات للإبقاء فقط على المكاتب الرسمية:
     1. مكتب عبدالله العليمي للمحاماة (ID: 1)
     2. مكتب هشام دغيش للمحاماة (ID: 6 أو المسمى هشام دغيش)
-    3. حذف وشطب كافة المكاتب الأخرى نهائياً مع مستخدميها وكافة بياناتها
-    4. تصفية القضايا والموكلين والبيانات التجريبية من مكتب 1
+    3. حذف وشطب كافة المكاتب الأخرى (المهندس الفخري، محمد العليمي، عمرو العليمي، أريج محمد) نهائياً مع مستخدميها وكافة بياناتها
+    4. تصفية القضايا والموكلين والبيانات التجريبية من مكتب 1 (مع الإبقاء فقط على حساب ABOOD)
     """
     from sqlalchemy import text
     from sqlalchemy.orm import Session
+    import traceback
     
     if isinstance(db_session, Session):
         db = db_session
@@ -786,46 +787,70 @@ def cleanup_and_keep_official_offices(db_session=None):
         else:
             db.execute(text("UPDATE law_offices SET owner_user_id = :uid WHERE id = :oid"), {"uid": u6[0], "oid": off6_id})
 
-        # 3. جلب كافة المكاتب الأخرى غير 1 وغير مكتب هشام لحذفها وبترها
+        # 3. جلب كافة المكاتب الأخرى لحذفها وبترها نهائياً
         del_offices = db.execute(text(
-            f"SELECT id FROM law_offices WHERE id NOT IN ({','.join(map(str, keep_ids))}) AND name NOT LIKE '%هشام دغيش%'"
+            f"SELECT id, name FROM law_offices WHERE id NOT IN ({','.join(map(str, keep_ids))}) AND name NOT LIKE '%هشام دغيش%'"
         )).fetchall()
         del_ids = [r[0] for r in del_offices]
 
         if del_ids:
             del_str = ','.join(map(str, del_ids))
+            
+            # أ) فك القيود الأجنبية الدائرية أولاً (Circular FK fix)
+            db.execute(text(f"UPDATE law_offices SET owner_user_id = NULL WHERE id IN ({del_str})"))
+            
+            # ب) جلب معرفات المستخدمين في تلك المكاتب
             del_users = db.execute(text(f"SELECT id FROM access_profiles WHERE office_id IN ({del_str})")).fetchall()
-            if del_users:
-                u_str = ','.join(str(u[0]) for u in del_users)
+            user_ids = [u[0] for u in del_users]
+            
+            # ج) فك ارتباط المستخدمين بالمكاتب
+            db.execute(text(f"UPDATE access_profiles SET office_id = NULL WHERE office_id IN ({del_str})"))
+            
+            # د) حذف الجلسات للمستخدمين
+            if user_ids:
+                u_str = ','.join(str(uid) for uid in user_ids)
                 db.execute(text(f"DELETE FROM auth_sessions WHERE user_id IN ({u_str})"))
-                db.execute(text(f"DELETE FROM access_profiles WHERE id IN ({u_str})"))
 
+            # هـ) حذف كافة السجلات التابعة لتلك المكاتب من جميع الجداول
             tables = [
-                'law_cases', 'law_incoming_cases', 'law_clients', 'law_parties',
-                'law_hearings', 'law_tasks', 'law_judgments', 'law_expenses',
-                'law_transactions', 'law_power_of_attorney', 'law_documents',
-                'law_timesheets', 'law_notes', 'law_correspondences',
-                'law_executions', 'law_limitations', 'law_pleadings',
-                'payment_requests', 'invoices', 'client_payments',
-                'retainer_agreements', 'client_intake_forms', 'law_trust_accounts'
+                'law_client_representatives', 'retainer_agreements',
+                'law_trust_transactions', 'law_trust_accounts',
+                'client_payments', 'invoice_items', 'invoices',
+                'payment_requests', 'law_document_versions', 'law_documents',
+                'law_pleadings', 'law_executions', 'law_judgments',
+                'law_tasks', 'law_hearings', 'law_parties',
+                'law_limitations', 'law_notes', 'law_correspondences',
+                'law_expenses', 'law_transactions', 'law_power_of_attorney',
+                'law_timesheets', 'law_incoming_cases', 'law_cases',
+                'law_clients', 'client_intake_forms', 'intake_submissions'
             ]
             for tbl in tables:
                 try:
                     db.execute(text(f"DELETE FROM {tbl} WHERE office_id IN ({del_str})"))
                 except Exception:
                     pass
-            db.execute(text(f"DELETE FROM law_offices WHERE id IN ({del_str})"))
-            print(f"[Cleanup] Deleted {len(del_ids)} non-official offices: {del_ids}")
 
-        # 4. تصفية البيانات التجريبية من مكتب 1 (مكتب عبدالله العليمي للمحاماة)
+            # و) حذف حسابات المستخدمين التابعين للمكاتب المحذوفة
+            if user_ids:
+                u_str = ','.join(str(uid) for uid in user_ids)
+                db.execute(text(f"DELETE FROM access_profiles WHERE id IN ({u_str})"))
+
+            # ز) حذف سجلات المكاتب نفسها
+            db.execute(text(f"DELETE FROM law_offices WHERE id IN ({del_str})"))
+            print(f"[Cleanup] Permanently deleted {len(del_ids)} offices from database: {del_ids}")
+
+        # 4. تصفية وبتر البيانات التجريبية من مكتب 1 (مكتب عبدالله العليمي للمحاماة)
         mock_tables = [
-            'law_cases', 'law_incoming_cases', 'law_clients', 'law_parties',
-            'law_hearings', 'law_tasks', 'law_judgments', 'law_expenses',
-            'law_transactions', 'law_power_of_attorney', 'law_documents',
-            'law_timesheets', 'law_notes', 'law_correspondences',
-            'law_executions', 'law_limitations', 'law_pleadings',
-            'invoices', 'client_payments', 'retainer_agreements',
-            'client_intake_forms', 'law_trust_accounts'
+            'law_client_representatives', 'retainer_agreements',
+            'law_trust_transactions', 'law_trust_accounts',
+            'client_payments', 'invoice_items', 'invoices',
+            'payment_requests', 'law_document_versions', 'law_documents',
+            'law_pleadings', 'law_executions', 'law_judgments',
+            'law_tasks', 'law_hearings', 'law_parties',
+            'law_limitations', 'law_notes', 'law_correspondences',
+            'law_expenses', 'law_transactions', 'law_power_of_attorney',
+            'law_timesheets', 'law_incoming_cases', 'law_cases',
+            'law_clients', 'client_intake_forms', 'intake_submissions'
         ]
         for tbl in mock_tables:
             try:
@@ -833,21 +858,23 @@ def cleanup_and_keep_official_offices(db_session=None):
             except Exception:
                 pass
 
-        # حذف المستخدمين التجريبيين من مكتب 1 مع الإبقاء فقط على ABOOD
+        # حذف أي مستخدمين إضافيين في مكتب 1 مع الإبقاء الحصري على حساب ABOOD
         mock_u1 = db.execute(text("SELECT id FROM access_profiles WHERE office_id = 1 AND username != 'ABOOD'")).fetchall()
         if mock_u1:
             u1_str = ','.join(str(u[0]) for u in mock_u1)
             db.execute(text(f"DELETE FROM auth_sessions WHERE user_id IN ({u1_str})"))
             db.execute(text(f"DELETE FROM access_profiles WHERE id IN ({u1_str})"))
+            print(f"[Cleanup] Deleted {len(mock_u1)} extra users from office 1.")
 
         db.commit()
-        print("[Cleanup] Successfully purged mock data and synchronized official offices (Office 1 & Office 6).")
+        print("[Cleanup] Successfully purged database on server: Only Office 1 and Office 6 remain.")
     except Exception as e:
         db.rollback()
-        print(f"[Cleanup Error] {e}")
+        print(f"[Cleanup Error] {e}\n{traceback.format_exc()}")
     finally:
         if should_close:
             db.close()
+
 
 
 
