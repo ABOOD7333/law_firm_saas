@@ -677,10 +677,7 @@
                 <i class="fa-solid fa-address-book"></i> 2. الاتصال والعنوان
             </button>
             <button type="button" class="modal-tab-btn" id="tabAdd3Btn" onclick="switchAddTab(3)">
-                <i class="fa-solid fa-scale-balanced"></i> 3. القضية والملاحظات
-            </button>
-            <button type="button" class="modal-tab-btn" id="tabAdd4Btn" onclick="switchAddTab(4)">
-                <i class="fa-solid fa-shield-halved"></i> 4. بوابة الموكل
+                <i class="fa-solid fa-shield-halved"></i> 3. بوابة الموكل
             </button>
         </div>
 
@@ -762,39 +759,8 @@
                     </div>
                 </div>
 
-                <!-- Tab 3: القضية والملاحظات -->
+                <!-- Tab 3: بوابة الموكل -->
                 <div id="tabAdd3" class="tab-panel" style="display:none;">
-                    <div class="form-section-box">
-                        <div class="form-section-title">
-                            <i class="fa-solid fa-briefcase"></i> الربط بالقضايا والملاحظات السرية
-                        </div>
-                        <div class="form-grid-2">
-                            <div class="custom-form-group">
-                                <label class="custom-label">ربط بقضية حالية بالمكتب (اختياري)</label>
-                                <select name="case_id" class="custom-select">
-                                    <option value="">-- بدون ربط بقضية حالية --</option>
-                                    {% for c in cases %}
-                                    <option value="{{ c.id }}">{{ c.case_number }} - {{ c.title[:35] }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="custom-form-group">
-                                <label class="custom-label">أو رقم قضية مرجعي خارجي</label>
-                                <input type="text" name="case_number" class="custom-input" placeholder="مثال: CAS-2026-001">
-                            </div>
-                        </div>
-
-                        <div class="form-grid-1">
-                            <div class="custom-form-group">
-                                <label class="custom-label">ملاحظات داخلية خاصة بالمكتب</label>
-                                <textarea name="notes" rows="3" class="custom-textarea" placeholder="أي شروط تعاقدية، بنود أتعاب، أو توجيهات خاصة بالموكل..."></textarea>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Tab 4: بوابة الموكل -->
-                <div id="tabAdd4" class="tab-panel" style="display:none;">
                     <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 12px 16px; margin-bottom: 18px; display: flex; align-items: center; gap: 10px; font-size: 0.88rem; color: #1e40af;">
                         <i class="fa-solid fa-circle-info" style="font-size: 1.1rem; flex-shrink: 0;"></i>
                         <span>تتيح بوابة الموكل للموكل متابعة جلسات قضيته، والاطلاع على المستندات المودعة مباشرة عبر حسابه الخاص.</span>
@@ -989,7 +955,7 @@ let currentAddTab = 1;
 
 function switchAddTab(tabIdx) {
     currentAddTab = tabIdx;
-    for (let i = 1; i <= 4; i++) {
+    for (let i = 1; i <= 3; i++) {
         const panel = document.getElementById(`tabAdd${i}`);
         const btn = document.getElementById(`tabAdd${i}Btn`);
         if (panel) panel.style.display = (i === tabIdx) ? 'block' : 'none';
@@ -1000,8 +966,8 @@ function switchAddTab(tabIdx) {
     const submitBtn = document.getElementById('submitAddBtn');
 
     if (prevBtn) prevBtn.style.display = tabIdx > 1 ? 'inline-flex' : 'none';
-    if (nextBtn) nextBtn.style.display = tabIdx < 4 ? 'inline-flex' : 'none';
-    if (submitBtn) submitBtn.style.display = tabIdx === 4 ? 'inline-flex' : 'none';
+    if (nextBtn) nextBtn.style.display = tabIdx < 3 ? 'inline-flex' : 'none';
+    if (submitBtn) submitBtn.style.display = tabIdx === 3 ? 'inline-flex' : 'none';
 }
 
 function stepAddTab(step) {

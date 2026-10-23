@@ -82,7 +82,10 @@ async def poa_page(
             "expiry_date": r.expiry_date or "",
             "scope_of_powers": getattr(r, 'scope_of_powers', '') or '',
             "status": getattr(r, 'status', 'active') or 'active',
-            "notes": r.notes or ""
+            "notes": r.notes or "",
+            "is_signed": getattr(r, 'is_signed', 0) or 0,
+            "signed_at": getattr(r, 'signed_at', '') or '',
+            "verification_hash": getattr(r, 'verification_hash', '') or ''
         } for r in all_records]
 
         return templates.TemplateResponse(

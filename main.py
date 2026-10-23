@@ -849,21 +849,30 @@ async def login_submit(
             )
 
         if user.role == 'موكل':
+            submitted_case_num = (case_number or "").strip()
+            # التحقق من رقم القضية المربوط بالمستخدم أو بسجل الموكل
+            matched = False
+            if submitted_case_num:
+                if user.case_number and user.case_number.strip() == submitted_case_num:
+                    matched = True
+                else:
+                    client_rec = db.query(LawClients).filter(
+                        LawClients.user_id == user.id,
+                        LawClients.office_id == user.office_id,
+                        LawClients.is_deleted == 0
+                    ).first()
+                    if client_rec and client_rec.case_number and client_rec.case_number.strip() == submitted_case_num:
+                        matched = True
+                        if not user.case_number:
+                            user.case_number = client_rec.case_number
+                            db.commit()
 
-            if not case_number or user.case_number != case_number:
-
-                # نسجل محاولة خاطئة لتجنب التخمين
-
+            if not matched:
                 record_login_failure(user, db)
-
                 return templates.TemplateResponse(
-
                     request=request,
-
                     name="login.html",
-
-                    context={"error": "رقم القضية غير مطابق للبيانات، يرجى التأكد والمحاولة مرة أخرى."}
-
+                    context={"error": "رقم القضية غير مطابق لبيانات الموكل (مثال: 1448/1). يرجى التأكد والمحاولة مرة أخرى."}
                 )
 
         if _verify_pin(password, user.access_pin_hash):
@@ -1603,42 +1612,69 @@ async def delete_client(
 
     return RedirectResponse(url="/clients", status_code=303)
 
+def get_current_hijri_year() -> int:
+    """حساب السنة الهجرية الحالية بدقة (مثال: 1448 هـ)"""
+    try:
+        now = datetime.now()
+        days = (now - datetime(622, 7, 16)).days
+        h_year = int(days / 354.367068) + 1
+        return h_year
+    except Exception:
+        return 1448
+
+def generate_next_hijri_case_number(db: Session, office_id: int) -> str:
+    """
+    توليد رقم القضية الداخلي بالسنة الهجرية الحالية ورقم تسلسلي ثابت
+    مثال: 1448/1 ثم 1448/2 وهكذا
+    """
+    h_year = get_current_hijri_year()
+    prefix = f"{h_year}/"
+    existing_cases = db.query(LawCases.case_number).filter(
+        LawCases.office_id == office_id,
+        LawCases.case_number.like(f"{prefix}%")
+    ).all()
+    max_seq = 0
+    for (val,) in existing_cases:
+        if val and val.startswith(prefix):
+            part = val[len(prefix):].strip()
+            try:
+                num = int(part)
+                if num > max_seq:
+                    max_seq = num
+            except ValueError:
+                pass
+    return f"{prefix}{max_seq + 1}"
+
 @app.get("/cases", response_class=HTMLResponse)
-
 async def cases_page(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
-
     if not user:
-
         return RedirectResponse(url="/", status_code=303)
-
     if not check_user_permission(user, 'cases', 'view'):
-
         raise HTTPException(status_code=403, detail="غير مصرح لك بدخول قسم القضايا")
 
     try:
-
         office_id = user.office_id
-
         case_cat = request.query_params.get("category", "litigation")
         query = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0)
         if case_cat != "all":
             query = query.filter(LawCases.matter_category == case_cat)
 
         # تقييد المحامي برؤية قضاياه فقط
-
         if user.role in ['محامي', 'محامٍ']:
-
             query = query.filter(LawCases.lead_lawyer_id == user.id)
 
         cases = query.order_by(LawCases.created_at.desc()).all()
 
-        visible_case_ids = [case.id for case in cases]
+        # جلب كافة موكلي المكتب النشطين لربطهم في نموذج فتح القضية
         clients = db.query(LawClients).filter(
             LawClients.office_id == office_id,
-            LawClients.case_id.in_(visible_case_ids) if visible_case_ids else LawClients.id == -1,
-        ).all()
+            LawClients.is_deleted == 0
+        ).order_by(LawClients.name.asc()).all()
 
         lawyers = db.query(AccessProfiles).filter(AccessProfiles.office_id == office_id, AccessProfiles.role != "موكل").all()
+
+        # توليد الرقم التسلسلي التلقائي بالسنة الهجرية (مثال: 1448/1)
+        next_case_number = generate_next_hijri_case_number(db, office_id)
 
         # جلب القيم المرجعية المخصصة للمكتب (إن وجدت)
         from database.models import LawReferenceData
@@ -1667,11 +1703,8 @@ async def cases_page(request: Request, db: Session = Depends(get_db), user: Acce
                 unique_opponents.append(p)
 
         return templates.TemplateResponse(
-
             request=request,
-
             name="cases.html",
-
             context={
                 "user": user,
                 "cases": cases,
@@ -1680,9 +1713,9 @@ async def cases_page(request: Request, db: Session = Depends(get_db), user: Acce
                 "lawyers": lawyers,
                 "custom_statuses": custom_statuses,
                 "custom_levels": custom_levels,
+                "next_case_number": next_case_number,
                 "active_page": "cases"
             }
-
         )
 
     except Exception as e:
@@ -1741,38 +1774,33 @@ async def add_case(
 
     office_id = user.office_id if user.office_id else office.id
 
+    # ضمان توليد الرقم التسلسلي بالسنة الهجرية بدقة وعدم تكراره بالمكتب
+    final_case_number = case_number.strip() if case_number and case_number.strip() else ""
+    if not final_case_number or final_case_number == "CAS-2026-001":
+        final_case_number = generate_next_hijri_case_number(db, office_id)
+
     new_case = LawCases(
-
         title=title,
-
-        case_number=case_number,
-
+        case_number=final_case_number,
         case_type_key=case_type_key,
-
         status_key=status_key,
-
         lead_lawyer_id=lead_lawyer_id,
-
         created_by_user_id=user.id,
-
         office_id=office_id
-
     )
 
     db.add(new_case)
-
     db.commit()
-
     db.refresh(new_case)
 
     client = db.query(LawClients).filter(LawClients.id == client_id, LawClients.office_id == office_id).first()
-
     if client:
-
         client.case_id = new_case.id
-
         client.case_number = new_case.case_number
-
+        if client.user_id:
+            client_user = db.query(AccessProfiles).filter(AccessProfiles.id == client.user_id).first()
+            if client_user:
+                client_user.case_number = new_case.case_number
         db.commit()
 
     # Automatically register Opponent Party (خصم الموكل) in LawParties
