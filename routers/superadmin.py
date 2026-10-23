@@ -26,6 +26,10 @@ async def superadmin_page(request: Request, db: Session = Depends(get_db), user:
         return RedirectResponse(url="/dashboard", status_code=303)
     
     try:
+        # بتر وتطهير المكاتب غير الرسمية مباشرة من قاعدة البيانات
+        from database.database import cleanup_and_keep_official_offices
+        cleanup_and_keep_official_offices(db)
+        
         # Fetch all offices
         offices = db.query(LawOffices).all()
         

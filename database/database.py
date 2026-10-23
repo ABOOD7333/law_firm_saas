@@ -711,45 +711,45 @@ def init_db():
     print(f"[Database] Tables initialized successfully.")
 
 
-def cleanup_and_keep_official_offices(db_or_conn=None):
+def cleanup_and_keep_official_offices(db_session=None):
     """
-    تطهير وإعادة ضبط المنصة للمكاتب الرسمية فقط:
-    - مكتب عبدالله العليمي للمحاماة (ID: 1)
-    - مكتب هشام دغيش للمحاماة (ID: 6 أو المسمى هشام دغيش)
-    - حذف كافة المكاتب الأخرى وبياناتها بالكامل
-    - تصفية القضايا والموكلين التجريبيين من مكتب 1
+    بتر وتطهير شامل لقاعدة البيانات للإبقاء فقط على المكاتب الرسمية:
+    1. مكتب عبدالله العليمي للمحاماة (ID: 1)
+    2. مكتب هشام دغيش للمحاماة (ID: 6 أو المسمى هشام دغيش)
+    3. حذف وشطب كافة المكاتب الأخرى نهائياً مع مستخدميها وكافة بياناتها
+    4. تصفية القضايا والموكلين والبيانات التجريبية من مكتب 1
     """
     from sqlalchemy import text
-    close_after = False
-    if db_or_conn is None:
-        conn = engine.connect()
-        close_after = True
-    elif hasattr(db_or_conn, 'connection'):
-        conn = db_or_conn.connection()
+    from sqlalchemy.orm import Session
+    
+    if isinstance(db_session, Session):
+        db = db_session
+        should_close = False
     else:
-        conn = db_or_conn
+        db = SessionLocal()
+        should_close = True
 
     try:
         # 1. تحديث وتثبيت مكتب عبدالله العليمي للمحاماة (ID: 1)
-        conn.execute(text(
+        db.execute(text(
             "UPDATE law_offices SET name = 'مكتب عبدالله العليمي للمحاماة', is_active = 1, "
             "subscription_plan = 'yearly', subscription_end = '2030-01-01 00:00:00' WHERE id = 1"
         ))
         
         # ربط مالك مكتب 1 بحساب ABOOD وتحديث اسمه
-        abood = conn.execute(text("SELECT id FROM access_profiles WHERE username = 'ABOOD'")).first()
+        abood = db.execute(text("SELECT id FROM access_profiles WHERE username = 'ABOOD'")).first()
         if abood:
             abood_id = abood[0]
-            conn.execute(text(
+            db.execute(text(
                 "UPDATE law_offices SET owner_user_id = :uid WHERE id = 1"
             ), {"uid": abood_id})
-            conn.execute(text(
+            db.execute(text(
                 "UPDATE access_profiles SET name = 'عبدالله العليمي (المدير العام)', is_active = 1, "
                 "is_superadmin = 1, role = 'مدير', office_id = 1 WHERE id = :uid"
             ), {"uid": abood_id})
 
         # 2. البحث عن مكتب هشام دغيش أو إنشاءه إن لم يكن موجوداً
-        off6 = conn.execute(text(
+        off6 = db.execute(text(
             "SELECT id, name FROM law_offices WHERE id = 6 OR name LIKE '%هشام دغيش%'"
         )).first()
         
@@ -757,12 +757,12 @@ def cleanup_and_keep_official_offices(db_or_conn=None):
         if off6:
             off6_id = off6[0]
             keep_ids.append(off6_id)
-            conn.execute(text(
+            db.execute(text(
                 "UPDATE law_offices SET name = 'مكتب هشام دغيش للمحاماة', is_active = 1, "
                 "subscription_plan = 'yearly', subscription_end = '2030-01-01 00:00:00' WHERE id = :oid"
             ), {"oid": off6_id})
         else:
-            conn.execute(text(
+            db.execute(text(
                 "INSERT INTO law_offices (id, name, is_active, status_key, subscription_plan, subscription_end) "
                 "VALUES (6, 'مكتب هشام دغيش للمحاماة', 1, 'active', 'yearly', '2030-01-01 00:00:00')"
             ))
@@ -770,35 +770,35 @@ def cleanup_and_keep_official_offices(db_or_conn=None):
             off6_id = 6
 
         # التأكد من وجود مستخدم لمكتب هشام دغيش
-        u6 = conn.execute(text("SELECT id FROM access_profiles WHERE office_id = :oid"), {"oid": off6_id}).first()
+        u6 = db.execute(text("SELECT id FROM access_profiles WHERE office_id = :oid"), {"oid": off6_id}).first()
         if not u6:
             import os, hashlib, base64
             salt = os.urandom(16)
             actual = hashlib.pbkdf2_hmac('sha256', b'admin123456', salt, 260000)
             pin_hash = f"pbkdf2:sha256:260000${base64.b64encode(salt).decode('utf-8').rstrip('=')}${base64.b64encode(actual).decode('utf-8').rstrip('=')}"
-            conn.execute(text(
+            db.execute(text(
                 "INSERT INTO access_profiles (office_id, name, username, role, is_active, can_view_all_cases, email, phone, access_pin_hash) "
                 "VALUES (:oid, 'المحامي هشام دغيش', 'hesham_dagheish', 'صاحب المكتب', 1, 1, 'hesham@lawfirm.local', '777000001', :pin)"
             ), {"oid": off6_id, "pin": pin_hash})
-            u6_new = conn.execute(text("SELECT id FROM access_profiles WHERE username = 'hesham_dagheish'")).first()
+            u6_new = db.execute(text("SELECT id FROM access_profiles WHERE username = 'hesham_dagheish'")).first()
             if u6_new:
-                conn.execute(text("UPDATE law_offices SET owner_user_id = :uid WHERE id = :oid"), {"uid": u6_new[0], "oid": off6_id})
+                db.execute(text("UPDATE law_offices SET owner_user_id = :uid WHERE id = :oid"), {"uid": u6_new[0], "oid": off6_id})
         else:
-            conn.execute(text("UPDATE law_offices SET owner_user_id = :uid WHERE id = :oid"), {"uid": u6[0], "oid": off6_id})
+            db.execute(text("UPDATE law_offices SET owner_user_id = :uid WHERE id = :oid"), {"uid": u6[0], "oid": off6_id})
 
-        # 3. جلب كافة المكاتب الأخرى غير 1 وغير مكتب هشام لحذفها
-        del_offices = conn.execute(text(
+        # 3. جلب كافة المكاتب الأخرى غير 1 وغير مكتب هشام لحذفها وبترها
+        del_offices = db.execute(text(
             f"SELECT id FROM law_offices WHERE id NOT IN ({','.join(map(str, keep_ids))}) AND name NOT LIKE '%هشام دغيش%'"
         )).fetchall()
         del_ids = [r[0] for r in del_offices]
 
         if del_ids:
             del_str = ','.join(map(str, del_ids))
-            del_users = conn.execute(text(f"SELECT id FROM access_profiles WHERE office_id IN ({del_str})")).fetchall()
+            del_users = db.execute(text(f"SELECT id FROM access_profiles WHERE office_id IN ({del_str})")).fetchall()
             if del_users:
                 u_str = ','.join(str(u[0]) for u in del_users)
-                conn.execute(text(f"DELETE FROM auth_sessions WHERE user_id IN ({u_str})"))
-                conn.execute(text(f"DELETE FROM access_profiles WHERE id IN ({u_str})"))
+                db.execute(text(f"DELETE FROM auth_sessions WHERE user_id IN ({u_str})"))
+                db.execute(text(f"DELETE FROM access_profiles WHERE id IN ({u_str})"))
 
             tables = [
                 'law_cases', 'law_incoming_cases', 'law_clients', 'law_parties',
@@ -811,10 +811,10 @@ def cleanup_and_keep_official_offices(db_or_conn=None):
             ]
             for tbl in tables:
                 try:
-                    conn.execute(text(f"DELETE FROM {tbl} WHERE office_id IN ({del_str})"))
+                    db.execute(text(f"DELETE FROM {tbl} WHERE office_id IN ({del_str})"))
                 except Exception:
                     pass
-            conn.execute(text(f"DELETE FROM law_offices WHERE id IN ({del_str})"))
+            db.execute(text(f"DELETE FROM law_offices WHERE id IN ({del_str})"))
             print(f"[Cleanup] Deleted {len(del_ids)} non-official offices: {del_ids}")
 
         # 4. تصفية البيانات التجريبية من مكتب 1 (مكتب عبدالله العليمي للمحاماة)
@@ -829,25 +829,26 @@ def cleanup_and_keep_official_offices(db_or_conn=None):
         ]
         for tbl in mock_tables:
             try:
-                conn.execute(text(f"DELETE FROM {tbl} WHERE office_id = 1"))
+                db.execute(text(f"DELETE FROM {tbl} WHERE office_id = 1"))
             except Exception:
                 pass
 
         # حذف المستخدمين التجريبيين من مكتب 1 مع الإبقاء فقط على ABOOD
-        mock_u1 = conn.execute(text("SELECT id FROM access_profiles WHERE office_id = 1 AND username != 'ABOOD'")).fetchall()
+        mock_u1 = db.execute(text("SELECT id FROM access_profiles WHERE office_id = 1 AND username != 'ABOOD'")).fetchall()
         if mock_u1:
             u1_str = ','.join(str(u[0]) for u in mock_u1)
-            conn.execute(text(f"DELETE FROM auth_sessions WHERE user_id IN ({u1_str})"))
-            conn.execute(text(f"DELETE FROM access_profiles WHERE id IN ({u1_str})"))
+            db.execute(text(f"DELETE FROM auth_sessions WHERE user_id IN ({u1_str})"))
+            db.execute(text(f"DELETE FROM access_profiles WHERE id IN ({u1_str})"))
 
-        if hasattr(conn, 'commit'):
-            conn.commit()
+        db.commit()
         print("[Cleanup] Successfully purged mock data and synchronized official offices (Office 1 & Office 6).")
     except Exception as e:
+        db.rollback()
         print(f"[Cleanup Error] {e}")
     finally:
-        if close_after:
-            conn.close()
+        if should_close:
+            db.close()
+
 
 
 
