@@ -518,7 +518,6 @@ input[type="date"].custom-input {
             <table class="data-table-clean">
                 <thead>
                     <tr>
-                        <th style="width: 130px;">رقم الوارد الهجري</th>
                         <th>الموكل / صفته</th>
                         <th>المحامي المختص</th>
                         <th>{{ cfg.ref_field_label }}</th>
@@ -533,11 +532,6 @@ input[type="date"].custom-input {
                     {% if records %}
                         {% for r in records %}
                         <tr>
-                            <td>
-                                <strong style="color: #1e40af; font-family: monospace; font-size: 0.95rem; background: #eff6ff; padding: 3px 8px; border-radius: 6px;">
-                                    {{ r.internal_number }}
-                                </strong>
-                            </td>
                             <td>
                                 <div style="font-weight: 800; color: #0f172a;">
                                     {{ r.client_name or (r.law_client.name if r.law_client else 'غير محدد') }}
@@ -692,9 +686,6 @@ input[type="date"].custom-input {
                 </div>
             </div>
             <div style="display: flex; align-items: center; gap: 12px;">
-                <span style="font-size: 0.84rem; font-weight: 800; color: #1e40af; background: #eff6ff; padding: 4px 12px; border-radius: 8px; border: 1px solid #bfdbfe;">
-                    رقم مقترح: #{{ suggested_internal_number }}
-                </span>
                 <button type="button" class="modal-close-btn" onclick="closeIncomingCreateModal()">&times;</button>
             </div>
         </div>
@@ -707,14 +698,10 @@ input[type="date"].custom-input {
                 <!-- القسم الأول: الهوية والمسؤول والموكل -->
                 <div class="form-section-box">
                     <div class="form-section-title">
-                        <i class="fa-solid fa-id-card"></i> البيانات الأساسية ورقم الوارد الهجري
+                        <i class="fa-solid fa-id-card"></i> البيانات الأساسية للملف
                     </div>
 
-                    <div class="form-grid-2">
-                        <div class="custom-form-group">
-                            <label class="custom-label">رقم الوارد (تسلسلي هجري تلقائي) <span style="color: #0284c7;">*</span></label>
-                            <input type="text" value="{{ suggested_internal_number }}" readonly class="custom-input" style="background: #f1f5f9; font-weight: 800; font-family: monospace; color: #0f172a;">
-                        </div>
+                    <div class="form-grid-1" style="margin-bottom: 14px;">
                         <div class="custom-form-group">
                             <label class="custom-label">المحامي المختص للقضية <span style="color: #e11d48;">*</span></label>
                             <select name="assigned_lawyer_id" class="custom-select" required>
@@ -1767,7 +1754,7 @@ function openDetailsModal(id) {
     fetch(`/incoming-cases/api/details/${id}`)
         .then(res => res.json())
         .then(data => {
-            title.innerHTML = `تفاصيل ملف الاستقبال #${data.internal_number} <span style="font-size: 0.85rem; color: #64748b;">(${data.section_title})</span>`;
+            title.innerHTML = `تفاصيل ملف الاستقبال <span style="font-size: 0.85rem; color: #64748b;">(${data.section_title})</span>`;
 
             let attachmentsHtml = '<p style="color: #94a3b8; font-size: 0.85rem;">لا توجد مستندات مرفوعة لهذا الملف.</p>';
             if (data.attachments && data.attachments.length > 0) {
@@ -1957,7 +1944,7 @@ function openEditModal(id) {
     fetch(`/incoming-cases/api/details/${id}`)
         .then(res => res.json())
         .then(data => {
-            document.getElementById('editModalTitle').innerText = `تعديل ملف الاستقبال #${data.internal_number}`;
+            document.getElementById('editModalTitle').innerText = 'تعديل ملف الاستقبال';
             document.getElementById('editStatusKey').value = data.status_key;
             document.getElementById('editNotes').value = data.notes;
 

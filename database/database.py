@@ -254,8 +254,6 @@ def init_db():
 
     # Add judicial section fields to law_incoming_cases if not exists
     new_incoming_cols = [
-        ('hijri_year', 'TEXT'),
-        ('incoming_sequence', 'INTEGER'),
         ('case_subject', 'TEXT'),
         ('crime_classification', 'TEXT'),
         ('client_capacity', 'TEXT'),

@@ -87,30 +87,13 @@ async def test_incoming_cases_flow():
             assert "القضايا الواردة من التنفيذ" in res.text
 
         # Direct database and backend tests
-        print("\n--- 2. Testing Internal Number Generation & Model Creation ---")
+        print("\n--- 2. Testing Incoming Cases Model Creation ---")
         db = SessionLocal()
         try:
-            from routers.incoming_cases import generate_internal_number
-
-            # Test generation for 5 sections
-            police_num = generate_internal_number(db, office_id, "police")
-            prosecution_num = generate_internal_number(db, office_id, "prosecution")
-            fi_num = generate_internal_number(db, office_id, "first_instance")
-            appeal_num = generate_internal_number(db, office_id, "appeal")
-            enforce_num = generate_internal_number(db, office_id, "enforcement")
-
-            assert int(police_num) >= 1001, f"Expected police number >= 1001, got {police_num}"
-            assert int(prosecution_num) >= 2001, f"Expected prosecution number >= 2001, got {prosecution_num}"
-            assert int(fi_num) >= 3001, f"Expected first instance number >= 3001, got {fi_num}"
-            assert int(appeal_num) >= 4001, f"Expected appeal number >= 4001, got {appeal_num}"
-            assert int(enforce_num) >= 5001, f"Expected enforcement number >= 5001, got {enforce_num}"
-            print(f"Generated sequential numbers: Police={police_num}, Pros={prosecution_num}, FI={fi_num}, Appeal={appeal_num}, Enf={enforce_num}")
-
             # 3. Create records for each of the 5 sections
             rec_police = LawIncomingCases(
                 office_id=office_id,
                 section_key="police",
-                internal_number=police_num,
                 client_id=client_id,
                 client_name=client_name,
                 reception_date=str(date.today()),
@@ -125,7 +108,6 @@ async def test_incoming_cases_flow():
             rec_pros = LawIncomingCases(
                 office_id=office_id,
                 section_key="prosecution",
-                internal_number=prosecution_num,
                 client_id=client_id,
                 client_name=client_name,
                 reception_date=str(date.today()),
@@ -139,7 +121,6 @@ async def test_incoming_cases_flow():
             rec_fi = LawIncomingCases(
                 office_id=office_id,
                 section_key="first_instance",
-                internal_number=fi_num,
                 client_id=client_id,
                 client_name=client_name,
                 reception_date=str(date.today()),
@@ -155,7 +136,6 @@ async def test_incoming_cases_flow():
             rec_appeal = LawIncomingCases(
                 office_id=office_id,
                 section_key="appeal",
-                internal_number=appeal_num,
                 client_id=client_id,
                 client_name=client_name,
                 reception_date=str(date.today()),
@@ -169,7 +149,6 @@ async def test_incoming_cases_flow():
             rec_enf = LawIncomingCases(
                 office_id=office_id,
                 section_key="enforcement",
-                internal_number=enforce_num,
                 client_id=client_id,
                 client_name=client_name,
                 reception_date=str(date.today()),
@@ -201,8 +180,8 @@ async def test_incoming_cases_flow():
             # Let's simulate conversion logic directly to test DB integrity
             new_case = LawCases(
                 office_id=office_id,
-                case_number=f"CASE-TEST-{rec_fi.internal_number}",
-                title=f"قضية محولة من ملف وارد #{rec_fi.internal_number}",
+                case_number=f"CASE-TEST-{rec_fi.id}",
+                title=f"قضية محولة من ملف وارد #{rec_fi.id}",
                 status_key="new",
             )
             db.add(new_case)
@@ -215,7 +194,7 @@ async def test_incoming_cases_flow():
 
             assert rec_fi.case_id == new_case.id
             assert rec_fi.law_case is not None
-            print(f"Converted incoming file #{rec_fi.internal_number} to official case #{new_case.case_number} successfully.")
+            print(f"Converted incoming file #{rec_fi.id} to official case #{new_case.case_number} successfully.")
 
         finally:
             db.close()

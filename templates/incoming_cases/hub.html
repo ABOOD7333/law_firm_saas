@@ -267,7 +267,6 @@
             <table style="width: 100%; border-collapse: collapse; text-align: right;">
                 <thead>
                     <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
-                        <th style="padding: 12px 14px; font-size: 0.86rem; font-weight: 800; color: #475569;">رقم الوارد</th>
                         <th style="padding: 12px 14px; font-size: 0.86rem; font-weight: 800; color: #475569;">الجهة الوارد منها</th>
                         <th style="padding: 12px 14px; font-size: 0.86rem; font-weight: 800; color: #475569;">الموكل / صفته</th>
                         <th style="padding: 12px 14px; font-size: 0.86rem; font-weight: 800; color: #475569;">المحامي المختص</th>
@@ -281,11 +280,6 @@
                     {% if all_records %}
                         {% for r in all_records %}
                         <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
-                            <td style="padding: 12px 14px;">
-                                <strong style="color: #0f172a; font-family: monospace; font-size: 0.95rem;">
-                                    {{ r.internal_number }}
-                                </strong>
-                            </td>
                             <td style="padding: 12px 14px;">
                                 {% set cfg = sections.get(r.section_key, {}) %}
                                 <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 700; color: {{ cfg.badge_color or '#334155' }}; background: #f8fafc; border: 1px solid #e2e8f0; padding: 4px 10px; border-radius: 6px;">
@@ -431,7 +425,7 @@ function openHubDetailsModal(id) {
     fetch(`/incoming-cases/api/details/${id}`)
         .then(res => res.json())
         .then(data => {
-            title.innerHTML = `تفاصيل ملف الاستقبال #${data.internal_number} <span style="font-size: 0.85rem; color: #64748b;">(${data.section_title})</span>`;
+            title.innerHTML = `تفاصيل ملف الاستقبال <span style="font-size: 0.85rem; color: #64748b;">(${data.section_title})</span>`;
 
             let attachmentsHtml = '<p style="color: #94a3b8; font-size: 0.85rem;">لا توجد مستندات مرفوعة لهذا الملف.</p>';
             if (data.attachments && data.attachments.length > 0) {

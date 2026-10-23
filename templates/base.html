@@ -374,7 +374,7 @@
             {% set not_client = (user and user.role != 'موكل') or (user and getattr(user, 'is_support_session', False)) %}
 
             <!-- 1. الميدان والعمل اليومي (منسدلة) -->
-            {% set field_active = active_page in ['dashboard', 'calendar', 'hearings', 'tasks', 'kanban', 'timeline'] %}
+            {% set field_active = active_page in ['dashboard', 'calendar', 'tasks', 'kanban', 'timeline'] %}
             <li class="nav-group {% if field_active or not not_client %}open{% endif %}">
                 <button type="button" class="nav-group-header" onclick="toggleNavGroup(this)">
                     <div class="nav-group-title">
@@ -394,11 +394,6 @@
                         </li>
                         {% endif %}
                         {% if is_admin or is_lawyer or is_sec %}
-                            {% if has_perm(user, 'hearings', 'view') %}
-                            <li class="nav-item {% if active_page == 'hearings' %}active{% endif %}">
-                                <a href="/hearings"><i class="fa-solid fa-calendar-days"></i> محاضر الجلسات</a>
-                            </li>
-                            {% endif %}
                             {% if has_perm(user, 'tasks', 'view') %}
                             <li class="nav-item {% if active_page == 'tasks' %}active{% endif %}">
                                 <a href="/tasks"><i class="fa-solid fa-list-check"></i> المهام والمتابعة</a>
@@ -422,7 +417,7 @@
             {% if not_client %}
             <!-- 2. القضايا والملفات (منسدلة) -->
             {% if (is_admin or is_lawyer or is_sec) and has_perm(user, 'cases', 'view') %}
-            {% set cases_active = active_page in ['cases', 'matters', 'incoming_cases', 'parties', 'conflict_check', 'execution'] %}
+            {% set cases_active = active_page in ['cases', 'hearings', 'matters', 'incoming_cases', 'parties', 'conflict_check', 'execution'] %}
             <li class="nav-group {% if cases_active %}open{% endif %}">
                 <button type="button" class="nav-group-header" onclick="toggleNavGroup(this)">
                     <div class="nav-group-title">
@@ -435,6 +430,11 @@
                     <li class="nav-item {% if active_page == 'cases' %}active{% endif %}">
                         <a href="/cases"><i class="fa-solid fa-gavel"></i> إدارة القضايا</a>
                     </li>
+                    {% if has_perm(user, 'hearings', 'view') %}
+                    <li class="nav-item {% if active_page == 'hearings' %}active{% endif %}">
+                        <a href="/hearings"><i class="fa-solid fa-calendar-days"></i> محاضر الجلسات</a>
+                    </li>
+                    {% endif %}
                     {% if has_perm(user, 'matters', 'view') %}
                     <li class="nav-item {% if active_page == 'matters' %}active{% endif %}">
                         <a href="/matters"><i class="fa-solid fa-file-signature" style="color: #3b82f6;"></i> المسائل والاستشارات</a>

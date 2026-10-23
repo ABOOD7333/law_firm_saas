@@ -403,7 +403,6 @@ REPORTS_CATALOG = {
         "icon": "fa-building-shield",
         "filters": ["المحامي المكلف", "قسم الشرطة", "حالة الإحالة", "الفترة الزمنية"],
         "columns": [
-            "الرقم الداخلي",
             "تاريخ الاستقبال بالمكتب",
             "المحامي المسؤول",
             "اسم الموكل",
@@ -426,7 +425,6 @@ REPORTS_CATALOG = {
         "icon": "fa-scale-balanced",
         "filters": ["النيابة المختصة", "المحامي المتابع", "تصرف النيابة", "الفترة الزمنية"],
         "columns": [
-            "الرقم الداخلي",
             "تاريخ الاستقبال بالمكتب",
             "المحامي المسؤول",
             "اسم الموكل",
@@ -452,7 +450,6 @@ REPORTS_CATALOG = {
         "icon": "fa-landmark",
         "filters": ["المحكمة الابتدائية", "المحامي المكلف", "حالة القيد", "الفترة الزمنية"],
         "columns": [
-            "الرقم الداخلي",
             "تاريخ الاستقبال بالمكتب",
             "المحامي المسؤول",
             "اسم الموكل",
@@ -480,7 +477,6 @@ REPORTS_CATALOG = {
         "icon": "fa-scale-unbalanced",
         "filters": ["محكمة الاستئناف", "المحامي المتابع", "حالة الطعن", "الفترة الزمنية"],
         "columns": [
-            "الرقم الداخلي",
             "تاريخ الاستقبال بالمكتب",
             "المحامي المسؤول",
             "اسم الموكل",
@@ -507,7 +503,6 @@ REPORTS_CATALOG = {
         "icon": "fa-building-columns",
         "filters": ["الدائرة العليا", "المحامي المتابع", "تاريخ الطعن", "الفترة الزمنية"],
         "columns": [
-            "الرقم الداخلي",
             "تاريخ الاستقبال بالمكتب",
             "المحامي المسؤول",
             "اسم الموكل",
@@ -534,7 +529,6 @@ REPORTS_CATALOG = {
         "icon": "fa-gavel",
         "filters": ["محكمة التنفيذ", "المحامي المسؤول", "نوع السند", "الفترة الزمنية"],
         "columns": [
-            "الرقم الداخلي",
             "تاريخ الاستقبال بالمكتب",
             "المحامي المسؤول",
             "اسم الموكل",
@@ -557,7 +551,7 @@ REPORTS_CATALOG = {
         "desc": "رصد ومتابعة الملفات والطلبات المستلمة حديثاً التي ما زالت تحت الفحص الفني والقانوني قبل اتخاذ قرار التعاقد والتوكيل.",
         "icon": "fa-clipboard-check",
         "filters": ["المستشار المكلف", "حالة الملف", "نوع الواقعة", "الفترة الزمنية"],
-        "columns": ["الرقم الداخلي", "تاريخ الاستلام", "اسم الموكل", "موضوع الملف / التصنيف", "المستشار المكلف بالدراسة", "حالة الدراسة والتقييم", "الموقف والإجراء المقترح"]
+        "columns": ["تاريخ الاستلام", "اسم الموكل", "موضوع الملف / التصنيف", "المستشار المكلف بالدراسة", "حالة الدراسة والتقييم", "الموقف والإجراء المقترح"]
     },
     40: {
         "id": 40,
@@ -568,7 +562,7 @@ REPORTS_CATALOG = {
         "desc": "توثيق وتحليل كافة الملفات الواردة التي استوفت شروط القبول وتم تحويلها رسمياً إلى ملفات قضايا معتمدة بملفات ومسائل المكتب.",
         "icon": "fa-arrow-right-arrow-left",
         "filters": ["المحامي الأصيل", "المحكمة المختصة", "الفترة الزمنية"],
-        "columns": ["الرقم الداخلي الوارد", "رقم القضية الرسمي الجديد", "اسم الموكل", "موضوع الدعوى", "المحكمة المختصة", "تاريخ التحويل والاعتماد", "المحامي الأصيل"]
+        "columns": ["رقم القضية الرسمي الجديد", "اسم الموكل", "موضوع الدعوى", "المحكمة المختصة", "تاريخ التحويل والاعتماد", "المحامي الأصيل"]
     },
     41: {
         "id": 41,
@@ -579,7 +573,7 @@ REPORTS_CATALOG = {
         "desc": "سجل استقصائي شامل لجميع الملفات المقيدة في وحدة الاستقبال عبر كافة المراحل (شرطة، نيابة، محاكم، تنفيذ) وتوزيعها على الفريق.",
         "icon": "fa-table-list",
         "filters": ["القسم الوارد منه", "المحامي المتابع", "حالة القيد", "الفترة الزمنية"],
-        "columns": ["الرقم الداخلي", "الموكل", "الجهة الوارد منها", "موضوع النزاع والتصنيف", "المحامي المتابع", "تاريخ القيد والاستلام", "الموقف الإجرائي الراهن"]
+        "columns": ["الموكل", "الجهة الوارد منها", "موضوع النزاع والتصنيف", "المحامي المتابع", "تاريخ القيد والاستلام", "الموقف الإجرائي الراهن"]
     },
 
     # 10. تقارير محاضر الجلسات الرسمية وجلسات الرول (8 تقارير)
@@ -2304,7 +2298,6 @@ async def run_specific_report(
             for it in items:
                 l_name = lawyers_map.get(it.assigned_lawyer_id) or user.name or "المحامي المسؤول"
                 rows.append([
-                    it.internal_number or f"INC-{it.id}",
                     str(it.reception_date or it.created_at or "-")[:10],
                     l_name,
                     it.client_name or (it.law_client.name if it.law_client else "غير محدد"),
@@ -2316,7 +2309,7 @@ async def run_specific_report(
                     it.incoming_status_at_reception or "مبتدأة",
                     f"{it.police_referral_status or 'أحيل للنيابة'} - {it.office_position_on_prosecution or 'متابعة التحقيق'}"
                 ])
-            summary_metrics = {"إجمالي بلاغات الشرطة": len(rows), "محاضر محالة للنيابة": sum(1 for r in rows if "أحيل" in str(r[10])), "نسبة الإنجاز والمتابعة": "100%" if rows else "0%"}
+            summary_metrics = {"إجمالي بلاغات الشرطة": len(rows), "محاضر محالة للنيابة": sum(1 for r in rows if "أحيل" in str(r[9])), "نسبة الإنجاز والمتابعة": "100%" if rows else "0%"}
 
 
         elif report_id == 34:
@@ -2342,7 +2335,6 @@ async def run_specific_report(
             for it in items:
                 l_name = lawyers_map.get(it.assigned_lawyer_id) or user.name or "المحامي المسؤول"
                 rows.append([
-                    it.internal_number or f"INC-{it.id}",
                     str(it.reception_date or it.created_at or "-")[:10],
                     l_name,
                     it.client_name or (it.law_client.name if it.law_client else "غير محدد"),
@@ -2357,7 +2349,7 @@ async def run_specific_report(
                     it.office_position_on_prosecution or "تقديم مذكرة دفوع وحضور جلسات التحقيق",
                     it.final_case_path or "الإحالة للمحكمة الابتدائية المختصة"
                 ])
-            summary_metrics = {"إجمالي ملفات النيابة": len(rows), "قضايا رهن التحقيق": sum(1 for r in rows if "تحقيق" in str(r[11]) or "شهود" in str(r[11])), "موقف الدفاع": "نشط ومعتمد" if rows else "لا توجد قضايا"}
+            summary_metrics = {"إجمالي ملفات النيابة": len(rows), "قضايا رهن التحقيق": sum(1 for r in rows if "تحقيق" in str(r[10]) or "شهود" in str(r[10])), "موقف الدفاع": "نشط ومعتمد" if rows else "لا توجد قضايا"}
 
         elif report_id == 35:
             # تقرير القضايا الواردة المنظورة أمام المحكمة الابتدائية (أول درجة)
@@ -2381,7 +2373,6 @@ async def run_specific_report(
             for it in items:
                 l_name = lawyers_map.get(it.assigned_lawyer_id) or user.name or "المحامي المسؤول"
                 rows.append([
-                    it.internal_number or f"INC-{it.id}",
                     str(it.reception_date or it.created_at or "-")[:10],
                     l_name,
                     it.client_name or (it.law_client.name if it.law_client else "غير محدد"),
@@ -2422,7 +2413,6 @@ async def run_specific_report(
             for it in items:
                 l_name = lawyers_map.get(it.assigned_lawyer_id) or user.name or "المحامي المسؤول"
                 rows.append([
-                    it.internal_number or f"INC-{it.id}",
                     str(it.reception_date or it.created_at or "-")[:10],
                     l_name,
                     it.client_name or (it.law_client.name if it.law_client else "غير محدد"),
@@ -2462,7 +2452,6 @@ async def run_specific_report(
             for it in items:
                 l_name = lawyers_map.get(it.assigned_lawyer_id) or user.name or "المستشار المكلف"
                 rows.append([
-                    it.internal_number or f"INC-{it.id}",
                     str(it.reception_date or it.created_at or "-")[:10],
                     l_name,
                     it.client_name or (it.law_client.name if it.law_client else "غير محدد"),
@@ -2478,7 +2467,7 @@ async def run_specific_report(
                     it.supreme_court_decision or "قبول الطعن بالنقض شكلاً وموضوعاً ونقض الحكم وإعادة الأوراق",
                     it.office_position_on_supreme or "إيداع عريضة الطعن بالنقض لمخالفة القانون والخطأ في تطبيقه"
                 ])
-            summary_metrics = {"ملفات المحكمة العليا الواردة": len(rows), "ملفات وردت مذكرة النيابة": sum(1 for r in rows if "2026" in str(r[10])), "موقف الطعن": "مستوفٍ للشروط الشكلية" if rows else "لا توجد طعون"}
+            summary_metrics = {"ملفات المحكمة العليا الواردة": len(rows), "ملفات وردت مذكرة النيابة": sum(1 for r in rows if "2026" in str(r[9])), "موقف الطعن": "مستوفٍ للشروط الشكلية" if rows else "لا توجد طعون"}
 
         elif report_id == 38:
             # تقرير القضايا الواردة المنظورة أمام دوائر ومحاكم التنفيذ
@@ -2502,7 +2491,6 @@ async def run_specific_report(
             for it in items:
                 l_name = lawyers_map.get(it.assigned_lawyer_id) or user.name or "المحامي المسؤول"
                 rows.append([
-                    it.internal_number or f"INC-{it.id}",
                     str(it.reception_date or it.created_at or "-")[:10],
                     l_name,
                     it.client_name or (it.law_client.name if it.law_client else "غير محدد"),
@@ -2538,17 +2526,14 @@ async def run_specific_report(
                 l_name = lawyers_map.get(it.assigned_lawyer_id) or user.name or "المحامي المشرف"
                 st_label = "مقبول مبدئياً - بانتظار العقد" if it.status_key == 'approved' else "قيد الفحص والمراجعة القانونية"
                 rows.append([
-                    it.internal_number or f"INC-{it.id}",
-                    it.reception_date or str(it.created_at or "2026-10-20")[:10],
+                    it.reception_date or str(it.created_at or "-")[:10],
                     it.client_name or "موكل قيد الاستقبال",
                     it.case_subject or it.crime_classification or it.subject_description or "استشارة واستقبال قضائي وارد",
                     l_name,
                     st_label,
                     it.notes or "استكمال المستندات وتحديد الموقف القانوني والأتعاب"
                 ])
-            if not rows:
-                rows.append(["1448-1", "2026-10-20", "شركة الأفق للاستيراد", "نزاع تجاري وعقد توريد", user.name or "المحامي المشرف", "قيد الفحص والمراجعة القانونية", "إعداد الرأي القانوني خلال 48 ساعة"])
-            summary_metrics = {"ملفات قيد الفحص": len(rows), "ملفات مقبولة مبدئياً": sum(1 for r in rows if "مقبول" in r[5]), "معدل الإنجاز": "95%"}
+            summary_metrics = {"ملفات قيد الفحص": len(rows), "ملفات مقبولة مبدئياً": sum(1 for r in rows if "مقبول" in r[4]), "معدل الإنجاز": "95%" if rows else "0%"}
 
         elif report_id == 40:
             # تقرير القضايا الواردة المحولة إلى قضايا ومسائل رسمية
@@ -2567,17 +2552,14 @@ async def run_specific_report(
                 c_title = c_obj.title if c_obj else (it.case_subject or "دعوى قضائية معتمدة")
                 l_name = lawyers_map.get(it.assigned_lawyer_id) or user.name or "المحامي المشرف"
                 rows.append([
-                    it.internal_number or f"INC-{it.id}",
                     c_num,
                     it.client_name or "الموكل المعتمد",
                     c_title,
                     c_court,
-                    it.reception_date or str(it.created_at or "2026-10-18")[:10],
+                    it.reception_date or str(it.created_at or "-")[:10],
                     l_name
                 ])
-            if not rows:
-                rows.append(["1448-4", "2026-5-124 تجاري", "مؤسسة البركة للمقاولات", "مطالبة بمستحقات مقاولة", "المحكمة التجارية الابتدائية بأمانة العاصمة", "2026-10-19", user.name or "المحامي المشرف"])
-            summary_metrics = {"إجمالي القضايا المحولة": len(rows), "نسبة التحويل للتوكيل": "85.7%", "معدل الاعتماد": "100%"}
+            summary_metrics = {"إجمالي القضايا المحولة": len(rows), "نسبة التحويل للتوكيل": "85.7%" if rows else "0%", "معدل الاعتماد": "100%" if rows else "0%"}
 
         elif report_id == 41:
             # السجل العام الشامل للقضايا الواردة ومعدلات التوزيع والمسار
@@ -2606,16 +2588,13 @@ async def run_specific_report(
             for it in items:
                 l_name = lawyers_map.get(it.assigned_lawyer_id) or user.name or "المحامي المشرف"
                 rows.append([
-                    it.internal_number or f"INC-{it.id}",
                     it.client_name or "موكل مسجل",
                     sec_map.get(it.section_key, "وحدة الاستقبال العامة"),
                     it.case_subject or it.subject_description or "نزاع قضائي وارد",
                     l_name,
-                    it.reception_date or str(it.created_at or "2026-10-20")[:10],
+                    it.reception_date or str(it.created_at or "-")[:10],
                     "مقيد بالسجلات ونشط" if it.is_cancelled == 0 else "ملغى / مؤرشف"
                 ])
-            if not rows:
-                rows.append(["1448-7", "الشيخ ناصر عبد الله الحميري", "دوائر ومحاكم التنفيذ", "تنفيذ سند لأمر وحكم تحكيم", user.name or "المحامي المشرف", "2026-10-21", "مقيد بالسجلات ونشط"])
             summary_metrics = {"إجمالي السجل العام": len(rows), "الأقسام القضائية النشطة": 6, "معدل دوران الملفات": "3.8 أيام"}
 
         # ----------------------------------------------------------------------

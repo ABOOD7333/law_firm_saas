@@ -123,7 +123,7 @@ def log_incoming_audit(
             actor_name=getattr(user, "name", "") or getattr(user, "username", "مستخدم"),
             actor_user_id=user.id,
             office_id=office_id,
-            details=f"ملف وارد #{record.internal_number} ({record.section_key}) | موكل: {record.client_name or '-'} | {details}",
+            details=f"ملف وارد #{record.id} ({record.section_key}) | موكل: {record.client_name or '-'} | {details}",
         )
         db.add(audit)
         db.commit()
@@ -131,42 +131,9 @@ def log_incoming_audit(
         print(f"[Audit Log Error] {e}")
 
 
-def get_current_hijri_year() -> int:
-    """حساب السنة الهجرية الحالية بدقة (مثال: 1448 هـ)"""
-    try:
-        now = datetime.now()
-        days = (now - datetime(622, 7, 16)).days
-        h_year = int(days / 354.367068) + 1
-        return h_year
-    except Exception:
-        return 1448
-
-
-def generate_internal_number(db: Session, office_id: int, section_key: str = None) -> str:
-    """
-    توليد رقم الوارد السنوي الهجري المتسلسل خلال السنة الهجرية الحالية
-    مثال: 1448-1 كأول وارد في أول سنة، ثم 1448-2، 1448-3، وهكذا
-    """
-    h_year = get_current_hijri_year()
-    prefix = f"{h_year}-"
-
-    existing = (
-        db.query(LawIncomingCases.internal_number)
-        .filter(
-            LawIncomingCases.office_id == office_id,
-            LawIncomingCases.internal_number.like(f"{prefix}%"),
-        )
-        .all()
-    )
-
-    max_num = 0
-    for (val,) in existing:
-        if val and val.startswith(prefix):
-            seq_part = val[len(prefix):]
-            if seq_part.isdigit():
-                max_num = max(max_num, int(seq_part))
-
-    return f"{prefix}{max_num + 1}"
+def generate_internal_number(db: Session = None, office_id: int = None, section_key: str = None) -> str:
+    """تم إيقاف وبتر التوليد التلقائي لرقم الوارد الهجري بناء على طلب المستخدم"""
+    return ""
 
 
 # ============================================================================
@@ -262,7 +229,6 @@ async def incoming_cases_hub(
         term = f"%{q.strip()}%"
         query = query.filter(
             or_(
-                LawIncomingCases.internal_number.ilike(term),
                 LawIncomingCases.client_name.ilike(term),
                 LawIncomingCases.police_report_number.ilike(term),
                 LawIncomingCases.prosecution_file_number.ilike(term),
@@ -385,7 +351,6 @@ async def incoming_cases_section_view(
         term = f"%{q.strip()}%"
         query = query.filter(
             or_(
-                LawIncomingCases.internal_number.ilike(term),
                 LawIncomingCases.client_name.ilike(term),
                 LawIncomingCases.police_report_number.ilike(term),
                 LawIncomingCases.police_station.ilike(term),
@@ -418,8 +383,6 @@ async def incoming_cases_section_view(
         .all()
     )
 
-    # تجهيز رقم داخلي مقترح جديد
-    suggested_internal_number = generate_internal_number(db, user.office_id, section_key)
     today_date = datetime.now().strftime("%Y-%m-%d")
 
     return templates.TemplateResponse(
@@ -439,7 +402,6 @@ async def incoming_cases_section_view(
             "total_pages": total_pages,
             "q": q or "",
             "status_filter": status_filter or "",
-            "suggested_internal_number": suggested_internal_number,
             "today_date": today_date,
             "all_sections": SECTION_CONFIG,
         },
@@ -567,16 +529,6 @@ async def create_incoming_case(
     # تاريخ الاستلام
     final_reception_date = reception_date or datetime.now().strftime("%Y-%m-%d")
 
-    # توليد الرقم الداخلي الفريد (مثال: 1448-1)
-    internal_number = generate_internal_number(db, user.office_id, section_key)
-    hijri_year_val = None
-    incoming_seq_val = None
-    if "-" in internal_number:
-        p = internal_number.split("-", 1)
-        hijri_year_val = p[0]
-        if p[1].isdigit():
-            incoming_seq_val = int(p[1])
-
     # معالجة الملفات المرفقة
     attachments_list = []
     allowed_exts = {"pdf", "doc", "docx", "jpg", "jpeg", "png", "txt"}
@@ -605,7 +557,7 @@ async def create_incoming_case(
         file_path_str = f"{DOCUMENTS_UPLOAD_DIR}/{saved_name}"
 
         if case_id:
-            doc_code = f"REC-{internal_number}-{len(attachments_list)+1}"
+            doc_code = f"REC-{section_key}-{int(datetime.now().timestamp())}-{len(attachments_list)+1}"
             law_doc = LawDocuments(
                 office_id=user.office_id,
                 case_id=case_id,
@@ -615,7 +567,7 @@ async def create_incoming_case(
                 doc_code=doc_code,
                 doc_date=document_date or final_reception_date,
                 received_date=final_reception_date,
-                description=f"مستند مرفق باستقبال ملف وارد #{internal_number} ({SECTION_CONFIG[section_key]['title']})",
+                description=f"مستند مرفق باستقبال ملف وارد ({SECTION_CONFIG[section_key]['title']})",
                 file_path=file_path_str,
                 file_size=len(file_bytes),
                 file_type=ext,
@@ -657,9 +609,6 @@ async def create_incoming_case(
     incoming_record = LawIncomingCases(
         office_id=user.office_id,
         section_key=section_key,
-        internal_number=internal_number,
-        hijri_year=hijri_year_val,
-        incoming_sequence=incoming_seq_val,
         client_id=final_client_id,
         client_name=final_client_name,
         case_id=case_id,
@@ -742,7 +691,7 @@ async def create_incoming_case(
         user,
         "تسجيل ملف وارد جديد",
         incoming_record,
-        f"تم استقبال الملف بنجاح برقم {internal_number}",
+        f"تم استقبال وتسجيل الملف بنجاح برقم قيد #{incoming_record.id}",
     )
 
     return RedirectResponse(
@@ -793,9 +742,6 @@ async def get_incoming_case_details(
         "office_id": item.office_id,
         "section_key": item.section_key,
         "section_title": cfg.get("title", ""),
-        "internal_number": item.internal_number,
-        "hijri_year": item.hijri_year or "",
-        "incoming_sequence": item.incoming_sequence or "",
         "client_id": item.client_id,
         "client_name": item.client_name or (item.law_client.name if item.law_client else ""),
         "case_id": item.case_id,
@@ -982,7 +928,7 @@ async def update_incoming_case(
         user,
         "تعديل ملف وارد",
         item,
-        f"تم تحديث بيانات الملف #{item.internal_number}",
+        f"تم تحديث بيانات الملف #{item.id}",
     )
 
     return JSONResponse({"success": True, "message": "تم تحديث الملف بنجاح"})
@@ -1071,9 +1017,8 @@ async def check_duplicate_incoming_case(
         return JSONResponse(
             {
                 "duplicate": True,
-                "message": f"تنبيه: يوجد ملف وارد مسجل مسبقاً بنفس الرقم الداخلي ({existing.internal_number}) للموكل ({existing.client_name or '-'}) بتاريخ {existing.reception_date}.",
+                "message": f"تنبيه: يوجد ملف وارد مسجل مسبقاً بنفس رقم المرجع للموكل ({existing.client_name or '-'}) بتاريخ {existing.reception_date}.",
                 "existing_id": existing.id,
-                "internal_number": existing.internal_number,
             }
         )
 

@@ -1023,8 +1023,6 @@ class LawIncomingCases(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     office_id: Mapped[int] = mapped_column(ForeignKey('law_offices.id', ondelete='CASCADE'), nullable=False, index=True)
     section_key: Mapped[str] = mapped_column(Text, nullable=False, index=True)  # police, prosecution, first_instance, appeal, enforcement
-    internal_number: Mapped[str] = mapped_column(Text, nullable=False, index=True)  # e.g. 1001, 2001, 3001, 4001, 5001
-    
     # Client & Relations
     client_id: Mapped[Optional[int]] = mapped_column(ForeignKey('law_clients.id', ondelete='SET NULL'), nullable=True, index=True)
     client_name: Mapped[Optional[str]] = mapped_column(Text)
@@ -1038,10 +1036,6 @@ class LawIncomingCases(Base):
     
     created_by_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey('access_profiles.id', ondelete='SET NULL'), nullable=True)
     assigned_lawyer_id: Mapped[Optional[int]] = mapped_column(ForeignKey('access_profiles.id', ondelete='SET NULL'), nullable=True)
-
-    # Hijri Number Components
-    hijri_year: Mapped[Optional[str]] = mapped_column(Text)
-    incoming_sequence: Mapped[Optional[int]] = mapped_column(Integer)
 
     # Shared Classifications & Roles
     case_subject: Mapped[Optional[str]] = mapped_column(Text)
