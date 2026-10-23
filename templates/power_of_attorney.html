@@ -108,13 +108,16 @@
                 <input type="hidden" id="recId">
 
                 <div class="form-group" style="margin-bottom: 12px;">
-                    <label style="display: block; margin-bottom: 5px; font-weight: 700; font-size: 0.85rem; color: #334155;">القضية المرتبطة</label>
-                    <select id="fCaseId" style="width: 100%; padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 700; font-size: 0.85rem; color: #334155;">القضية المرتبطة بالمكتب</label>
+                    <select id="fCaseId" onchange="onCaseSelected(this.value)" style="width: 100%; padding: 9px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-family: inherit; font-size: 0.9rem; background: #fff;">
                         <option value="">بدون قضية (وكالة عامة للمكتب)</option>
                         {% for c in cases %}
-                        <option value="{{ c.id }}">{{ c.case_number }} - {{ c.title[:30] }}</option>
+                        <option value="{{ c.id }}">{{ c.case_number }} - {{ c.title[:35] }}</option>
                         {% endfor %}
                     </select>
+                    <small id="caseAutoFillHint" style="display: none; color: #0d9488; font-size: 0.78rem; font-weight: 700; margin-top: 4px;">
+                        <i class="fa-solid fa-magic-wand-sparkles"></i> تم جلب بيانات الموكل والمحامي تلقائياً من ملف القضية
+                    </small>
                 </div>
 
                 <div class="form-group" style="margin-bottom: 12px;">
@@ -345,6 +348,28 @@
 <script>
     const csrfToken = "{{ request.cookies.get('csrf_token', '') }}";
     const allRecords = {{ records_json|tojson }};
+    const casesMeta = {{ cases_meta|tojson }};
+
+    function onCaseSelected(caseId) {
+        const hint = document.getElementById('caseAutoFillHint');
+        if (!caseId) {
+            if (hint) hint.style.display = 'none';
+            return;
+        }
+        const c = casesMeta[caseId];
+        if (c) {
+            if (c.client_name) {
+                document.getElementById('fName').value = c.client_name;
+            }
+            if (c.lawyer_name) {
+                document.getElementById('fAgent').value = c.lawyer_name;
+            }
+            if (hint) {
+                hint.style.display = 'block';
+                setTimeout(() => { hint.style.display = 'none'; }, 4500);
+            }
+        }
+    }
 
     function showAlert(msg, isSuccess) {
         const box = document.getElementById('alertBox');
@@ -358,6 +383,8 @@
     function clearForm() {
         document.getElementById('recId').value = '';
         document.getElementById('poaForm').reset();
+        const hint = document.getElementById('caseAutoFillHint');
+        if (hint) hint.style.display = 'none';
         document.getElementById('formTitle').innerHTML = '<i class="fa-solid fa-pen-to-square" style="color: #0d9488;"></i> إضافة وكالة رسمية';
         document.getElementById('btnDelete').style.display = 'none';
     }

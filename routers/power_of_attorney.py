@@ -36,6 +36,33 @@ async def poa_page(
         if user.role in {"محامي", "محامٍ"} and not getattr(user, "can_view_all_cases", 0):
             cases_query = cases_query.filter(LawCases.lead_lawyer_id == user.id)
         cases = cases_query.order_by(LawCases.title.asc()).all()
+
+        # بناء خريطة بيانات القضايا لجلب الموكل والمحامي تلقائياً عند الاختيار
+        from database.models import LawClients
+        cases_meta = {}
+        # جلب أسماء المحامين بالمكتب
+        lawyers_map = {l.id: l.name for l in db.query(AccessProfiles.id, AccessProfiles.name).filter(AccessProfiles.office_id == office_id).all()}
+        # جلب موكلي القضايا
+        clients_map = {}
+        for c in db.query(LawClients.case_id, LawClients.name).filter(LawClients.office_id == office_id, LawClients.is_deleted == 0, LawClients.case_id.isnot(None)).all():
+            if c.case_id and c.case_id not in clients_map:
+                clients_map[c.case_id] = c.name
+
+        for c in cases:
+            client_name = ""
+            if c.law_clients:
+                client_name = c.law_clients[0].name
+            elif c.id in clients_map:
+                client_name = clients_map[c.id]
+            lawyer_name = lawyers_map.get(c.lead_lawyer_id, "")
+            cases_meta[c.id] = {
+                "id": c.id,
+                "case_number": c.case_number,
+                "title": c.title,
+                "client_name": client_name,
+                "lawyer_name": lawyer_name
+            }
+
         records_query = db.query(LawPowerOfAttorney).filter(
             LawPowerOfAttorney.office_id == office_id,
             LawPowerOfAttorney.is_deleted == 0
@@ -95,6 +122,7 @@ async def poa_page(
                 "active_page": "power_of_attorney",
                 "records": filtered_records,
                 "cases": cases,
+                "cases_meta": cases_meta,
                 "records_json": records_json,
                 "today": today_str,
                 "filter_type": filter_type,
