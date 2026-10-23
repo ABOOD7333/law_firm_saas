@@ -16,23 +16,33 @@ templates = Jinja2Templates(directory="templates")
 _orig_template_response = templates.TemplateResponse
 
 def _safe_template_response(*args, **kwargs):
-    if len(args) >= 1 and isinstance(args[0], str):
-        name = args[0]
-        context = args[1] if len(args) > 1 else kwargs.get("context", {})
-        request = kwargs.get("request")
-        if not request and isinstance(context, dict):
-            request = context.get("request")
-        if isinstance(context, dict) and request:
-            if not context.get("csrf_token"):
-                context["csrf_token"] = getattr(request.state, "csrf_token", None) or request.cookies.get("csrf_token", "")
-        clean_kwargs = {k: v for k, v in kwargs.items() if k not in ("request", "name", "context")}
-        return _orig_template_response(request=request, name=name, context=context, **clean_kwargs)
-    elif kwargs.get("request") and isinstance(kwargs.get("context"), dict):
-        ctx = kwargs["context"]
-        req = kwargs["request"]
-        if not ctx.get("csrf_token"):
-            ctx["csrf_token"] = getattr(req.state, "csrf_token", None) or req.cookies.get("csrf_token", "")
-    return _orig_template_response(*args, **kwargs)
+    # Support both old signature (name, context, ...) and new Starlette signature (request, name, context, ...)
+    # as well as keyword-only calls.
+    request = kwargs.get("request")
+    name = kwargs.get("name")
+    context = kwargs.get("context", {})
+
+    if len(args) >= 1:
+        if isinstance(args[0], str):
+            name = args[0]
+            if len(args) > 1 and isinstance(args[1], dict):
+                context = args[1]
+        else:
+            request = args[0]
+            if len(args) > 1:
+                name = args[1]
+            if len(args) > 2 and isinstance(args[2], dict):
+                context = args[2]
+
+    if not request and isinstance(context, dict):
+        request = context.get("request")
+
+    if isinstance(context, dict) and request:
+        if not context.get("csrf_token"):
+            context["csrf_token"] = getattr(request.state, "csrf_token", None) or getattr(request, "cookies", {}).get("csrf_token", "")
+
+    clean_kwargs = {k: v for k, v in kwargs.items() if k not in ("request", "name", "context")}
+    return _orig_template_response(request=request, name=name, context=context, **clean_kwargs)
 
 templates.TemplateResponse = _safe_template_response
 templates.env.globals["get_csrf_token"] = lambda req: (getattr(req.state, "csrf_token", None) or req.cookies.get("csrf_token", "")) if req else ""
