@@ -79,22 +79,6 @@ async def startup_event():
 
     print("[Startup] Server ready.")
 
-@app.get("/api/direct-hard-purge")
-def api_direct_hard_purge(db: Session = Depends(get_db)):
-    from database.database import cleanup_and_keep_official_offices
-    res = cleanup_and_keep_official_offices(db)
-    return res
-
-@app.get("/api/db-inspect")
-def api_db_inspect(db: Session = Depends(get_db)):
-    from sqlalchemy import text
-    offices = db.execute(text("SELECT id, name, is_deleted, is_active FROM law_offices")).fetchall()
-    users = db.execute(text("SELECT id, username, office_id, is_deleted FROM access_profiles")).fetchall()
-    return {
-        "offices": [dict(r._mapping) for r in offices],
-        "users": [dict(r._mapping) for r in users]
-    }
-
 
 try:
 
