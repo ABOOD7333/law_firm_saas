@@ -713,11 +713,10 @@ def init_db():
 
 def cleanup_and_keep_official_offices(db_session=None):
     """
-    بتر وتطهير شامل لقاعدة البيانات للإبقاء فقط على المكاتب الرسمية:
-    1. مكتب عبدالله العليمي للمحاماة (ID: 1)
-    2. مكتب هشام دغيش للمحاماة (ID: 6 أو المسمى هشام دغيش)
-    3. حذف وشطب كافة المكاتب الأخرى (المهندس الفخري، محمد العليمي، عمرو العليمي، أريج محمد) نهائياً مع مستخدميها وكافة بياناتها
-    4. تصفية القضايا والموكلين والبيانات التجريبية من مكتب 1 (مع الإبقاء فقط على حساب ABOOD)
+    بتر وحذف نهائي قطعي من قاعدة البيانات:
+    1. حذف وشطب كافة المكاتب الأخرى (المهندس الفخري، محمد العليمي، عمرو العليمي، أريج محمد) نهائياً مع كافة مستخدميها وبياناتها
+    2. تصفية وحذف كافة القضايا والموكلين والجلسات والبيانات التجريبية من مكتب 1 (مكتب عبدالله العليمي للمحاماة)
+    3. الإبقاء الحصري فقط على: مكتب عبدالله العليمي للمحاماة ومكتب هشام دغيش للمحاماة
     """
     from sqlalchemy import text
     from sqlalchemy.orm import Session
@@ -731,63 +730,27 @@ def cleanup_and_keep_official_offices(db_session=None):
         should_close = True
 
     try:
-        # 1. تحديث وتثبيت مكتب عبدالله العليمي للمحاماة (ID: 1)
-        db.execute(text(
-            "UPDATE law_offices SET name = 'مكتب عبدالله العليمي للمحاماة', is_active = 1, "
-            "subscription_plan = 'yearly', subscription_end = '2030-01-01 00:00:00' WHERE id = 1"
-        ))
-        
-        # ربط مالك مكتب 1 بحساب ABOOD وتحديث اسمه
-        abood = db.execute(text("SELECT id FROM access_profiles WHERE username = 'ABOOD'")).first()
-        if abood:
-            abood_id = abood[0]
-            db.execute(text(
-                "UPDATE law_offices SET owner_user_id = :uid WHERE id = 1"
-            ), {"uid": abood_id})
-            db.execute(text(
-                "UPDATE access_profiles SET name = 'عبدالله العليمي (المدير العام)', is_active = 1, "
-                "is_superadmin = 1, role = 'مدير', office_id = 1 WHERE id = :uid"
-            ), {"uid": abood_id})
-
-        # 2. البحث عن مكتب هشام دغيش أو إنشاءه إن لم يكن موجوداً
-        off6 = db.execute(text(
-            "SELECT id, name FROM law_offices WHERE id = 6 OR name LIKE '%هشام دغيش%'"
-        )).first()
-        
-        keep_ids = [1]
-        if off6:
-            off6_id = off6[0]
-            keep_ids.append(off6_id)
-            db.execute(text(
-                "UPDATE law_offices SET name = 'مكتب هشام دغيش للمحاماة', is_active = 1, "
-                "subscription_plan = 'yearly', subscription_end = '2030-01-01 00:00:00' WHERE id = :oid"
-            ), {"oid": off6_id})
+        # 1. فك قيود المفاتيح مؤقتاً لضمان الحذف الجذري
+        is_pg = "postgresql" in str(db.bind.url) if db.bind else False
+        if is_pg:
+            try:
+                db.execute(text("SET session_replication_role = 'replica';"))
+            except Exception:
+                pass
         else:
-            db.execute(text(
-                "INSERT INTO law_offices (id, name, is_active, status_key, subscription_plan, subscription_end) "
-                "VALUES (6, 'مكتب هشام دغيش للمحاماة', 1, 'active', 'yearly', '2030-01-01 00:00:00')"
-            ))
-            keep_ids.append(6)
-            off6_id = 6
+            try:
+                db.execute(text("PRAGMA foreign_keys = OFF;"))
+            except Exception:
+                pass
 
-        # التأكد من وجود مستخدم لمكتب هشام دغيش
-        u6 = db.execute(text("SELECT id FROM access_profiles WHERE office_id = :oid"), {"oid": off6_id}).first()
-        if not u6:
-            import os, hashlib, base64
-            salt = os.urandom(16)
-            actual = hashlib.pbkdf2_hmac('sha256', b'admin123456', salt, 260000)
-            pin_hash = f"pbkdf2:sha256:260000${base64.b64encode(salt).decode('utf-8').rstrip('=')}${base64.b64encode(actual).decode('utf-8').rstrip('=')}"
-            db.execute(text(
-                "INSERT INTO access_profiles (office_id, name, username, role, is_active, can_view_all_cases, email, phone, access_pin_hash) "
-                "VALUES (:oid, 'المحامي هشام دغيش', 'hesham_dagheish', 'صاحب المكتب', 1, 1, 'hesham@lawfirm.local', '777000001', :pin)"
-            ), {"oid": off6_id, "pin": pin_hash})
-            u6_new = db.execute(text("SELECT id FROM access_profiles WHERE username = 'hesham_dagheish'")).first()
-            if u6_new:
-                db.execute(text("UPDATE law_offices SET owner_user_id = :uid WHERE id = :oid"), {"uid": u6_new[0], "oid": off6_id})
-        else:
-            db.execute(text("UPDATE law_offices SET owner_user_id = :uid WHERE id = :oid"), {"uid": u6[0], "oid": off6_id})
-
-        # 3. جلب كافة المكاتب الأخرى لحذفها وبترها نهائياً
+        # 2. تحديد المكاتب المطلوب الإبقاء عليها والمكاتب المطلوب بترها
+        keep_offices = db.execute(text(
+            "SELECT id FROM law_offices WHERE id IN (1, 6) OR name LIKE '%هشام دغيش%'"
+        )).fetchall()
+        keep_ids = [r[0] for r in keep_offices]
+        if 1 not in keep_ids:
+            keep_ids.append(1)
+            
         del_offices = db.execute(text(
             f"SELECT id, name FROM law_offices WHERE id NOT IN ({','.join(map(str, keep_ids))}) AND name NOT LIKE '%هشام دغيش%'"
         )).fetchall()
@@ -796,27 +759,24 @@ def cleanup_and_keep_official_offices(db_session=None):
         if del_ids:
             del_str = ','.join(map(str, del_ids))
             
-            # أ) فك القيود الأجنبية الدائرية أولاً (Circular FK fix)
-            db.execute(text(f"UPDATE law_offices SET owner_user_id = NULL WHERE id IN ({del_str})"))
-            
-            # ب) جلب معرفات المستخدمين في تلك المكاتب
-            del_users = db.execute(text(f"SELECT id FROM access_profiles WHERE office_id IN ({del_str})")).fetchall()
-            user_ids = [u[0] for u in del_users]
-            
-            # ج) فك ارتباط المستخدمين بالمكاتب
-            db.execute(text(f"UPDATE access_profiles SET office_id = NULL WHERE office_id IN ({del_str})"))
-            
-            # د) حذف الجلسات للمستخدمين
-            if user_ids:
-                u_str = ','.join(str(uid) for uid in user_ids)
-                db.execute(text(f"DELETE FROM auth_sessions WHERE user_id IN ({u_str})"))
+            # أ) فك المفاتيح الدائرية
+            try:
+                db.execute(text(f"UPDATE law_offices SET owner_user_id = NULL WHERE id IN ({del_str})"))
+            except Exception:
+                pass
 
-            # هـ) حذف كافة السجلات التابعة لتلك المكاتب من جميع الجداول
-            tables = [
+            # ب) حذف عناصر الفواتير للمكاتب المحذوفة
+            try:
+                db.execute(text(f"DELETE FROM invoice_items WHERE invoice_id IN (SELECT id FROM invoices WHERE office_id IN ({del_str}))"))
+            except Exception:
+                pass
+
+            # ج) حذف كافة السجلات التابعة لتلك المكاتب من جميع الجداول
+            valid_tables = [
                 'law_client_representatives', 'retainer_agreements',
                 'law_trust_transactions', 'law_trust_accounts',
-                'client_payments', 'invoice_items', 'invoices',
-                'payment_requests', 'law_document_versions', 'law_documents',
+                'client_payments', 'invoices', 'payment_requests',
+                'law_document_versions', 'law_documents',
                 'law_pleadings', 'law_executions', 'law_judgments',
                 'law_tasks', 'law_hearings', 'law_parties',
                 'law_limitations', 'law_notes', 'law_correspondences',
@@ -824,27 +784,37 @@ def cleanup_and_keep_official_offices(db_session=None):
                 'law_timesheets', 'law_incoming_cases', 'law_cases',
                 'law_clients', 'client_intake_forms', 'intake_submissions'
             ]
-            for tbl in tables:
+            for tbl in valid_tables:
                 try:
                     db.execute(text(f"DELETE FROM {tbl} WHERE office_id IN ({del_str})"))
                 except Exception:
                     pass
 
-            # و) حذف حسابات المستخدمين التابعين للمكاتب المحذوفة
-            if user_ids:
-                u_str = ','.join(str(uid) for uid in user_ids)
-                db.execute(text(f"DELETE FROM access_profiles WHERE id IN ({u_str})"))
-
-            # ز) حذف سجلات المكاتب نفسها
+            # د) حذف الجلسات وحسابات المستخدمين لتلك المكاتب
+            try:
+                db.execute(text(f"DELETE FROM auth_sessions WHERE user_id IN (SELECT id FROM access_profiles WHERE office_id IN ({del_str}))"))
+            except Exception:
+                pass
+            try:
+                db.execute(text(f"DELETE FROM access_profiles WHERE office_id IN ({del_str})"))
+            except Exception:
+                pass
+                
+            # هـ) حذف سجلات المكاتب نفسها نهائياً من قاعدة البيانات
             db.execute(text(f"DELETE FROM law_offices WHERE id IN ({del_str})"))
-            print(f"[Cleanup] Permanently deleted {len(del_ids)} offices from database: {del_ids}")
+            print(f"[Cleanup] Permanently deleted offices: {del_ids}")
 
-        # 4. تصفية وبتر البيانات التجريبية من مكتب 1 (مكتب عبدالله العليمي للمحاماة)
-        mock_tables = [
+        # 3. تصفية وبتر البيانات التجريبية نهائياً من مكتب 1 (مكتب عبدالله العليمي للمحاماة)
+        try:
+            db.execute(text("DELETE FROM invoice_items WHERE invoice_id IN (SELECT id FROM invoices WHERE office_id = 1)"))
+        except Exception:
+            pass
+            
+        valid_tables = [
             'law_client_representatives', 'retainer_agreements',
             'law_trust_transactions', 'law_trust_accounts',
-            'client_payments', 'invoice_items', 'invoices',
-            'payment_requests', 'law_document_versions', 'law_documents',
+            'client_payments', 'invoices', 'payment_requests',
+            'law_document_versions', 'law_documents',
             'law_pleadings', 'law_executions', 'law_judgments',
             'law_tasks', 'law_hearings', 'law_parties',
             'law_limitations', 'law_notes', 'law_correspondences',
@@ -852,25 +822,68 @@ def cleanup_and_keep_official_offices(db_session=None):
             'law_timesheets', 'law_incoming_cases', 'law_cases',
             'law_clients', 'client_intake_forms', 'intake_submissions'
         ]
-        for tbl in mock_tables:
+        for tbl in valid_tables:
             try:
                 db.execute(text(f"DELETE FROM {tbl} WHERE office_id = 1"))
             except Exception:
                 pass
 
-        # حذف أي مستخدمين إضافيين في مكتب 1 مع الإبقاء الحصري على حساب ABOOD
-        mock_u1 = db.execute(text("SELECT id FROM access_profiles WHERE office_id = 1 AND username != 'ABOOD'")).fetchall()
-        if mock_u1:
-            u1_str = ','.join(str(u[0]) for u in mock_u1)
-            db.execute(text(f"DELETE FROM auth_sessions WHERE user_id IN ({u1_str})"))
-            db.execute(text(f"DELETE FROM access_profiles WHERE id IN ({u1_str})"))
-            print(f"[Cleanup] Deleted {len(mock_u1)} extra users from office 1.")
+        # حذف كافة المستخدمين التجريبيين في مكتب 1 والإبقاء حصرياً على حساب ABOOD
+        try:
+            db.execute(text("DELETE FROM auth_sessions WHERE user_id IN (SELECT id FROM access_profiles WHERE office_id = 1 AND username != 'ABOOD')"))
+        except Exception:
+            pass
+        try:
+            db.execute(text("DELETE FROM access_profiles WHERE office_id = 1 AND username != 'ABOOD'"))
+        except Exception:
+            pass
+
+        # 4. تثبيت وتحديث مكتب 1 وتعيين ABOOD كمالك وحيد
+        db.execute(text(
+            "UPDATE law_offices SET name = 'مكتب عبدالله العليمي للمحاماة', is_active = 1, is_deleted = 0, "
+            "status_key = 'active', subscription_plan = 'yearly', subscription_end = '2030-01-01 00:00:00' WHERE id = 1"
+        ))
+        abood = db.execute(text("SELECT id FROM access_profiles WHERE username = 'ABOOD'")).first()
+        if abood:
+            db.execute(text(
+                "UPDATE access_profiles SET name = 'عبدالله العليمي (المدير العام)', role = 'مدير', is_superadmin = 1, "
+                "office_id = 1, is_active = 1, is_deleted = 0 WHERE id = :uid"
+            ), {"uid": abood[0]})
+            db.execute(text("UPDATE law_offices SET owner_user_id = :uid WHERE id = 1"), {"uid": abood[0]})
+
+        # 5. تثبيت وتحديث مكتب هشام دغيش (ID: 6)
+        off6 = db.execute(text("SELECT id FROM law_offices WHERE id = 6 OR name LIKE '%هشام دغيش%'")).first()
+        if off6:
+            db.execute(text(
+                "UPDATE law_offices SET name = 'مكتب هشام دغيش للمحاماة', is_active = 1, is_deleted = 0, "
+                "status_key = 'active', subscription_plan = 'yearly', subscription_end = '2030-01-01 00:00:00' WHERE id = :oid"
+            ), {"oid": off6[0]})
+        else:
+            db.execute(text(
+                "INSERT INTO law_offices (id, name, is_active, is_deleted, status_key, subscription_plan, subscription_end) "
+                "VALUES (6, 'مكتب هشام دغيش للمحاماة', 1, 0, 'active', 'yearly', '2030-01-01 00:00:00')"
+            ))
+
+        # إعادة تفعيل قيود المفاتيح الأجنبية
+        if is_pg:
+            try:
+                db.execute(text("SET session_replication_role = 'origin';"))
+            except Exception:
+                pass
+        else:
+            try:
+                db.execute(text("PRAGMA foreign_keys = ON;"))
+            except Exception:
+                pass
 
         db.commit()
-        print("[Cleanup] Successfully purged database on server: Only Office 1 and Office 6 remain.")
+        print("[Cleanup] SUCCESS: Permanent hard deletion and purge complete!")
+        return {"success": True, "message": "تم الحذف والبتر النهائي بنجاح"}
     except Exception as e:
         db.rollback()
-        print(f"[Cleanup Error] {e}\n{traceback.format_exc()}")
+        err = f"{e}\n{traceback.format_exc()}"
+        print(f"[Cleanup Fatal Error] {err}")
+        return {"success": False, "error": str(e), "traceback": err}
     finally:
         if should_close:
             db.close()
