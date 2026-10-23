@@ -34,8 +34,10 @@
 
             <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-top: 12px; font-size: 0.88rem; color: #64748b;">
                 <div>
-                    <strong style="color: #334155;"><i class="fa-regular fa-user"></i> الموكل:</strong>
-                    {% if client %}
+                    <strong style="color: #334155;"><i class="fa-regular fa-user"></i> طالب الاستشارة:</strong>
+                    {% if matter.consultation_client_name %}
+                    <span style="color: #0f172a; font-weight: 700;">{{ matter.consultation_client_name }}</span>
+                    {% elif client %}
                     <span style="color: #0f172a; font-weight: 700;">{{ client.name }}</span>
                     {% else %}
                     <span style="color: #94a3b8;">غير محدد</span>
@@ -417,9 +419,15 @@
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
                     <div>
+                        <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 6px; font-size: 0.88rem;">طالب الاستشارة</label>
+                        <input type="text" name="consultation_client_name" value="{{ matter.consultation_client_name or (client.name if client else '') }}" placeholder="أدخل اسم طالب الاستشارة..." style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                    </div>
+                    <div>
                         <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 6px; font-size: 0.88rem;">النوع</label>
                         <input type="text" name="case_type_key" value="{{ matter.case_type_key }}" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
                     </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
                     <div>
                         <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 6px; font-size: 0.88rem;">الحالة</label>
                         <select name="status_key" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
@@ -429,20 +437,18 @@
                             <option value="draft" {% if matter.status_key == 'draft' %}selected{% endif %}>مسودة داخلية</option>
                         </select>
                     </div>
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
-                    <div>
-                        <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 6px; font-size: 0.88rem;">المستشار المكلف</label>
-                        <select name="lead_lawyer_id" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
-                            {% for lawyer in lawyers %}
-                            <option value="{{ lawyer.id }}" {% if lawyer.id == matter.lead_lawyer_id %}selected{% endif %}>{{ lawyer.name or lawyer.username }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
                     <div>
                         <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 6px; font-size: 0.88rem;">الأتعاب المقدرة</label>
                         <input type="number" step="0.01" name="estimated_fee" value="{{ matter.estimated_fee or 0 }}" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
                     </div>
+                </div>
+                <div>
+                    <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 6px; font-size: 0.88rem;">المستشار المكلف</label>
+                    <select name="lead_lawyer_id" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
+                        {% for lawyer in lawyers %}
+                        <option value="{{ lawyer.id }}" {% if lawyer.id == matter.lead_lawyer_id %}selected{% endif %}>{{ lawyer.name or lawyer.username }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <div>
                     <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 6px; font-size: 0.88rem;">نطاق العمل الاستشاري (Scope)</label>

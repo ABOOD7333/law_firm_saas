@@ -148,6 +148,7 @@ class LawCases(Base):
     court_name: Mapped[Optional[str]] = mapped_column(Text)
     consultation_scope: Mapped[Optional[str]] = mapped_column(Text)
     legal_opinion: Mapped[Optional[str]] = mapped_column(Text)
+    consultation_client_name: Mapped[Optional[str]] = mapped_column(Text)
 
     law_parties: Mapped[List['LawParties']] = relationship('LawParties', back_populates='law_case')
     law_hearings: Mapped[List['LawHearings']] = relationship('LawHearings', back_populates='law_case')

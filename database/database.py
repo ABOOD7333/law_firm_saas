@@ -642,7 +642,16 @@ def init_db():
         except Exception:
             pass
 
+    # Migration for law_cases consultation_client_name
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE law_cases ADD COLUMN consultation_client_name TEXT;"))
+    except Exception:
+        pass
+
     # Migrations for law_timesheets
+
     ts_cols = [
         ("is_billed", "INTEGER DEFAULT 0"),
         ("invoice_id", "INTEGER"),

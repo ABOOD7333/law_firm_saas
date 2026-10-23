@@ -77,10 +77,12 @@ async def matters_page(
             or_(
                 LawCases.title.ilike(search_term),
                 LawCases.case_number.ilike(search_term),
+                LawCases.consultation_client_name.ilike(search_term),
                 LawCases.summary.ilike(search_term),
                 LawCases.consultation_scope.ilike(search_term)
             )
         )
+
 
     matters = query.order_by(LawCases.created_at.desc()).all()
 
@@ -149,7 +151,8 @@ async def add_matter(
     request: Request,
     title: str = Form(...),
     matter_type_key: str = Form("استشارة قانونية"),
-    client_id: int = Form(...),
+    consultation_client_name: Optional[str] = Form(None),
+    client_id: Optional[int] = Form(None),
     matter_number: Optional[str] = Form(None),
     lead_lawyer_id: Optional[int] = Form(None),
     consultation_scope: Optional[str] = Form(None),
@@ -187,6 +190,14 @@ async def add_matter(
         if exists:
             matter_number = f"{matter_number}-{int(datetime.now().timestamp()) % 1000}"
 
+    clean_client_name = consultation_client_name.strip() if consultation_client_name and consultation_client_name.strip() else None
+
+    # إذا اختار من قائمة موكلي المكتب كخيار اختياري
+    if not clean_client_name and client_id and client_id > 0:
+        c_obj = db.query(LawClients).filter(LawClients.id == client_id, LawClients.office_id == office_id).first()
+        if c_obj:
+            clean_client_name = c_obj.name
+
     new_matter = LawCases(
         office_id=office_id,
         case_number=matter_number,
@@ -196,6 +207,7 @@ async def add_matter(
         status_key=status_key,
         visibility_mode=visibility_mode,
         consultation_scope=consultation_scope.strip() if consultation_scope else None,
+        consultation_client_name=clean_client_name,
         summary=summary.strip() if summary else None,
         estimated_fee=estimated_fee or 0.0,
         open_date=open_date or datetime.now().strftime("%Y-%m-%d"),
@@ -209,7 +221,7 @@ async def add_matter(
     db.commit()
     db.refresh(new_matter)
 
-    # Link client
+    # إذا تم تحديد موكل موجود مسبقاً، يتم ربطه أيضاً
     if client_id and client_id > 0:
         client = db.query(LawClients).filter(
             LawClients.id == client_id,
@@ -219,8 +231,9 @@ async def add_matter(
             client.case_id = new_matter.id
             db.commit()
 
-    log_matter_audit(db, office_id, user, "إضافة مسألة/استشارة جديدة", new_matter, f"النوع: {matter_type_key}")
+    log_matter_audit(db, office_id, user, "إضافة مسألة/استشارة جديدة", new_matter, f"طالب الاستشارة: {clean_client_name or 'غير محدد'}")
     return RedirectResponse(url=f"/matters/{new_matter.id}?msg=added", status_code=303)
+
 
 
 @router.get("/matters/{matter_id}", response_class=HTMLResponse)
@@ -324,6 +337,7 @@ async def edit_matter(
     title: str = Form(...),
     case_type_key: str = Form(...),
     status_key: str = Form(...),
+    consultation_client_name: Optional[str] = Form(None),
     lead_lawyer_id: Optional[int] = Form(None),
     client_id: Optional[int] = Form(None),
     consultation_scope: Optional[str] = Form(None),
@@ -351,6 +365,8 @@ async def edit_matter(
     matter.title = title.strip()
     matter.case_type_key = case_type_key.strip()
     matter.status_key = status_key.strip()
+    if consultation_client_name is not None:
+        matter.consultation_client_name = consultation_client_name.strip() if consultation_client_name.strip() else None
     matter.lead_lawyer_id = lead_lawyer_id if lead_lawyer_id and lead_lawyer_id > 0 else matter.lead_lawyer_id
     matter.consultation_scope = consultation_scope.strip() if consultation_scope else None
     matter.summary = summary.strip() if summary else None
@@ -372,8 +388,14 @@ async def edit_matter(
             LawClients.id == client_id,
             LawClients.office_id == user.office_id
         ).update({"case_id": matter.id})
+        # إذا لم يتم تحديد اسم يدوي، نأخذ اسم الموكل المختار
+        if not matter.consultation_client_name:
+            cl_selected = db.query(LawClients).filter(LawClients.id == client_id).first()
+            if cl_selected:
+                matter.consultation_client_name = cl_selected.name
 
     db.commit()
+
     log_matter_audit(db, user.office_id, user, "تعديل بيانات المسألة", matter)
     return RedirectResponse(url=f"/matters/{matter.id}?msg=updated", status_code=303)
 

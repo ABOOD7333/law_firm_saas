@@ -153,10 +153,12 @@
                         </span>
                     </td>
 
-                    <!-- الموكل -->
+                    <!-- الموكل / طالب الاستشارة -->
                     <td style="padding: 14px 18px; color: #334155; font-weight: 600;">
                         {% set client = m.law_clients[0] if m.law_clients and m.law_clients|length > 0 else None %}
-                        {% if client %}
+                        {% if m.consultation_client_name %}
+                        <i class="fa-regular fa-user" style="color: #64748b; margin-left: 4px;"></i> {{ m.consultation_client_name }}
+                        {% elif client %}
                         <i class="fa-regular fa-user" style="color: #64748b; margin-left: 4px;"></i> {{ client.name }}
                         {% else %}
                         <span style="color: #94a3b8;">غير محدد</span>
@@ -271,12 +273,7 @@
 
                     <div>
                         <label style="display: block; font-weight: 700; color: #334155; margin-bottom: 6px; font-size: 0.88rem;">الموكل / طالب الاستشارة <span style="color: #ef4444;">*</span></label>
-                        <select name="client_id" required style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
-                            <option value="">-- اختر العميل --</option>
-                            {% for c in clients %}
-                            <option value="{{ c.id }}">{{ c.name }} ({{ c.phone or c.email or 'بدون هاتف' }})</option>
-                            {% endfor %}
-                        </select>
+                        <input type="text" name="consultation_client_name" required placeholder="أدخل اسم طالب الاستشارة أو الجهة..." style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif;">
                     </div>
                 </div>
 

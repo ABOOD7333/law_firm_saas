@@ -91,7 +91,7 @@
     </div>
 
     <div class="meta-grid">
-        <div><strong>طالب الاستشارة / الموكل:</strong> {{ client.name if client else 'غير محدد' }}</div>
+        <div><strong>طالب الاستشارة:</strong> {{ matter.consultation_client_name or (client.name if client else 'غير محدد') }}</div>
         <div><strong>نوع المسألة:</strong> {{ matter.case_type_key }}</div>
         <div><strong>المستشار المعد للرأي:</strong> {{ lead_lawyer.name if lead_lawyer else 'الإدارة القانونية' }}</div>
         <div><strong>تاريخ البدء:</strong> {{ matter.open_date or '-' }}</div>
