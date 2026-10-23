@@ -26,12 +26,87 @@ async def superadmin_page(request: Request, db: Session = Depends(get_db), user:
         return RedirectResponse(url="/dashboard", status_code=303)
     
     try:
-        # بتر وتطهير المكاتب غير الرسمية مباشرة من قاعدة البيانات
-        from database.database import cleanup_and_keep_official_offices
-        cleanup_and_keep_official_offices(db)
-        
-        # Fetch all offices
-        offices = db.query(LawOffices).all()
+        # 1. تحديث وتثبيت مكتب عبدالله العليمي للمحاماة (ID: 1)
+        db.query(LawOffices).filter(LawOffices.id == 1).update({
+            "name": "مكتب عبدالله العليمي للمحاماة",
+            "is_active": 1,
+            "is_deleted": 0,
+            "status_key": "active",
+            "subscription_plan": "yearly",
+            "subscription_end": "2030-01-01 00:00:00"
+        }, synchronize_session=False)
+
+        # ربط حساب ABOOD كمدير ومالك رسمي لمكتب 1
+        abood_user = db.query(AccessProfiles).filter(AccessProfiles.username == "ABOOD").first()
+        if abood_user:
+            abood_user.name = "عبدالله العليمي (المدير العام)"
+            abood_user.role = "مدير"
+            abood_user.is_superadmin = 1
+            abood_user.office_id = 1
+            abood_user.is_active = 1
+            abood_user.is_deleted = 0
+            db.query(LawOffices).filter(LawOffices.id == 1).update({"owner_user_id": abood_user.id}, synchronize_session=False)
+
+        # 2. تحديد وتثبيت مكتب هشام دغيش (ID: 6 أو اسمه يحتوي هشام دغيش)
+        off6 = db.query(LawOffices).filter(
+            (LawOffices.id == 6) | (LawOffices.name.like("%هشام دغيش%"))
+        ).first()
+        keep_office_ids = [1]
+        if off6:
+            keep_office_ids.append(off6.id)
+            off6.name = "مكتب هشام دغيش للمحاماة"
+            off6.is_active = 1
+            off6.is_deleted = 0
+            off6.status_key = "active"
+            off6.subscription_plan = "yearly"
+            off6.subscription_end = "2030-01-01 00:00:00"
+        else:
+            new_off6 = LawOffices(
+                id=6,
+                name="مكتب هشام دغيش للمحاماة",
+                is_active=1,
+                is_deleted=0,
+                status_key="active",
+                subscription_plan="yearly",
+                subscription_end="2030-01-01 00:00:00"
+            )
+            db.add(new_off6)
+            db.flush()
+            keep_office_ids.append(6)
+
+        # 3. أرشفة وشطب وإخفاء كافة المكاتب الأخرى نهائياً (المهندس الفخري، محمد العليمي، عمرو العليمي، أريج محمد)
+        db.query(LawOffices).filter(
+            LawOffices.id.notin_(keep_office_ids),
+            ~LawOffices.name.like("%هشام دغيش%")
+        ).update({
+            "is_deleted": 1,
+            "is_active": 0,
+            "status_key": "archived"
+        }, synchronize_session=False)
+
+        # 4. إخفاء وتعطيل كافة مستخدمي تلك المكاتب المحذوفة
+        db.query(AccessProfiles).filter(
+            AccessProfiles.office_id.notin_(keep_office_ids)
+        ).update({
+            "is_deleted": 1,
+            "is_active": 0
+        }, synchronize_session=False)
+
+        # 5. تصفية وأرشفة كافة القضايا والموكلين والموظفين التجريبيين داخل مكتب 1 (مكتب عبدالله العليمي)
+        db.query(LawCases).filter(LawCases.office_id == 1).update({"is_deleted": 1}, synchronize_session=False)
+        db.query(LawClients).filter(LawClients.office_id == 1).update({"is_deleted": 1}, synchronize_session=False)
+        db.query(AccessProfiles).filter(
+            AccessProfiles.office_id == 1,
+            AccessProfiles.username != "ABOOD"
+        ).update({"is_deleted": 1, "is_active": 0}, synchronize_session=False)
+
+        db.commit()
+
+        # 6. جلب المكاتب النشطة وغير المحذوفة فقط (مكتب عبدالله العليمي + مكتب هشام دغيش)
+        offices = db.query(LawOffices).filter(
+            LawOffices.is_deleted == 0,
+            LawOffices.id.in_(keep_office_ids)
+        ).all()
         
         # Calculate SaaS KPI metrics
         total_offices = len(offices)
@@ -58,7 +133,7 @@ async def superadmin_page(request: Request, db: Session = Depends(get_db), user:
         office_data = []
         for office in offices:
             owner = db.query(AccessProfiles).filter(AccessProfiles.id == office.owner_user_id).first() if office.owner_user_id else None
-            user_count = db.query(AccessProfiles).filter(AccessProfiles.office_id == office.id).count()
+            user_count = db.query(AccessProfiles).filter(AccessProfiles.office_id == office.id, AccessProfiles.is_deleted == 0).count()
             case_count = db.query(LawCases).filter(LawCases.office_id == office.id, LawCases.is_deleted == 0).count()
             doc_count = db.query(LawDocuments).filter(LawDocuments.office_id == office.id).count()
             
@@ -113,7 +188,7 @@ async def superadmin_page(request: Request, db: Session = Depends(get_db), user:
             "arr": round(mrr * 12, 2),
             "total_revenue": round(total_revenue, 2),
             "pending_payments": pending_payments_count,
-            "total_users": db.query(AccessProfiles).count(),
+            "total_users": db.query(AccessProfiles).filter(AccessProfiles.is_deleted == 0).count(),
             "total_cases": db.query(LawCases).filter(LawCases.is_deleted == 0).count()
         }
             
