@@ -548,3 +548,41 @@ async def purge_and_reset_production(request: Request, db: Session = Depends(get
         app_logger.error(f"Superadmin purge-and-reset error: {e}")
         return JSONResponse({"success": False, "error": f"حدث خطأ أثناء التصفية: {str(e)}"}, status_code=500)
 
+
+def purge_erroneous_intake_case(db: Session):
+    """
+    بتر وحذف أي قضية أُنشئت خطأً عند الضغط على زر قبول وتحويل لطلب الاستقطاب الخاص بالمستفيد (هائل سعيد)
+    مع إعادة ربط الاستقطاب بالوكالة فقط وتصفير converted_case_id.
+    """
+    from sqlalchemy import text
+    try:
+        # البحث عن القضايا التي تم إنشاؤها عبر تحويل الاستقطاب أو بعنوان هائل سعيد
+        cur_cases = db.execute(text("""
+            SELECT id FROM law_cases 
+            WHERE title LIKE '%هائل سعيد%' 
+               OR description LIKE '%الخصم المذكور%'
+               OR summary LIKE '%هائل سعيد%'
+        """)).fetchall()
+
+        deleted_ids = [row[0] for row in cur_cases]
+        for cid in deleted_ids:
+            # حذف المتعلقات في الجداول الفرعية إن وجدت
+            db.execute(text("DELETE FROM law_parties WHERE case_id = :cid"), {"cid": cid})
+            db.execute(text("DELETE FROM law_hearings WHERE case_id = :cid"), {"cid": cid})
+            db.execute(text("DELETE FROM law_tasks WHERE case_id = :cid"), {"cid": cid})
+            db.execute(text("DELETE FROM law_cases WHERE id = :cid"), {"cid": cid})
+
+        # تصفير converted_case_id في intake_submissions
+        db.execute(text("""
+            UPDATE intake_submissions 
+            SET converted_case_id = NULL 
+            WHERE full_name LIKE '%هائل سعيد%' OR phone = '737737944'
+        """))
+        db.commit()
+        if deleted_ids:
+            app_logger.info(f"PURGE_ERRONEOUS_INTAKE_CASE | Erroneous case IDs {deleted_ids} successfully deleted.")
+    except Exception as e:
+        db.rollback()
+        app_logger.error(f"Error purging erroneous intake case: {e}")
+
+

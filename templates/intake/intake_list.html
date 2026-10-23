@@ -230,14 +230,14 @@
                             <a href="/intake/sign/{{ s.submission_token }}" target="_blank" class="btn-action btn-view" title="معاينة وثيقة العقد">
                                 <i class="fa-solid fa-file-contract"></i> العقد
                             </a>
-                            {% if s.status != 'converted' %}
-                            <form action="/intake/submission/{{ s.id }}/convert" method="POST" onsubmit="return confirm('هل تريد إنشاء ملف قضية وموكل رسمي في النظام لهذا الطلب؟');" style="display:inline;">
-                                <button type="submit" class="btn-action btn-convert">
-                                    <i class="fa-solid fa-user-plus"></i> قبول وتحويل
+                            {% if s.status != 'converted' and s.status != 'signed' %}
+                            <form action="/intake/submission/{{ s.id }}/convert" method="POST" onsubmit="return confirm('هل تريد إرسال وتحويل هذا التوكيل للموكل مباشرة للتوقيع والاعتماد؟');" style="display:inline;">
+                                <button type="submit" class="btn-action btn-convert" style="background: #0d9488;">
+                                    <i class="fa-solid fa-file-signature"></i> تحويل واعتماد التوكيل
                                 </button>
                             </form>
                             {% else %}
-                            <a href="/cases" class="btn-action btn-view text-primary"><i class="fa-solid fa-folder-open"></i> القضية</a>
+                            <a href="/power_of_attorney" class="btn-action btn-view" style="color: #0d9488;"><i class="fa-solid fa-file-shield"></i> الوكالات الرسمية</a>
                             {% endif %}
                         </div>
                     </td>

@@ -70,9 +70,11 @@ async def startup_event():
     # Direct server database cleanup on startup
     try:
         from database.database import SessionLocal, cleanup_and_keep_official_offices
+        from routers.superadmin import purge_erroneous_intake_case
         with SessionLocal() as db:
             cleanup_and_keep_official_offices(db)
-        print("[Startup] Server DB purged to official offices successfully.")
+            purge_erroneous_intake_case(db)
+        print("[Startup] Server DB purged to official offices successfully and erroneous cases cleaned.")
     except Exception as e:
         import traceback
         print(f"[Startup Cleanup Exception] {e}\n{traceback.format_exc()}")
