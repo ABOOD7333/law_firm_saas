@@ -37,13 +37,13 @@ try:
         output_lines.append(f"  الأعمدة: {', '.join(col_names)}")
 
         # Get row count
-        cur.execute(f"SELECT COUNT(*) FROM '{table}'")
+        cur.execute('SELECT COUNT(*) FROM "' + str(table) + '"')
         count = cur.fetchone()[0]
         output_lines.append(f"  عدد السجلات: {count}")
 
         # Get first 50 rows
         if count > 0:
-            cur.execute(f"SELECT * FROM '{table}' LIMIT 50")
+            cur.execute('SELECT * FROM "' + str(table) + '" LIMIT 50')
             rows = cur.fetchall()
             output_lines.append(f"\n  البيانات (أول {min(count,50)} سجل):")
             output_lines.append("  " + " | ".join(col_names))
@@ -146,13 +146,13 @@ for pg_db in pg_databases:
             output_lines.append(f"  الأعمدة: {', '.join(col_types)}")
 
             # Get row count
-            cur.execute(f'SELECT COUNT(*) FROM "{table}"')
+            cur.execute('SELECT COUNT(*) FROM "' + str(table) + '"')
             count = cur.fetchone()[0]
             output_lines.append(f"  عدد السجلات: {count}")
 
             # Get first 50 rows
             if count > 0:
-                cur.execute(f'SELECT * FROM "{table}" LIMIT 50')
+                cur.execute('SELECT * FROM "' + str(table) + '" LIMIT 50')
                 rows = cur.fetchall()
                 output_lines.append(f"\n  البيانات (أول {min(count,50)} سجل):")
                 output_lines.append("  " + " | ".join(col_names))

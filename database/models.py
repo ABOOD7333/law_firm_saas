@@ -113,7 +113,7 @@ class LawAuditLog(Base):
     actor_name: Mapped[Optional[str]] = mapped_column(Text, index=True)
     details: Mapped[Optional[str]] = mapped_column(Text)
     actor_user_id: Mapped[Optional[int]] = mapped_column(Integer)
-    office_id: Mapped[Optional[int]] = mapped_column(Integer)
+    office_id: Mapped[Optional[int]] = mapped_column(Integer, index=True)
     session_uuid: Mapped[Optional[str]] = mapped_column(Text)
     entity_type: Mapped[Optional[str]] = mapped_column(Text)
     entity_id: Mapped[Optional[int]] = mapped_column(Integer)
@@ -929,7 +929,7 @@ class ClientPayments(Base):
     __tablename__ = 'client_payments'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    office_id: Mapped[int] = mapped_column(ForeignKey('law_offices.id', ondelete='CASCADE'), nullable=False)
+    office_id: Mapped[int] = mapped_column(ForeignKey('law_offices.id', ondelete='CASCADE'), nullable=False, index=True)
     invoice_id: Mapped[int] = mapped_column(ForeignKey('invoices.id', ondelete='CASCADE'), nullable=False, index=True)
     client_id: Mapped[Optional[int]] = mapped_column(ForeignKey('law_clients.id', ondelete='SET NULL'), nullable=True)
     

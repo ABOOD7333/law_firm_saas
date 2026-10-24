@@ -296,7 +296,7 @@
         </div>
 
         <!-- Document Content -->
-        <div class="doc-content" id="documentContent">{{ (pleading_html|safe) if pleading_html else 'لا يوجد محتوى مسجل للمذكرة بعد.' }}</div>
+        <div class="doc-content" id="documentContent">{{ (pleading_html|e) if pleading_html else 'لا يوجد محتوى مسجل للمذكرة بعد.' }}</div>
 
         <!-- Signatures -->
         <div class="signature-block">
