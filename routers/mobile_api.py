@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 
 from database.database import get_db
 from database.models import (
@@ -97,9 +97,12 @@ def _verify_pin(pin: str, stored_hash: str) -> bool:
 async def login(req: LoginRequest, db: Session = Depends(get_db)):
     from email_service import generate_otp, store_otp, send_otp_email
     
-    # Try finding user by username or email
+    # Try finding user by username, email, or phone (case-insensitive)
+    search_term = req.email.strip().lower()
     user = db.query(AccessProfiles).filter(
-        (AccessProfiles.email == req.email.strip()) | (AccessProfiles.username == req.email.strip())
+        (func.lower(AccessProfiles.email) == search_term) |
+        (func.lower(AccessProfiles.username) == search_term) |
+        (AccessProfiles.phone == req.email.strip())
     ).first()
     
     if not user or user.is_active == 0:

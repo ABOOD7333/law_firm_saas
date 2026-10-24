@@ -366,27 +366,23 @@ app.add_middleware(LoginRateLimitMiddleware)
 from fastapi.middleware.cors import CORSMiddleware
 
 # ── [SECURITY FIX CRIT-01] إصلاح ثغرة CORS Wildcard ──
-# تم حذف allow_origin_regex=r"https?://.*" التي كانت تسمح لأي موقع بالوصول
+# السماح بجميع منافذ localhost للتطوير ومحاكي الجوال مع تقييد النطاقات الخارجية
 _ALLOWED_ORIGINS = [
     "http://localhost",
     "http://localhost:8000",
     "http://localhost:7882",
+    "http://localhost:8085",
     "http://127.0.0.1:8000",
     "https://web-production-80e9e.up.railway.app",
 ]
 
 app.add_middleware(
-
     CORSMiddleware,
-
     allow_origins=_ALLOWED_ORIGINS,
-
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
     allow_credentials=True,
-
-    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
-
-    allow_headers=["Content-Type", "Authorization", "X-CSRF-Token", "X-Requested-With"],
-
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["*"],
 )
 
 # ── [SECURITY FIX MED-06] إضافة Security HTTP Headers ──
