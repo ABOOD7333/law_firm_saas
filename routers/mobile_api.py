@@ -13,11 +13,13 @@ from database.models import (
     AccessProfiles, AuthSessions, AuthVerificationTokens, LawCases, LawDocuments,
     LawOffices, LawClients, LawHearings, LawTasks, LawParties, LawNotes, LawPleadings, LawJudgments,
     Invoices, LawExpenses, LawTimesheets, LawPowerOfAttorney, LawExecutions, LawCorrespondences,
-    LawLimitations, YemeniLawDocument, LawWorkflowRules, LawReferenceData, LawAuditLog
+    LawLimitations, YemeniLawDocument, LawWorkflowRules, LawReferenceData, LawAuditLog,
+    LawIncomingCases, LawTrustAccounts, IntakeSubmissions, RetainerAgreements
 )
 from dependencies import get_current_user, check_user_permission
 from core.security import hash_session_token
 from core.security import login_lockout_active, record_login_failure, client_records_for_user
+from core.conflict_checker import perform_conflict_check
 
 router = APIRouter(prefix="/api/mobile", tags=["Mobile API"])
 
@@ -1403,3 +1405,193 @@ async def get_mobile_activity(
         "details": lg.details or "",
         "created_at": lg.created_at or ""
     } for lg in logs]
+
+
+# =========================================================================
+# Phase 4: Full Parity Endpoints (Incoming Cases, Matters, Intake, Kanban, Trust Accounts, Conflict Check)
+# =========================================================================
+
+@router.get("/incoming-cases")
+async def get_mobile_incoming_cases(
+    section: Optional[str] = None,
+    q: Optional[str] = None,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    """سجل القضايا والملفات الواردة إلى المكتب وفق الجهات الخمس"""
+    if not user or not user.office_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    query = db.query(LawIncomingCases).filter(
+        LawIncomingCases.office_id == user.office_id
+    )
+    if section:
+        query = query.filter(LawIncomingCases.section_key == section)
+    if q:
+        query = query.filter(or_(
+            LawIncomingCases.client_name.ilike(f"%{q}%"),
+            LawIncomingCases.subject_description.ilike(f"%{q}%"),
+            LawIncomingCases.police_station.ilike(f"%{q}%")
+        ))
+    cases = query.order_by(LawIncomingCases.id.desc()).limit(100).all()
+    return [{
+        "id": c.id,
+        "section_key": c.section_key or "police",
+        "client_name": c.client_name or "بدون اسم",
+        "reception_date": c.reception_date or "",
+        "status_key": c.status_key or "under_review",
+        "subject_description": c.subject_description or "",
+        "notes": c.notes or "",
+        "police_station": c.police_station or "",
+        "police_report_number": c.police_report_number or ""
+    } for c in cases]
+
+
+@router.get("/matters")
+async def get_mobile_matters(
+    q: Optional[str] = None,
+    status: Optional[str] = None,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    """المسائل والاستشارات القانونية"""
+    if not user or not user.office_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    query = db.query(LawCases).filter(
+        LawCases.office_id == user.office_id,
+        LawCases.is_deleted == 0,
+        LawCases.matter_category == "matter"
+    )
+    if status:
+        query = query.filter(LawCases.status_key == status)
+    if q:
+        query = query.filter(or_(
+            LawCases.title.ilike(f"%{q}%"),
+            LawCases.case_number.ilike(f"%{q}%"),
+            LawCases.consultation_client_name.ilike(f"%{q}%")
+        ))
+    matters = query.order_by(LawCases.id.desc()).limit(100).all()
+    return [{
+        "id": m.id,
+        "title": m.title or "استشارة قانونية",
+        "case_number": m.case_number or "",
+        "status_key": m.status_key or "active",
+        "case_type_key": m.case_type_key or "general",
+        "estimated_fee": float(m.estimated_fee or 0.0),
+        "consultation_client_name": m.consultation_client_name or "",
+        "summary": m.summary or ""
+    } for m in matters]
+
+
+@router.get("/intake")
+async def get_mobile_intake(
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    """استقطاب الموكلين وتوقيع العقود الرقمية"""
+    if not user or not user.office_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    submissions = db.query(IntakeSubmissions).filter(
+        IntakeSubmissions.office_id == user.office_id
+    ).order_by(IntakeSubmissions.id.desc()).limit(100).all()
+    return [{
+        "id": s.id,
+        "full_name": s.full_name or "موكل محتمل",
+        "phone": s.phone or "",
+        "email": s.email or "",
+        "case_type": s.case_type or "عام",
+        "case_summary": s.case_summary or "",
+        "status": s.status or "pending",
+        "conflict_status": s.conflict_status or "safe",
+        "created_at": s.created_at or ""
+    } for s in submissions]
+
+
+@router.get("/kanban")
+async def get_mobile_kanban(
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    """لوحة الكانبان التفاعلية لفرز وتوزيع مهام المكتب"""
+    if not user or not user.office_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    tasks = db.query(LawTasks).filter(
+        LawTasks.office_id == user.office_id,
+        LawTasks.is_deleted == 0
+    ).order_by(LawTasks.kanban_order.asc(), LawTasks.id.desc()).limit(150).all()
+
+    board = {
+        "todo": [],
+        "in_progress": [],
+        "review": [],
+        "completed": []
+    }
+    for t in tasks:
+        k_status = t.kanban_status or ("completed" if t.status_key == "completed" else "todo")
+        if k_status not in board:
+            k_status = "todo"
+        board[k_status].append({
+            "id": t.id,
+            "title": t.title or "مهمة",
+            "priority": t.priority_level or "normal",
+            "status_key": t.status_key or "pending",
+            "due_at": t.due_at or "",
+            "case_id": t.case_id,
+            "description": t.description or ""
+        })
+    return board
+
+
+@router.get("/trust-accounts")
+async def get_mobile_trust_accounts(
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    """حسابات أمانات وودائع الموكلين المعزولة (IOLTA)"""
+    if not user or not user.office_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    accounts = db.query(LawTrustAccounts).filter(
+        LawTrustAccounts.office_id == user.office_id,
+        LawTrustAccounts.is_deleted == 0
+    ).order_by(LawTrustAccounts.id.desc()).limit(100).all()
+    return [{
+        "id": a.id,
+        "account_number": a.account_number or "",
+        "title": a.title or "حساب أمانة",
+        "bank_name": a.bank_name or "",
+        "currency": a.currency or "SAR",
+        "current_balance": float(a.current_balance or 0.0),
+        "total_deposited": float(a.total_deposited or 0.0),
+        "total_disbursed": float(a.total_disbursed or 0.0),
+        "status_key": a.status_key or "active",
+        "notes": a.notes or ""
+    } for a in accounts]
+
+
+class ConflictCheckRequest(BaseModel):
+    name: Optional[str] = None
+    national_id: Optional[str] = None
+    cr_number: Optional[str] = None
+    phone: Optional[str] = None
+    role: Optional[str] = "خصم"
+
+
+@router.post("/conflict-check")
+async def post_mobile_conflict_check(
+    req: ConflictCheckRequest,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    """فحص تعارض المصالح اللحظي"""
+    if not user or not user.office_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    res = perform_conflict_check(
+        db=db,
+        office_id=user.office_id,
+        query_name=req.name,
+        id_number=req.national_id,
+        cr_number=req.cr_number,
+        phone=req.phone,
+        target_role=req.role or "خصم"
+    )
+    return res or {"conflicts_found": False, "results": [], "risk_level": "safe"}
+
