@@ -72,7 +72,13 @@ scratch/
 *.db-shm
 *.db-wal
 
-# --- ملفات PDF مؤقتة ---
+# --- ملفات PDF ومخططات مؤقتة ---
 120.pdf
 Detailed_Platform_Review_Report.pdf
+150_Comprehensive_Architecture.pdf
+154.pdf
+154_Server_Database.pdf
+generate_pdf_154.py
+generate_perfect_pdf_154.py
+generate_server_pdf.py
 response_output.txt

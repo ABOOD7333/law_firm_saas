@@ -67,17 +67,18 @@ async def startup_event():
     import asyncio
     asyncio.create_task(daily_scheduler())
 
-    # Direct server database cleanup on startup
-    try:
-        from database.database import SessionLocal, cleanup_and_keep_official_offices
-        from routers.superadmin import purge_erroneous_intake_case
-        with SessionLocal() as db:
-            cleanup_and_keep_official_offices(db)
-            purge_erroneous_intake_case(db)
-        print("[Startup] Server DB purged to official offices successfully and erroneous cases cleaned.")
-    except Exception as e:
-        import traceback
-        print(f"[Startup Cleanup Exception] {e}\n{traceback.format_exc()}")
+    # Direct server database cleanup on startup (guarded by env var to prevent data loss in production)
+    if os.getenv("RUN_STARTUP_OFFICE_CLEANUP", "false").lower() in ("true", "1"):
+        try:
+            from database.database import SessionLocal, cleanup_and_keep_official_offices
+            from routers.superadmin import purge_erroneous_intake_case
+            with SessionLocal() as db:
+                cleanup_and_keep_official_offices(db)
+                purge_erroneous_intake_case(db)
+            print("[Startup] Server DB purged to official offices successfully and erroneous cases cleaned.")
+        except Exception as e:
+            import traceback
+            print(f"[Startup Cleanup Exception] {e}\n{traceback.format_exc()}")
 
     print("[Startup] Server ready.")
 
@@ -398,6 +399,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 app.add_middleware(SecurityHeadersMiddleware)
+
+from core.security_center.monitor_middleware import SecurityMonitoringMiddleware
+app.add_middleware(SecurityMonitoringMiddleware)
 
 # Mount static files
 
@@ -2840,22 +2844,17 @@ async def update_office(
 
         return RedirectResponse(url="/", status_code=303)
 
-    if user.role not in ['مدير', 'مدير المكتب', 'صاحب المكتب']:
-
+    if user.role not in ['مدير', 'مدير المكتب', 'صاحب المكتب'] and getattr(user, 'is_superadmin', 0) != 1:
         raise HTTPException(status_code=403, detail="غير مصرح لك بتعديل بيانات المكتب")
 
-    office_id_to_update = office_id or user.office_id
+    if office_id and office_id != user.office_id and getattr(user, 'is_superadmin', 0) != 1:
+        raise HTTPException(status_code=403, detail="غير مصرح لك بتعديل بيانات مكتب آخر")
 
+    office_id_to_update = user.office_id if getattr(user, 'is_superadmin', 0) != 1 else (office_id or user.office_id)
     if office_id_to_update:
-
         office = db.query(LawOffices).filter(LawOffices.id == office_id_to_update).first()
-
-        # نتحقق أن المستخدم ينتمي لهذا المكتب قبل التعديل (أو أنه سوبر آدمن)
-
-        if office and (user.office_id == office.id or user.id == 1):
-
+        if office and (user.office_id == office.id or getattr(user, 'is_superadmin', 0) == 1):
             office.name = name
-
             db.commit()
 
     else:
@@ -3204,7 +3203,7 @@ async def get_hearing_minutes_details(
         return JSONResponse({"success": False, "error": "غير مصرح"}, status_code=401)
     office_id = user.office_id
     if not office_id:
-        office_id = 1
+        return JSONResponse({"success": False, "error": "غير مصرح لك بالوصول لغياب معرف المكتب"}, status_code=403)
     h = db.query(LawHearings).filter(LawHearings.id == hearing_id, LawHearings.office_id == office_id).first()
     if not h:
         return JSONResponse({"success": False, "error": "المحضر غير موجود"}, status_code=404)
@@ -3248,9 +3247,9 @@ async def delete_hearing(
     db: Session = Depends(get_db),
     user: AccessProfiles = Depends(get_current_user)
 ):
-    if not user or not check_user_permission(user, 'hearings', 'delete'):
+    if not user or not user.office_id or not check_user_permission(user, 'hearings', 'delete'):
         return HTMLResponse("<script>alert('غير مصرح لك بحذف الجلسة'); window.history.back();</script>", status_code=403)
-    office_id = user.office_id or 1
+    office_id = user.office_id
     h = db.query(LawHearings).filter(LawHearings.id == hearing_id, LawHearings.office_id == office_id).first()
     if h:
         db.delete(h)
@@ -4243,6 +4242,10 @@ app.include_router(power_of_attorney.router)
 app.include_router(advanced_operations.router)
 
 app.include_router(superadmin.router)
+
+# مركز العمليات والأمن السيبراني (SOC)
+from routers import security_center
+app.include_router(security_center.router)
 
 # لوحة الكانبان (Kanban Boards)
 from routers import kanban as kanban_router
