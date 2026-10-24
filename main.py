@@ -74,6 +74,17 @@ async def startup_event():
     except Exception as e:
         print(f"[Startup Warning] Could not spawn SOC Watchdog: {e}")
 
+    # Transparent Field-Level Encryption Migration (AES-256-GCM)
+    try:
+        from core.security_center.crypto_fields import migrate_and_encrypt_existing_records
+        from database.database import SessionLocal
+        with SessionLocal() as db:
+            crypto_stats = migrate_and_encrypt_existing_records(db)
+            if any(v > 0 for v in crypto_stats.values()):
+                print(f"[Crypto] Field-level encryption migration completed: {crypto_stats}")
+    except Exception as e:
+        print(f"[Crypto Warning] Failed field-level encryption migration: {e}")
+
     # Direct server database cleanup on startup (guarded by env var to prevent data loss in production)
     if os.getenv("RUN_STARTUP_OFFICE_CLEANUP", "false").lower() in ("true", "1"):
         try:

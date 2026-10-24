@@ -1,6 +1,7 @@
 from typing import Optional, List
 from sqlalchemy import Column, CheckConstraint, ForeignKey, Index, Integer, REAL, Table, Text, UniqueConstraint, text, Float, LargeBinary
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from core.security_center.crypto_fields import EncryptedString, EncryptedText
 
 class Base(DeclarativeBase):
     pass
@@ -178,8 +179,8 @@ class LawClients(Base):
     name: Mapped[str] = mapped_column(Text, nullable=False)
     client_type: Mapped[Optional[str]] = mapped_column(Text, server_default=text("'individual'")) # individual (فرد) / company (شركة أو مؤسسة)
     nationality: Mapped[Optional[str]] = mapped_column(Text)
-    national_id: Mapped[Optional[str]] = mapped_column(Text)
-    cr_number: Mapped[Optional[str]] = mapped_column(Text) # السجل التجاري للشركات
+    national_id: Mapped[Optional[str]] = mapped_column(EncryptedString)
+    cr_number: Mapped[Optional[str]] = mapped_column(EncryptedString) # السجل التجاري للشركات
     legal_rep_name: Mapped[Optional[str]] = mapped_column(Text) # ممثل الشركة / المفوض
     phone: Mapped[Optional[str]] = mapped_column(Text)
     alt_phone: Mapped[Optional[str]] = mapped_column(Text)
@@ -194,7 +195,7 @@ class LawClients(Base):
     updated_at: Mapped[Optional[str]] = mapped_column(Text)
     is_deleted: Mapped[int] = mapped_column(Integer, server_default=text('0'), nullable=False)
 
-    tax_number: Mapped[Optional[str]] = mapped_column(Text)
+    tax_number: Mapped[Optional[str]] = mapped_column(EncryptedString)
     industry: Mapped[Optional[str]] = mapped_column(Text)
     parent_company_id: Mapped[Optional[int]] = mapped_column(ForeignKey('law_clients.id', ondelete='SET NULL'), index=True)
     website: Mapped[Optional[str]] = mapped_column(Text)
@@ -211,7 +212,7 @@ class LawClientRepresentatives(Base):
     office_id: Mapped[int] = mapped_column(ForeignKey('law_offices.id'), index=True)
     name: Mapped[str] = mapped_column(Text, nullable=False)
     role_title: Mapped[str] = mapped_column(Text, nullable=False)
-    national_id: Mapped[Optional[str]] = mapped_column(Text)
+    national_id: Mapped[Optional[str]] = mapped_column(EncryptedString)
     phone: Mapped[Optional[str]] = mapped_column(Text)
     email: Mapped[Optional[str]] = mapped_column(Text)
     poa_number: Mapped[Optional[str]] = mapped_column(Text)
@@ -1131,7 +1132,7 @@ class LawTrustAccounts(Base):
     account_number: Mapped[str] = mapped_column(Text, nullable=False, unique=True, index=True)
     title: Mapped[str] = mapped_column(Text, nullable=False)
     bank_name: Mapped[Optional[str]] = mapped_column(Text)
-    iban: Mapped[Optional[str]] = mapped_column(Text)
+    iban: Mapped[Optional[str]] = mapped_column(EncryptedString)
     currency: Mapped[str] = mapped_column(Text, server_default=text("'SAR'"), nullable=False)
     current_balance: Mapped[float] = mapped_column(REAL, server_default=text('0.0'), nullable=False)
     total_deposited: Mapped[float] = mapped_column(REAL, server_default=text('0.0'), nullable=False)
