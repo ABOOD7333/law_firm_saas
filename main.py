@@ -67,6 +67,13 @@ async def startup_event():
     import asyncio
     asyncio.create_task(daily_scheduler())
 
+    # Spawn Autonomous 24/7 Cybersecurity SOC Watchdog
+    try:
+        from core.security_center.watchdog import soc_autonomous_watchdog_loop
+        asyncio.create_task(soc_autonomous_watchdog_loop())
+    except Exception as e:
+        print(f"[Startup Warning] Could not spawn SOC Watchdog: {e}")
+
     # Direct server database cleanup on startup (guarded by env var to prevent data loss in production)
     if os.getenv("RUN_STARTUP_OFFICE_CLEANUP", "false").lower() in ("true", "1"):
         try:
