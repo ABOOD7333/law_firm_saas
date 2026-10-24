@@ -148,34 +148,45 @@ async def trigger_security_scan(
 ):
     """بدء عملية فحص أمني شاملة للمنصة"""
     require_superadmin(user)
-    scanner = LawSaaSScanner(root_dir=".", db=db)
-    scan = scanner.run_full_scan(trigger_type=scan_type, triggered_by=user.id)
+    try:
+        scanner = LawSaaSScanner(root_dir=".", db=db)
+        scan = scanner.run_full_scan(trigger_type=scan_type, triggered_by=user.id)
 
-    log_admin_audit(
-        db=db,
-        user_id=user.id,
-        action="trigger_security_scan",
-        target_type="security_scan",
-        target_id=str(scan.id),
-        details=f"Type: {scan_type}, Findings: {scan.findings_count}, Files: {scan.files_scanned}",
-        ip_address=request.client.host if request.client else None
-    )
+        log_admin_audit(
+            db=db,
+            user_id=user.id,
+            action="trigger_security_scan",
+            target_type="security_scan",
+            target_id=str(scan.id),
+            details=f"Type: {scan_type}, Findings: {scan.findings_count}, Files: {scan.files_scanned}",
+            ip_address=request.client.host if request.client else None
+        )
 
-    return {
-        "status": "success",
-        "message": "تم إكمال الفحص الأمني بنجاح وتحديث كافة السجلات وقاعدة البيانات.",
-        "scan": {
-            "id": scan.id,
-            "status": scan.status,
-            "findings_count": scan.findings_count,
-            "critical_count": scan.critical_count,
-            "high_count": scan.high_count,
-            "medium_count": scan.medium_count,
-            "low_count": scan.low_count,
-            "files_scanned": scan.files_scanned,
-            "completed_at": scan.completed_at
+        return {
+            "status": "success",
+            "message": "تم إكمال الفحص الأمني بنجاح وتحديث كافة السجلات وقاعدة البيانات.",
+            "scan": {
+                "id": scan.id,
+                "status": scan.status,
+                "findings_count": scan.findings_count,
+                "critical_count": scan.critical_count,
+                "high_count": scan.high_count,
+                "medium_count": scan.medium_count,
+                "low_count": scan.low_count,
+                "files_scanned": scan.files_scanned,
+                "completed_at": scan.completed_at
+            }
         }
-    }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JSONResponse(
+            status_code=500,
+            content={
+                "status": "error",
+                "message": f"فشل تشغيل الفحص الأمني: {str(e)}"
+            }
+        )
 
 
 @router.get("/api/superadmin/security/scans")

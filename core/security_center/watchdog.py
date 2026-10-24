@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 
 from database.database import SessionLocal
 from database.security_models import SecurityScans, SecurityScanSchedules, SecurityEvents, SecurityAlertSettings
-from core.security_center.scanner_engine import ScannerEngine
+from core.security_center.scanner_engine import LawSaaSScanner, ScannerEngine
 from core.security_center.alert_service import dispatch_security_alert
 
 
@@ -68,8 +68,8 @@ async def soc_autonomous_watchdog_loop():
                 # 2. تشغيل الفحص الأمني التلقائي إذا حان موعده
                 if should_scan:
                     print("[SOC Watchdog] Triggering scheduled autonomous security scan...")
-                    engine = ScannerEngine()
-                    scan = engine.run_full_scan(db=db, triggered_by_user_id=None)
+                    engine = LawSaaSScanner(root_dir=".", db=db)
+                    scan = engine.run_full_scan(trigger_type="scheduled_watchdog", triggered_by=None)
                     schedule.last_run_at = now.strftime("%Y-%m-%d %H:%M:%S")
                     schedule.next_run_at = (now + timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
                     db.commit()

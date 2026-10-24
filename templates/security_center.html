@@ -414,6 +414,13 @@
 </div>
 
 <script>
+function getCsrfToken() {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; csrf_token=`);
+    if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
+    return '';
+}
+
 function switchTab(tabId, btn) {
     document.querySelectorAll('.soc-tab-content').forEach(el => el.style.display = 'none');
     document.querySelectorAll('.soc-tab-btn').forEach(el => {
@@ -437,18 +444,23 @@ async function triggerNewScan() {
     text.innerText = 'جاري تنفيذ الفحص الأمني الشامل...';
 
     try {
+        const token = getCsrfToken();
         const formData = new FormData();
         formData.append('scan_type', 'full_audit');
+        if (token) formData.append('csrf_token', token);
+
         const res = await fetch('/api/superadmin/security/scan', {
             method: 'POST',
+            headers: token ? { 'X-CSRF-Token': token } : {},
             body: formData
         });
         const data = await res.json();
-        if (data.status === 'success') {
+        if (res.ok && data.status === 'success') {
             alert('تم إكمال الفحص الأمني بنجاح! تم رصد ' + data.scan.findings_count + ' ملاحظة أمنية.');
             window.location.reload();
         } else {
-            alert('خطأ أثناء الفحص: ' + (data.message || 'فشل الفحص'));
+            const errorMsg = data.message || data.error || data.detail || ('رمز الخطأ: ' + res.status);
+            alert('خطأ أثناء الفحص: ' + errorMsg);
         }
     } catch (err) {
         alert('حدث خطأ في الاتصال بالخادم: ' + err.message);
@@ -485,13 +497,16 @@ function closeModal() {
 
 async function updateFindingStatus(id, newStatus) {
     if (!confirm('هل تريد بالتأكيد تغيير حالة هذه الثغرة إلى: ' + newStatus + '؟')) return;
+    const token = getCsrfToken();
     const formData = new FormData();
     formData.append('new_status', newStatus);
     formData.append('notes', 'تم الحل والمراجعة عبر لوحة مركز الأمن السيبراني.');
+    if (token) formData.append('csrf_token', token);
 
     try {
         const res = await fetch('/api/superadmin/security/findings/' + id + '/status', {
             method: 'POST',
+            headers: token ? { 'X-CSRF-Token': token } : {},
             body: formData
         });
         const data = await res.json();
@@ -499,6 +514,8 @@ async function updateFindingStatus(id, newStatus) {
             const badge = document.getElementById('status-badge-' + id);
             if (badge) badge.innerText = newStatus;
             alert('تم تحديث الحالة بنجاح!');
+        } else {
+            alert('خطأ: ' + (data.message || data.error || data.detail || 'فشلت العملية'));
         }
     } catch (e) {
         alert('خطأ: ' + e.message);
@@ -568,22 +585,25 @@ async function saveAlertSettings(e) {
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
 
+    const token = getCsrfToken();
     const formData = new FormData();
     formData.append('admin_email', document.getElementById('setting_email').value);
     formData.append('min_email_severity', document.getElementById('setting_min_sev').value);
     formData.append('dedup_cooldown_minutes', document.getElementById('setting_cooldown').value);
     formData.append('email_alerts_enabled', document.getElementById('setting_enabled').checked ? 1 : 0);
+    if (token) formData.append('csrf_token', token);
 
     try {
         const res = await fetch('/api/superadmin/security/settings', {
             method: 'POST',
+            headers: token ? { 'X-CSRF-Token': token } : {},
             body: formData
         });
         const data = await res.json();
         if (data.status === 'success') {
             alert('تم حفظ وتحديث إعدادات التنبيهات بنجاح!');
         } else {
-            alert('فشل الحفظ: ' + data.message);
+            alert('فشل الحفظ: ' + (data.message || data.error || data.detail || 'خطأ غير معروف'));
         }
     } catch (err) {
         alert('خطأ: ' + err.message);
@@ -601,7 +621,11 @@ async function autoFixFinding(id) {
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإصلاح...';
     }
     try {
-        const res = await fetch('/api/superadmin/security/findings/' + id + '/auto-fix', { method: 'POST' });
+        const token = getCsrfToken();
+        const res = await fetch('/api/superadmin/security/findings/' + id + '/auto-fix', {
+            method: 'POST',
+            headers: token ? { 'X-CSRF-Token': token } : {}
+        });
         const data = await res.json();
         if (data.success) {
             alert('✅ تم الإصلاح الذاتي بنجاح!\n' + (data.summary || 'تم ترقيع الملاحظة.'));
@@ -636,7 +660,11 @@ async function autoFixAllFindings() {
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري إصلاح الجميع...';
     }
     try {
-        const res = await fetch('/api/superadmin/security/auto-fix-all', { method: 'POST' });
+        const token = getCsrfToken();
+        const res = await fetch('/api/superadmin/security/auto-fix-all', {
+            method: 'POST',
+            headers: token ? { 'X-CSRF-Token': token } : {}
+        });
         const data = await res.json();
         alert('🎉 اكتملت عملية الإصلاح الشامل بنجاح!\nتم ترقيع وإصلاح: ' + data.remediated_count + ' ملاحظة.\nملاحظات تتطلب مراجعة يدوية: ' + data.skipped_count);
         window.location.reload();
@@ -689,7 +717,11 @@ async function loadActiveDefense() {
 async function unbanIP(ip) {
     if (!confirm('فك الحظر عن ' + ip + '؟')) return;
     try {
-        const res = await fetch('/api/superadmin/security/active-defense/unban/' + encodeURIComponent(ip), { method: 'POST' });
+        const token = getCsrfToken();
+        const res = await fetch('/api/superadmin/security/active-defense/unban/' + encodeURIComponent(ip), {
+            method: 'POST',
+            headers: token ? { 'X-CSRF-Token': token } : {}
+        });
         const data = await res.json();
         alert(data.message || 'تم فك الحظر بنجاح');
         loadActiveDefense();

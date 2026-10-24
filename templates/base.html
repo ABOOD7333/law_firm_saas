@@ -748,45 +748,58 @@
 
     <!-- CSRF Protection Interceptor -->
     <script>
-    document.addEventListener("DOMContentLoaded", () => {
-        // Function to get cookie value by name
+    (function() {
         const getCookie = (name) => {
             const value = `; ${document.cookie}`;
             const parts = value.split(`; ${name}=`);
-            if (parts.length === 2) return parts.pop().split(';').shift();
+            if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
+            return '';
         };
 
-        const csrfToken = getCookie('csrf_token');
+        // 1. Intercept all forms (POST/PUT/DELETE/PATCH)
+        document.addEventListener('submit', (e) => {
+            const form = e.target;
+            if (form && form.tagName === 'FORM' && ['POST', 'PUT', 'DELETE', 'PATCH'].includes((form.method || '').toUpperCase())) {
+                const token = getCookie('csrf_token');
+                if (token && !form.querySelector('input[name="csrf_token"]')) {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'csrf_token';
+                    input.value = token;
+                    form.appendChild(input);
+                }
+            }
+        });
 
-        if (csrfToken) {
-            // 1. Intercept all forms (POST/PUT/DELETE)
-            document.addEventListener('submit', (e) => {
-                const form = e.target;
-                if (form.tagName === 'FORM' && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(form.method.toUpperCase())) {
-                    // Inject hidden input if not exists
-                    if (!form.querySelector('input[name="csrf_token"]')) {
-                        const input = document.createElement('input');
-                        input.type = 'hidden';
-                        input.name = 'csrf_token';
-                        input.value = csrfToken;
-                        form.appendChild(input);
+        // 2. Intercept fetch API dynamically
+        const originalFetch = window.fetch;
+        window.fetch = async function() {
+            let [resource, config] = arguments;
+            if (!config) { config = {}; }
+            const method = (config.method || 'GET').toUpperCase();
+            if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+                const token = getCookie('csrf_token');
+                if (token) {
+                    if (config.headers instanceof Headers) {
+                        if (!config.headers.has('X-CSRF-Token')) {
+                            config.headers.set('X-CSRF-Token', token);
+                        }
+                    } else if (Array.isArray(config.headers)) {
+                        const hasHeader = config.headers.some(h => h[0].toLowerCase() === 'x-csrf-token');
+                        if (!hasHeader) {
+                            config.headers.push(['X-CSRF-Token', token]);
+                        }
+                    } else {
+                        config.headers = config.headers || {};
+                        if (!config.headers['X-CSRF-Token']) {
+                            config.headers['X-CSRF-Token'] = token;
+                        }
                     }
                 }
-            });
-
-            // 2. Intercept fetch API
-            const originalFetch = window.fetch;
-            window.fetch = async function() {
-                let [resource, config] = arguments;
-                if (!config) { config = {}; }
-                if (config.method && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(config.method.toUpperCase())) {
-                    config.headers = config.headers || {};
-                    config.headers['X-CSRF-Token'] = csrfToken;
-                }
-                return originalFetch(resource, config);
-            };
-        }
-    });
+            }
+            return originalFetch.call(this, resource, config);
+        };
+    })();
     </script>
     <!-- Case Number Autocomplete & Prefix Script -->
     <script>

@@ -94,7 +94,7 @@ class LawSaaSScanner:
     محرك الفحص الشامل لمنصة LawSaaS
     """
 
-    def __init__(self, root_dir: str, db: Session):
+    def __init__(self, root_dir: str = ".", db: Optional[Session] = None):
         self.root_dir = os.path.abspath(root_dir)
         self.db = db
         self.findings: List[Dict[str, Any]] = []
@@ -102,8 +102,22 @@ class LawSaaSScanner:
         self.components_scanned = 0
         self.scanned_targets: List[Dict[str, Any]] = []
 
-    def run_full_scan(self, trigger_type: str = "full_audit", triggered_by: Optional[int] = None) -> SecurityScans:
+    def run_full_scan(
+        self,
+        trigger_type: str = "full_audit",
+        triggered_by: Optional[int] = None,
+        db: Optional[Session] = None,
+        triggered_by_user_id: Optional[int] = None
+    ) -> SecurityScans:
         """تشغيل فحص شامل متكامل وحفظ النتائج في قاعدة البيانات"""
+        if db is not None:
+            self.db = db
+        if triggered_by_user_id is not None and triggered_by is None:
+            triggered_by = triggered_by_user_id
+
+        if not self.db:
+            raise ValueError("A database session (db) must be provided to run the security scan.")
+
         start_time = datetime.now()
         start_str = start_time.strftime("%Y-%m-%d %H:%M:%S")
 
@@ -549,3 +563,7 @@ class LawSaaSScanner:
                 "evidence": f"Unindexed tables: {len(tenant_tables_lacking_index)} tables",
                 "recommendation": "أضف index=True على حقل office_id في نماذج SQLAlchemy لتحسين الأداء وتسريع عزل المكاتب."
             })
+
+
+# التوافقية مع المسميات السابقة (Backwards Compatibility Alias)
+ScannerEngine = LawSaaSScanner
