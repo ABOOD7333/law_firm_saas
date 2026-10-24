@@ -97,6 +97,9 @@
         <button onclick="switchTab('findingsTab', this)" class="soc-tab-btn active" style="padding: 10px 18px; border: none; background: #0f172a; color: white; border-radius: 10px 10px 0 0; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px;">
             <i class="fas fa-list-check"></i> الملاحظات والثغرات ({{ total_findings }})
         </button>
+        <button onclick="switchTab('defenseTab', this)" class="soc-tab-btn" style="padding: 10px 18px; border: none; background: #f1f5f9; color: #475569; border-radius: 10px 10px 0 0; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-shield-halved" style="color: #10b981;"></i> الدرع التلقائي الذكي (Active IPS)
+        </button>
         <button onclick="switchTab('eventsTab', this)" class="soc-tab-btn" style="padding: 10px 18px; border: none; background: #f1f5f9; color: #475569; border-radius: 10px 10px 0 0; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px;">
             <i class="fas fa-bolt"></i> مراقبة الهجمات المباشرة ({{ recent_events|length }})
         </button>
@@ -118,7 +121,10 @@
                 <h3 style="margin: 0; font-size: 1.1rem; color: #0f172a; display: flex; align-items: center; gap: 8px;">
                     <i class="fas fa-bug" style="color: #6366f1;"></i> قائمة الملاحظات الأمنية المكتشفة
                 </h3>
-                <div style="display: flex; gap: 10px;">
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <button onclick="autoFixAllFindings()" id="fixAllBtn" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 7px 15px; border-radius: 8px; font-weight: bold; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(16,185,129,0.3);">
+                        <i class="fas fa-wand-magic-sparkles"></i> إصلاح كافة الملاحظات آلياً (Auto-Fix All)
+                    </button>
                     <select id="severityFilter" onchange="filterFindings()" style="padding: 6px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.85rem;">
                         <option value="all">كل مستويات الخطورة</option>
                         <option value="critical">حرجة فقط (Critical)</option>
@@ -179,6 +185,11 @@
                                     <button onclick='showFindingDetails({{ f.id }}, {{ f.title|tojson }}, {{ f.description|tojson }}, {{ (f.affected_file or "")|tojson }}, {{ (f.affected_line or "")|tojson }}, {{ (f.evidence_summary or "")|tojson }}, {{ (f.remediation_recommendation or "")|tojson }})' style="background: #0f172a; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; cursor: pointer;">
                                         <i class="fas fa-eye"></i> تفاصيل وتوصية
                                     </button>
+                                    {% if f.status == 'open' %}
+                                    <button onclick="autoFixFinding({{ f.id }})" id="fix-btn-{{ f.id }}" style="background: #4f46e5; color: white; border: none; padding: 6px 10px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="إصلاح ذاتي تلقائي للثغرة">
+                                        <i class="fas fa-wand-magic-sparkles"></i> إصلاح ذكي
+                                    </button>
+                                    {% endif %}
                                     <button onclick="updateFindingStatus({{ f.id }}, 'resolved')" style="background: #10b981; color: white; border: none; padding: 6px 10px; border-radius: 6px; font-size: 0.8rem; cursor: pointer;" title="تحديد كمحلولة">
                                         <i class="fas fa-check"></i>
                                     </button>
@@ -197,6 +208,47 @@
                         {% endif %}
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB: Active Defense & IPS -->
+    <div id="defenseTab" class="soc-tab-content" style="display: none;">
+        <div class="card" style="background: white; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); padding: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 15px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+                <div>
+                    <h3 style="margin: 0; font-size: 1.2rem; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-shield-halved" style="color: #10b981;"></i> الدرع التلقائي الذكي ومنع الاختراق (Active IPS)
+                    </h3>
+                    <p style="margin: 4px 0 0; color: #64748b; font-size: 0.85rem;">يراقب كافة الطلبات ويحظر محاولات التسلل وهجمات الحقن تلقائياً على مدار الساعة.</p>
+                </div>
+                <button onclick="loadActiveDefense()" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 7px 15px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: bold; display: flex; align-items: center; gap: 6px;">
+                    <i class="fas fa-arrows-rotate"></i> تحديث الحالة الحية
+                </button>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 25px;">
+                <div style="padding: 16px; border-radius: 12px; background: #ecfdf5; border: 1px solid #a7f3d0;">
+                    <div style="color: #065f46; font-size: 0.85rem; font-weight: bold;">حالة درع الحماية</div>
+                    <div style="font-size: 1.3rem; font-weight: 800; color: #047857; margin-top: 4px;">🛡️ نشط (ONLINE)</div>
+                </div>
+                <div style="padding: 16px; border-radius: 12px; background: #fef2f2; border: 1px solid #fecaca;">
+                    <div style="color: #991b1b; font-size: 0.85rem; font-weight: bold;">هجمات تم صدها تلقائياً</div>
+                    <div id="defenseBlockedCount" style="font-size: 1.6rem; font-weight: 800; color: #b91c1c; margin-top: 4px;">0</div>
+                </div>
+                <div style="padding: 16px; border-radius: 12px; background: #fffbeb; border: 1px solid #fde68a;">
+                    <div style="color: #92400e; font-size: 0.85rem; font-weight: bold;">عناوين IP محظورة حالياً</div>
+                    <div id="defenseBannedCount" style="font-size: 1.6rem; font-weight: 800; color: #b45309; margin-top: 4px;">0</div>
+                </div>
+                <div style="padding: 16px; border-radius: 12px; background: #eff6ff; border: 1px solid #bfdbfe;">
+                    <div style="color: #1e40af; font-size: 0.85rem; font-weight: bold;">طلبات تم فحصها وتأمينها</div>
+                    <div id="defenseInspectedCount" style="font-size: 1.6rem; font-weight: 800; color: #1d4ed8; margin-top: 4px;">0</div>
+                </div>
+            </div>
+
+            <h4 style="font-size: 1rem; color: #0f172a; margin-bottom: 12px;">قائمة العناوين المحظورة تلقائياً (Blocked IPs):</h4>
+            <div id="bannedIpsContainer" style="overflow-x: auto;">
+                <div style="color: #64748b; padding: 20px; text-align: center;">جاري استرجاع القائمة...</div>
             </div>
         </div>
     </div>
@@ -540,5 +592,120 @@ async function saveAlertSettings(e) {
         btn.innerHTML = '<i class="fas fa-floppy-disk"></i> حفظ الإعدادات';
     }
 }
+
+async function autoFixFinding(id) {
+    if (!confirm('هل تريد تطبيق الإصلاح الذاتي التلقائي لهذه الملاحظة الآن؟')) return;
+    const btn = document.getElementById('fix-btn-' + id);
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإصلاح...';
+    }
+    try {
+        const res = await fetch('/api/superadmin/security/findings/' + id + '/auto-fix', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            alert('✅ تم الإصلاح الذاتي بنجاح!\n' + (data.summary || 'تم ترقيع الملاحظة.'));
+            const badge = document.getElementById('status-badge-' + id);
+            if (badge) {
+                badge.textContent = 'resolved';
+                badge.style.background = '#dcfce7';
+                badge.style.color = '#15803d';
+            }
+            if (btn) btn.style.display = 'none';
+        } else {
+            alert('⚠️ لم يتم الإصلاح: ' + (data.error || 'خطأ غير معروف'));
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> إصلاح ذكي';
+            }
+        }
+    } catch (e) {
+        alert('خطأ في الاتصال: ' + e.message);
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> إصلاح ذكي';
+        }
+    }
+}
+
+async function autoFixAllFindings() {
+    if (!confirm('هل تريد بدء إصلاح كافة الملاحظات القابلة للعلاج الآلي بنقرة واحدة؟')) return;
+    const btn = document.getElementById('fixAllBtn');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري إصلاح الجميع...';
+    }
+    try {
+        const res = await fetch('/api/superadmin/security/auto-fix-all', { method: 'POST' });
+        const data = await res.json();
+        alert('🎉 اكتملت عملية الإصلاح الشامل بنجاح!\nتم ترقيع وإصلاح: ' + data.remediated_count + ' ملاحظة.\nملاحظات تتطلب مراجعة يدوية: ' + data.skipped_count);
+        window.location.reload();
+    } catch (e) {
+        alert('خطأ أثناء الإصلاح: ' + e.message);
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> إصلاح كافة الملاحظات آلياً';
+        }
+    }
+}
+
+async function loadActiveDefense() {
+    try {
+        const res = await fetch('/api/superadmin/security/active-defense/status');
+        const data = await res.json();
+        const blkEl = document.getElementById('defenseBlockedCount');
+        const banEl = document.getElementById('defenseBannedCount');
+        const insEl = document.getElementById('defenseInspectedCount');
+        if (blkEl) blkEl.textContent = data.total_blocked_attacks || 0;
+        if (banEl) banEl.textContent = data.currently_banned_count || 0;
+        if (insEl) insEl.textContent = data.total_inspected_requests || 0;
+
+        const cont = document.getElementById('bannedIpsContainer');
+        if (!cont) return;
+
+        if (!data.banned_ips || data.banned_ips.length === 0) {
+            cont.innerHTML = '<div style="padding: 25px; text-align: center; color: #10b981; font-weight: bold;"><i class="fas fa-circle-check"></i> لا توجد عناوين محظورة حالياً. الدرع يراقب كافة الطلبات بالوقت الفعلي.</div>';
+            return;
+        }
+
+        let html = '<table style="width: 100%; border-collapse: collapse; font-size: 0.88rem;">';
+        html += '<tr style="background: #f1f5f9; text-align: right;"><th style="padding: 10px;">عنوان IP</th><th style="padding: 10px;">سبب الحظر</th><th style="padding: 10px;">وقت الحظر</th><th style="padding: 10px;">المتبقي</th><th style="padding: 10px; text-align: center;">إجراء</th></tr>';
+        data.banned_ips.forEach(b => {
+            html += '<tr style="border-bottom: 1px solid #f1f5f9;">';
+            html += '<td style="padding: 10px; font-weight: bold; direction: ltr; text-align: right;"><code>' + b.ip + '</code></td>';
+            html += '<td style="padding: 10px; color: #dc2626;">' + b.reason + '</td>';
+            html += '<td style="padding: 10px; color: #64748b;">' + b.banned_at + '</td>';
+            html += '<td style="padding: 10px;">' + b.remaining_minutes + ' دقيقة</td>';
+            html += '<td style="padding: 10px; text-align: center;"><button onclick="unbanIP(\'' + b.ip + '\')" style="background: #dc2626; color: white; border: none; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; cursor: pointer;">فك الحظر</button></td>';
+            html += '</tr>';
+        });
+        html += '</table>';
+        cont.innerHTML = html;
+    } catch (e) {
+        console.error('Failed to load active defense:', e);
+    }
+}
+
+async function unbanIP(ip) {
+    if (!confirm('فك الحظر عن ' + ip + '؟')) return;
+    try {
+        const res = await fetch('/api/superadmin/security/active-defense/unban/' + encodeURIComponent(ip), { method: 'POST' });
+        const data = await res.json();
+        alert(data.message || 'تم فك الحظر بنجاح');
+        loadActiveDefense();
+    } catch (e) {
+        alert('خطأ: ' + e.message);
+    }
+}
+
+// تحميل حالة الدرع تلقائياً عند فتح التبويب
+const origSwitchTab = switchTab;
+switchTab = function(tabId, btn) {
+    origSwitchTab(tabId, btn);
+    if (tabId === 'defenseTab') {
+        loadActiveDefense();
+    }
+};
+
 </script>
 {% endblock %}
