@@ -303,6 +303,10 @@ class LawSaaSScanner:
                 content = f.read()
                 lines = content.splitlines()
 
+            # 0. فحص المسارات ونقاط النهاية وفق مبدأ المنع الافتراضي (Zero-Trust AST Route Audit)
+            if rel_path.startswith("routers/") and not rel_path.endswith("__init__.py"):
+                self._analyze_router_ast(content, rel_path)
+
             # 1. فحص حقن الاستعلامات SQL Injection
             for idx, line in enumerate(lines, 1):
                 clean_line = line.strip()
@@ -535,9 +539,55 @@ class LawSaaSScanner:
                     "recommendation": "أضف وسيطاً (Middleware) يلحق ترويسات X-Content-Type-Options: nosniff و X-Frame-Options: SAMEORIGIN و HSTS بكل استجابة."
                 })
 
+    def _analyze_router_ast(self, content: str, rel_path: str):
+        """فحص عميق لنقاط النهاية في ملفات الراوتر وفق مبدأ المنع الافتراضي (Zero-Trust)"""
+        try:
+            tree = ast.parse(content)
+        except Exception:
+            return
+
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                is_endpoint = False
+                for dec in node.decorator_list:
+                    if isinstance(dec, ast.Call):
+                        if isinstance(dec.func, ast.Attribute) and dec.func.attr in ("get", "post", "put", "delete", "patch"):
+                            is_endpoint = True
+                    elif isinstance(dec, ast.Attribute) and dec.attr in ("get", "post", "put", "delete", "patch"):
+                        is_endpoint = True
+
+                if is_endpoint:
+                    func_source = ast.get_source_segment(content, node) or ""
+                    auth_keywords = [
+                        "get_current_user", "require_superadmin", "require_user_permission",
+                        "user_can_access", "require_admin", "user: AccessProfiles", "user=Depends", "user ="
+                    ]
+                    has_auth = any(kw in func_source for kw in auth_keywords)
+
+                    public_exceptions = [
+                        "login", "auth", "static", "case_numbers", "case_recipients",
+                        "terms", "privacy", "health", "ping", "webhook", "biometrics", "portal",
+                        "public", "intake", "sign", "e_sign"
+                    ]
+                    is_public = any(pe in node.name.lower() or pe in rel_path.lower() for pe in public_exceptions)
+
+                    if not has_auth and not is_public:
+                        self.findings.append({
+                            "title": f"نقطة نهاية تفتقر للتوثيق الأمني الصريح ({node.name})",
+                            "description": f"الدالة {node.name} في {rel_path} تعرف مسار ويب ولكن لا تتطلب وسيط توثيق صريح (مخالفة لمبدأ المنع الافتراضي Zero-Trust).",
+                            "severity": "high",
+                            "category": "auth_bypass",
+                            "affected_component": "API Routing",
+                            "affected_file": rel_path,
+                            "affected_line": node.lineno,
+                            "vulnerability_id": "CWE-306",
+                            "evidence": f"def {node.name}(...) lacks explicit security auth dependency",
+                            "recommendation": "أضف user: AccessProfiles = Depends(get_current_user) لمنع أي وصول غير مصرح به."
+                        })
+
     def _scan_database_tenancy(self):
-        """فحص عزل قاعدة البيانات وفهارس أمان المكاتب"""
-        # تدقيق الجداول التي تحوي office_id وتأكد من وجود فهارس
+        """فحص عزل قاعدة البيانات وفهارس أمان المكاتب وسلامة البيانات الحية"""
+        # 1. تدقيق الجداول التي تحوي office_id وتأكد من وجود فهارس
         tenant_tables_lacking_index = []
         for table_name, table in Base.metadata.tables.items():
             if table_name.startswith("security_"):
@@ -563,6 +613,56 @@ class LawSaaSScanner:
                 "evidence": f"Unindexed tables: {len(tenant_tables_lacking_index)} tables",
                 "recommendation": "أضف index=True على حقل office_id في نماذج SQLAlchemy لتحسين الأداء وتسريع عزل المكاتب."
             })
+
+        # 2. فحص سلامة البيانات الحية في قاعدة البيانات (Data Leakage & Orphaned Records Audit)
+        tenant_models_to_check = [
+            ("law_cases", "قضايا بدون مكتب"),
+            ("clients", "موكلون بدون مكتب"),
+            ("invoices", "فواتير بدون مكتب"),
+            ("client_payments", "دفعات مالية بدون مكتب"),
+            ("hearings", "جلسات بدون مكتب"),
+            ("law_documents", "مستندات بدون مكتب"),
+        ]
+        for tbl_name, label in tenant_models_to_check:
+            if tbl_name in Base.metadata.tables:
+                try:
+                    res = self.db.execute(text(f"SELECT COUNT(*) FROM {tbl_name} WHERE office_id IS NULL")).scalar()
+                    if res and res > 0:
+                        self.findings.append({
+                            "title": f"رصد بيانات معزولة بدون مكتب ({label})",
+                            "description": f"تم رصد {res} سجل في جدول {tbl_name} بدون تعيين office_id مما قد يؤدي لتسريب البيانات أو اختفاء السجلات.",
+                            "severity": "critical",
+                            "category": "data_integrity",
+                            "affected_component": "Database Isolation",
+                            "affected_file": f"database/models.py ({tbl_name})",
+                            "affected_line": None,
+                            "vulnerability_id": "CWE-284",
+                            "evidence": f"Found {res} records with office_id IS NULL in table {tbl_name}",
+                            "recommendation": f"قم بربط السجلات بالمكتب المالك وتعيين قيد NOT NULL على office_id في جدول {tbl_name}."
+                        })
+                except Exception:
+                    pass
+
+        # 3. فحص السجلات اليتيمة التابعة لمكاتب غير موجودة
+        for tbl_name, label in tenant_models_to_check:
+            if tbl_name in Base.metadata.tables and "law_offices" in Base.metadata.tables:
+                try:
+                    res = self.db.execute(text(f"SELECT COUNT(*) FROM {tbl_name} WHERE office_id IS NOT NULL AND office_id NOT IN (SELECT id FROM law_offices)")).scalar()
+                    if res and res > 0:
+                        self.findings.append({
+                            "title": f"رصد سجلات يتيمة لمكاتب غير موجودة في {tbl_name}",
+                            "description": f"تم رصد {res} سجل يشير إلى مكاتب محذوفة أو غير مسجلة في جدول law_offices.",
+                            "severity": "high",
+                            "category": "data_integrity",
+                            "affected_component": "Database Foreign Keys",
+                            "affected_file": f"database/models.py ({tbl_name})",
+                            "affected_line": None,
+                            "vulnerability_id": "CWE-672",
+                            "evidence": f"Found {res} orphaned records in table {tbl_name}",
+                            "recommendation": "قم بتنظيف السجلات التابعة لمكاتب غير موجودة وتفعيل CASCADE DELETE."
+                        })
+                except Exception:
+                    pass
 
 
 # التوافقية مع المسميات السابقة (Backwards Compatibility Alias)
