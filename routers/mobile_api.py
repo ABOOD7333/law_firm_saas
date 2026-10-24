@@ -9,7 +9,10 @@ from pydantic import BaseModel
 from sqlalchemy import or_
 
 from database.database import get_db
-from database.models import AccessProfiles, AuthSessions, AuthVerificationTokens, LawCases, LawDocuments, LawOffices, LawClients, LawHearings, LawTasks
+from database.models import (
+    AccessProfiles, AuthSessions, AuthVerificationTokens, LawCases, LawDocuments,
+    LawOffices, LawClients, LawHearings, LawTasks, LawParties, LawNotes, LawPleadings, LawJudgments
+)
 from dependencies import get_current_user, check_user_permission
 from core.security import hash_session_token
 from core.security import login_lockout_active, record_login_failure, client_records_for_user
@@ -546,3 +549,321 @@ async def logout(user: AccessProfiles = Depends(get_current_user), db: Session =
             s.is_active = 0
         db.commit()
     return {"success": True}
+
+
+# =========================================================================
+# Phase 1: Judicial & Operations Endpoints (Mobile Native API)
+# =========================================================================
+
+@router.get("/clients")
+async def get_mobile_clients(
+    q: Optional[str] = None,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    """قائمة الموكلين مع إمكانية البحث الفوري"""
+    if not user or not user.office_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    query = db.query(LawClients).filter(
+        LawClients.office_id == user.office_id,
+        LawClients.is_deleted == 0
+    )
+    if q:
+        search_filter = f"%{q}%"
+        query = query.filter(or_(
+            LawClients.name.ilike(search_filter),
+            LawClients.phone.ilike(search_filter),
+            LawClients.email.ilike(search_filter)
+        ))
+    clients = query.order_by(LawClients.id.desc()).limit(100).all()
+    return [{
+        "id": c.id,
+        "name": c.name or "بدون اسم",
+        "client_type": c.client_type or "فرد",
+        "phone": c.phone or "",
+        "email": c.email or "",
+        "national_id": c.national_id or "",
+        "cr_number": c.cr_number or "",
+        "legal_rep_name": c.legal_rep_name or "",
+        "case_id": c.case_id,
+        "case_number": c.case_number or "",
+        "created_at": c.created_at or ""
+    } for c in clients]
+
+
+@router.get("/parties")
+async def get_mobile_parties(
+    case_id: Optional[int] = None,
+    q: Optional[str] = None,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    """قائمة الأطراف والخصوم والمتقاضين"""
+    if not user or not user.office_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    query = db.query(LawParties).filter(
+        LawParties.office_id == user.office_id,
+        LawParties.is_deleted == 0
+    )
+    if case_id:
+        query = query.filter(LawParties.case_id == case_id)
+    if q:
+        search_filter = f"%{q}%"
+        query = query.filter(or_(
+            LawParties.name.ilike(search_filter),
+            LawParties.phone.ilike(search_filter),
+            LawParties.role_key.ilike(search_filter)
+        ))
+    parties = query.order_by(LawParties.id.desc()).limit(100).all()
+    return [{
+        "id": p.id,
+        "name": p.name or "بدون اسم",
+        "role_key": p.role_key or "طرف",
+        "party_type": p.party_type or "فرد",
+        "phone": p.phone or "",
+        "case_id": p.case_id,
+        "legal_capacity": p.legal_capacity or "",
+        "representation_status": p.representation_status or "",
+        "notes": getattr(p, "notes", "") or ""
+    } for p in parties]
+
+
+@router.get("/hearings")
+async def get_mobile_hearings(
+    case_id: Optional[int] = None,
+    status: Optional[str] = None,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    """محاضر وجلسات المحاكم"""
+    if not user or not user.office_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    query = db.query(LawHearings).filter(
+        LawHearings.office_id == user.office_id,
+        LawHearings.is_deleted == 0
+    )
+    if case_id:
+        query = query.filter(LawHearings.case_id == case_id)
+    if status:
+        query = query.filter(LawHearings.status_key == status)
+    hearings = query.order_by(LawHearings.hearing_at.desc(), LawHearings.id.desc()).limit(100).all()
+    return [{
+        "id": h.id,
+        "title": h.title or "جلسة قضائية",
+        "hearing_at": h.hearing_at or "",
+        "court_name": h.court_name or "",
+        "chamber_name": getattr(h, "chamber_name", "") or "",
+        "judge_name": getattr(h, "judge_name", "") or "",
+        "status_key": h.status_key or "pending",
+        "result_summary": h.result_summary or "",
+        "next_hearing_date": h.next_hearing_date or "",
+        "case_id": h.case_id,
+        "court_case_number": getattr(h, "court_case_number", "") or ""
+    } for h in hearings]
+
+
+@router.get("/calendar")
+async def get_mobile_calendar(
+    month: Optional[str] = None,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    """أحداث التقويم القضائي (جلسات ومواعيد ومهام)"""
+    if not user or not user.office_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    
+    hearings_q = db.query(LawHearings).filter(
+        LawHearings.office_id == user.office_id,
+        LawHearings.is_deleted == 0,
+        LawHearings.hearing_at.isnot(None)
+    )
+    tasks_q = db.query(LawTasks).filter(
+        LawTasks.office_id == user.office_id,
+        LawTasks.is_deleted == 0,
+        LawTasks.due_at.isnot(None)
+    )
+    if month:
+        hearings_q = hearings_q.filter(LawHearings.hearing_at.like(f"{month}%"))
+        tasks_q = tasks_q.filter(LawTasks.due_at.like(f"{month}%"))
+
+    hearings = hearings_q.limit(100).all()
+    tasks = tasks_q.limit(100).all()
+
+    events = []
+    for h in hearings:
+        dt = h.hearing_at or ""
+        date_part = dt.split(" ")[0] if " " in dt else dt
+        time_part = dt.split(" ")[1] if " " in dt else ""
+        events.append({
+            "id": h.id,
+            "type": "hearing",
+            "title": h.title or "جلسة قضائية",
+            "date": date_part,
+            "time": time_part,
+            "location": h.court_name or "",
+            "status": h.status_key or "pending",
+            "case_id": h.case_id,
+            "details": h.result_summary or ""
+        })
+    for t in tasks:
+        dt = t.due_at or ""
+        date_part = dt.split(" ")[0] if " " in dt else dt
+        time_part = dt.split(" ")[1] if " " in dt else ""
+        events.append({
+            "id": t.id,
+            "type": "task",
+            "title": t.title or "مهمة عمل",
+            "date": date_part,
+            "time": time_part,
+            "location": "",
+            "status": t.status_key or "pending",
+            "case_id": t.case_id,
+            "details": t.description or ""
+        })
+    events.sort(key=lambda x: (x["date"], x["time"]))
+    return events
+
+
+@router.get("/tasks")
+async def get_mobile_tasks(
+    status: Optional[str] = None,
+    priority: Optional[str] = None,
+    case_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    """قائمة المهام والتكليفات القانونية"""
+    if not user or not user.office_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    query = db.query(LawTasks).filter(
+        LawTasks.office_id == user.office_id,
+        LawTasks.is_deleted == 0
+    )
+    if case_id:
+        query = query.filter(LawTasks.case_id == case_id)
+    if status:
+        query = query.filter(LawTasks.status_key == status)
+    if priority:
+        query = query.filter(LawTasks.priority_level == priority)
+
+    tasks = query.order_by(LawTasks.id.desc()).limit(100).all()
+    return [{
+        "id": t.id,
+        "title": t.title or "مهمة",
+        "description": t.description or "",
+        "due_at": t.due_at or "",
+        "status_key": t.status_key or "pending",
+        "priority_level": t.priority_level or "normal",
+        "case_id": t.case_id,
+        "assignee_user_id": t.assignee_user_id,
+        "estimated_hours": getattr(t, "estimated_hours", 0) or 0
+    } for t in tasks]
+
+
+@router.post("/tasks/{task_id}/toggle")
+async def toggle_mobile_task(
+    task_id: int,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    """تحديث حالة المهمة (مكتملة / معلقة)"""
+    if not user or not user.office_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    task = db.query(LawTasks).filter(
+        LawTasks.id == task_id,
+        LawTasks.office_id == user.office_id,
+        LawTasks.is_deleted == 0
+    ).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="المهمة غير موجودة")
+    task.status_key = "completed" if task.status_key != "completed" else "pending"
+    db.commit()
+    return {"success": True, "id": task.id, "status_key": task.status_key}
+
+
+@router.get("/notes")
+async def get_mobile_notes(
+    case_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    """الملاحظات والاتصالات وسجلات المتابعة"""
+    if not user or not user.office_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    query = db.query(LawNotes).filter(
+        LawNotes.office_id == user.office_id,
+        LawNotes.is_deleted == 0
+    )
+    if case_id:
+        query = query.filter(LawNotes.case_id == case_id)
+    notes = query.order_by(LawNotes.id.desc()).limit(100).all()
+    return [{
+        "id": n.id,
+        "title": n.title or "ملاحظة",
+        "note_type_key": n.note_type_key or "general",
+        "communication_channel": n.communication_channel or "",
+        "direction": n.direction or "",
+        "contact_person": n.contact_person or "",
+        "case_id": n.case_id,
+        "details": getattr(n, "notes", "") or getattr(n, "details", "") or "",
+        "created_at": getattr(n, "created_at", "") or ""
+    } for n in notes]
+
+
+@router.get("/pleadings")
+async def get_mobile_pleadings(
+    case_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    """المرافعات والمذكرات القانونية"""
+    if not user or not user.office_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    query = db.query(LawPleadings).filter(
+        LawPleadings.office_id == user.office_id,
+        LawPleadings.is_deleted == 0
+    )
+    if case_id:
+        query = query.filter(LawPleadings.case_id == case_id)
+    pleadings = query.order_by(LawPleadings.id.desc()).limit(100).all()
+    return [{
+        "id": p.id,
+        "title": p.title or "مذكرة دفاع",
+        "pleading_type_key": p.pleading_type_key or "مذكرة",
+        "version_no": p.version_no or 1,
+        "issue_date": p.issue_date or "",
+        "status_key": p.status_key or "draft",
+        "case_id": p.case_id,
+        "content_html": p.content_html or ""
+    } for p in pleadings]
+
+
+@router.get("/judgments")
+async def get_mobile_judgments(
+    case_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    """الأحكام والقرارات القضائية"""
+    if not user or not user.office_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    query = db.query(LawJudgments).filter(
+        LawJudgments.office_id == user.office_id,
+        LawJudgments.is_deleted == 0
+    )
+    if case_id:
+        query = query.filter(LawJudgments.case_id == case_id)
+    judgments = query.order_by(LawJudgments.id.desc()).limit(100).all()
+    return [{
+        "id": j.id,
+        "judgment_date": j.judgment_date or "",
+        "court_name": j.court_name or "",
+        "chamber_name": j.chamber_name or "",
+        "judge_name": j.judge_name or "",
+        "decree_number": j.decree_number or "",
+        "litigation_degree": j.litigation_degree or "ابتدائي",
+        "judgment_type": j.judgment_type or "حكم منهي للخصومة",
+        "status_key": j.status_key or "final",
+        "judgment_text": j.judgment_text or "",
+        "case_id": j.case_id
+    } for j in judgments]
