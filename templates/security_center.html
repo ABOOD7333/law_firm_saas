@@ -1,0 +1,544 @@
+{% extends "base.html" %}
+
+{% block title %}مركز الأمن السيبراني (SOC) - LawSaaS{% endblock %}
+
+{% block content %}
+<div style="direction: rtl; text-align: right; font-family: 'Cairo', sans-serif;">
+
+    <!-- SOC Header Banner -->
+    <div style="background: linear-gradient(135deg, #090d16 0%, #1e1b4b 50%, #0f172a 100%); padding: 32px; border-radius: 20px; margin-bottom: 25px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); border: 1px solid rgba(99, 102, 241, 0.2); color: white;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+            <div>
+                <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(99, 102, 241, 0.25); border: 1px solid rgba(129, 140, 248, 0.4); padding: 4px 14px; border-radius: 20px; font-size: 0.85rem; color: #c7d2fe; margin-bottom: 12px;">
+                    <i class="fas fa-shield-halved" style="color: #818cf8;"></i> مركز العمليات الأمنية المتكامل (SOC)
+                </div>
+                <h1 style="color: white; font-size: 2.2rem; margin: 0; font-weight: 800; display: flex; align-items: center; gap: 12px;">
+                    <i class="fas fa-user-shield" style="color: #6366f1;"></i> مركز الأمن السيبراني لمنصة LawSaaS
+                </h1>
+                <p style="color: #94a3b8; font-size: 1.05rem; margin-top: 8px; margin-bottom: 0;">
+                    مراقبة الهجمات في الوقت الفعلي، محركات الفحص الدوري (SAST / SCA / Tenancy)، وإدارة التنبيهات الخاصة بمدير المنصة.
+                </p>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                <button onclick="triggerNewScan()" id="scanBtn" style="background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%); color: white; border: none; padding: 12px 24px; border-radius: 12px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4); transition: all 0.2s;">
+                    <i class="fas fa-radar" id="scanIcon"></i>
+                    <span id="scanText">بدء فحص أمني شامل الآن</span>
+                </button>
+                <div style="background: rgba(255,255,255,0.06); padding: 10px 18px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); text-align: center;">
+                    <div style="color: #94a3b8; font-size: 0.8rem;">محرك المراقبة الحية</div>
+                    <div style="color: #10b981; font-weight: bold; font-size: 0.95rem;">
+                        <i class="fas fa-circle" style="font-size: 0.55rem; animation: pulse 1.5s infinite;"></i> نشط ومحمٍ
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% if latest_scan %}
+        <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; gap: 20px; font-size: 0.85rem; color: #cbd5e1; flex-wrap: wrap;">
+            <span><i class="fas fa-history" style="color: #818cf8;"></i> آخر فحص مكتمل: <strong>{{ latest_scan.completed_at or latest_scan.started_at }}</strong></span>
+            <span><i class="fas fa-file-code" style="color: #38bdf8;"></i> الملفات المفحوصة: <strong>{{ latest_scan.files_scanned }}</strong></span>
+            <span><i class="fas fa-bug" style="color: #f43f5e;"></i> الملاحظات المرصودة: <strong>{{ latest_scan.findings_count }}</strong></span>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- KPI Metric Cards -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 25px;">
+        <!-- Critical Findings -->
+        <div class="card" style="padding: 18px; border-radius: 16px; border: 1px solid #fee2e2; background: white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <span style="color: #dc2626; font-size: 0.85rem; font-weight: bold;">مخاطر حرجة (Critical)</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: #fef2f2; color: #dc2626; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-radiation"></i>
+                </div>
+            </div>
+            <div style="font-size: 2rem; font-weight: 800; color: #dc2626;">{{ critical_findings }}</div>
+            <div style="font-size: 0.8rem; color: #991b1b; margin-top: 4px;">تتطلب تدخلاً فورياً لحماية المنصة</div>
+        </div>
+
+        <!-- High Findings -->
+        <div class="card" style="padding: 18px; border-radius: 16px; border: 1px solid #ffedd5; background: white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <span style="color: #ea580c; font-size: 0.85rem; font-weight: bold;">مخاطر عالية (High)</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: #fff7ed; color: #ea580c; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-triangle-exclamation"></i>
+                </div>
+            </div>
+            <div style="font-size: 2rem; font-weight: 800; color: #ea580c;">{{ high_findings }}</div>
+            <div style="font-size: 0.8rem; color: #c2410c; margin-top: 4px;">إعدادات عزل المكاتب والمفاتيح</div>
+        </div>
+
+        <!-- Medium / Low -->
+        <div class="card" style="padding: 18px; border-radius: 16px; border: 1px solid #fef3c7; background: white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <span style="color: #d97706; font-size: 0.85rem; font-weight: bold;">ملاحظات متوسطة وخفيفة</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: #fffbeb; color: #d97706; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-circle-exclamation"></i>
+                </div>
+            </div>
+            <div style="font-size: 2rem; font-weight: 800; color: #d97706;">{{ medium_findings + low_findings }}</div>
+            <div style="font-size: 0.8rem; color: #b45309; margin-top: 4px;">ترويسات الحماية والفهارس</div>
+        </div>
+
+        <!-- Today's Security Events -->
+        <div class="card" style="padding: 18px; border-radius: 16px; border: 1px solid #e0e7ff; background: white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <span style="color: #4f46e5; font-size: 0.85rem; font-weight: bold;">أحداث أمنية مرصودة اليوم</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: #eef2ff; color: #4f46e5; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-crosshairs"></i>
+                </div>
+            </div>
+            <div style="font-size: 2rem; font-weight: 800; color: #4f46e5;">{{ recent_events_count }}</div>
+            <div style="font-size: 0.8rem; color: #4338ca; margin-top: 4px;">محاولات دخول مشبوهة أو اختراق</div>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div style="display: flex; gap: 8px; border-bottom: 2px solid #e2e8f0; margin-bottom: 20px; overflow-x: auto; padding-bottom: 4px;">
+        <button onclick="switchTab('findingsTab', this)" class="soc-tab-btn active" style="padding: 10px 18px; border: none; background: #0f172a; color: white; border-radius: 10px 10px 0 0; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-list-check"></i> الملاحظات والثغرات ({{ total_findings }})
+        </button>
+        <button onclick="switchTab('eventsTab', this)" class="soc-tab-btn" style="padding: 10px 18px; border: none; background: #f1f5f9; color: #475569; border-radius: 10px 10px 0 0; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-bolt"></i> مراقبة الهجمات المباشرة ({{ recent_events|length }})
+        </button>
+        <button onclick="switchTab('depsTab', this)" class="soc-tab-btn" style="padding: 10px 18px; border: none; background: #f1f5f9; color: #475569; border-radius: 10px 10px 0 0; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-cubes"></i> تدقيق المكتبات والاعتماديات (SCA)
+        </button>
+        <button onclick="switchTab('targetsTab', this)" class="soc-tab-btn" style="padding: 10px 18px; border: none; background: #f1f5f9; color: #475569; border-radius: 10px 10px 0 0; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-folder-tree"></i> الملفات والأهداف المفحوصة
+        </button>
+        <button onclick="switchTab('settingsTab', this)" class="soc-tab-btn" style="padding: 10px 18px; border: none; background: #f1f5f9; color: #475569; border-radius: 10px 10px 0 0; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-bell"></i> إعدادات التنبيهات والإشعار
+        </button>
+    </div>
+
+    <!-- TAB 1: Findings & Vulnerabilities -->
+    <div id="findingsTab" class="soc-tab-content">
+        <div class="card" style="background: white; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+            <div style="padding: 16px 20px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; background: #f8fafc;">
+                <h3 style="margin: 0; font-size: 1.1rem; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-bug" style="color: #6366f1;"></i> قائمة الملاحظات الأمنية المكتشفة
+                </h3>
+                <div style="display: flex; gap: 10px;">
+                    <select id="severityFilter" onchange="filterFindings()" style="padding: 6px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.85rem;">
+                        <option value="all">كل مستويات الخطورة</option>
+                        <option value="critical">حرجة فقط (Critical)</option>
+                        <option value="high">عالية فقط (High)</option>
+                        <option value="medium">متوسطة فقط (Medium)</option>
+                        <option value="low">منخفضة فقط (Low)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;" id="findingsTable">
+                    <thead>
+                        <tr style="background: #f1f5f9; color: #475569; text-align: right; border-bottom: 1px solid #e2e8f0;">
+                            <th style="padding: 12px 16px;">المستوى</th>
+                            <th style="padding: 12px 16px;">عنوان الملاحظة</th>
+                            <th style="padding: 12px 16px;">التصنيف</th>
+                            <th style="padding: 12px 16px;">الملف المتأثر</th>
+                            <th style="padding: 12px 16px;">الحالة</th>
+                            <th style="padding: 12px 16px; text-align: center;">الإجراء</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for f in findings %}
+                        <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.2s;" class="finding-row" data-severity="{{ f.severity }}">
+                            <td style="padding: 12px 16px;">
+                                {% if f.severity == 'critical' %}
+                                <span style="background: #fee2e2; color: #dc2626; padding: 4px 10px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 4px;">
+                                    <i class="fas fa-circle-radiation"></i> حرج
+                                </span>
+                                {% elif f.severity == 'high' %}
+                                <span style="background: #ffedd5; color: #ea580c; padding: 4px 10px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 4px;">
+                                    <i class="fas fa-triangle-exclamation"></i> عالي
+                                </span>
+                                {% elif f.severity == 'medium' %}
+                                <span style="background: #fef3c7; color: #d97706; padding: 4px 10px; border-radius: 6px; font-weight: bold; font-size: 0.8rem;">متوسط</span>
+                                {% else %}
+                                <span style="background: #e0f2fe; color: #0284c7; padding: 4px 10px; border-radius: 6px; font-weight: bold; font-size: 0.8rem;">منخفض</span>
+                                {% endif %}
+                            </td>
+                            <td style="padding: 12px 16px;">
+                                <strong>{{ f.title }}</strong>
+                                <div style="color: #64748b; font-size: 0.8rem; margin-top: 2px;">{{ f.description[:100] }}...</div>
+                            </td>
+                            <td style="padding: 12px 16px;">
+                                <span style="background: #f1f5f9; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; color: #334155;">{{ f.category }}</span>
+                            </td>
+                            <td style="padding: 12px 16px; direction: ltr; text-align: right;">
+                                <code style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; color: #0f172a;">
+                                    {{ f.affected_file or 'Platform' }}{% if f.affected_line %}:{{ f.affected_line }}{% endif %}
+                                </code>
+                            </td>
+                            <td style="padding: 12px 16px;">
+                                <span id="status-badge-{{ f.id }}" style="padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; background: #ecfdf5; color: #059669;">{{ f.status }}</span>
+                            </td>
+                            <td style="padding: 12px 16px; text-align: center;">
+                                <div style="display: inline-flex; gap: 6px;">
+                                    <button onclick='showFindingDetails({{ f.id }}, {{ f.title|tojson }}, {{ f.description|tojson }}, {{ (f.affected_file or "")|tojson }}, {{ (f.affected_line or "")|tojson }}, {{ (f.evidence_summary or "")|tojson }}, {{ (f.remediation_recommendation or "")|tojson }})' style="background: #0f172a; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; cursor: pointer;">
+                                        <i class="fas fa-eye"></i> تفاصيل وتوصية
+                                    </button>
+                                    <button onclick="updateFindingStatus({{ f.id }}, 'resolved')" style="background: #10b981; color: white; border: none; padding: 6px 10px; border-radius: 6px; font-size: 0.8rem; cursor: pointer;" title="تحديد كمحلولة">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% if not findings %}
+                        <tr>
+                            <td colspan="6" style="padding: 40px; text-align: center; color: #64748b;">
+                                <i class="fas fa-circle-check" style="font-size: 2.5rem; color: #10b981; margin-bottom: 10px;"></i>
+                                <div style="font-weight: bold; font-size: 1.1rem; color: #0f172a;">لا توجد ثغرات مفتوحة حالياً!</div>
+                                <div style="font-size: 0.85rem; margin-top: 4px;">يمكنك تشغيل فحص أمني جديد في أي وقت للتحقق من سلامة كافة ملفات المنصة.</div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 2: Live Security Events -->
+    <div id="eventsTab" class="soc-tab-content" style="display: none;">
+        <div class="card" style="background: white; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+            <div style="padding: 16px 20px; border-bottom: 1px solid #f1f5f9; background: #f8fafc;">
+                <h3 style="margin: 0; font-size: 1.1rem; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-radar" style="color: #ef4444;"></i> سجل محاولات الهجوم والاستكشاف المشبوه
+                </h3>
+            </div>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.88rem;">
+                    <thead>
+                        <tr style="background: #f1f5f9; color: #475569; text-align: right; border-bottom: 1px solid #e2e8f0;">
+                            <th style="padding: 12px 16px;">الوقت</th>
+                            <th style="padding: 12px 16px;">نوع الحدث</th>
+                            <th style="padding: 12px 16px;">الخطورة</th>
+                            <th style="padding: 12px 16px;">عنوان IP المصدر</th>
+                            <th style="padding: 12px 16px;">المسار المستهدف</th>
+                            <th style="padding: 12px 16px;">التفاصيل المنقاة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ev in recent_events %}
+                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                            <td style="padding: 12px 16px; color: #64748b; font-size: 0.8rem; white-space: nowrap;">{{ ev.created_at }}</td>
+                            <td style="padding: 12px 16px;"><strong>{{ ev.event_type }}</strong></td>
+                            <td style="padding: 12px 16px;">
+                                <span style="background: {{ '#fee2e2' if ev.severity in ['critical','high'] else '#f1f5f9' }}; color: {{ '#dc2626' if ev.severity in ['critical','high'] else '#475569' }}; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 0.75rem;">
+                                    {{ ev.severity.upper() }}
+                                </span>
+                            </td>
+                            <td style="padding: 12px 16px; direction: ltr; text-align: right;"><code style="color: #0284c7;">{{ ev.source_ip }}</code></td>
+                            <td style="padding: 12px 16px; direction: ltr; text-align: right;"><code>{{ ev.endpoint }}</code></td>
+                            <td style="padding: 12px 16px; color: #475569; font-size: 0.8rem; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                {{ ev.details }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% if not recent_events %}
+                        <tr>
+                            <td colspan="6" style="padding: 30px; text-align: center; color: #64748b;">
+                                لم يتم تسجيل أي أحداث أمنية مشبوهة حتى الآن.
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 3: Dependencies Audit -->
+    <div id="depsTab" class="soc-tab-content" style="display: none;">
+        <div class="card" style="background: white; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); padding: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3 style="margin: 0; font-size: 1.1rem; color: #0f172a;">
+                    <i class="fas fa-boxes-stacked" style="color: #3b82f6;"></i> فحص المكتبات والاعتماديات (SCA)
+                </h3>
+                <button onclick="loadDependencies()" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 0.85rem;">
+                    <i class="fas fa-rotate"></i> تحديث العرض
+                </button>
+            </div>
+            <div id="depsContainer" style="color: #64748b; font-size: 0.9rem;">
+                اضغط على زر التحديث أو ابدأ فحصاً أمنياً لتحميل بيانات الاعتماديات.
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 4: Scanned Targets -->
+    <div id="targetsTab" class="soc-tab-content" style="display: none;">
+        <div class="card" style="background: white; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); padding: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3 style="margin: 0; font-size: 1.1rem; color: #0f172a;">
+                    <i class="fas fa-folder-tree" style="color: #10b981;"></i> توثيق الأهداف والملفات المفحوصة والمستثناة
+                </h3>
+                <button onclick="loadTargets()" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 0.85rem;">
+                    <i class="fas fa-rotate"></i> تحميل السجل
+                </button>
+            </div>
+            <div id="targetsContainer" style="color: #64748b; font-size: 0.9rem;">
+                جاري استدعاء قائمة الملفات المسجلة في قاعدة البيانات...
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 5: Alert Settings -->
+    <div id="settingsTab" class="soc-tab-content" style="display: none;">
+        <div class="card" style="background: white; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); padding: 24px; max-width: 700px;">
+            <h3 style="margin-top: 0; font-size: 1.2rem; color: #0f172a; margin-bottom: 16px;">
+                <i class="fas fa-sliders" style="color: #6366f1;"></i> إعدادات التنبيهات الأمنية وكبح الإغراق (Throttling)
+            </h3>
+            <form onsubmit="saveAlertSettings(event)">
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; font-weight: bold; margin-bottom: 6px; font-size: 0.9rem;">بريد مدير المنصة الرئيسي لتلقي التنبيهات:</label>
+                    <input type="email" id="setting_email" value="{{ alert_settings.admin_email }}" required style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem;" dir="ltr">
+                    <small style="color: #64748b;">تُرسل التنبيهات الحرجة والعاجلة حصراً إلى هذا البريد المشفر.</small>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                    <div>
+                        <label style="display: block; font-weight: bold; margin-bottom: 6px; font-size: 0.9rem;">الحد الأدنى لخطورة التنبيه البريدي:</label>
+                        <select id="setting_min_sev" style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem;">
+                            <option value="critical" {% if alert_settings.min_email_severity == 'critical' %}selected{% endif %}>حرجة فقط (Critical)</option>
+                            <option value="high" {% if alert_settings.min_email_severity == 'high' %}selected{% endif %}>عالية وحرجة (High & Critical)</option>
+                            <option value="medium" {% if alert_settings.min_email_severity == 'medium' %}selected{% endif %}>متوسطة فأعلى</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: bold; margin-bottom: 6px; font-size: 0.9rem;">فترة كبح التكرار (دقائق):</label>
+                        <input type="number" id="setting_cooldown" value="{{ alert_settings.dedup_cooldown_minutes }}" min="10" max="1440" style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem;">
+                        <small style="color: #64748b;">لمنع تكرار إرسال نفس التنبيه خلال هذه المدة.</small>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.95rem;">
+                        <input type="checkbox" id="setting_enabled" {% if alert_settings.email_alerts_enabled == 1 %}checked{% endif %} style="width: 18px; height: 18px;">
+                        <span>تفعيل الإرسال التلقائي للتنبيهات عبر البريد الإلكتروني</span>
+                    </label>
+                </div>
+
+                <button type="submit" id="saveSettingsBtn" style="background: #0f172a; color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-floppy-disk"></i> حفظ الإعدادات
+                </button>
+            </form>
+        </div>
+    </div>
+
+</div>
+
+<!-- Modal: Finding Details -->
+<div id="findingModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
+    <div style="background: white; border-radius: 16px; max-width: 650px; width: 100%; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3); direction: rtl; text-align: right; max-height: 90vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+            <h3 id="modalTitle" style="margin: 0; font-size: 1.2rem; color: #0f172a;"></h3>
+            <button onclick="closeModal()" style="background: none; border: none; font-size: 1.2rem; color: #64748b; cursor: pointer;">&times;</button>
+        </div>
+        <div style="margin-bottom: 14px;">
+            <label style="color: #64748b; font-size: 0.85rem; font-weight: bold;">الوصف والتحليل:</label>
+            <p id="modalDesc" style="color: #334155; line-height: 1.6; margin: 4px 0; font-size: 0.95rem;"></p>
+        </div>
+        <div style="margin-bottom: 14px;">
+            <label style="color: #64748b; font-size: 0.85rem; font-weight: bold;">الموقع في الكود:</label>
+            <div id="modalLocation" style="direction: ltr; text-align: left; background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px 12px; border-radius: 6px; font-family: monospace; font-size: 0.85rem;"></div>
+        </div>
+        <div style="margin-bottom: 14px;">
+            <label style="color: #64748b; font-size: 0.85rem; font-weight: bold;">الدليل المنقى (Sanitized Evidence):</label>
+            <pre id="modalEvidence" style="direction: ltr; text-align: left; background: #0f172a; color: #38bdf8; padding: 12px; border-radius: 8px; font-size: 0.8rem; overflow-x: auto; white-space: pre-wrap;"></pre>
+        </div>
+        <div style="margin-bottom: 20px; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 12px 16px; border-radius: 8px;">
+            <label style="color: #065f46; font-size: 0.85rem; font-weight: bold; display: flex; align-items: center; gap: 6px;">
+                <i class="fas fa-lightbulb"></i> التوصية العلاجية (Remediation):
+            </label>
+            <p id="modalRecommendation" style="color: #047857; margin: 4px 0 0; font-size: 0.9rem; line-height: 1.5;"></p>
+        </div>
+        <div style="text-align: left;">
+            <button onclick="closeModal()" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 8px 18px; border-radius: 8px; cursor: pointer; font-weight: bold;">إغلاق</button>
+        </div>
+    </div>
+</div>
+
+<script>
+function switchTab(tabId, btn) {
+    document.querySelectorAll('.soc-tab-content').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.soc-tab-btn').forEach(el => {
+        el.style.background = '#f1f5f9';
+        el.style.color = '#475569';
+    });
+    document.getElementById(tabId).style.display = 'block';
+    btn.style.background = '#0f172a';
+    btn.style.color = 'white';
+
+    if (tabId === 'depsTab') loadDependencies();
+    if (tabId === 'targetsTab') loadTargets();
+}
+
+async function triggerNewScan() {
+    const btn = document.getElementById('scanBtn');
+    const icon = document.getElementById('scanIcon');
+    const text = document.getElementById('scanText');
+    btn.disabled = true;
+    icon.className = 'fas fa-spinner fa-spin';
+    text.innerText = 'جاري تنفيذ الفحص الأمني الشامل...';
+
+    try {
+        const formData = new FormData();
+        formData.append('scan_type', 'full_audit');
+        const res = await fetch('/api/superadmin/security/scan', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            alert('تم إكمال الفحص الأمني بنجاح! تم رصد ' + data.scan.findings_count + ' ملاحظة أمنية.');
+            window.location.reload();
+        } else {
+            alert('خطأ أثناء الفحص: ' + (data.message || 'فشل الفحص'));
+        }
+    } catch (err) {
+        alert('حدث خطأ في الاتصال بالخادم: ' + err.message);
+    } finally {
+        btn.disabled = false;
+        icon.className = 'fas fa-radar';
+        text.innerText = 'بدء فحص أمني شامل الآن';
+    }
+}
+
+function filterFindings() {
+    const val = document.getElementById('severityFilter').value;
+    document.querySelectorAll('.finding-row').forEach(row => {
+        if (val === 'all' || row.getAttribute('data-severity') === val) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+function showFindingDetails(id, title, desc, file, line, evidence, rec) {
+    document.getElementById('modalTitle').innerText = title;
+    document.getElementById('modalDesc').innerText = desc;
+    document.getElementById('modalLocation').innerText = (file || 'Platform Core') + (line ? (':' + line) : '');
+    document.getElementById('modalEvidence').innerText = evidence || 'No sensitive snippet retained.';
+    document.getElementById('modalRecommendation').innerText = rec || 'اتبع ممارسات OWASP لتأمين هذا المكون.';
+    document.getElementById('findingModal').style.display = 'flex';
+}
+
+function closeModal() {
+    document.getElementById('findingModal').style.display = 'none';
+}
+
+async function updateFindingStatus(id, newStatus) {
+    if (!confirm('هل تريد بالتأكيد تغيير حالة هذه الثغرة إلى: ' + newStatus + '؟')) return;
+    const formData = new FormData();
+    formData.append('new_status', newStatus);
+    formData.append('notes', 'تم الحل والمراجعة عبر لوحة مركز الأمن السيبراني.');
+
+    try {
+        const res = await fetch('/api/superadmin/security/findings/' + id + '/status', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            const badge = document.getElementById('status-badge-' + id);
+            if (badge) badge.innerText = newStatus;
+            alert('تم تحديث الحالة بنجاح!');
+        }
+    } catch (e) {
+        alert('خطأ: ' + e.message);
+    }
+}
+
+async function loadDependencies() {
+    const cont = document.getElementById('depsContainer');
+    cont.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري استرجاع بيانات فحص المكتبات...';
+    try {
+        const res = await fetch('/api/superadmin/security/dependencies');
+        const data = await res.json();
+        if (!data || data.length === 0) {
+            cont.innerHTML = '<div style="color: #64748b;">لا توجد مكتبات مسجلة بعد. شغّل الفحص لتحديثها.</div>';
+            return;
+        }
+        let html = '<table style="width: 100%; border-collapse: collapse; font-size: 0.88rem;">';
+        html += '<tr style="background: #f1f5f9; text-align: right; border-bottom: 1px solid #e2e8f0;"><th style="padding: 10px;">المكتبة</th><th style="padding: 10px;">الإصدار</th><th style="padding: 10px;">الحالة الأمنية</th><th style="padding: 10px;">الثغرة إن وجدت</th><th style="padding: 10px;">الإصدار الآمن</th></tr>';
+        data.forEach(d => {
+            const isVuln = d.verification_status === 'verified_vulnerable';
+            html += '<tr style="border-bottom: 1px solid #f1f5f9;">';
+            html += '<td style="padding: 10px; font-weight: bold;">' + d.package_name + '</td>';
+            html += '<td style="padding: 10px; direction: ltr; text-align: right;"><code>' + (d.installed_version || '-') + '</code></td>';
+            html += '<td style="padding: 10px;"><span style="padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; background: ' + (isVuln ? '#fee2e2; color: #dc2626;' : '#ecfdf5; color: #059669;') + '">' + (isVuln ? '⚠️ متأثر بثغرة' : '✅ آمن') + '</span></td>';
+            html += '<td style="padding: 10px;">' + (d.vulnerability_id ? ('<a href="' + (d.advisory_url || '#') + '" target="_blank" style="color: #ef4444; font-weight: bold;">' + d.vulnerability_id + '</a>') : '-') + '</td>';
+            html += '<td style="padding: 10px; direction: ltr; text-align: right;"><code>' + (d.fixed_version || '-') + '</code></td>';
+            html += '</tr>';
+        });
+        html += '</table>';
+        cont.innerHTML = html;
+    } catch (e) {
+        cont.innerHTML = '<div style="color: #ef4444;">تعذر تحميل الاعتماديات: ' + e.message + '</div>';
+    }
+}
+
+async function loadTargets() {
+    const cont = document.getElementById('targetsContainer');
+    cont.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري استرجاع سجل الأهداف والملفات...';
+    try {
+        const res = await fetch('/api/superadmin/security/targets');
+        const data = await res.json();
+        if (!data || data.length === 0) {
+            cont.innerHTML = '<div style="color: #64748b;">لا توجد أهداف مسجلة بعد. شغّل الفحص الأمني لتسجيل الملفات.</div>';
+            return;
+        }
+        let html = '<table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">';
+        html += '<tr style="background: #f1f5f9; text-align: right; border-bottom: 1px solid #e2e8f0;"><th style="padding: 8px;">مسار الملف / الهدف</th><th style="padding: 8px;">النوع</th><th style="padding: 8px;">حالة الفحص</th><th style="padding: 8px;">سبب الاستثناء (إن وجد)</th></tr>';
+        data.forEach(t => {
+            const isScanned = t.scan_status === 'scanned';
+            html += '<tr style="border-bottom: 1px solid #f1f5f9;">';
+            html += '<td style="padding: 8px; direction: ltr; text-align: right;"><code>' + t.target_path + '</code></td>';
+            html += '<td style="padding: 8px;">' + t.target_type + '</td>';
+            html += '<td style="padding: 8px;"><span style="padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; background: ' + (isScanned ? '#ecfdf5; color: #059669;' : '#f1f5f9; color: #64748b;') + '">' + (isScanned ? 'تم الفحص' : 'مستثنى') + '</span></td>';
+            html += '<td style="padding: 8px; color: #64748b;">' + (t.skip_reason || '-') + '</td>';
+            html += '</tr>';
+        });
+        html += '</table>';
+        cont.innerHTML = html;
+    } catch (e) {
+        cont.innerHTML = '<div style="color: #ef4444;">تعذر تحميل السجل: ' + e.message + '</div>';
+    }
+}
+
+async function saveAlertSettings(e) {
+    e.preventDefault();
+    const btn = document.getElementById('saveSettingsBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
+
+    const formData = new FormData();
+    formData.append('admin_email', document.getElementById('setting_email').value);
+    formData.append('min_email_severity', document.getElementById('setting_min_sev').value);
+    formData.append('dedup_cooldown_minutes', document.getElementById('setting_cooldown').value);
+    formData.append('email_alerts_enabled', document.getElementById('setting_enabled').checked ? 1 : 0);
+
+    try {
+        const res = await fetch('/api/superadmin/security/settings', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            alert('تم حفظ وتحديث إعدادات التنبيهات بنجاح!');
+        } else {
+            alert('فشل الحفظ: ' + data.message);
+        }
+    } catch (err) {
+        alert('خطأ: ' + err.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-floppy-disk"></i> حفظ الإعدادات';
+    }
+}
+</script>
+{% endblock %}

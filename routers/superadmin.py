@@ -8,7 +8,7 @@ import html
 import uuid
 
 from database.database import get_db
-from database.models import AccessProfiles, LawOffices, PaymentRequest, LawCases, LawDocuments, AuthSessions
+from database.models import Base, AccessProfiles, LawOffices, PaymentRequest, LawCases, LawDocuments, AuthSessions
 from dependencies import get_current_user, templates
 from core.security import hash_session_token
 from core.logger import app_logger
@@ -497,8 +497,7 @@ async def delete_office(office_id: int, request: Request, db: Session = Depends(
             db.query(AuthSessions).filter(AuthSessions.user_id.in_(user_ids)).delete(synchronize_session=False)
             db.query(AccessProfiles).filter(AccessProfiles.id.in_(user_ids)).delete(synchronize_session=False)
             
-        # 2. حذف كافة السجلات التابعة للمكتب من كافة الجداول
-        from sqlalchemy import text
+        # 2. حذف كافة السجلات التابعة للمكتب من كافة الجداول بطريقة آمنة
         tables_to_clean = [
             'law_cases', 'law_incoming_cases', 'law_clients', 'law_parties',
             'law_hearings', 'law_tasks', 'law_judgments', 'law_expenses',
@@ -509,10 +508,12 @@ async def delete_office(office_id: int, request: Request, db: Session = Depends(
             'retainer_agreements', 'client_intake_forms', 'law_trust_accounts'
         ]
         for tbl in tables_to_clean:
-            try:
-                db.execute(text(f"DELETE FROM {tbl} WHERE office_id = :oid"), {"oid": office_id})
-            except Exception:
-                pass
+            table_obj = Base.metadata.tables.get(tbl)
+            if table_obj is not None and "office_id" in table_obj.c:
+                try:
+                    db.execute(table_obj.delete().where(table_obj.c.office_id == office_id))
+                except Exception:
+                    pass
                 
         # 3. حذف سجل المكتب نفسه
         db.delete(office)

@@ -33,7 +33,11 @@ target_metadata = Base.metadata
 
 # قراءة DATABASE_URL من متغيرات البيئة
 def get_database_url():
-    url = os.getenv("DATABASE_URL", "sqlite:///./law_firm.db")
+    main_url = config.get_main_option("sqlalchemy.url")
+    if main_url and not main_url.startswith("%(here)s"):
+        url = main_url
+    else:
+        url = os.getenv("DATABASE_URL", "sqlite:///./law_firm.db")
     # Heroku/Render يعطي postgres:// لكن SQLAlchemy يريد postgresql://
     if url.startswith("postgres://"):
         url = url.replace("postgres://", "postgresql://", 1)

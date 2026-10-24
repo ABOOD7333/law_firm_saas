@@ -1,4 +1,4 @@
-import sys, os, json, sqlite3
+import sys, os, json, sqlite3, re
 from datetime import datetime
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -24,6 +24,8 @@ try:
     output_lines.append(f"\n  عدد الجداول: {len(tables)}")
 
     for table in tables:
+        if not re.match(r'^[a-zA-Z0-9_]+$', str(table)):
+            continue
         output_lines.append(f"\n  {'─'*60}")
         output_lines.append(f"  الجدول: {table}")
         output_lines.append(f"  {'─'*60}")
@@ -125,6 +127,8 @@ for pg_db in pg_databases:
         output_lines.append(f"  عدد الجداول: {len(tables)}")
 
         for table in tables:
+            if not re.match(r'^[a-zA-Z0-9_]+$', str(table)):
+                continue
             output_lines.append(f"\n  {'─'*60}")
             output_lines.append(f"  الجدول: {table}")
             output_lines.append(f"  {'─'*60}")

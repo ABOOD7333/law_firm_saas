@@ -707,11 +707,12 @@ def init_db():
     except Exception as sync_exc:
         print(f"[Migration Notice] Auto-sync column check: {sync_exc}")
 
-    # Call cleanup on startup to ensure production keeps only official offices
-    try:
-        cleanup_and_keep_official_offices()
-    except Exception as e:
-        print(f"[Startup Cleanup Warning] {e}")
+    # Call cleanup on startup only if explicitly requested to prevent accidental data loss in production
+    if os.getenv("RUN_STARTUP_OFFICE_CLEANUP", "false").lower() in ("true", "1"):
+        try:
+            cleanup_and_keep_official_offices()
+        except Exception as e:
+            print(f"[Startup Cleanup Warning] {e}")
 
     # Never log DATABASE_URL: it may contain a username and password.
     print(f"[Database] Connected using dialect: {engine.dialect.name}")
@@ -751,72 +752,23 @@ def cleanup_and_keep_official_offices(db_session=None):
                 pass
 
         # 2. تحديد المكاتب المطلوب الإبقاء عليها والمكاتب المطلوب بترها
-        keep_offices = db.execute(text(
-            "SELECT id FROM law_offices WHERE id IN (1, 6) OR name LIKE '%هشام دغيش%'"
-        )).fetchall()
+        law_offices_tbl = Base.metadata.tables.get('law_offices')
+        invoices_tbl = Base.metadata.tables.get('invoices')
+        invoice_items_tbl = Base.metadata.tables.get('invoice_items')
+        access_profiles_tbl = Base.metadata.tables.get('access_profiles')
+        auth_sessions_tbl = Base.metadata.tables.get('auth_sessions')
+
+        keep_offices = db.execute(
+            text("SELECT id FROM law_offices WHERE id IN (1, 6) OR name LIKE :p"),
+            {"p": "%هشام دغيش%"}
+        ).fetchall()
         keep_ids = [r[0] for r in keep_offices]
         if 1 not in keep_ids:
             keep_ids.append(1)
             
-        del_offices = db.execute(text(
-            f"SELECT id, name FROM law_offices WHERE id NOT IN ({','.join(map(str, keep_ids))}) AND name NOT LIKE '%هشام دغيش%'"
-        )).fetchall()
-        del_ids = [r[0] for r in del_offices]
+        all_offices = db.execute(text("SELECT id, name FROM law_offices")).fetchall()
+        del_ids = [r[0] for r in all_offices if r[0] not in keep_ids and 'هشام دغيش' not in (r[1] or '')]
 
-        if del_ids:
-            del_str = ','.join(map(str, del_ids))
-            
-            # أ) فك المفاتيح الدائرية
-            try:
-                db.execute(text(f"UPDATE law_offices SET owner_user_id = NULL WHERE id IN ({del_str})"))
-            except Exception:
-                pass
-
-            # ب) حذف عناصر الفواتير للمكاتب المحذوفة
-            try:
-                db.execute(text(f"DELETE FROM invoice_items WHERE invoice_id IN (SELECT id FROM invoices WHERE office_id IN ({del_str}))"))
-            except Exception:
-                pass
-
-            # ج) حذف كافة السجلات التابعة لتلك المكاتب من جميع الجداول
-            valid_tables = [
-                'law_client_representatives', 'retainer_agreements',
-                'law_trust_transactions', 'law_trust_accounts',
-                'client_payments', 'invoices', 'payment_requests',
-                'law_document_versions', 'law_documents',
-                'law_pleadings', 'law_executions', 'law_judgments',
-                'law_tasks', 'law_hearings', 'law_parties',
-                'law_limitations', 'law_notes', 'law_correspondences',
-                'law_expenses', 'law_transactions', 'law_power_of_attorney',
-                'law_timesheets', 'law_incoming_cases', 'law_cases',
-                'law_clients', 'client_intake_forms', 'intake_submissions'
-            ]
-            for tbl in valid_tables:
-                try:
-                    db.execute(text(f"DELETE FROM {tbl} WHERE office_id IN ({del_str})"))
-                except Exception:
-                    pass
-
-            # د) حذف الجلسات وحسابات المستخدمين لتلك المكاتب
-            try:
-                db.execute(text(f"DELETE FROM auth_sessions WHERE user_id IN (SELECT id FROM access_profiles WHERE office_id IN ({del_str}))"))
-            except Exception:
-                pass
-            try:
-                db.execute(text(f"DELETE FROM access_profiles WHERE office_id IN ({del_str})"))
-            except Exception:
-                pass
-                
-            # هـ) حذف سجلات المكاتب نفسها نهائياً من قاعدة البيانات
-            db.execute(text(f"DELETE FROM law_offices WHERE id IN ({del_str})"))
-            print(f"[Cleanup] Permanently deleted offices: {del_ids}")
-
-        # 3. تصفية وبتر البيانات التجريبية نهائياً من مكتب 1 (مكتب عبدالله العليمي للمحاماة)
-        try:
-            db.execute(text("DELETE FROM invoice_items WHERE invoice_id IN (SELECT id FROM invoices WHERE office_id = 1)"))
-        except Exception:
-            pass
-            
         valid_tables = [
             'law_client_representatives', 'retainer_agreements',
             'law_trust_transactions', 'law_trust_accounts',
@@ -829,21 +781,86 @@ def cleanup_and_keep_official_offices(db_session=None):
             'law_timesheets', 'law_incoming_cases', 'law_cases',
             'law_clients', 'client_intake_forms', 'intake_submissions'
         ]
-        for tbl in valid_tables:
+
+        if del_ids:
+            # أ) فك المفاتيح الدائرية
+            if law_offices_tbl is not None:
+                try:
+                    db.execute(law_offices_tbl.update().where(law_offices_tbl.c.id.in_(del_ids)).values(owner_user_id=None))
+                except Exception:
+                    pass
+
+            # ب) حذف عناصر الفواتير للمكاتب المحذوفة
+            if invoice_items_tbl is not None and invoices_tbl is not None:
+                try:
+                    del_inv_rows = db.execute(invoices_tbl.select().where(invoices_tbl.c.office_id.in_(del_ids))).fetchall()
+                    del_inv_ids = [r[0] for r in del_inv_rows]
+                    if del_inv_ids:
+                        db.execute(invoice_items_tbl.delete().where(invoice_items_tbl.c.invoice_id.in_(del_inv_ids)))
+                except Exception:
+                    pass
+
+            # ج) حذف كافة السجلات التابعة لتلك المكاتب من جميع الجداول عبر Table Objects الآمنة
+            for tbl_name in valid_tables:
+                t_obj = Base.metadata.tables.get(tbl_name)
+                if t_obj is not None and 'office_id' in t_obj.c:
+                    try:
+                        db.execute(t_obj.delete().where(t_obj.c.office_id.in_(del_ids)))
+                    except Exception:
+                        pass
+
+            # د) حذف الجلسات وحسابات المستخدمين لتلك المكاتب
+            if auth_sessions_tbl is not None and access_profiles_tbl is not None:
+                try:
+                    u_rows = db.execute(access_profiles_tbl.select().where(access_profiles_tbl.c.office_id.in_(del_ids))).fetchall()
+                    u_ids = [r[0] for r in u_rows]
+                    if u_ids:
+                        db.execute(auth_sessions_tbl.delete().where(auth_sessions_tbl.c.user_id.in_(u_ids)))
+                    db.execute(access_profiles_tbl.delete().where(access_profiles_tbl.c.office_id.in_(del_ids)))
+                except Exception:
+                    pass
+                
+            # هـ) حذف سجلات المكاتب نفسها نهائياً من قاعدة البيانات
+            if law_offices_tbl is not None:
+                db.execute(law_offices_tbl.delete().where(law_offices_tbl.c.id.in_(del_ids)))
+            print(f"[Cleanup] Permanently deleted offices: {del_ids}")
+
+        # 3. تصفية وبتر البيانات التجريبية نهائياً من مكتب 1 (مكتب عبدالله العليمي للمحاماة)
+        if invoice_items_tbl is not None and invoices_tbl is not None:
             try:
-                db.execute(text(f"DELETE FROM {tbl} WHERE office_id = 1"))
+                inv_1 = db.execute(invoices_tbl.select().where(invoices_tbl.c.office_id == 1)).fetchall()
+                inv_1_ids = [r[0] for r in inv_1]
+                if inv_1_ids:
+                    db.execute(invoice_items_tbl.delete().where(invoice_items_tbl.c.invoice_id.in_(inv_1_ids)))
             except Exception:
                 pass
+            
+        for tbl_name in valid_tables:
+            t_obj = Base.metadata.tables.get(tbl_name)
+            if t_obj is not None and 'office_id' in t_obj.c:
+                try:
+                    db.execute(t_obj.delete().where(t_obj.c.office_id == 1))
+                except Exception:
+                    pass
 
         # حذف كافة المستخدمين التجريبيين في مكتب 1 والإبقاء حصرياً على حساب ABOOD
-        try:
-            db.execute(text("DELETE FROM auth_sessions WHERE user_id IN (SELECT id FROM access_profiles WHERE office_id = 1 AND username != 'ABOOD')"))
-        except Exception:
-            pass
-        try:
-            db.execute(text("DELETE FROM access_profiles WHERE office_id = 1 AND username != 'ABOOD'"))
-        except Exception:
-            pass
+        if auth_sessions_tbl is not None and access_profiles_tbl is not None:
+            try:
+                non_abood_users = db.execute(
+                    access_profiles_tbl.select().where(
+                        (access_profiles_tbl.c.office_id == 1) & (access_profiles_tbl.c.username != 'ABOOD')
+                    )
+                ).fetchall()
+                non_abood_ids = [r[0] for r in non_abood_users]
+                if non_abood_ids:
+                    db.execute(auth_sessions_tbl.delete().where(auth_sessions_tbl.c.user_id.in_(non_abood_ids)))
+                db.execute(
+                    access_profiles_tbl.delete().where(
+                        (access_profiles_tbl.c.office_id == 1) & (access_profiles_tbl.c.username != 'ABOOD')
+                    )
+                )
+            except Exception:
+                pass
 
         # 4. تثبيت وتحديث مكتب 1 وتعيين ABOOD كمالك وحيد
         db.execute(text(
