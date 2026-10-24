@@ -32,7 +32,7 @@ ATTACK_SIGNATURES = [
     (
         "injection_attempt",
         "critical",
-        re.compile(r"(\bUNION\b\s+\bSELECT\b|'\s*OR\s*'\d+'='\d+|--\s*$|;\s*DROP\s+TABLE|\bSLEEP\s*\(\d+\)|PG_SLEEP|BENCHMARK\(|\bWAITFOR\s+DELAY\b)", re.IGNORECASE),
+        re.compile(r"(\bUNION\b\s+\bSELECT\b|'\s*OR\s*'\d+'='\d+|--\s+[a-zA-Z0-9_]|;\s*DROP\s+TABLE|\bSLEEP\s*\(\d+\)|PG_SLEEP|BENCHMARK\(|\bWAITFOR\s+DELAY\b)", re.IGNORECASE),
         "محاولة حقن استعلامات خبيثة (SQL Injection Attempt)"
     ),
     (
@@ -259,6 +259,10 @@ class SecurityMonitoringMiddleware(BaseHTTPMiddleware):
         user_agent = request.headers.get("user-agent", "")
         path = request.url.path
 
+        # 0. استثناء مسارات مركز العمليات الأمنية ولوحة السوبر أدمن لتمكين المدير من الفحص والتحكم
+        if path.startswith(("/api/superadmin/security/", "/superadmin/security/")):
+            return await call_next(request)
+
         # 2. فحص أدوات الفحص والاختراق الآلية (Scanner Detection)
         if user_agent and SCANNER_USER_AGENTS.search(user_agent):
             _active_defense_stats["total_blocked_attacks"] += 1
@@ -290,6 +294,8 @@ class SecurityMonitoringMiddleware(BaseHTTPMiddleware):
             try:
                 body_bytes = await request.body()
                 body_str = body_bytes.decode("utf-8", errors="ignore")[:2000]
+                # إزالة حدود multipart/form-data لتفادي الخلط بين علامات الـ boundary وعلامات SQL
+                body_str = re.sub(r"-{2,}[a-zA-Z0-9_-]+(?:--)?", "", body_str)
                 # إعادة بناء receive حتى تتمكن الراوترات التالية من قراءة الـ body
                 async def receive():
                     return {"type": "http.request", "body": body_bytes}
