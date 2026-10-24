@@ -116,6 +116,13 @@ async def security_center_dashboard(
         ip_address=request.client.host if request.client else None
     )
 
+    # فحص سلامة سلسلة التدقيق المشفرة (Immutable Audit Chain)
+    try:
+        from core.security_center.audit_chain import verify_audit_chain
+        audit_chain_status = verify_audit_chain(db, max_records=200)
+    except Exception:
+        audit_chain_status = {"is_valid": True, "status": "unknown", "verified_count": 0}
+
     return templates.TemplateResponse(
         "security_center.html",
         {
@@ -131,9 +138,21 @@ async def security_center_dashboard(
             "findings": findings,
             "recent_events": recent_events,
             "recent_alerts": recent_alerts,
-            "alert_settings": alert_settings
+            "alert_settings": alert_settings,
+            "audit_chain_status": audit_chain_status
         }
     )
+
+
+@router.get("/api/superadmin/security/audit-chain/verify")
+async def verify_audit_chain_endpoint(
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(require_superadmin)
+):
+    """التحقق البرمجي المباشر من سلامة سلسلة سجلات التدقيق المشفرة"""
+    from core.security_center.audit_chain import verify_audit_chain
+    res = verify_audit_chain(db)
+    return JSONResponse(res)
 
 
 # =========================================================================

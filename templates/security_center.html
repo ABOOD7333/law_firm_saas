@@ -40,6 +40,7 @@
         </div>
         <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; gap: 20px; font-size: 0.85rem; color: #cbd5e1; flex-wrap: wrap;">
             <span><i class="fas fa-shield-virus" style="color: #34d399;"></i> نمط الأمان: <strong>منع افتراضي شامل (Zero-Trust & Default-Deny)</strong></span>
+            <span><i class="fas fa-link" style="color: #a78bfa;"></i> سجل التدقيق المشفر: <strong>سلسلة HMAC-SHA256 محصنة ضد التلاعب ({% if audit_chain_status and audit_chain_status.is_valid %}<span style="color: #34d399;">سليمة 100%</span>{% else %}<span style="color: #f87171;">تحذير تلاعب</span>{% endif %})</strong></span>
             <span><i class="fas fa-rotate" style="color: #38bdf8;"></i> الجدولة التلقائية: <strong>فحص شامل للكود وقاعدة البيانات كل 6 ساعات (4 مرات يومياً)</strong></span>
             {% if latest_scan %}
             <span><i class="fas fa-history" style="color: #818cf8;"></i> آخر فحص مكتمل: <strong>{{ latest_scan.completed_at or latest_scan.started_at }}</strong></span>

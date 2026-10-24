@@ -85,6 +85,19 @@ async def startup_event():
     except Exception as e:
         print(f"[Crypto Warning] Failed field-level encryption migration: {e}")
 
+    # Cryptographic Immutable Audit Chain Initialization & Backfill
+    try:
+        from core.security_center.audit_chain import backfill_legacy_audit_logs, verify_audit_chain
+        from database.database import SessionLocal
+        with SessionLocal() as db:
+            signed_legacy = backfill_legacy_audit_logs(db)
+            if signed_legacy > 0:
+                print(f"[Audit Chain] Signed and secured {signed_legacy} legacy audit records.")
+            verify_res = verify_audit_chain(db, max_records=100)
+            print(f"[Audit Chain] Integrity status: {verify_res.get('status')} (Verified {verify_res.get('verified_count')} records)")
+    except Exception as e:
+        print(f"[Audit Chain Warning] Failed audit chain initialization: {e}")
+
     # Direct server database cleanup on startup (guarded by env var to prevent data loss in production)
     if os.getenv("RUN_STARTUP_OFFICE_CLEANUP", "false").lower() in ("true", "1"):
         try:

@@ -177,6 +177,20 @@ def init_db():
     except Exception:
         pass
 
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE law_audit_log ADD COLUMN prev_hash TEXT;"))
+    except Exception:
+        pass
+
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE law_audit_log ADD COLUMN entry_hash TEXT;"))
+    except Exception:
+        pass
+
     # تجديد خطط المكاتب التجريبية المنتهية لضمان عمل واجهات النظام والمستخدمين التجريبيين دون حظر
     try:
         from sqlalchemy import text

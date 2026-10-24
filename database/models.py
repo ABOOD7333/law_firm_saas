@@ -121,6 +121,8 @@ class LawAuditLog(Base):
     old_values_json: Mapped[Optional[str]] = mapped_column(Text)
     new_values_json: Mapped[Optional[str]] = mapped_column(Text)
     device_context: Mapped[Optional[str]] = mapped_column(Text)
+    prev_hash: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    entry_hash: Mapped[Optional[str]] = mapped_column(Text, nullable=True, index=True)
 
 class LawCases(Base):
     __tablename__ = 'law_cases'

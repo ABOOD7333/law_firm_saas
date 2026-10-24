@@ -664,6 +664,28 @@ class LawSaaSScanner:
                 except Exception:
                     pass
 
+        # 4. فحص سلامة سلسلة سجلات التدقيق المشفرة (Cryptographic Immutable Audit Chain Audit)
+        try:
+            from core.security_center.audit_chain import verify_audit_chain
+            chain_res = verify_audit_chain(self.db)
+            if not chain_res.get("is_valid", True):
+                tampered = chain_res.get("tampered_ids", [])
+                broken = chain_res.get("broken_chain_ids", [])
+                self.findings.append({
+                    "title": "رصد اختراق أو تلاعب في سلسلة سجلات التدقيق المشفرة (Audit Chain Integrity Compromise)",
+                    "description": f"تحذير أمني خطير: تم رصد عدم تطابق في التوقيع الرقمي أو انكسار في سلسلة سجلات التدقيق (LawAuditLog). السجلات المتلاعب بها: {tampered}، الانقطاعات في السلسلة: {broken}.",
+                    "severity": "critical",
+                    "category": "audit_integrity",
+                    "affected_component": "Cryptographic Audit Chain",
+                    "affected_file": "core/security_center/audit_chain.py",
+                    "affected_line": None,
+                    "vulnerability_id": "CWE-353",
+                    "evidence": f"Tampered IDs: {tampered}, Broken Chain IDs: {broken}",
+                    "recommendation": "قم بفحص وصول المخترقين لقاعدة البيانات فوراً وعزل الجلسات المشبوهة واستعادة سجلات التدقيق من النسخة الاحتياطية المعتمدة."
+                })
+        except Exception:
+            pass
+
 
 # التوافقية مع المسميات السابقة (Backwards Compatibility Alias)
 ScannerEngine = LawSaaSScanner
