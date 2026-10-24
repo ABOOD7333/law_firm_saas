@@ -5,16 +5,8 @@
 import hashlib
 from datetime import datetime, timedelta
 
-def validate_file_signature(content: bytes, extension: str) -> bool:
-    """
-    التحقق من صحة الملف بناءً على التوقيع الرقمي (Magic Bytes) وليس فقط الامتداد لمنع رفع ملفات خبيثة بامتدادات مزيفة.
-    """
-    if not content:
-        return False
-        
-    ext = extension.lower().strip().replace(".", "")
-    
-    # التوقيعات الرقمية الشائعة (Magic Bytes)
+def _basic_magic_bytes_check(content: bytes, ext: str) -> bool:
+    """التحقق الأساسي من البصمة الثنائية"""
     if ext == 'pdf':
         return content.startswith(b'%PDF')
     elif ext in ['jpg', 'jpeg']:
@@ -24,11 +16,8 @@ def validate_file_signature(content: bytes, extension: str) -> bool:
     elif ext == 'gif':
         return content.startswith(b'GIF87a') or content.startswith(b'GIF89a')
     elif ext in ['docx', 'doc']:
-        # تنسيق DOCX هو عبارة عن ملف ZIP مضغوط (يبدأ بـ PK\x03\x04)
-        # تنسيق DOC القديم يبدأ بـ \xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1
         return content.startswith(b'PK\x03\x04') or content.startswith(b'\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1')
     elif ext == 'txt':
-        # التحقق من أن الملف النصي لا يحتوي على أحرف ثنائية ملغية (Null Bytes) وهي سمة الملفات التنفيذية
         try:
             if b'\x00' in content:
                 return False
@@ -36,8 +25,32 @@ def validate_file_signature(content: bytes, extension: str) -> bool:
             return True
         except UnicodeDecodeError:
             return False
-            
     return False
+
+
+def validate_file_signature(content: bytes, extension: str, filename: str = "", db=None, client_ip: str = None) -> bool:
+    """
+    التحقق المتقدم والشامل من صحة وأمان الملف المرفوع:
+    1. التحقق من التوقيع الرقمي (Magic Bytes).
+    2. فحص هيكل ملفات PDF لمنع ثغرات /Launch و /JavaScript و /EmbeddedFiles.
+    3. فحص ملفات Word المضغوطة ضد أكواد الماكرو VBA.
+    4. منع الامتدادات المزدوجة والتنفيذية.
+    """
+    if not content:
+        return False
+        
+    ext = extension.lower().strip().replace(".", "")
+    try:
+        from core.security_center.file_scanner import scan_uploaded_file
+        is_safe, _ = scan_uploaded_file(
+            content=content,
+            filename=filename or f"upload.{ext}",
+            db=db,
+            client_ip=client_ip
+        )
+        return is_safe
+    except Exception:
+        return _basic_magic_bytes_check(content, ext)
 
 
 def hash_session_token(token: str) -> str:

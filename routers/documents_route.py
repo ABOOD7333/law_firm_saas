@@ -287,9 +287,11 @@ async def add_document(
         if len(file_bytes) > MAX_SIZE_BYTES:
             raise HTTPException(status_code=400, detail="حجم الملف يتجاوز الحد الأقصى المسموح به (25 ميجابايت)")
 
-        from core.security import validate_file_signature
-        if not validate_file_signature(file_bytes, ext):
-            raise HTTPException(status_code=400, detail="فشل التحقق من أمان محتوى الملف. يرجى رفع ملف سليم وصحيح.")
+        from core.security_center.file_scanner import scan_uploaded_file
+        client_ip = request.client.host if request.client else "unknown"
+        is_safe, scan_reason = scan_uploaded_file(file_bytes, clean_fn, db=db, client_ip=client_ip, endpoint=request.url.path)
+        if not is_safe:
+            raise HTTPException(status_code=400, detail=f"تم حظر الملف: {scan_reason}")
 
         filename = f"{uuid.uuid4().hex}.{ext}"
         path = os.path.join(DOCUMENTS_UPLOAD_DIR, filename)
@@ -418,9 +420,11 @@ async def edit_document(
         if len(file_bytes) > MAX_SIZE_BYTES:
             raise HTTPException(status_code=400, detail="حجم الملف يتجاوز الحد المسموح به")
 
-        from core.security import validate_file_signature
-        if not validate_file_signature(file_bytes, ext):
-            raise HTTPException(status_code=400, detail="فشل التحقق من أمان محتوى الملف")
+        from core.security_center.file_scanner import scan_uploaded_file
+        client_ip = request.client.host if request.client else "unknown"
+        is_safe, scan_reason = scan_uploaded_file(file_bytes, clean_fn, db=db, client_ip=client_ip, endpoint=request.url.path)
+        if not is_safe:
+            raise HTTPException(status_code=400, detail=f"تم حظر الملف: {scan_reason}")
 
         filename = f"{uuid.uuid4().hex}.{ext}"
         path = os.path.join(DOCUMENTS_UPLOAD_DIR, filename)
@@ -704,9 +708,11 @@ async def upload_document_version(
     if len(file_bytes) > MAX_SIZE_BYTES:
         raise HTTPException(status_code=400, detail="حجم الملف يتجاوز الحد المسموح به (25MB)")
 
-    from core.security import validate_file_signature
-    if not validate_file_signature(file_bytes, ext):
-        raise HTTPException(status_code=400, detail="فشل التحقق من أمان محتوى الملف")
+    from core.security_center.file_scanner import scan_uploaded_file
+    client_ip = request.client.host if request.client else "unknown"
+    is_safe, scan_reason = scan_uploaded_file(file_bytes, clean_fn, db=db, client_ip=client_ip, endpoint=request.url.path)
+    if not is_safe:
+        raise HTTPException(status_code=400, detail=f"تم حظر الملف: {scan_reason}")
 
     filename = f"{uuid.uuid4().hex}.{ext}"
     path = os.path.join(DOCUMENTS_UPLOAD_DIR, filename)
