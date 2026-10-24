@@ -11,7 +11,9 @@ from sqlalchemy import or_
 from database.database import get_db
 from database.models import (
     AccessProfiles, AuthSessions, AuthVerificationTokens, LawCases, LawDocuments,
-    LawOffices, LawClients, LawHearings, LawTasks, LawParties, LawNotes, LawPleadings, LawJudgments
+    LawOffices, LawClients, LawHearings, LawTasks, LawParties, LawNotes, LawPleadings, LawJudgments,
+    Invoices, LawExpenses, LawTimesheets, LawPowerOfAttorney, LawExecutions, LawCorrespondences,
+    LawLimitations, YemeniLawDocument
 )
 from dependencies import get_current_user, check_user_permission
 from core.security import hash_session_token
@@ -867,3 +869,252 @@ async def get_mobile_judgments(
         "judgment_text": j.judgment_text or "",
         "case_id": j.case_id
     } for j in judgments]
+
+
+# =========================================================================
+# Phase 2: Financial, Executive & Compliance Endpoints (Mobile Native API)
+# =========================================================================
+
+@router.get("/finance")
+async def get_mobile_finance(
+    status: Optional[str] = None,
+    client_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    """الفواتير والحسابات المالية"""
+    if not user or not user.office_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    query = db.query(Invoices).filter(
+        Invoices.office_id == user.office_id,
+        Invoices.is_deleted == 0
+    )
+    if status:
+        query = query.filter(Invoices.status == status)
+    if client_id:
+        query = query.filter(Invoices.client_id == client_id)
+
+    invoices = query.order_by(Invoices.id.desc()).limit(100).all()
+    return [{
+        "id": inv.id,
+        "invoice_number": inv.invoice_number or "",
+        "issue_date": inv.issue_date or "",
+        "due_date": inv.due_date or "",
+        "status": inv.status or "draft",
+        "total_amount": float(getattr(inv, "total_amount", 0.0) or 0.0),
+        "subtotal": float(getattr(inv, "subtotal", 0.0) or 0.0),
+        "tax_amount": float(getattr(inv, "tax_amount", 0.0) or 0.0),
+        "client_id": inv.client_id,
+        "case_id": inv.case_id,
+        "invoice_type": getattr(inv, "invoice_type", "standard") or "standard"
+    } for inv in invoices]
+
+
+@router.get("/expenses")
+async def get_mobile_expenses(
+    case_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    """مصاريف ورسوم الدعاوى القضائية"""
+    if not user or not user.office_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    query = db.query(LawExpenses).filter(
+        LawExpenses.office_id == user.office_id,
+        LawExpenses.is_deleted == 0
+    )
+    if case_id:
+        query = query.filter(LawExpenses.case_id == case_id)
+
+    expenses = query.order_by(LawExpenses.id.desc()).limit(100).all()
+    return [{
+        "id": exp.id,
+        "title": exp.title or "مصروف قضائي",
+        "amount": float(getattr(exp, "amount", 0.0) or 0.0),
+        "currency": getattr(exp, "currency", "SAR") or "SAR",
+        "expense_at": exp.expense_at or "",
+        "case_id": exp.case_id,
+        "notes": getattr(exp, "notes", "") or ""
+    } for exp in expenses]
+
+
+@router.get("/timesheet")
+async def get_mobile_timesheet(
+    case_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    """سجل ساعات العمل القانونية"""
+    if not user or not user.office_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    query = db.query(LawTimesheets).filter(
+        LawTimesheets.office_id == user.office_id,
+        LawTimesheets.is_deleted == 0
+    )
+    if case_id:
+        query = query.filter(LawTimesheets.case_id == case_id)
+
+    sheets = query.order_by(LawTimesheets.id.desc()).limit(100).all()
+    return [{
+        "id": ts.id,
+        "title": ts.title or "ساعات عمل",
+        "duration_hours": float(getattr(ts, "duration_hours", 0.0) or 0.0),
+        "billable_rate": float(getattr(ts, "billable_rate", 0.0) or 0.0),
+        "case_id": ts.case_id,
+        "created_at": ts.created_at or ""
+    } for ts in sheets]
+
+
+@router.get("/power-of-attorney")
+async def get_mobile_power_of_attorney(
+    case_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    """الوكالات الرسمية والتوثيقات"""
+    if not user or not user.office_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    query = db.query(LawPowerOfAttorney).filter(
+        LawPowerOfAttorney.office_id == user.office_id,
+        LawPowerOfAttorney.is_deleted == 0
+    )
+    if case_id:
+        query = query.filter(LawPowerOfAttorney.case_id == case_id)
+
+    poas = query.order_by(LawPowerOfAttorney.id.desc()).limit(100).all()
+    return [{
+        "id": poa.id,
+        "agency_number": poa.agency_number or "بدون رقم",
+        "principal_name": poa.principal_name or "",
+        "agent_name": poa.agent_name or "",
+        "poa_type": poa.poa_type or "وكالة عامة",
+        "issuing_authority": poa.issuing_authority or "",
+        "issue_date": poa.issue_date or "",
+        "expiry_date": poa.expiry_date or "",
+        "case_id": poa.case_id
+    } for poa in poas]
+
+
+@router.get("/execution")
+async def get_mobile_execution(
+    case_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    """إجراءات وطلبات التنفيذ القضائي"""
+    if not user or not user.office_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    query = db.query(LawExecutions).filter(
+        LawExecutions.office_id == user.office_id,
+        LawExecutions.is_deleted == 0
+    )
+    if case_id:
+        query = query.filter(LawExecutions.case_id == case_id)
+
+    executions = query.order_by(LawExecutions.id.desc()).limit(100).all()
+    return [{
+        "id": ex.id,
+        "execution_number": ex.execution_number or "بدون رقم",
+        "authority_name": ex.authority_name or "",
+        "execution_type": ex.execution_type or "تنفيذ سند لأمر",
+        "debtor_name": ex.debtor_name or "",
+        "claimed_amount": float(getattr(ex, "claimed_amount", 0.0) or 0.0),
+        "collected_amount": float(getattr(ex, "collected_amount", 0.0) or 0.0),
+        "status_key": getattr(ex, "status_key", "active") or "active",
+        "case_id": ex.case_id
+    } for ex in executions]
+
+
+@router.get("/correspondences")
+async def get_mobile_correspondences(
+    case_id: Optional[int] = None,
+    direction: Optional[str] = None,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    """المراسلات والخطابات الرسمية الواردة والصادرة"""
+    if not user or not user.office_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    query = db.query(LawCorrespondences).filter(
+        LawCorrespondences.office_id == user.office_id,
+        LawCorrespondences.is_deleted == 0
+    )
+    if case_id:
+        query = query.filter(LawCorrespondences.case_id == case_id)
+    if direction:
+        query = query.filter(LawCorrespondences.direction_key == direction)
+
+    corrs = query.order_by(LawCorrespondences.id.desc()).limit(100).all()
+    return [{
+        "id": c.id,
+        "direction_key": c.direction_key or "incoming",
+        "letter_number": c.letter_number or "",
+        "letter_date": c.letter_date or "",
+        "subject": c.subject or "خطاب رسمي",
+        "entity_name": c.entity_name or "",
+        "recipient_name": c.recipient_name or "",
+        "case_id": c.case_id
+    } for c in corrs]
+
+
+@router.get("/limitations")
+async def get_mobile_limitations(
+    case_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    """مدد التقادم ومواعيد السقوط والطعن"""
+    if not user or not user.office_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    query = db.query(LawLimitations).filter(
+        LawLimitations.office_id == user.office_id,
+        LawLimitations.is_deleted == 0
+    )
+    if case_id:
+        query = query.filter(LawLimitations.case_id == case_id)
+
+    limits = query.order_by(LawLimitations.id.desc()).limit(100).all()
+    return [{
+        "id": lim.id,
+        "title": lim.title or "تنبيه مدة تقادم",
+        "limitation_type_key": lim.limitation_type_key or "استئناف",
+        "due_date": lim.due_date or "",
+        "days_count": lim.days_count or 30,
+        "action_required": lim.action_required or "",
+        "status_key": getattr(lim, "status_key", "active") or "active",
+        "case_id": lim.case_id
+    } for lim in limits]
+
+
+@router.get("/legal-references")
+async def get_mobile_legal_references(
+    q: Optional[str] = None,
+    category: Optional[str] = None,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    """المكتبة القانونية ومواد التشريعات اليمنية"""
+    if not user:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    query = db.query(YemeniLawDocument).filter(
+        YemeniLawDocument.is_deleted == 0
+    )
+    if category:
+        query = query.filter(YemeniLawDocument.category == category)
+    if q:
+        query = query.filter(or_(
+            YemeniLawDocument.title.ilike(f"%{q}%"),
+            YemeniLawDocument.legal_text.ilike(f"%{q}%"),
+            YemeniLawDocument.law_number.ilike(f"%{q}%")
+        ))
+
+    docs = query.order_by(YemeniLawDocument.id.asc()).limit(100).all()
+    return [{
+        "id": d.id,
+        "title": d.title or "تشريع قانوني",
+        "law_type": d.law_type or "قانون",
+        "category": d.category or "عام",
+        "law_number": d.law_number or "",
+        "issue_year": d.issue_year or "",
+        "legal_text": (d.legal_text or "")[:400]
+    } for d in docs]
