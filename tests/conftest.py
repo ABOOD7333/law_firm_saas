@@ -1,5 +1,9 @@
 """Deterministic, synthetic database fixtures for the CI test database."""
+import os
+import sys
 from datetime import datetime, timedelta
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import pytest
 
