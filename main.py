@@ -3027,6 +3027,56 @@ async def download_hearing_attachment(hearing_id: int, db: Session = Depends(get
     return FileResponse(path, filename=os.path.basename(path), headers={"Cache-Control": "private, no-store"})
 
 
+def _hearing_file_items(raw_value):
+    try:
+        items = json.loads(raw_value or "[]")
+    except (TypeError, ValueError):
+        return []
+    return [item for item in items if isinstance(item, dict) and isinstance(item.get("url"), str)] if isinstance(items, list) else []
+
+
+@app.get("/hearings/{hearing_id}/files/{filename}")
+async def download_hearing_extra_attachment(hearing_id: int, filename: str, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
+    if not user or not user.office_id:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    if not filename or filename in {".", ".."} or os.path.basename(filename) != filename:
+        raise HTTPException(status_code=404, detail="الملف غير موجود")
+    hearing = db.query(LawHearings).filter(
+        LawHearings.id == hearing_id,
+        LawHearings.office_id == user.office_id,
+        LawHearings.is_deleted == 0,
+    ).first()
+    if not hearing:
+        raise HTTPException(status_code=404, detail="الجلسة غير موجودة")
+    if user.role == "موكل":
+        linked_case_ids = {row.case_id for row in client_records_for_user(db, user) if row.case_id}
+        if not hearing.show_in_client_portal or hearing.case_id not in linked_case_ids:
+            raise HTTPException(status_code=403, detail="غير مصرح بهذا الملف")
+    elif not check_user_permission(user, "hearings", "view") or (hearing.case_id and not user_can_access_case(db, user, hearing.case_id)):
+        raise HTTPException(status_code=403, detail="غير مصرح بهذه القضية")
+    registered_names = {
+        os.path.basename(item["url"].split("?", 1)[0])
+        for raw in (hearing.decision_attachments_json, hearing.submitted_papers_json, hearing.attachments_json)
+        for item in _hearing_file_items(raw)
+    }
+    if filename not in registered_names:
+        raise HTTPException(status_code=404, detail="الملف غير موجود في سجل الجلسة")
+    root = os.path.realpath(os.path.join("static", "uploads", "hearings"))
+    path = os.path.realpath(os.path.join(root, filename))
+    if os.path.commonpath([root, path]) != root or not os.path.isfile(path):
+        raise HTTPException(status_code=404, detail="الملف غير موجود على الخادم")
+    return FileResponse(path, filename=filename, headers={"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"})
+
+
+def _hearing_attachment_links(hearing, raw_value):
+    from urllib.parse import quote
+    items = _hearing_file_items(raw_value)
+    for item in items:
+        filename = os.path.basename(item["url"].split("?", 1)[0])
+        item["url"] = f"/hearings/{hearing.id}/files/{quote(filename, safe='')}"
+    return items
+
+
 @app.get("/api/hearings/{hearing_id}")
 async def get_hearing_details(
     hearing_id: int,
@@ -3261,8 +3311,8 @@ async def get_hearing_minutes_details(
             "prosecutor_name": getattr(h, 'prosecutor_name', '') or "",
             "bench_judges": json.loads(h.bench_judges_json) if getattr(h, 'bench_judges_json', None) else {},
             "prosecution_details": json.loads(h.prosecution_details_json) if getattr(h, 'prosecution_details_json', None) else {},
-            "submitted_papers": json.loads(h.submitted_papers_json) if getattr(h, 'submitted_papers_json', None) else [],
-            "decision_attachments": json.loads(h.decision_attachments_json) if getattr(h, 'decision_attachments_json', None) else [],
+            "submitted_papers": _hearing_attachment_links(h, getattr(h, "submitted_papers_json", None)),
+            "decision_attachments": _hearing_attachment_links(h, getattr(h, "decision_attachments_json", None)),
             "attendees_list": json.loads(h.attendees_list_json) if getattr(h, 'attendees_list_json', None) else (json.loads(h.attendees_json) if getattr(h, 'attendees_json', None) else []),
             "result_summary": getattr(h, 'result_summary', '') or getattr(h, 'hearing_summary', '') or ""
         }
