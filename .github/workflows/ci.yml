@@ -42,7 +42,6 @@ jobs:
       - name: Run Ruff (linter + formatter check)
         run: |
           ruff check . --select=E,W,F --ignore=E501,F403,F401
-        continue-on-error: true  # لا نوقف الـ pipeline بسبب lint فقط
 
   # ============================================
   # JOB 2: الاختبارات (Tests)
@@ -76,7 +75,7 @@ jobs:
 
       - name: Run tests
         run: |
-          pytest tests/ -v --tb=short 2>/dev/null || echo "No tests found yet — add tests in /tests folder"
+          pytest --asyncio-mode=auto tests/ -v --tb=short
         env:
           DATABASE_URL: ${{ env.DATABASE_URL }}
 
@@ -91,7 +90,7 @@ jobs:
     name: 🐳 Build Docker Image
     runs-on: ubuntu-latest
     needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout code
@@ -144,4 +143,4 @@ jobs:
           alembic upgrade head
         env:
           DATABASE_URL: ${{ env.DATABASE_URL }}
-        continue-on-error: true
+
