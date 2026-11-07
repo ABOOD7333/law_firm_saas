@@ -69,6 +69,28 @@ def seed_ci_database():
         office.owner_user_id = user.id
         db.flush()
 
+        other_user = db.query(AccessProfiles).filter(
+            AccessProfiles.username == "CI-OTHER-USER"
+        ).first()
+        if other_user is None:
+            other_user = AccessProfiles(
+                name="CI Synthetic User in Another Office",
+                username="CI-OTHER-USER",
+                phone="+966500000006",
+                email="ci-other@example.test",
+                role="محامي",
+                office_id=6,
+                is_active=1,
+                is_deleted=0,
+                can_view_all_cases=1,
+                state="active",
+            )
+            db.add(other_user)
+        else:
+            other_user.is_active = 1
+            other_user.is_deleted = 0
+            other_user.office_id = 6
+
         case = db.query(LawCases).filter(
             LawCases.office_id == 1,
             LawCases.case_number == "CI-CASE-001",
