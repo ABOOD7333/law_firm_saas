@@ -201,9 +201,11 @@ def init_db():
     except Exception as e:
         print(f"[Database Auto-Renew] {e}")
     # إزالة حقول درجات التقاضي وبيانات المحكمة والنتائج من جدول law_cases نهائياً
+    # Keep court_name: LawCases still maps and queries this field. Dropping it
+    # here and re-adding it during dynamic column sync erases saved court names
+    # on every application startup.
     cols_to_drop = [
         'litigation_level_key',
-        'court_name',
         'court_case_number',
         'judgment_number',
         'judgment_date',
