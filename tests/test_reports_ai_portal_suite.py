@@ -24,6 +24,10 @@ async def test_reports_portal_suite():
 
         office1_id = user1.office_id
         office2_id = user2.office_id
+        cases1 = db.query(LawCases).filter(LawCases.office_id == office1_id, LawCases.is_deleted == 0).count()
+        clients1 = db.query(LawClients).filter(LawClients.office_id == office1_id, LawClients.is_deleted == 0).count()
+        cases2 = db.query(LawCases).filter(LawCases.office_id == office2_id, LawCases.is_deleted == 0).count()
+        clients2 = db.query(LawClients).filter(LawClients.office_id == office2_id, LawClients.is_deleted == 0).count()
     finally:
         db.close()
 
@@ -48,7 +52,8 @@ async def test_reports_portal_suite():
         assert r_summary.status_code == 200
         sum_data = r_summary.json()
         assert sum_data.get("success") is True
-        assert sum_data.get("office_id") == office1_id
+        assert sum_data.get("total_cases") == cases1
+        assert sum_data.get("total_clients") == clients1
 
         # -------------------------------------------------------------
         # Part 2: بوابة الموكل (/client-portal/*)
@@ -78,7 +83,9 @@ async def test_reports_portal_suite():
         # User 2 reports summary must only reflect office 2
         r_summary2 = await client.get("/api/reports/summary", cookies=cookies2)
         assert r_summary2.status_code == 200
-        assert r_summary2.json().get("office_id") == office2_id
+        summary2 = r_summary2.json()
+        assert summary2.get("total_cases") == cases2
+        assert summary2.get("total_clients") == clients2
 
         # User 2 client portal must only reflect office 2
         r_cp2 = await client.get("/client-portal", cookies=cookies2)
