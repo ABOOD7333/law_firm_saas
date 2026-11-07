@@ -90,6 +90,7 @@ def seed_ci_database():
             other_user.is_active = 1
             other_user.is_deleted = 0
             other_user.office_id = 6
+        other_user.access_pin_hash = hash_pin("admin123456")
 
         case = db.query(LawCases).filter(
             LawCases.office_id == 1,
