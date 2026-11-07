@@ -220,10 +220,6 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
                     if admin_user and getattr(admin_user, 'is_superadmin', 0) == 1:
                         is_support_session = True
                         
-        # 3. Fallback cookie flag check
-        if not is_support_session and request.cookies.get("is_support_session") == "1":
-            is_support_session = True
-        
         user.is_support_session = is_support_session
 
         # Superadmins bypass office blocks
