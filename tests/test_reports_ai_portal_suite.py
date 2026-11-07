@@ -42,7 +42,7 @@ async def test_reports_portal_suite():
         for period in ["all", "month", "quarter", "year"]:
             r_rep = await client.get(f"/reports?period={period}", cookies=cookies1)
             assert r_rep.status_code == 200, f"Reports failed for period {period}"
-            assert "التقارير والإحصائيات الشاملة" in r_rep.text
+            assert "التقارير الشاملة" in r_rep.text
 
         r_summary = await client.get("/api/reports/summary?period=month", cookies=cookies1)
         assert r_summary.status_code == 200
