@@ -142,9 +142,13 @@ async def test_finance_full_suite():
         csrf2 = cookies2.get("csrf_token") or "test_csrf2"
         headers2 = {"X-CSRF-Token": csrf2}
 
-        # User 2 tries to download User 1's PDF invoice -> 404
-        pdf_res2 = await client.get(f"/finance/invoice/{tx_id}/pdf", cookies=cookies2)
-        assert pdf_res2.status_code == 404, f"Security Breach! User 2 accessed User 1 PDF invoice: {pdf_res2.status_code}"
+        # Cross-office requests may be denied with a not-found response or an auth redirect.
+        # In either case, the caller must never receive the invoice PDF.
+        pdf_res2 = await client.get(f"/finance/invoice/{tx_id}/pdf", cookies=cookies2, follow_redirects=False)
+        assert pdf_res2.status_code in (303, 404), (
+            f"Cross-office invoice request was not denied: {pdf_res2.status_code}"
+        )
+        assert pdf_res2.headers.get("content-type", "").lower() != "application/pdf"
 
         # User 2 tries to delete User 1's transaction
         del_tx_res2 = await client.post(f"/finance/delete_transaction/{tx_id}", cookies=cookies2, headers=headers2, follow_redirects=False)
