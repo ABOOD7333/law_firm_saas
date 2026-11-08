@@ -986,7 +986,7 @@ async def login_submit(
 
             app_logger.info(f"LOGIN_OK | user={user.id} | role={user.role} | office={user.office_id}")
 
-            is_secure = not (request.url.hostname in ["127.0.0.1", "localhost"])
+            is_secure = (request.url.scheme == "https") or (request.headers.get("x-forwarded-proto") == "https")
 
             target_url = "/dashboard"
             if user.role == "موكل":
@@ -1169,7 +1169,7 @@ async def login_2fa_submit(
 
         # Enforce secure cookies dynamically based on hostname
 
-        is_secure = not (request.url.hostname in ["127.0.0.1", "localhost"])
+        is_secure = (request.url.scheme == "https") or (request.headers.get("x-forwarded-proto") == "https")
 
         target_url = "/dashboard"
         if user.role == "موكل":
