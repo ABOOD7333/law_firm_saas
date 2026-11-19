@@ -5,9 +5,10 @@ from sqlalchemy import func
 import traceback
 from core.error_handler import safe_error_html
 
+from datetime import datetime
 from database.database import get_db
 from database.models import (
-    AccessProfiles, LawCases, LawHearings, LawJudgments,
+    AccessProfiles, LawOffices, LawCases, LawHearings, LawJudgments,
     LawTransactions, LawExpenses, LawTasks, LawClients, LawParties
 )
 from dependencies import get_current_user, templates
@@ -26,6 +27,33 @@ async def reports_page(
     from sqlalchemy import func
     try:
         office_id = user.office_id or 1
+        office = db.query(LawOffices).filter(LawOffices.id == office_id).first()
+
+        sub_status_text = "غير محدد"
+        days_left = None
+        if office:
+            if office.subscription_plan == 'lifetime':
+                sub_status_text = "اشتراك دائم (مدى الحياة)"
+                days_left = 9999
+            elif office.subscription_end:
+                try:
+                    end_dt = datetime.strptime(office.subscription_end[:19], "%Y-%m-%d %H:%M:%S")
+                    diff = (end_dt - datetime.utcnow()).days
+                    if diff < 0:
+                        sub_status_text = f"منتهي منذ {abs(diff)} يوم ({office.subscription_end[:10]})"
+                        days_left = 0
+                    elif diff == 0:
+                        sub_status_text = f"ينتهي اليوم ({office.subscription_end[:10]})"
+                        days_left = 0
+                    else:
+                        days_left = diff
+                        sub_status_text = f"متبقي {diff} يوم (حتى {office.subscription_end[:10]})"
+                except Exception:
+                    sub_status_text = f"صالح حتى {office.subscription_end[:10]}"
+                    days_left = getattr(user, 'trial_days_left', 0)
+            elif getattr(user, 'trial_days_left', None) is not None:
+                days_left = user.trial_days_left
+                sub_status_text = f"متبقي {days_left} يوم تجريبي"
 
         # --- Cases stats ---
         total_cases   = db.query(LawCases).filter(LawCases.office_id == office_id).count()
@@ -119,6 +147,12 @@ async def reports_page(
 
         return templates.TemplateResponse(request=request, name="reports.html", context={
             "user": user, "active_page": "reports",
+            "office": office,
+            "days_left": days_left,
+            "sub_status_text": sub_status_text,
+            "report_date": datetime.now().strftime("%Y-%m-%d"),
+            "report_ref": f"REP-{office.id if office else '1'}-{user.id}-{total_cases}",
+            "report_type_title": "التقرير الإحصائي والتحليلي العام للمكتب",
             "total_cases": total_cases, "open_cases": open_cases, "closed_cases": closed_cases,
             "cases_by_type": cases_by_type, "cases_by_status": cases_by_status,
             "income_data": income_data, "total_income": total_income,

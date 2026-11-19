@@ -82,14 +82,25 @@
 {% endblock %}
 
 {% block content %}
+<!-- Official Legal Letterhead & Center Watermark for Display & Print -->
+{% include "components/report_letterhead.html" %}
+
 <div class="reports-header">
     <div>
         <h1>التقارير والإحصائيات الشاملة</h1>
-        <p>نظرة تحليلية متكاملة لأداء المكتب المالي والقانوني</p>
+        <p>نظرة تحليلية متكاملة لأداء المكتب المالي والقانوني — <strong style="color: var(--primary-color); font-weight: 800;">{{ office.name if office and office.name else 'المكتب' }}</strong></p>
     </div>
-    <button class="print-btn" onclick="window.print()">
-        <i class="fa-solid fa-print"></i> طباعة التقرير
-    </button>
+    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+        {% if sub_status_text %}
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; padding: 8px 16px; border-radius: 8px; font-weight: 700; font-size: 0.88rem; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-clock-rotate-left" style="color: #2563eb;"></i>
+            <span>صلاحية الاشتراك: <strong>{{ sub_status_text }}</strong></span>
+        </div>
+        {% endif %}
+        <button class="print-btn" onclick="window.print()">
+            <i class="fa-solid fa-print"></i> طباعة التقرير
+        </button>
+    </div>
 </div>
 
 <!-- KPIs -->

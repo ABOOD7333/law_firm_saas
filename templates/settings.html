@@ -15,32 +15,106 @@
     </div>
 </div>
 
+{% if request.query_params.get('msg') == 'office_updated' %}
+<div id="officeAlertSuccess" style="background: #ecfdf5; border: 1px solid #6ee7b7; color: #065f46; padding: 14px 20px; border-radius: 12px; margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.12);">
+    <div style="display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 1rem;">
+        <i class="fa-solid fa-circle-check" style="font-size: 1.5rem; color: #10b981;"></i>
+        <span>تم حفظ وتحديث بيانات المكتب وشعار الهوية بنجاح! ستظهر التحديثات فوراً في ترويسة التقارير.</span>
+    </div>
+    <button type="button" onclick="this.parentElement.remove()" style="background: none; border: none; font-size: 1.3rem; color: #047857; cursor: pointer;">&times;</button>
+</div>
+{% elif request.query_params.get('msg') == 'error' %}
+<div id="officeAlertError" style="background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; padding: 14px 20px; border-radius: 12px; margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.12);">
+    <div style="display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 1rem;">
+        <i class="fa-solid fa-circle-exclamation" style="font-size: 1.5rem; color: #ef4444;"></i>
+        <span>حدث خطأ أثناء حفظ البيانات، يرجى إعادة المحاولة.</span>
+    </div>
+    <button type="button" onclick="this.parentElement.remove()" style="background: none; border: none; font-size: 1.3rem; color: #991b1b; cursor: pointer;">&times;</button>
+</div>
+{% endif %}
+
 <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 25px;">
     
     <!-- Office Information -->
     <div class="card" style="padding: 25px;">
         <h3 style="color: var(--secondary-color); margin-bottom: 20px; font-size: 1.2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
-            <i class="fa-solid fa-building"></i> بيانات مكتب المحاماة
+            <i class="fa-solid fa-building"></i> بيانات مكتب المحاماة والهوية
         </h3>
         
-        <form action="/settings/update_office" method="post">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
+        <form action="/settings/update_office" method="post" id="officeForm">
+            <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
             <input type="hidden" name="office_id" value="{{ office.id if office else '' }}">
+            <input type="hidden" name="logo_base64" id="logoBase64Input" value="">
             
+            <!-- Office Logo Uploader -->
+            <div class="form-group" style="margin-bottom: 20px; text-align: center;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 700; color: var(--secondary-color); text-align: right;">
+                    <i class="fa-solid fa-stamp" style="color: #6366f1;"></i> شعار المكتب الرسمي (يظهر في ترويسة التقارير والعلامة المائية)
+                </label>
+                
+                <div style="border: 2px dashed #cbd5e1; border-radius: 12px; padding: 16px; background: #f8fafc; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;">
+                    <div id="logoPreviewContainer" style="width: 110px; height: 110px; border-radius: 12px; border: 1px solid #e2e8f0; background: white; display: flex; align-items: center; justify-content: center; overflow: hidden; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+                        <img id="logoPreviewImg" src="{{ office.logo_path if office and office.logo_path else '' }}" alt="شعار المكتب" style="max-width: 100%; max-height: 100%; object-fit: contain; {% if not office or not office.logo_path %}display: none;{% endif %}">
+                        <i id="logoPlaceholderIcon" class="fa-solid fa-scale-balanced" style="font-size: 3rem; color: #94a3b8; {% if office and office.logo_path %}display: none;{% endif %}"></i>
+                    </div>
+                    
+                    <div style="display: flex; gap: 8px;">
+                        <label for="logoFileInput" style="padding: 7px 14px; background: #4f46e5; color: white; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                            <i class="fa-solid fa-upload"></i> رفع الشعار
+                        </label>
+                        <input type="file" id="logoFileInput" accept="image/png,image/jpeg,image/webp,image/svg+xml" style="display: none;" onchange="handleLogoSelect(event)">
+                        
+                        <button type="button" onclick="removeLogo()" style="padding: 7px 14px; background: #fee2e2; color: #b91c1c; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                            <i class="fa-solid fa-trash"></i> إزالة
+                        </button>
+                    </div>
+                    <small style="color: #64748b; margin-top: 8px; font-size: 0.78rem;">يفضل شعار بدقة عالية وخلفية شفافة (PNG أو SVG أو JPG)</small>
+                </div>
+            </div>
+
             <div class="form-group" style="margin-bottom: 15px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">اسم المكتب / الشركة <span style="color: red;">*</span></label>
                 <input type="text" name="name" value="{{ office.name if office else 'المكتب الرئيسي' }}" required style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit;">
             </div>
 
-            <div class="form-group" style="margin-bottom: 25px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">حالة الحساب</label>
-                <div style="padding: 12px; background: #dcfce7; color: #166534; border-radius: 8px; font-weight: bold; text-align: center;">
-                    <i class="fa-solid fa-check-circle"></i> نشط (Active)
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">رقم ترخيص مزاولة المهنة</label>
+                <input type="text" name="license_number" value="{{ office.license_number if office and office.license_number else '' }}" placeholder="مثال: ترخيص رقم 1445/789" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit;">
+            </div>
+
+            <!-- Subscription & Seats Card -->
+            <div style="background: #f1f5f9; border-radius: 10px; padding: 16px; margin-bottom: 20px; border: 1px solid #e2e8f0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <span style="font-size: 0.88rem; font-weight: 700; color: var(--secondary-color);">باقة الاشتراك:</span>
+                    <span style="background: #e0e7ff; color: #4338ca; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700;">
+                        {{ tier.name_ar if tier else 'الفترة التجريبية' }}
+                    </span>
                 </div>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 0.88rem;">
+                    <span style="color: #475569;">سعة المستخدمين:</span>
+                    <span style="font-weight: 800; color: #0f172a;">{{ users|length }} / {{ max_users }} حساب</span>
+                </div>
+
+                {% if extra_seats and extra_seats >= 1 %}
+                    <div style="padding: 8px 12px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; color: #065f46; font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+                        <i class="fa-solid fa-circle-check" style="color: #10b981;"></i>
+                        <span>تم تفعيل المقعد الإضافي (+1 مستخدم) — رسوم التجديد: $9.99/شهر</span>
+                    </div>
+                {% elif can_add_seat %}
+                    <div style="margin-top: 10px; padding: 10px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;">
+                        <div style="font-size: 0.8rem; color: #1e40af; margin-bottom: 8px; line-height: 1.4;">
+                            <i class="fa-solid fa-user-plus"></i> <strong>ترقية سعة الفريق:</strong> يمكنك إضافة مقعد مستخدم إضافي واحد لمكتبك ($100 رسوم تأسيس لمرة واحدة + $9.99/شهرياً تضاف للتجديد).
+                        </div>
+                        <button type="button" onclick="openExtraSeatModal()" style="width: 100%; padding: 8px; background: #2563eb; color: white; border: none; border-radius: 6px; font-weight: 700; font-size: 0.82rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                            <i class="fa-solid fa-cart-plus"></i> طلب شراء مقعد إضافي واحد ($100)
+                        </button>
+                    </div>
+                {% endif %}
             </div>
             
-            <button type="submit" class="btn-primary" style="width: 100%; padding: 12px; font-family: inherit;">
-                <i class="fa-solid fa-save"></i> حفظ بيانات المكتب
+            <button type="submit" id="btnSaveOffice" class="btn-primary" style="width: 100%; padding: 12px; font-family: inherit;">
+                <i class="fa-solid fa-save"></i> حفظ بيانات المكتب والشعار
             </button>
         </form>
     </div>
@@ -227,10 +301,149 @@
         </form>
     </div>
 </div>
+<!-- Modal for Purchasing Single Extra Seat -->
+<div id="extraSeatModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000;">
+    <div class="modal-content" style="background: white; padding: 30px; border-radius: 16px; width: 550px; max-width: 92%; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0; font-size: 1.35rem; color: #1e1b4b; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-user-plus" style="color: #2563eb;"></i> طلب شراء مقعد إضافي لمكتبكم
+            </h2>
+            <button onclick="document.getElementById('extraSeatModal').style.display='none'" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted);">&times;</button>
+        </div>
+        
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 14px; margin-bottom: 20px; font-size: 0.88rem; color: #1e3a8a; line-height: 1.6;">
+            <div><strong>تفاصيل التكلفة والشروط:</strong></div>
+            <ul style="margin: 8px 18px 0 0; padding: 0;">
+                <li><strong>رسوم التأسيس الأولية:</strong> 100 دولار تدفع لمرة واحدة عند الشراء.</li>
+                <li><strong>رسوم التجديد الشهرية:</strong> 9.99 دولار تضاف تلقائياً مع فاتورة تجديد باقة المكتب.</li>
+                <li><strong>الحد الأقصى:</strong> يسمح بمقعد إضافي واحد فقط لكل مكتب على الباقة المتوسطة أو الكبرى.</li>
+            </ul>
+        </div>
+
+        <form id="extraSeatForm" onsubmit="submitExtraSeatOrder(event)">
+            <input type="hidden" name="plan" value="extra_seat">
+            <input type="hidden" name="amount" value="100.00">
+            
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">
+                    رقم الحوالة / رقم المرجع <span style="color: red;">*</span>
+                </label>
+                <input type="text" id="seatTransferRef" required placeholder="مثال: حوالة الكريمي 87342918" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit;">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 25px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">
+                    صورة سند التحويل أو إشعار الإيداع <span style="color: red;">*</span>
+                </label>
+                <input type="file" id="seatReceiptFile" accept="image/*" required style="width: 100%; padding: 10px; border: 1px dashed var(--border-color); border-radius: 8px; font-family: inherit;">
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button type="button" onclick="document.getElementById('extraSeatModal').style.display='none'" style="padding: 12px 20px; background: #e2e8f0; color: #475569; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-family: inherit;">إلغاء</button>
+                <button type="submit" id="btnSubmitSeat" class="btn-primary" style="padding: 12px 20px; font-family: inherit; display: inline-flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-paper-plane"></i> إرسال طلب الشعار والتفعيل
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const officeForm = document.getElementById('officeForm');
+        if (officeForm) {
+            officeForm.addEventListener('submit', function() {
+                const btn = document.getElementById('btnSaveOffice');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري حفظ البيانات والشعار...';
+                }
+            });
+        }
+    });
+
+    function handleLogoSelect(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (file.size > 3 * 1024 * 1024) {
+            alert('حجم الشعار كبير جداً. يرجى اختيار صورة أقل من 3 ميجابايت.');
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            const base64 = evt.target.result;
+            document.getElementById('logoBase64Input').value = base64;
+            const img = document.getElementById('logoPreviewImg');
+            img.src = base64;
+            img.style.display = 'block';
+            const icon = document.getElementById('logoPlaceholderIcon');
+            if (icon) icon.style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function removeLogo() {
+        if (!confirm('هل أنت متأكد من رغبتك في إزالة شعار المكتب؟')) return;
+        document.getElementById('logoBase64Input').value = 'REMOVE';
+        const img = document.getElementById('logoPreviewImg');
+        img.src = '';
+        img.style.display = 'none';
+        const icon = document.getElementById('logoPlaceholderIcon');
+        if (icon) icon.style.display = 'block';
+    }
+
+    function openExtraSeatModal() {
+        document.getElementById('extraSeatModal').style.display = 'flex';
+    }
+
+    async function submitExtraSeatOrder(e) {
+        e.preventDefault();
+        const ref = document.getElementById('seatTransferRef').value.trim();
+        const fileInput = document.getElementById('seatReceiptFile');
+        if (!ref || !fileInput.files.length) {
+            alert('يرجى كتابة رقم المرجع وإرفاق صورة السند.');
+            return;
+        }
+
+        const file = fileInput.files[0];
+        const btn = document.getElementById('btnSubmitSeat');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الإرسال...';
+
+        const reader = new FileReader();
+        reader.onload = async function(evt) {
+            try {
+                const res = await fetch('/api/subscription/checkout', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        plan: 'extra_seat',
+                        amount: 100.0,
+                        transfer_ref: ref,
+                        receipt_base64: evt.target.result
+                    })
+                });
+                const data = await res.json();
+                if (data.success !== false) {
+                    alert('تم إرسال طلب تفعيل المقعد الإضافي بنجاح، وستتم مراجعته واعتماده من قبل الإدارة فوراً.');
+                    window.location.reload();
+                } else {
+                    alert('خطأ: ' + (data.error || 'فشل إرسال الطلب'));
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> إرسال طلب الشراء والتفعيل';
+                }
+            } catch(err) {
+                alert('حدث خطأ في الاتصال بالخادم.');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> إرسال طلب الشراء والتفعيل';
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+
     function openEditUserModal(id, name, phone, email, role, isActive, birthDate) {
         document.getElementById('edit_user_id').value = id;
         document.getElementById('edit_user_name').value = name;
