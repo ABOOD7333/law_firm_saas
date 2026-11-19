@@ -61,23 +61,25 @@ async def reports_page(
         closed_cases  = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.status_key.in_(['closed','مغلقة'])).count()
 
         # Cases by type
-        cases_by_type = db.query(LawCases.case_type_key, func.count(LawCases.id).label('cnt'))\
+        raw_types = db.query(LawCases.case_type_key, func.count(LawCases.id).label('cnt'))\
             .filter(LawCases.office_id == office_id, LawCases.case_type_key != None)\
             .group_by(LawCases.case_type_key).order_by(func.count(LawCases.id).desc()).limit(8).all()
+        cases_by_type = [[r[0] or 'غير محدد', int(r[1])] for r in raw_types]
 
         # Cases by status
-        cases_by_status = db.query(LawCases.status_key, func.count(LawCases.id).label('cnt'))\
+        raw_status = db.query(LawCases.status_key, func.count(LawCases.id).label('cnt'))\
             .filter(LawCases.office_id == office_id)\
             .group_by(LawCases.status_key).all()
+        cases_by_status = [[r[0] or 'غير محدد', int(r[1])] for r in raw_status]
 
         # --- Financials ---
-        income_data = db.query(
+        raw_income = db.query(
             func.substr(LawTransactions.transaction_at, 1, 7).label('month'),
             func.coalesce(func.sum(LawTransactions.amount * LawTransactions.exchange_rate), 0).label('total')
         ).filter(LawTransactions.office_id == office_id)\
          .group_by(func.substr(LawTransactions.transaction_at, 1, 7))\
          .order_by(func.substr(LawTransactions.transaction_at, 1, 7).desc()).limit(6).all()
-        income_data = list(reversed(income_data))
+        income_data = [[r[0] or '', float(r[1])] for r in reversed(raw_income)]
 
         total_income   = db.query(func.coalesce(func.sum(LawTransactions.amount * LawTransactions.exchange_rate), 0))\
             .filter(LawTransactions.office_id == office_id).scalar() or 0
