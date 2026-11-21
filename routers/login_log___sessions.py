@@ -18,7 +18,7 @@ async def login_log_page(request: Request, db: Session = Depends(get_db), user: 
     if not user: return RedirectResponse(url="/", status_code=303)
     try:
         from datetime import datetime
-        office_id = user.office_id or 1
+        office_id = user.office_id
         # Fetch sessions for all users in the office
         users = db.query(AccessProfiles).filter(AccessProfiles.office_id == office_id).all()
         user_dict = {u.id: u for u in users}
@@ -74,11 +74,13 @@ async def session_revoke(session_id: int, db: Session = Depends(get_db), user: A
 async def session_revoke_all(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     from fastapi.responses import JSONResponse
     if not user: return JSONResponse({"ok": False, "message": "غير مصرح"}, status_code=401)
+    if not (getattr(user, "is_superadmin", 0) == 1 or user.role in {"صاحب المكتب", "صاحب مكتب", "مدير المكتب", "مدير مكتب", "مدير", "مدير النظام", "admin", "owner"}):
+        return JSONResponse({"ok": False, "message": "إنهاء جلسات المكتب متاح لمدير المكتب فقط"}, status_code=403)
     token = request.cookies.get("session_token")
     if not token:
         auth_header = request.headers.get("Authorization", "")
         token = auth_header[7:] if auth_header.startswith("Bearer ") else None
-    office_id = user.office_id or 1
+    office_id = user.office_id
     users = db.query(AccessProfiles.id).filter(AccessProfiles.office_id == office_id).all()
     user_ids = [u[0] for u in users]
     

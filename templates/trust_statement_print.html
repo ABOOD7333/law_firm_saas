@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>كشف حساب أمانات موكل - {{ account.account_number }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: #fff;
+            color: #0f172a;
+            margin: 0;
+            padding: 30px;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        .header {
+            border-bottom: 3px double #065f46;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .title {
+            text-align: center;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 14px;
+        }
+        .summary-boxes {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+        .box {
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 25px;
+        }
+        th, td {
+            border: 1px solid #cbd5e1;
+            padding: 8px 10px;
+            text-align: right;
+            font-size: 12px;
+        }
+        th {
+            background: #f1f5f9;
+            font-weight: 800;
+        }
+        .footer-sig {
+            margin-top: 40px;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 40px;
+        }
+        @media print {
+            body { padding: 0; }
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="no-print" style="margin-bottom: 20px; text-align: left;">
+        <button onclick="window.print()" style="padding: 10px 24px; background: #059669; color: #fff; border: none; border-radius: 6px; font-family: 'Cairo'; font-weight: 700; cursor: pointer;">
+            🖨️ طباعة كشف الحساب / حفظ كـ PDF
+        </button>
+    </div>
+
+    <div class="header">
+        <div>
+            <h2 style="margin: 0; color: #065f46; font-weight: 900;">{{ office.name if office else 'مكتب المحاماة والاستشارات القانونية' }}</h2>
+            <div style="font-size: 0.85rem; color: #64748b;">قسم المحاسبة الرقابية وإدارة أمانات الموكلين المستقلة</div>
+        </div>
+        <div style="text-align: left;">
+            <div><strong>رقم حساب الأمانة:</strong> {{ account.account_number }}</div>
+            <div><strong>تاريخ استخراج الكشف:</strong> {{ print_date }}</div>
+        </div>
+    </div>
+
+    <div class="title">
+        <h2 style="margin: 0; color: #065f46; font-size: 1.25rem;">كشف حساب أمانات موكل مستقل (Client Trust Statement)</h2>
+        <div style="font-size: 0.95rem; color: #334155; font-weight: 700; margin-top: 4px;">{{ account.title }}</div>
+    </div>
+
+    <div class="meta-grid">
+        <div><strong>الموكل صاحب الأمانة:</strong> {{ client.name if client else 'غير محدد' }}</div>
+        <div><strong>البنك المودع به الحساب:</strong> {{ account.bank_name or 'حساب أمانات معتمد' }}</div>
+        <div><strong>الآيبان البنكي (IBAN):</strong> <span dir="ltr">{{ account.iban or '-' }}</span></div>
+        <div><strong>القضية المرتبطة:</strong> {{ (law_case.case_number + ' - ' + law_case.title) if law_case else 'أمانة عامة' }}</div>
+    </div>
+
+    <div class="summary-boxes">
+        <div class="box" style="background: #eff6ff; border: 1px solid #bfdbfe;">
+            <div style="font-size: 0.8rem; color: #1e40af;">إجمالي المقبوض لحساب الأمانة</div>
+            <div style="font-size: 1.3rem; font-weight: 900; color: #1e3a8a;">{{ "{:,.2f}".format(account.total_deposited) }} {{ account.currency }}</div>
+        </div>
+        <div class="box" style="background: #fef3c7; border: 1px solid #fde68a;">
+            <div style="font-size: 0.8rem; color: #92400e;">إجمالي المصروف / المحول</div>
+            <div style="font-size: 1.3rem; font-weight: 900; color: #78350f;">{{ "{:,.2f}".format(account.total_disbursed) }} {{ account.currency }}</div>
+        </div>
+        <div class="box" style="background: #ecfdf5; border: 2px solid #10b981;">
+            <div style="font-size: 0.8rem; color: #047857; font-weight: 800;">الرصيد الفعلي الحالي بالأمانة</div>
+            <div style="font-size: 1.4rem; font-weight: 900; color: #065f46;">{{ "{:,.2f}".format(account.current_balance) }} {{ account.currency }}</div>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>رقم السند</th>
+                <th>التاريخ</th>
+                <th>نوع الحركة</th>
+                <th>البيان والسبب</th>
+                <th>المستلم / المودع</th>
+                <th>إيداع (+)</th>
+                <th>صرف (-)</th>
+                <th>الرصيد بعد الحركة</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in transactions %}
+            <tr>
+                <td style="font-family: monospace; font-weight: 700;">{{ t.voucher_number }}</td>
+                <td>{{ t.transaction_date }}</td>
+                <td>
+                    {% if t.transaction_type == 'deposit' %}إيداع أمانة{% elif t.transaction_type == 'disbursement' %}صرف للموكل{% else %}تحويل أتعاب للمكتب{% endif %}
+                </td>
+                <td>{{ t.description }}</td>
+                <td>{{ t.payee_or_payer or '-' }}</td>
+                <td style="color: #059669; font-weight: 700;">{{ "{:,.2f}".format(t.amount) if t.transaction_type == 'deposit' else '-' }}</td>
+                <td style="color: #dc2626; font-weight: 700;">{{ "{:,.2f}".format(t.amount) if t.transaction_type != 'deposit' else '-' }}</td>
+                <td style="font-weight: 800; font-family: monospace;">{{ "{:,.2f}".format(t.balance_after) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div style="font-size: 0.8rem; color: #64748b; margin-top: 15px; border-top: 1px dashed #cbd5e1; padding-top: 10px;">
+        * إقرار رقابي: تم استخراج هذا الكشف وفق متطلبات عزل أموال أمانات الموكلين عن الحساب التشغيلي للمكتب، ولا يُعتبر رصيد الأمانة جزءاً من أصول المكتب أو إيراداته لحين صرفه أو تحويله بموجب عقود قانونية مسبقة.
+    </div>
+
+    <div class="footer-sig">
+        <div style="text-align: center;">
+            <strong>توقيع المحاسب المعتمد</strong><br><br><br>
+            ..................................
+        </div>
+        <div style="text-align: center;">
+            <strong>ختم الإدارة المالية للمكتب</strong><br><br><br>
+            ..................................
+        </div>
+    </div>
+
+</body>
+</html>

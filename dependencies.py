@@ -2,7 +2,7 @@
 Shared dependencies module - imported by routers to avoid circular imports.
 This module provides get_current_user and templates without importing from main.
 """
-from fastapi import Request, Depends
+from fastapi import Request, Depends, HTTPException
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
@@ -12,9 +12,82 @@ from core.security import hash_session_token
 
 templates = Jinja2Templates(directory="templates")
 
+# Universal backward-compatibility wrapper for Starlette 0.38+ TemplateResponse
+_orig_template_response = templates.TemplateResponse
+
+def _safe_template_response(*args, **kwargs):
+    # Support both old signature (name, context, ...) and new Starlette signature (request, name, context, ...)
+    # as well as keyword-only calls.
+    request = kwargs.get("request")
+    name = kwargs.get("name")
+    context = kwargs.get("context", {})
+
+    if len(args) >= 1:
+        if isinstance(args[0], str):
+            name = args[0]
+            if len(args) > 1 and isinstance(args[1], dict):
+                context = args[1]
+        else:
+            request = args[0]
+            if len(args) > 1:
+                name = args[1]
+            if len(args) > 2 and isinstance(args[2], dict):
+                context = args[2]
+
+    if not request and isinstance(context, dict):
+        request = context.get("request")
+
+    if isinstance(context, dict) and request:
+        if not context.get("csrf_token"):
+            context["csrf_token"] = getattr(request.state, "csrf_token", None) or getattr(request, "cookies", {}).get("csrf_token", "")
+
+    clean_kwargs = {k: v for k, v in kwargs.items() if k not in ("request", "name", "context")}
+    return _orig_template_response(request=request, name=name, context=context, **clean_kwargs)
+
+templates.TemplateResponse = _safe_template_response
+templates.env.globals["get_csrf_token"] = lambda req: (getattr(req.state, "csrf_token", None) or req.cookies.get("csrf_token", "")) if req else ""
+templates.env.globals["getattr"] = getattr
+
+# ==============================================================================
+# سجل الصلاحيات الموحد لكافة واجهات النظام (Central System Permissions Registry)
+# ==============================================================================
+SYSTEM_PERM_MODULES = [
+    ("cases", "إدارة القضايا"),
+    ("incoming_cases", "القضايا الواردة"),
+    ("matters", "المسائل والاستشارات"),
+    ("parties", "الأطراف والمتقاضون"),
+    ("clients", "الموكلون"),
+    ("hearings", "محاضر الجلسات"),
+    ("documents", "المستندات والأرشفة"),
+    ("pleadings", "المرافعات والمذكرات"),
+    ("judgments", "الأحكام والقرارات"),
+    ("notes", "الملاحظات والاتصالات"),
+    ("correspondences", "المراسلات الرسمية"),
+    ("tasks", "المهام والمتابعة"),
+    ("finance", "الحسابات والمالية"),
+    ("expenses", "مصاريف القضية"),
+    ("timesheet", "سجل الساعات"),
+    ("execution", "إجراءات التنفيذ"),
+    ("power_of_attorney", "الوكالات الرسمية"),
+    ("conflict_check", "فحص تضارب المصالح"),
+    ("trust_accounts", "حسابات الأمانات"),
+    ("calendar", "التقويم القضائي والمواعيد"),
+    ("intake", "استقبال واستمارة العملاء"),
+    ("reports", "التقارير"),
+    ("team", "الفريق والصلاحيات"),
+    ("legal_references", "المراجع القانونية"),
+    ("limitations", "تنبيهات التقادم"),
+    ("advanced_operations", "العمليات المتقدمة"),
+]
+templates.env.globals["SYSTEM_PERM_MODULES"] = SYSTEM_PERM_MODULES
+
+
 def check_user_permission(user, module: str, action: str = "view") -> bool:
     if not user:
         return False
+    # جلسات الدعم الفني بالنيابة وحسابات المشرف العام تتجاوز كافة قيود الصلاحيات
+    if getattr(user, 'is_support_session', False) or getattr(user, 'is_superadmin', 0) == 1:
+        return True
     # Owner and Office Manager bypass all checks — covers all role name variants
     _ADMIN_ROLES = {
         "صاحب المكتب", "صاحب مكتب",
@@ -26,20 +99,64 @@ def check_user_permission(user, module: str, action: str = "view") -> bool:
         return True
     
     if not getattr(user, 'permissions_json', None):
+        if user.role in {"محامي", "محامٍ"}:
+            return True
         return False
         
     try:
         import json
         perms = json.loads(user.permissions_json)
         if module in perms:
-            if action == "view":
-                return "view" in perms[module] or len(perms[module]) > 0
-            return action in perms[module]
+            allowed_actions = perms[module]
+            if not isinstance(allowed_actions, (list, tuple, set)):
+                return False
+            return action in allowed_actions
+        elif user.role in {"محامي", "محامٍ"}:
+            return True
     except Exception:
         pass
+    if user.role in {"محامي", "محامٍ"}:
+        return True
     return False
 
+
+def require_user_permission(user, module: str, action: str = "view") -> None:
+    """Enforce an RBAC permission at the request handler boundary."""
+    if not user:
+        raise HTTPException(status_code=401, detail="غير مصرح")
+    if not user.office_id or not check_user_permission(user, module, action):
+        raise HTTPException(status_code=403, detail="لا تملك الصلاحية المطلوبة")
+
+
+def user_can_access_case(db: Session, user, case_id: int) -> bool:
+    """Return whether a user may access a live case within their own office."""
+    from database.models import LawCases
+
+    if not user or not user.office_id or user.role == "موكل":
+        return False
+    query = db.query(LawCases.id).filter(
+        LawCases.id == case_id,
+        LawCases.office_id == user.office_id,
+        LawCases.is_deleted == 0,
+    )
+    if user.role in {"محامي", "محامٍ"} and not getattr(user, "can_view_all_cases", 0):
+        query = query.filter(LawCases.lead_lawyer_id == user.id)
+    return query.first() is not None
+
 templates.env.globals['has_perm'] = check_user_permission
+
+
+def is_module_enabled(user, module_key: str) -> bool:
+    """Check if an office has access to a specific module (Feature Flagging)."""
+    if not user:
+        return False
+    if getattr(user, 'is_superadmin', 0) == 1:
+        return True
+    disabled_list = getattr(user, 'disabled_modules', []) or []
+    return module_key not in disabled_list
+
+
+templates.env.globals['is_module_enabled'] = is_module_enabled
 
 
 
@@ -79,6 +196,36 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
         if user.is_active == 0:
             return None
             
+        # Check if this is an impersonated technical support session
+        is_support_session = False
+        
+        # 1. Direct database-backed check via device_id on the session record
+        if getattr(session_record, 'device_id', None) and str(session_record.device_id).startswith("impersonated_by_admin"):
+            is_support_session = True
+            
+        # 2. Token-backed check via superadmin_session_token cookie
+        if not is_support_session:
+            superadmin_token = request.cookies.get("superadmin_session_token")
+            if superadmin_token:
+                superadmin_token_hash = hash_session_token(superadmin_token)
+                admin_session = db.query(AuthSessions).filter(
+                    AuthSessions.session_token.in_([superadmin_token, superadmin_token_hash]),
+                    AuthSessions.is_active == 1
+                ).first()
+                if admin_session:
+                    admin_user = db.query(AccessProfiles).filter(
+                        AccessProfiles.id == admin_session.user_id,
+                        AccessProfiles.is_active == 1
+                    ).first()
+                    if admin_user and getattr(admin_user, 'is_superadmin', 0) == 1:
+                        is_support_session = True
+                        
+        # 3. Fallback cookie flag check
+        if not is_support_session and request.cookies.get("is_support_session") == "1":
+            is_support_session = True
+        
+        user.is_support_session = is_support_session
+
         # Superadmins bypass office blocks
         if getattr(user, 'is_superadmin', 0) == 1:
             return user
@@ -89,7 +236,7 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
             
         if user.office_id:
             office = db.query(LawOffices).filter(LawOffices.id == user.office_id).first()
-            if office and office.is_active == 0:
+            if office and office.is_active == 0 and not is_support_session:
                 return None
             if office:
                 user.subscription_plan = getattr(office, 'subscription_plan', 'trial')
@@ -108,11 +255,24 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
                     except:
                         pass
                 
+                # تحميل الموديولات المقفلة على هذا المكتب (Feature Flagging)
+                import json
+                raw_disabled = getattr(office, 'disabled_modules_json', '[]') or '[]'
+                try:
+                    user.disabled_modules = json.loads(raw_disabled)
+                except Exception:
+                    user.disabled_modules = []
+                
         # ── حماية أمنية وتوزيع الصلاحيات (RBAC) ──
         path = request.url.path
         
         from fastapi.exceptions import HTTPException
         from fastapi import status
+
+        # جلسات الدعم الفني بالنيابة وحسابات الإدارة تعبر دون قفل انتهاء الاشتراك أو حظر الأدوار لتتمكن من فحص وتجربة النظام
+        if is_support_session or getattr(user, 'is_superadmin', 0) == 1:
+            user.subscription_expired = False
+            return user
 
         # Subscription Lock Check
         is_api = path.startswith('/api/')
@@ -122,19 +282,50 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
                 raise HTTPException(status_code=403, detail="Subscription Expired")
             else:
                 raise HTTPException(status_code=status.HTTP_303_SEE_OTHER, headers={"Location": "/subscription"})
+
+        # ── التحقق من الواجهات المقفلة على هذا المكتب (Tenant Module Restriction) ──
+        # خريطة المسارات التابعة لكل موديول
+        _MODULE_PATH_MAP = {
+            "accounting": ["/accounting", "/api/accounting"],
+            "finance": ["/finance", "/api/finance"],
+            "expenses": ["/expenses", "/api/expenses"],
+            "timesheet": ["/timesheet", "/api/timesheets"],
+            "kanban": ["/kanban", "/api/kanban"],
+            "intake": ["/intake", "/api/intake"],
+            "automation": ["/automation", "/api/automation", "/api/workflows", "/api/conflict-check", "/api/case", "/api/templates", "/api/doc-generator"],
+            "timeline": ["/timeline", "/api/timeline", "/api/case"],
+            "execution": ["/execution", "/api/execution"],
+            "power_of_attorney": ["/power_of_attorney", "/api/poa"],
+            "advanced_operations": ["/advanced_operations", "/api/advanced"],
+            "client_portal": ["/client-portal"]
+        }
+
+        disabled_mods = getattr(user, 'disabled_modules', []) or []
+        if disabled_mods and getattr(user, 'is_superadmin', 0) != 1:
+            for mod_key in disabled_mods:
+                prefixes = _MODULE_PATH_MAP.get(mod_key, [])
+                if any(path == p or path.startswith(p + '/') for p in prefixes):
+                    if is_api:
+                        raise HTTPException(status_code=403, detail="هذه الواجهة غير مفعلة لمكتبكم من قبل إدارة المنصة")
+                    raise HTTPException(status_code=status.HTTP_303_SEE_OTHER, headers={"Location": "/dashboard?msg=module_disabled"})
         
         # 1. الموكل (Client)
         if user.role == 'موكل':
             allowed = ['/', '/dashboard', '/logout']
-            if not any(path == p for p in allowed) and not path.startswith('/static') and not path.startswith('/api/mobile'):
+            if not any(path == p for p in allowed) and not path.startswith(('/static/', '/api/mobile/', '/client-portal/')) and path != '/client-portal':
                 if path.startswith('/api/'):
                     raise HTTPException(status_code=403, detail="غير مصرح للموكلين بالوصول")
                 raise HTTPException(status_code=status.HTTP_303_SEE_OTHER, headers={"Location": "/dashboard"})
                 
         # 2. المحاسب (Accountant)
         elif user.role == 'محاسب':
-            allowed_prefixes = ('/', '/dashboard', '/finance', '/expenses', '/timesheet', '/reports', '/clients', '/logout', '/static', '/api/finance', '/api/expenses', '/api/timesheets', '/api/ai')
-            if not path.startswith(allowed_prefixes):
+            allowed_exact = {'/', '/logout'}
+            allowed_prefixes = ('/dashboard', '/finance', '/expenses', '/timesheet', '/reports', '/clients', '/static', '/api/finance', '/api/expenses', '/api/timesheets')
+            is_allowed = path in allowed_exact or any(
+                path == prefix or path.startswith(prefix + '/')
+                for prefix in allowed_prefixes
+            )
+            if not is_allowed:
                 if path.startswith('/api/'):
                     raise HTTPException(status_code=403, detail="غير مصرح للمحاسبين بالوصول")
                 raise HTTPException(status_code=status.HTTP_303_SEE_OTHER, headers={"Location": "/dashboard"})
@@ -142,7 +333,7 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
         # 3. السكرتير والمحامي (Secretary & Lawyer)
         elif user.role in ['سكرتير', 'محامي', 'محامٍ']:
             forbidden_prefixes = ('/team', '/settings', '/finance', '/expenses', '/login_log', '/activity', '/api/team', '/api/settings', '/api/finance', '/api/expenses', '/advanced_operations', '/reports', '/api/advanced')
-            if path.startswith(forbidden_prefixes) and not path.startswith('/api/ai'):
+            if path.startswith(forbidden_prefixes):
                 if path.startswith('/api/'):
                     raise HTTPException(status_code=403, detail="غير مصرح لك بالقيام بهذا الإجراء")
                 raise HTTPException(status_code=status.HTTP_303_SEE_OTHER, headers={"Location": "/dashboard"})

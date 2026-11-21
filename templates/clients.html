@@ -1,249 +1,1102 @@
 {% extends "base.html" %}
 
-{% block title %}الموكلين | LawSaaS{% endblock %}
+{% block title %}إدارة وسجل الموكلين | LawSaaS{% endblock %}
 
 {% block content %}
-<div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
-    <div>
-        <h1>سجل الموكلين</h1>
-        <p>إدارة بيانات الموكلين وإضافة موكلين جدد للنظام.</p>
-    </div>
-    {% if has_perm(user, 'clients', 'add') %}
-    <button class="primary-btn" onclick="openAddClientModal()">
-        <i class="fa-solid fa-plus"></i> إضافة موكل جديد
-    </button>
-    {% endif %}
-</div>
-
-<div class="content-section">
-    <div class="table-container">
-        <table class="saas-table">
-            <thead>
-                <tr>
-                    <th>اسم الموكل</th>
-                    <th>اسم المستخدم</th>
-                    <th>رقم القضية</th>
-                    <th>رقم الهاتف</th>
-                    <th>الإيميل</th>
-                    <th>تاريخ الإضافة</th>
-                    <th>إجراءات</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for client in clients %}
-                <tr>
-                    <td><strong>{{ client.name }}</strong></td>
-                    <td><span style="background:#e2e8f0; padding:2px 8px; border-radius:10px; font-size:0.85rem;">{{ client.username or '-' }}</span></td>
-                    <td>{{ client.case_number or '-' }}</td>
-                    <td dir="ltr" style="text-align: right;">{{ client.phone or '-' }}</td>
-                    <td>{{ client.email or '-' }}</td>
-                    <td>{{ client.created_at.split(' ')[0] if client.created_at else '-' }}</td>
-                    <td>
-                        <div style="display:flex;gap:5px;flex-wrap:wrap;">
-                            <button class="action-btn view-btn" title="عرض التفاصيل">
-                                <i class="fa-solid fa-eye"></i> عرض
-                            </button>
-                            {% if has_perm(user, 'clients', 'edit') %}
-                            <button class="action-btn edit-btn" title="تعديل" onclick="openEditClientModal('{{ client.id }}', '{{ client.name }}', '{{ client.username or '' }}', '{{ client.case_number or '' }}', '{{ client.phone }}', '{{ client.email }}')">
-                                <i class="fa-solid fa-pen-to-square"></i> تعديل
-                            </button>
-                            {% endif %}
-                        </div>
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="7" style="text-align: center; padding: 30px; color: #64748b;">
-                        <i class="fa-solid fa-users" style="font-size: 3rem; margin-bottom: 10px; opacity: 0.5;"></i>
-                        <br>
-                        لا يوجد موكلين مضافين حتى الآن
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<!-- Add Client Modal -->
-<div id="addClientModal" class="modal-overlay">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2>إضافة موكل جديد</h2>
-            <button class="close-btn" onclick="closeAddClientModal()"><i class="fa-solid fa-xmark"></i></button>
-        </div>
-        <div class="modal-body">
-            <form id="addClientForm" method="POST" action="/clients/add">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>الاسم الكامل (أو اسم الشركة) *</label>
-                        <input type="text" name="name" required class="form-control">
-                    </div>
-                    <div class="form-group">
-                        <label>اسم المستخدم (للدخول) *</label>
-                        <input type="text" name="username" required class="form-control" dir="ltr">
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>كلمة المرور *</label>
-                        <input type="text" name="password" required class="form-control" dir="ltr">
-                    </div>
-                    <div class="form-group">
-                        <label>رقم القضية *</label>
-                        <input type="text" name="case_number" required class="form-control">
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>رقم الهاتف</label>
-                        <input type="text" name="phone" class="form-control">
-                    </div>
-                    <div class="form-group">
-                        <label>البريد الإلكتروني</label>
-                        <input type="email" name="email" class="form-control">
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="cancel-btn" onclick="closeAddClientModal()">إلغاء</button>
-                    <button type="submit" class="submit-btn">حفظ الموكل</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Edit Client Modal -->
-<div id="editClientModal" class="modal-overlay">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2>تعديل بيانات الموكل</h2>
-            <button class="close-btn" onclick="closeEditClientModal()"><i class="fa-solid fa-xmark"></i></button>
-        </div>
-        <div class="modal-body">
-            <form id="editClientForm" method="POST" action="/clients/edit">
-    <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
-                <input type="hidden" name="client_id" id="edit_client_id">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>الاسم الكامل (أو اسم الشركة) *</label>
-                        <input type="text" name="name" id="edit_client_name" required class="form-control">
-                    </div>
-                    <div class="form-group">
-                        <label>اسم المستخدم</label>
-                        <input type="text" name="username" id="edit_client_username" required class="form-control" dir="ltr">
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>كلمة المرور (اتركه فارغاً إذا لم ترد التغيير)</label>
-                        <input type="text" name="password" id="edit_client_password" class="form-control" dir="ltr">
-                    </div>
-                    <div class="form-group">
-                        <label>رقم القضية</label>
-                        <input type="text" name="case_number" id="edit_client_case_number" class="form-control">
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>رقم الهاتف</label>
-                        <input type="text" name="phone" id="edit_client_phone" class="form-control">
-                    </div>
-                    <div class="form-group">
-                        <label>البريد الإلكتروني</label>
-                        <input type="email" name="email" id="edit_client_email" class="form-control">
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="cancel-btn" onclick="closeEditClientModal()">إلغاء</button>
-                    <button type="submit" class="submit-btn">حفظ التعديلات</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block head %}
 <style>
-/* Buttons & Modal Styles */
-.primary-btn {
-    background-color: var(--primary-color);
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 8px;
+/* ==============================================================
+   Scoped Styles for Clients Management (LawSaaS Design System)
+   ============================================================== */
+.clients-page-container {
+    padding: 0 4px;
+}
+
+/* KPI Cards */
+.clients-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+.client-stat-card {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 18px 20px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.client-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+}
+.client-stat-info .stat-label {
+    color: #64748b;
+    font-size: 0.84rem;
     font-weight: 700;
+    margin-bottom: 4px;
+}
+.client-stat-info .stat-value {
+    font-size: 1.6rem;
+    font-weight: 900;
+    color: #0f172a;
+    line-height: 1.2;
+}
+.client-stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+}
+
+/* Avatar */
+.client-avatar-badge {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1rem;
+    color: #ffffff;
+    flex-shrink: 0;
+}
+
+/* Filter Card */
+.clients-filter-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+.clients-search-box {
+    position: relative;
+    flex: 1;
+    min-width: 280px;
+}
+.clients-search-box i {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 0.95rem;
+}
+.clients-search-input {
+    width: 100%;
+    padding: 10px 42px 10px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-family: 'Cairo', sans-serif;
+    font-size: 0.9rem;
+    background: #f8fafc;
+    transition: border-color 0.2s, background-color 0.2s;
+    box-sizing: border-box;
+}
+.clients-search-input:focus {
+    outline: none;
+    border-color: #1e40af;
+    background: #ffffff;
+}
+.clients-type-select {
+    padding: 10px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-family: 'Cairo', sans-serif;
+    font-size: 0.9rem;
+    background: #f8fafc;
+    min-width: 190px;
+    color: #334155;
+    font-weight: 600;
+    box-sizing: border-box;
+}
+
+/* Data Table */
+.clients-table-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+}
+.clients-table-wrapper {
+    overflow-x: auto;
+}
+.custom-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: right;
+    font-size: 0.9rem;
+}
+.custom-table thead th {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 800;
+    padding: 14px 16px;
+    border-bottom: 1px solid #e2e8f0;
+    white-space: nowrap;
+}
+.custom-table tbody td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+.custom-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+/* Badges */
+.badge-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+.badge-blue {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+.badge-green {
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #a7f3d0;
+}
+.badge-gray {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+}
+
+/* Modal Overlay & Dialog */
+.custom-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 23, 42, 0.65);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1200;
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+}
+.custom-modal-overlay.active {
+    display: flex;
+    opacity: 1;
+}
+.custom-modal-box {
+    background: #ffffff;
+    border-radius: 16px;
+    width: 780px;
+    max-width: 95%;
+    max-height: 90vh;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: modalSlideIn 0.25s ease-out;
+}
+@keyframes modalSlideIn {
+    from { transform: translateY(15px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+.modal-header-styled {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 24px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+.modal-close-btn {
+    background: none;
+    border: none;
+    font-size: 1.6rem;
+    color: #94a3b8;
     cursor: pointer;
+    line-height: 1;
+    padding: 4px;
+}
+.modal-close-btn:hover {
+    color: #0f172a;
+}
+
+/* Modal Nav Tabs */
+.modal-tabs-header {
+    display: flex;
+    gap: 8px;
+    padding: 10px 24px 0 24px;
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    overflow-x: auto;
+}
+.modal-tab-btn {
+    background: none;
+    border: none;
+    padding: 10px 16px;
+    font-family: 'Cairo', sans-serif;
+    font-weight: 700;
+    font-size: 0.88rem;
+    color: #64748b;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+.modal-tab-btn.active {
+    color: #1e40af;
+    border-bottom-color: #1e40af;
+    background: #eff6ff;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+}
+
+/* Form Styles */
+.modal-body-content {
+    padding: 22px 24px;
+    overflow-y: auto;
+    flex: 1;
+}
+.form-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+.form-grid-1 {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+@media (max-width: 650px) {
+    .form-grid-2 {
+        grid-template-columns: 1fr;
+    }
+}
+.custom-form-group {
+    display: flex;
+    flex-direction: column;
+}
+.custom-label {
+    font-weight: 700;
+    color: #334155;
+    font-size: 0.88rem;
+    margin-bottom: 6px;
+}
+.custom-input, .custom-select, .custom-textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-family: 'Cairo', sans-serif;
+    font-size: 0.9rem;
+    background: #ffffff;
+    color: #0f172a;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+}
+.custom-input:focus, .custom-select:focus, .custom-textarea:focus {
+    outline: none;
+    border-color: #1e40af;
+    box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+}
+.custom-input[readonly] {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+/* Section Box Inside Modal */
+.form-section-box {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-bottom: 18px;
+}
+.form-section-title {
+    font-weight: 800;
+    color: #1e40af;
+    font-size: 0.95rem;
+    margin-bottom: 14px;
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 1rem;
-    transition: all 0.3s;
 }
-.primary-btn:hover { background-color: var(--primary-dark); }
 
-.action-btn {
-    background: none; border: none; padding: 6px; cursor: pointer; border-radius: 4px; font-size: 1.1rem;
+/* Action Buttons inside Table */
+.action-btn-group {
+    display: inline-flex;
+    gap: 6px;
 }
-.view-btn { color: var(--primary-color); }
-.edit-btn { color: var(--warning); }
-.action-btn:hover { background-color: #f1f5f9; }
-
-/* Modal Overlay */
-.modal-overlay {
-    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-    background-color: rgba(15, 23, 42, 0.6);
-    display: flex; justify-content: center; align-items: center;
-    z-index: 1000; opacity: 0; visibility: hidden; transition: all 0.3s ease;
-    backdrop-filter: blur(4px);
+.btn-icon-action {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #475569;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.15s;
+    font-size: 0.85rem;
 }
-.modal-overlay.active { opacity: 1; visibility: visible; }
-
-.modal-content {
-    background: white; border-radius: 16px; width: 500px; max-width: 90%;
-    transform: translateY(20px); transition: all 0.3s ease;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+.btn-icon-action:hover {
+    background: #f1f5f9;
+    color: #0f172a;
 }
-.modal-overlay.active .modal-content { transform: translateY(0); }
-
-.modal-header {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 20px 24px; border-bottom: 1px solid var(--border-color);
+.btn-icon-action.primary:hover {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-color: #bfdbfe;
 }
-.modal-header h2 { font-size: 1.25rem; color: var(--secondary-color); }
-.close-btn { background: none; border: none; font-size: 1.25rem; color: var(--text-muted); cursor: pointer; }
-
-.modal-body { padding: 24px; }
-.form-group { margin-bottom: 20px; }
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
-.form-group label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; color: var(--text-main); }
-.form-control { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.95rem; font-family: inherit; }
-.form-control:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
-
-.modal-footer {
-    display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;
+.btn-icon-action.warning:hover {
+    background: #fffbeb;
+    color: #b45309;
+    border-color: #fde68a;
 }
-.cancel-btn { background: white; border: 1px solid var(--border-color); padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--text-main); }
-.submit-btn { background: var(--primary-color); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+.btn-icon-action.danger:hover {
+    background: #fef2f2;
+    color: #dc2626;
+    border-color: #fecaca;
+}
+
+/* Modal Footer */
+.modal-footer-styled {
+    padding: 16px 24px;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.btn-styled {
+    padding: 9px 18px;
+    border-radius: 8px;
+    font-family: 'Cairo', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+}
+.btn-styled-primary {
+    background: #1e40af;
+    color: #ffffff;
+}
+.btn-styled-primary:hover {
+    background: #1d4ed8;
+}
+.btn-styled-success {
+    background: #059669;
+    color: #ffffff;
+}
+.btn-styled-success:hover {
+    background: #047857;
+}
+.btn-styled-secondary {
+    background: #ffffff;
+    border-color: #cbd5e1;
+    color: #475569;
+}
+.btn-styled-secondary:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
 </style>
-{% endblock %}
 
-{% block scripts %}
+<div class="clients-page-container" dir="rtl">
+    <!-- Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
+        <div>
+            <h1 style="font-size: 1.55rem; color: #0f172a; margin: 0 0 6px 0; font-weight: 800; display: flex; align-items: center; gap: 10px;">
+                <i class="fa-solid fa-users" style="color: #1e40af;"></i> إدارة وسجل الموكلين
+            </h1>
+            <p style="color: #64748b; margin: 0; font-size: 0.92rem;">قاعدة بيانات الموكلين، الشركات، حسابات بوابة الموكل، والربط بالقضايا والمستندات</p>
+        </div>
+        {% if has_perm(user, 'clients', 'add') %}
+        <button class="btn-styled btn-styled-primary" onclick="openAddClientModal()">
+            <i class="fa-solid fa-user-plus"></i> إضافة موكل جديد
+        </button>
+        {% endif %}
+    </div>
+
+    <!-- KPI Ribbon -->
+    <div class="clients-kpi-grid">
+        <div class="client-stat-card">
+            <div class="client-stat-info">
+                <div class="stat-label">إجمالي الموكلين بالمكتب</div>
+                <div class="stat-value">{{ stats.total if stats else (clients|length) }}</div>
+            </div>
+            <div class="client-stat-icon" style="background: #eff6ff; color: #1d4ed8;">
+                <i class="fa-solid fa-users"></i>
+            </div>
+        </div>
+
+        <div class="client-stat-card">
+            <div class="client-stat-info">
+                <div class="stat-label">الأفراد (أشخاص طبيعيين)</div>
+                <div class="stat-value" style="color: #0284c7;">{{ stats.individuals if stats else '-' }}</div>
+            </div>
+            <div class="client-stat-icon" style="background: #f0f9ff; color: #0284c7;">
+                <i class="fa-solid fa-user-tie"></i>
+            </div>
+        </div>
+
+        <div class="client-stat-card">
+            <div class="client-stat-info">
+                <div class="stat-label">الشركات والمؤسسات</div>
+                <div class="stat-value" style="color: #059669;">{{ stats.companies if stats else '-' }}</div>
+            </div>
+            <div class="client-stat-icon" style="background: #ecfdf5; color: #059669;">
+                <i class="fa-solid fa-building"></i>
+            </div>
+        </div>
+
+        <div class="client-stat-card">
+            <div class="client-stat-info">
+                <div class="stat-label">حسابات البوابة المفعلة</div>
+                <div class="stat-value" style="color: #d97706;">{{ stats.portal_active if stats else '-' }}</div>
+            </div>
+            <div class="client-stat-icon" style="background: #fef3c7; color: #d97706;">
+                <i class="fa-solid fa-shield-halved"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter & Search Bar -->
+    <div class="clients-filter-card">
+        <div class="clients-search-box">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="clientTableSearch" class="clients-search-input" placeholder="بحث بالاسم، رقم الهاتف، السجل التجاري، أو الهوية..." oninput="filterClientsTable()">
+        </div>
+        <div style="display: flex; gap: 12px; align-items: center;">
+            <select id="clientTypeFilter" class="clients-type-select" onchange="filterClientsTable()">
+                <option value="">جميع الكيانات (أفراد وشركات)</option>
+                <option value="individual">أفراد طبيعيين فقط</option>
+                <option value="company">شركات ومؤسسات فقط</option>
+            </select>
+            <div style="color: #64748b; font-size: 0.86rem; font-weight: 700; white-space: nowrap;" id="clientCountBadge">
+                إجمالي المعروض: {{ clients|length }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Clients Table -->
+    <div class="clients-table-card">
+        <div class="clients-table-wrapper">
+            <table class="custom-table" id="clientsTable">
+                <thead>
+                    <tr>
+                        <th>الموكل</th>
+                        <th>النوع / الكيان</th>
+                        <th>رقم الهوية / السجل</th>
+                        <th>بيانات الاتصال</th>
+                        <th>القضية المنسوبة</th>
+                        <th>بوابة الموكل</th>
+                        <th style="text-align: center;">إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for client in clients %}
+                    <tr class="client-row" 
+                        data-name="{{ client.name|lower }}" 
+                        data-phone="{{ client.phone or '' }}" 
+                        data-id="{{ client.national_id or client.cr_number or '' }}" 
+                        data-type="{{ client.client_type or 'individual' }}">
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div class="client-avatar-badge {% if client.client_type in ['company', 'شركة', 'مؤسسة'] %}" style="background: #059669;{% else %}" style="background: #1e40af;{% endif %}">
+                                    {% if client.client_type in ['company', 'شركة', 'مؤسسة'] %}
+                                    <i class="fa-solid fa-building" style="font-size: 0.95rem;"></i>
+                                    {% else %}
+                                    {{ client.name[0] }}
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <div style="font-weight: 800; color: #0f172a; font-size: 0.95rem;"><a href="/clients/{{ client.id }}" style="text-decoration: none; color: inherit;">{{ client.name }}</a></div>
+                                    <div style="color: #64748b; font-size: 0.8rem; margin-top: 2px; display: flex; gap: 6px; align-items: center;">
+                                        {% if client.username %}<span class="badge-pill badge-gray" dir="ltr">{{ client.username }}</span>{% endif %}
+                                        {% if client.city %}<span><i class="fa-solid fa-location-dot" style="font-size: 0.75rem;"></i> {{ client.city }}</span>{% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            {% if client.client_type in ['company', 'شركة', 'مؤسسة'] %}
+                            <span class="badge-pill badge-green">
+                                <i class="fa-solid fa-building"></i> شركة / مؤسسة
+                            </span>
+                            {% if client.legal_rep_name %}
+                            <div style="color: #64748b; font-size: 0.78rem; margin-top: 3px;">المفوض: {{ client.legal_rep_name }}</div>
+                            {% endif %}
+                            {% else %}
+                            <span class="badge-pill badge-blue">
+                                <i class="fa-solid fa-user"></i> فرد طبيعي
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if client.cr_number %}
+                            <div style="font-size: 0.82rem;"><span style="color: #64748b;">سجل:</span> <strong dir="ltr">{{ client.cr_number }}</strong></div>
+                            {% endif %}
+                            {% if client.national_id %}
+                            <div style="font-size: 0.82rem;"><span style="color: #64748b;">هوية:</span> <strong dir="ltr">{{ client.national_id }}</strong></div>
+                            {% endif %}
+                            {% if not client.cr_number and not client.national_id %}
+                            <span style="color: #94a3b8; font-size: 0.85rem;">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div style="font-weight: 700; color: #0f172a; font-size: 0.88rem;" dir="ltr">{{ client.phone or '-' }}</div>
+                            {% if client.email %}
+                            <div style="color: #64748b; font-size: 0.78rem;" dir="ltr">{{ client.email }}</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if client.case_number %}
+                            <span class="badge-pill badge-gray">{{ client.case_number }}</span>
+                            {% elif client.law_case %}
+                            <a href="/cases/{{ client.law_case.id }}" class="badge-pill badge-blue" style="text-decoration: none;">
+                                {{ client.law_case.case_number }}
+                            </a>
+                            {% else %}
+                            <span style="color: #94a3b8; font-size: 0.85rem;">غير منسوب</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if client.portal_access == 1 and client.user_id %}
+                            <span class="badge-pill badge-green">
+                                <i class="fa-solid fa-circle-check"></i> مفعل
+                            </span>
+                            {% else %}
+                            <span class="badge-pill badge-gray">معطل</span>
+                            {% endif %}
+                        </td>
+                        <td style="text-align: center;">
+                            <div class="action-btn-group">
+                                <a href="/clients/{{ client.id }}" class="btn-icon-action" style="background: #e0e7ff; color: #3730a3;" title="الملف التعريفي وسجل الممثلين">
+                                    <i class="fa-solid fa-address-card"></i>
+                                </a>
+                                <a href="/documents?client_id={{ client.id }}" class="btn-icon-action primary"  title="مستندات وأرشيف الموكل">
+                                    <i class="fa-solid fa-folder-open"></i>
+                                </a>
+                                {% if has_perm(user, 'clients', 'edit') %}
+                                <button type="button" class="btn-icon-action warning" title="تعديل الموكل"
+                                        data-client-id="{{ client.id }}"
+                                        data-client-name="{{ client.name or '' }}"
+                                        data-client-type="{{ client.client_type or 'individual' }}"
+                                        data-client-national-id="{{ client.national_id or '' }}"
+                                        data-client-cr-number="{{ client.cr_number or '' }}"
+                                        data-client-legal-rep="{{ client.legal_rep_name or '' }}"
+                                        data-client-phone="{{ client.phone or '' }}"
+                                        data-client-alt-phone="{{ client.alt_phone or '' }}"
+                                        data-client-email="{{ client.email or '' }}"
+                                        data-client-city="{{ client.city or '' }}"
+                                        data-client-address="{{ client.address or '' }}"
+                                        data-client-notes="{{ client.notes or '' }}"
+                                        data-client-case-number="{{ client.case_number or '' }}"
+                                        data-client-portal="{{ client.portal_access or 0 }}"
+                                        onclick="openEditClientFromBtn(this)">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+                                {% endif %}
+                                {% if has_perm(user, 'clients', 'delete') %}
+                                <button type="button" class="btn-icon-action danger" title="حذف" onclick="confirmDeleteClient({{ client.id }}, '{{ client.name }}')">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 48px 16px; color: #64748b;">
+                            <i class="fa-solid fa-users" style="font-size: 3rem; opacity: 0.3; display: block; margin-bottom: 12px;"></i>
+                            <h3 style="margin: 0 0 6px 0; color: #334155; font-size: 1.15rem; font-weight: 700;">لا يوجد موكلين مسجلين حتى الآن</h3>
+                            <p style="margin: 0; font-size: 0.88rem; color: #94a3b8;">اضغط على زر «إضافة موكل جديد» بالأعلى لبدء تسجيل الموكلين وإسناد القضايا لهم.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- 1. MODAL: إضافة موكل جديد (4 خطوات منظمة)                        -->
+<!-- ============================================================== -->
+<div id="addClientModal" class="custom-modal-overlay" dir="rtl">
+    <div class="custom-modal-box">
+        <div class="modal-header-styled">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 42px; height: 42px; background: #eff6ff; color: #1d4ed8; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                    <i class="fa-solid fa-user-plus"></i>
+                </div>
+                <div>
+                    <h2 style="margin: 0; font-size: 1.15rem; color: #0f172a; font-weight: 800;">إضافة موكل جديد للنظام</h2>
+                    <p style="margin: 2px 0 0 0; font-size: 0.82rem; color: #64748b;">تسجيل موكل جديد وربطه بالقضايا وبوابة الموكلين الإلكترونية</p>
+                </div>
+            </div>
+            <button type="button" class="modal-close-btn" onclick="closeAddClientModal()">&times;</button>
+        </div>
+
+        <div class="modal-tabs-header">
+            <button type="button" class="modal-tab-btn active" id="tabAdd1Btn" onclick="switchAddTab(1)">
+                <i class="fa-solid fa-id-card"></i> 1. الهوية والكيان
+            </button>
+            <button type="button" class="modal-tab-btn" id="tabAdd2Btn" onclick="switchAddTab(2)">
+                <i class="fa-solid fa-address-book"></i> 2. الاتصال والعنوان
+            </button>
+            <button type="button" class="modal-tab-btn" id="tabAdd3Btn" onclick="switchAddTab(3)">
+                <i class="fa-solid fa-shield-halved"></i> 3. بوابة الموكل
+            </button>
+        </div>
+
+        <form id="addClientForm" method="POST" action="/clients/add" style="display: flex; flex-direction: column; flex: 1; overflow: hidden; margin: 0;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token or request.cookies.get('csrf_token', '') }}">
+
+            <div class="modal-body-content">
+                <!-- Tab 1: الهوية والكيان -->
+                <div id="tabAdd1" class="tab-panel">
+                    <div class="form-section-box">
+                        <div class="form-section-title">
+                            <i class="fa-solid fa-user-gear"></i> البيانات التعريفية الأساسية
+                        </div>
+                        <div class="form-grid-2">
+                            <div class="custom-form-group">
+                                <label class="custom-label">نوع الموكل / الكيان القانوني <span style="color: red;">*</span></label>
+                                <select name="client_type" class="custom-select" id="addClientType" onchange="onClientTypeChange('add')">
+                                    <option value="individual">فرد طبيعي</option>
+                                    <option value="company">شركة / مؤسسة / جهة اعتبارية</option>
+                                </select>
+                            </div>
+                            <div class="custom-form-group">
+                                <label class="custom-label">الاسم الكامل / اسم الشركة <span style="color: red;">*</span></label>
+                                <input type="text" name="name" required class="custom-input" placeholder="مثال: أحمد عبد الله اليماني أو شركة الرواد للتجارة">
+                            </div>
+                        </div>
+
+                        <div class="form-grid-2">
+                            <div class="custom-form-group" id="addNationalIdBox">
+                                <label class="custom-label">رقم الهوية الوطنية / جواز السفر / الإقامة</label>
+                                <input type="text" name="national_id" class="custom-input" placeholder="رقم الهوية الوطنية أو البطاقة الشخصية">
+                            </div>
+                            <div class="custom-form-group" id="addCrNumberBox" style="display:none;">
+                                <label class="custom-label">رقم السجل التجاري (CR)</label>
+                                <input type="text" name="cr_number" class="custom-input" placeholder="مثال: 1010XXXXXX">
+                            </div>
+                            <div class="custom-form-group" id="addLegalRepBox" style="display:none;">
+                                <label class="custom-label">اسم المفوض / الممثل القانوني للشركة</label>
+                                <input type="text" name="legal_rep_name" class="custom-input" placeholder="اسم المدير العام أو الوكيل المفوض">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 2: الاتصال والعنوان -->
+                <div id="tabAdd2" class="tab-panel" style="display:none;">
+                    <div class="form-section-box">
+                        <div class="form-section-title">
+                            <i class="fa-solid fa-phone-volume"></i> بيانات التواصل والعنوان الوطني
+                        </div>
+                        <div class="form-grid-2">
+                            <div class="custom-form-group">
+                                <label class="custom-label">رقم الهاتف الأساسي <span style="color: red;">*</span></label>
+                                <input type="text" name="phone" required class="custom-input" placeholder="مثال: 771234567" dir="ltr">
+                            </div>
+                            <div class="custom-form-group">
+                                <label class="custom-label">هاتف بديل / رقم واتساب</label>
+                                <input type="text" name="alt_phone" class="custom-input" placeholder="هاتف إضافي للمتابعة" dir="ltr">
+                            </div>
+                        </div>
+
+                        <div class="form-grid-2">
+                            <div class="custom-form-group">
+                                <label class="custom-label">البريد الإلكتروني</label>
+                                <input type="email" name="email" class="custom-input" placeholder="client@example.com" dir="ltr">
+                            </div>
+                            <div class="custom-form-group">
+                                <label class="custom-label">المدينة / المحافظة</label>
+                                <input type="text" name="city" class="custom-input" placeholder="مثال: صنعاء، عدن، تعز...">
+                            </div>
+                        </div>
+
+                        <div class="form-grid-1">
+                            <div class="custom-form-group">
+                                <label class="custom-label">العنوان التفصيلي / المقر</label>
+                                <input type="text" name="address" class="custom-input" placeholder="الشارع، الحي، المبنى، رقم المكتب أو الشقة...">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 3: بوابة الموكل -->
+                <div id="tabAdd3" class="tab-panel" style="display:none;">
+                    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 12px 16px; margin-bottom: 18px; display: flex; align-items: center; gap: 10px; font-size: 0.88rem; color: #1e40af;">
+                        <i class="fa-solid fa-circle-info" style="font-size: 1.1rem; flex-shrink: 0;"></i>
+                        <span>تتيح بوابة الموكل للموكل متابعة جلسات قضيته، والاطلاع على المستندات المودعة مباشرة عبر حسابه الخاص.</span>
+                    </div>
+
+                    <div class="form-section-box">
+                        <div class="form-section-title">
+                            <i class="fa-solid fa-key"></i> إعدادات حساب الدخول
+                        </div>
+                        <div style="margin-bottom: 16px;">
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 700; color: #0f172a; font-size: 0.95rem;">
+                                <input type="checkbox" name="portal_access" value="1" id="addPortalToggle" checked onchange="togglePortalFields('add')" style="width: 18px; height: 18px; accent-color: #1e40af; cursor: pointer;">
+                                تفعيل حساب دخول بوابة الموكلين الإلكترونية
+                            </label>
+                        </div>
+
+                        <div class="form-grid-2 portal-add-field">
+                            <div class="custom-form-group">
+                                <label class="custom-label">اسم المستخدم (Username)</label>
+                                <input type="text" name="username" class="custom-input" placeholder="اتركه فارغاً للتوليد التلقائي" dir="ltr">
+                            </div>
+                            <div class="custom-form-group">
+                                <label class="custom-label">كلمة المرور (8 أحرف فأكثر)</label>
+                                <input type="password" name="password" class="custom-input" placeholder="اتركه فارغاً للتوليد التلقائي" dir="ltr">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer-styled">
+                <button type="button" class="btn-styled btn-styled-secondary" onclick="closeAddClientModal()">إلغاء</button>
+                <div style="display: flex; gap: 10px;">
+                    <button type="button" class="btn-styled btn-styled-secondary" id="prevAddBtn" style="display:none;" onclick="stepAddTab(-1)">
+                        <i class="fa-solid fa-arrow-right"></i> السابق
+                    </button>
+                    <button type="button" class="btn-styled btn-styled-primary" id="nextAddBtn" onclick="stepAddTab(1)">
+                        التالي <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                    <button type="submit" class="btn-styled btn-styled-success" id="submitAddBtn" style="display:none;">
+                        <i class="fa-solid fa-check"></i> حفظ وإضافة الموكل
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- 2. MODAL: تعديل بيانات الموكل                                  -->
+<!-- ============================================================== -->
+<div id="editClientModal" class="custom-modal-overlay" dir="rtl">
+    <div class="custom-modal-box">
+        <div class="modal-header-styled">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 42px; height: 42px; background: #fffbeb; color: #b45309; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                    <i class="fa-solid fa-user-pen"></i>
+                </div>
+                <div>
+                    <h2 style="margin: 0; font-size: 1.15rem; color: #0f172a; font-weight: 800;">تعديل بيانات الموكل</h2>
+                    <p style="margin: 2px 0 0 0; font-size: 0.82rem; color: #64748b;">تحديث بيانات الموكل وبيانات حسابه بالبوابة</p>
+                </div>
+            </div>
+            <button type="button" class="modal-close-btn" onclick="closeEditClientModal()">&times;</button>
+        </div>
+
+        <form id="editClientForm" method="POST" action="/clients/edit" style="display: flex; flex-direction: column; flex: 1; overflow: hidden; margin: 0;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token or request.cookies.get('csrf_token', '') }}">
+            <input type="hidden" name="client_id" id="edit_client_id">
+
+            <div class="modal-body-content">
+                <div class="form-section-box">
+                    <div class="form-section-title">
+                        <i class="fa-solid fa-id-card"></i> البيانات القانونية
+                    </div>
+                    <div class="form-grid-2">
+                        <div class="custom-form-group">
+                            <label class="custom-label">نوع الكيان</label>
+                            <select name="client_type" class="custom-select" id="edit_client_type" onchange="onClientTypeChange('edit')">
+                                <option value="individual">فرد طبيعي</option>
+                                <option value="company">شركة / مؤسسة</option>
+                            </select>
+                        </div>
+                        <div class="custom-form-group">
+                            <label class="custom-label">الاسم الكامل *</label>
+                            <input type="text" name="name" id="edit_client_name" required class="custom-input">
+                        </div>
+                    </div>
+
+                    <div class="form-grid-2">
+                        <div class="custom-form-group" id="editNationalIdBox">
+                            <label class="custom-label">رقم الهوية الوطنية / الإقامة</label>
+                            <input type="text" name="national_id" id="edit_client_national_id" class="custom-input">
+                        </div>
+                        <div class="custom-form-group" id="editCrNumberBox">
+                            <label class="custom-label">السجل التجاري (CR)</label>
+                            <input type="text" name="cr_number" id="edit_client_cr_number" class="custom-input">
+                        </div>
+                    </div>
+
+                    <div class="form-grid-1" id="editLegalRepBox">
+                        <div class="custom-form-group">
+                            <label class="custom-label">الممثل القانوني للشركة</label>
+                            <input type="text" name="legal_rep_name" id="edit_client_legal_rep_name" class="custom-input">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section-box">
+                    <div class="form-section-title">
+                        <i class="fa-solid fa-address-book"></i> التواصل والعنوان
+                    </div>
+                    <div class="form-grid-2">
+                        <div class="custom-form-group">
+                            <label class="custom-label">رقم الهاتف</label>
+                            <input type="text" name="phone" id="edit_client_phone" class="custom-input" dir="ltr">
+                        </div>
+                        <div class="custom-form-group">
+                            <label class="custom-label">هاتف بديل / واتساب</label>
+                            <input type="text" name="alt_phone" id="edit_client_alt_phone" class="custom-input" dir="ltr">
+                        </div>
+                    </div>
+
+                    <div class="form-grid-2">
+                        <div class="custom-form-group">
+                            <label class="custom-label">البريد الإلكتروني</label>
+                            <input type="email" name="email" id="edit_client_email" class="custom-input" dir="ltr">
+                        </div>
+                        <div class="custom-form-group">
+                            <label class="custom-label">المدينة</label>
+                            <input type="text" name="city" id="edit_client_city" class="custom-input">
+                        </div>
+                    </div>
+
+                    <div class="form-grid-1">
+                        <div class="custom-form-group">
+                            <label class="custom-label">العنوان التفصيلي</label>
+                            <input type="text" name="address" id="edit_client_address" class="custom-input">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section-box">
+                    <div class="form-section-title">
+                        <i class="fa-solid fa-shield-halved"></i> القضية وحساب البوابة
+                    </div>
+                    <div class="form-grid-2">
+                        <div class="custom-form-group">
+                            <label class="custom-label">رقم القضية المنسوب</label>
+                            <input type="text" name="case_number" id="edit_client_case_number" class="custom-input">
+                        </div>
+                        <div class="custom-form-group">
+                            <label class="custom-label">تغيير كلمة المرور (اتركه فارغاً للتجاهل)</label>
+                            <input type="password" name="password" class="custom-input" placeholder="كلمة المرور الجديدة" dir="ltr">
+                        </div>
+                    </div>
+
+                    <div class="form-grid-1">
+                        <div class="custom-form-group">
+                            <label class="custom-label">ملاحظات سرية</label>
+                            <textarea name="notes" id="edit_client_notes" rows="2" class="custom-textarea"></textarea>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 10px;">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 700; color: #0f172a; font-size: 0.95rem;">
+                            <input type="checkbox" name="portal_access" value="1" id="edit_portal_access" style="width: 18px; height: 18px; accent-color: #1e40af; cursor: pointer;">
+                            تفعيل حساب الدخول لبوابة الموكلين
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer-styled">
+                <button type="button" class="btn-styled btn-styled-secondary" onclick="closeEditClientModal()">إلغاء</button>
+                <button type="submit" class="btn-styled btn-styled-primary">
+                    <i class="fa-solid fa-check"></i> حفظ التعديلات
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Form (Hidden) -->
+<form id="deleteClientForm" method="POST" action="/clients/delete" style="display:none;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token or request.cookies.get('csrf_token', '') }}">
+    <input type="hidden" name="client_id" id="delete_client_id">
+</form>
+
 <script>
-    function openAddClientModal() { document.getElementById('addClientModal').classList.add('active'); }
-    function closeAddClientModal() { document.getElementById('addClientModal').classList.remove('active'); }
-    
-    function openEditClientModal(id, name, username, case_number, phone, email) {
-        document.getElementById('edit_client_id').value = id;
-        document.getElementById('edit_client_name').value = name;
-        document.getElementById('edit_client_username').value = username && username != 'None' ? username : '';
-        document.getElementById('edit_client_case_number').value = case_number && case_number != 'None' ? case_number : '';
-        document.getElementById('edit_client_phone').value = phone && phone != 'None' ? phone : '';
-        document.getElementById('edit_client_email').value = email && email != 'None' ? email : '';
-        document.getElementById('editClientModal').classList.add('active');
+let currentAddTab = 1;
+
+function switchAddTab(tabIdx) {
+    currentAddTab = tabIdx;
+    for (let i = 1; i <= 3; i++) {
+        const panel = document.getElementById(`tabAdd${i}`);
+        const btn = document.getElementById(`tabAdd${i}Btn`);
+        if (panel) panel.style.display = (i === tabIdx) ? 'block' : 'none';
+        if (btn) btn.classList.toggle('active', i === tabIdx);
     }
-    function closeEditClientModal() { document.getElementById('editClientModal').classList.remove('active'); }
+    const prevBtn = document.getElementById('prevAddBtn');
+    const nextBtn = document.getElementById('nextAddBtn');
+    const submitBtn = document.getElementById('submitAddBtn');
+
+    if (prevBtn) prevBtn.style.display = tabIdx > 1 ? 'inline-flex' : 'none';
+    if (nextBtn) nextBtn.style.display = tabIdx < 3 ? 'inline-flex' : 'none';
+    if (submitBtn) submitBtn.style.display = tabIdx === 3 ? 'inline-flex' : 'none';
+}
+
+function stepAddTab(step) {
+    switchAddTab(currentAddTab + step);
+}
+
+function openAddClientModal() {
+    switchAddTab(1);
+    const m = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
+    const token = m ? decodeURIComponent(m[1]) : '';
+    const input = document.querySelector('#addClientForm input[name="csrf_token"]');
+    if (input && (!input.value || input.value.trim() === '') && token) {
+        input.value = token;
+    }
+    document.getElementById('addClientModal').classList.add('active');
+}
+
+function closeAddClientModal() {
+    document.getElementById('addClientModal').classList.remove('active');
+}
+
+function onClientTypeChange(mode) {
+    const isAdd = (mode === 'add');
+    const typeSelect = document.getElementById(isAdd ? 'addClientType' : 'edit_client_type');
+    if (!typeSelect) return;
+    const type = typeSelect.value;
+    const isCompany = (type === 'company' || type === 'شركة' || type === 'مؤسسة');
+
+    if (isAdd) {
+        document.getElementById('addCrNumberBox').style.display = isCompany ? 'flex' : 'none';
+        document.getElementById('addLegalRepBox').style.display = isCompany ? 'flex' : 'none';
+    } else {
+        document.getElementById('editCrNumberBox').style.display = isCompany ? 'flex' : 'none';
+        document.getElementById('editLegalRepBox').style.display = isCompany ? 'grid' : 'none';
+    }
+}
+
+function togglePortalFields(mode) {
+    const toggle = document.getElementById('addPortalToggle');
+    const isChecked = toggle ? toggle.checked : true;
+    document.querySelectorAll('.portal-add-field').forEach(el => {
+        el.style.opacity = isChecked ? '1' : '0.4';
+    });
+}
+
+function openEditClientFromBtn(btn) {
+    const d = btn.dataset;
+    openEditClientModal({
+        id: d.clientId,
+        name: d.clientName,
+        client_type: d.clientType,
+        national_id: d.clientNationalId,
+        cr_number: d.clientCrNumber,
+        legal_rep_name: d.clientLegalRep,
+        phone: d.clientPhone,
+        alt_phone: d.clientAltPhone,
+        email: d.clientEmail,
+        city: d.clientCity,
+        address: d.clientAddress,
+        notes: d.clientNotes,
+        case_number: d.clientCaseNumber,
+        portal_access: d.clientPortal
+    });
+}
+
+function openEditClientModal(client) {
+    document.getElementById('edit_client_id').value = client.id;
+    document.getElementById('edit_client_name').value = client.name || '';
+    document.getElementById('edit_client_type').value = client.client_type || 'individual';
+    document.getElementById('edit_client_national_id').value = client.national_id || '';
+    document.getElementById('edit_client_cr_number').value = client.cr_number || '';
+    document.getElementById('edit_client_legal_rep_name').value = client.legal_rep_name || '';
+    document.getElementById('edit_client_phone').value = client.phone || '';
+    document.getElementById('edit_client_alt_phone').value = client.alt_phone || '';
+    document.getElementById('edit_client_email').value = client.email || '';
+    document.getElementById('edit_client_city').value = client.city || '';
+    document.getElementById('edit_client_address').value = client.address || '';
+    document.getElementById('edit_client_notes').value = client.notes || '';
+    document.getElementById('edit_client_case_number').value = client.case_number || '';
+    document.getElementById('edit_portal_access').checked = (client.portal_access == 1);
+
+    onClientTypeChange('edit');
+    document.getElementById('editClientModal').classList.add('active');
+}
+
+function closeEditClientModal() {
+    document.getElementById('editClientModal').classList.remove('active');
+}
+
+function confirmDeleteClient(clientId, clientName) {
+    if (confirm(`هل أنت متأكد من حذف الموكل: "${clientName}" من النظام؟`)) {
+        document.getElementById('delete_client_id').value = clientId;
+        document.getElementById('deleteClientForm').submit();
+    }
+}
+
+function filterClientsTable() {
+    const searchVal = document.getElementById('clientTableSearch').value.toLowerCase().trim();
+    const typeVal = document.getElementById('clientTypeFilter').value;
+    const rows = document.querySelectorAll('.client-row');
+    let visibleCount = 0;
+
+    rows.forEach(row => {
+        const name = row.getAttribute('data-name') || '';
+        const phone = row.getAttribute('data-phone') || '';
+        const idNum = row.getAttribute('data-id') || '';
+        const type = row.getAttribute('data-type') || 'individual';
+
+        const matchSearch = !searchVal || name.includes(searchVal) || phone.includes(searchVal) || idNum.includes(searchVal);
+        const matchType = !typeVal || type === typeVal;
+
+        if (matchSearch && matchType) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+
+    const badge = document.getElementById('clientCountBadge');
+    if (badge) badge.textContent = `إجمالي المعروض: ${visibleCount}`;
+}
+
+// Close modals on clicking overlay outside box
+window.addEventListener('click', function(e) {
+    const addModal = document.getElementById('addClientModal');
+    const editModal = document.getElementById('editClientModal');
+    if (e.target === addModal) closeAddClientModal();
+    if (e.target === editModal) closeEditClientModal();
+});
 </script>
 {% endblock %}

@@ -318,14 +318,15 @@ async function loadCaseHealth() {
     document.querySelectorAll('.val')[2].textContent = data.stage;
     document.querySelectorAll('.val')[3].textContent = data.next_hearing;
     
+    const esc = value => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     let fHtml = "";
-    data.factors.forEach((f, i) => { fHtml += `${i+1}- ${f}<br>`; });
+    data.factors.forEach((f, i) => { fHtml += `${i+1}- ${esc(f)}<br>`; });
     document.querySelector('.health-box .h-item > div[style*="min-height:50px"]').innerHTML = fHtml;
     
     let wfHtml = "";
     data.workflow.forEach(w => {
       let color = w.status === "مكتمل" ? "#059669" : (w.status === "متأخر" ? "#e11d48" : "#d97706");
-      wfHtml += `<tr><td>${w.stage}</td><td>${w.user}</td><td><span style="color:${color};font-weight:bold;">${w.status}</span></td><td>${w.start}</td><td>${w.due}</td></tr>`;
+      wfHtml += `<tr><td>${esc(w.stage)}</td><td>${esc(w.user)}</td><td><span style="color:${color};font-weight:bold;">${esc(w.status)}</span></td><td>${esc(w.start)}</td><td>${esc(w.due)}</td></tr>`;
     });
     document.querySelector('#tab-workflow .data-table tbody').innerHTML = wfHtml;
     
@@ -333,7 +334,7 @@ async function loadCaseHealth() {
     data.checklist.forEach(c => {
       let color = c.status === "منجز" ? "#059669" : "#e11d48";
       let icon = c.status === "منجز" ? "✔️" : "❌";
-      clHtml += `<tr><td>${c.item}</td><td><span style="color:${color};">${icon} ${c.status}</span></td><td>النظام الذكي</td></tr>`;
+      clHtml += `<tr><td>${esc(c.item)}</td><td><span style="color:${color};">${icon} ${esc(c.status)}</span></td><td>النظام الذكي</td></tr>`;
     });
     document.querySelectorAll('#tab-workflow .data-table tbody')[1].innerHTML = clHtml;
     

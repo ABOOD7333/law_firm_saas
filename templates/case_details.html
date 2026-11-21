@@ -124,8 +124,9 @@
                                 {% endif %}
                             </td>
                             <td>
+                                {% if hearing.attachment_path and has_perm(user, 'hearings', 'view') %}<a class="action-btn" href="/hearings/{{ hearing.id }}/attachment" title="تنزيل المرفق"><i class="fa-solid fa-download"></i> المرفق</a>{% endif %}
                                 {% if has_perm(user, 'hearings', 'edit') %}
-                                <button class="action-btn" style="color: var(--primary-color);" title="تعديل" onclick="openEditHearingModal('{{ hearing.id }}', '{{ hearing.title }}', '{{ hearing.hearing_at }}', '{{ hearing.next_hearing_date or '' }}', '{{ hearing.status_key }}', '{{ case.id }}', '{{ hearing.chamber_number or '' }}', '{{ hearing.floor_number or '' }}', '{{ hearing.show_in_client_portal }}')"><i class="fa-solid fa-pen"></i></button>
+                                <button class="action-btn" style="color: var(--primary-color);" title="تعديل" onclick="openEditHearingModal({{ hearing.id|tojson|forceescape }}, {{ hearing.title|tojson|forceescape }}, {{ hearing.hearing_at|tojson|forceescape }}, {{ (hearing.next_hearing_date or '')|tojson|forceescape }}, {{ hearing.status_key|tojson|forceescape }}, {{ case.id|tojson|forceescape }}, {{ (hearing.chamber_number or '')|tojson|forceescape }}, {{ (hearing.floor_number or '')|tojson|forceescape }}, {{ hearing.show_in_client_portal|tojson|forceescape }})"><i class="fa-solid fa-pen"></i></button>
                                 {% endif %}
                             </td>
                         </tr>
@@ -185,10 +186,10 @@
                     
                     <div style="display: flex; gap: 10px; margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border-color);">
                         {% if doc.file_path %}
-                        <a href="/{{ doc.file_path }}" target="_blank" class="btn-primary" style="flex: 1; text-align: center; padding: 6px; font-size: 0.9rem; text-decoration: none; background: white; color: var(--primary-color); border: 1px solid var(--primary-color);">
+                        <a href="/documents/download/{{ doc.file_path.split('/')[-1] }}" target="_blank" class="btn-primary" style="flex: 1; text-align: center; padding: 6px; font-size: 0.9rem; text-decoration: none; background: white; color: var(--primary-color); border: 1px solid var(--primary-color);">
                             <i class="fa-solid fa-eye"></i> عرض
                         </a>
-                        <a href="/{{ doc.file_path }}" download class="btn-primary" style="flex: 1; text-align: center; padding: 6px; font-size: 0.9rem; text-decoration: none;">
+                        <a href="/documents/download/{{ doc.file_path.split('/')[-1] }}" class="btn-primary" style="flex: 1; text-align: center; padding: 6px; font-size: 0.9rem; text-decoration: none;">
                             <i class="fa-solid fa-download"></i> تحميل
                         </a>
                         {% else %}
@@ -216,7 +217,7 @@
             <button onclick="document.getElementById('addHearingModal').style.display='none'" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted);">&times;</button>
         </div>
         
-        <form action="/hearings/add" method="post">
+        <form action="/hearings/add" method="post" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ request.cookies.get('csrf_token', '') }}">
             <input type="hidden" name="case_id" value="{{ case.id }}">
             <input type="hidden" name="redirect_to_case" value="true">

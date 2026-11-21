@@ -141,8 +141,8 @@
                 </div>
                 <div class="doc-actions">
                     {% if doc.file_path %}
-                    <a href="/{{ doc.file_path }}" target="_blank" class="btn-action"><i class="fa-regular fa-eye"></i> عرض</a>
-                    <a href="/{{ doc.file_path }}" download class="btn-action"><i class="fa-solid fa-download"></i> تنزيل</a>
+                    <a href="/documents/download/{{ doc.file_path.split('/')[-1] }}" target="_blank" class="btn-action"><i class="fa-regular fa-eye"></i> عرض</a>
+                    <a href="/documents/download/{{ doc.file_path.split('/')[-1] }}" class="btn-action"><i class="fa-solid fa-download"></i> تنزيل</a>
                     {% else %}
                     <span style="color: var(--text-muted); font-size: 0.8rem;">لا يوجد ملف مرفق</span>
                     {% endif %}

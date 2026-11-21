@@ -343,8 +343,8 @@ async def ai_chat(request: Request, db: Session = Depends(get_db), current_user:
         })
 
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        from core.logger import app_logger
+        app_logger.error(f"AI_ASSISTANT_CHAT_ERROR: {str(e)}", exc_info=True)
         return JSONResponse({
             "success": False,
             "error": "حدث خطأ داخلي. يرجى المحاولة مرة أخرى."

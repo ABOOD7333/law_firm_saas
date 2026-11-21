@@ -60,12 +60,24 @@ async def pull_sync(req: SyncRequest, db: Session = Depends(get_db), user: Acces
         "documents": [],
     }
 
-    # Helper function to convert model to dict safely
+    # Mobile clients receive only fields intended for client-facing workflows.
+    # Never serialize internal case summaries, hearing outcomes, staff IDs,
+    # internal notes, or storage paths to a client's device.
+    client_fields = {
+        LawCases: {"id", "case_number", "title", "case_type_key", "status_key", "open_date", "close_date"},
+        LawClients: {"id", "case_id", "name", "phone", "email"},
+        LawHearings: {"id", "case_id", "title", "hearing_at", "next_hearing_date", "status_key"},
+        LawDocuments: {"id", "case_id", "name", "document_type_key", "doc_date", "created_at"},
+    }
+
     def model_to_dict(obj):
+        if user.role == "موكل" and type(obj) not in client_fields:
+            return {}
+        allowed = client_fields.get(type(obj)) if user.role == "موكل" else None
         return {
-            c.name: getattr(obj, c.name)
-            for c in obj.__table__.columns
-            if c.name not in {"file_path"}
+            column.name: getattr(obj, column.name)
+            for column in obj.__table__.columns
+            if column.name != "file_path" and (allowed is None or column.name in allowed)
         }
 
     # 1. Cases
@@ -124,14 +136,17 @@ async def pull_sync(req: SyncRequest, db: Session = Depends(get_db), user: Acces
             LawHearings.is_deleted == 0,
             LawHearings.case_id.in_(case_ids),
         )
+        if user.role == "موكل":
+            hearings_query = hearings_query.filter(LawHearings.show_in_client_portal == 1)
         response_data["hearings"] = [model_to_dict(c) for c in get_delta(hearings_query, last_sync)]
 
         # 5. Documents
-        docs_query = db.query(LawDocuments).filter(
-            LawDocuments.office_id == office_id,
-            LawDocuments.is_deleted == 0,
-            LawDocuments.case_id.in_(case_ids),
-        )
-        response_data["documents"] = [model_to_dict(c) for c in get_delta(docs_query, last_sync)]
+        if user.role != "موكل":
+            docs_query = db.query(LawDocuments).filter(
+                LawDocuments.office_id == office_id,
+                LawDocuments.is_deleted == 0,
+                LawDocuments.case_id.in_(case_ids),
+            )
+            response_data["documents"] = [model_to_dict(c) for c in get_delta(docs_query, last_sync)]
 
     return response_data

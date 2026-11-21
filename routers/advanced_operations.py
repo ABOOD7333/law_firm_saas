@@ -19,7 +19,9 @@ router = APIRouter()
 async def advanced_operations_page(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
     if not user: return RedirectResponse(url="/", status_code=303)
     try:
-        office_id = user.office_id or 1
+        if not user.office_id:
+            raise HTTPException(status_code=403, detail="الحساب غير مرتبط بمكتب")
+        office_id = user.office_id
         cases = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0).all()
         return templates.TemplateResponse(request=request, name="advanced_operations.html", context={
             "user": user, "active_page": "advanced_operations", "cases": cases

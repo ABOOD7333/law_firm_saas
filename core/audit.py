@@ -44,6 +44,13 @@ def write_audit(
             session_uuid=session_uuid,
             created_at=datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
         )
+        # توقيع السجل رقمياً وربطه بالسلسلة المشفرة غير القابلة للتلاعب
+        try:
+            from core.security_center.audit_chain import sign_audit_entry
+            sign_audit_entry(entry, db=db)
+        except Exception as sign_err:
+            app_logger.warning(f"Audit cryptographic signing failed: {sign_err}")
+
         db.add(entry)
         db.flush()  # نحفظ بدون commit لأن الـ caller هو المسؤول عن الـ commit
         app_logger.info(

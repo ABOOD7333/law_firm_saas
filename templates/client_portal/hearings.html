@@ -1,0 +1,169 @@
+{% extends "client_portal/base.html" %}
+
+{% block title %}الجلسات القضائية | بوابة الموكلين{% endblock %}
+{% block page_title %}الجلسات ومواعيد المحاكم{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hearings-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+    }
+    .hearing-card {
+        background: var(--surface-color, #ffffff);
+        border: 1px solid var(--border-color, #e2e8f0);
+        border-radius: 14px;
+        padding: 24px;
+        transition: transform 0.2s, box-shadow 0.2s;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    .hearing-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 15px -3px rgba(30, 58, 138, 0.08);
+        border-color: var(--accent-color, #d4af37);
+    }
+    .hearing-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 16px;
+    }
+    .hearing-date-badge {
+        background: linear-gradient(135deg, #1e3a8a, #0f172a);
+        color: #ffffff;
+        padding: 8px 14px;
+        border-radius: 10px;
+        text-align: center;
+        font-weight: 700;
+        min-width: 65px;
+    }
+    .hearing-date-badge .day {
+        font-size: 1.4rem;
+        line-height: 1;
+        display: block;
+    }
+    .hearing-date-badge .month {
+        font-size: 0.75rem;
+        color: #cbd5e1;
+    }
+    .hearing-title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: var(--text-main, #1e293b);
+        margin-bottom: 8px;
+    }
+    .hearing-meta {
+        font-size: 0.88rem;
+        color: var(--text-muted, #64748b);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+    .hearing-meta-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        align-self: flex-start;
+    }
+    .status-pending { background: #fef3c7; color: #b45309; }
+    .status-completed { background: #dcfce7; color: #15803d; }
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #94a3b8;
+    }
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 15px;
+        color: #cbd5e1;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if is_preview %}
+<div style="background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; padding: 12px 18px; border-radius: 10px; margin-bottom: 20px; font-weight: 600; display: flex; align-items: center; gap: 10px;">
+    <i class="fa-solid fa-eye"></i>
+    <span>وضع المعاينة الإدارية: أنت تشاهد الآن واجهة بوابة الموكل كما تظهر لعملاء المكتب.</span>
+</div>
+{% endif %}
+
+<div class="vip-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
+        <h3 style="font-size: 1.3rem; font-weight: 700; color: var(--primary-color, #1e3a8a); margin: 0;">
+            <i class="fa-solid fa-calendar-check" style="color: var(--accent-color, #d4af37);"></i> جدول الجلسات القضائية القادمة والسابقة
+        </h3>
+        <span style="font-size: 0.9rem; color: var(--text-muted, #64748b); font-weight: 600;">
+            إجمالي الجلسات: {{ hearings | length }}
+        </span>
+    </div>
+
+    {% if hearings %}
+    <div class="hearings-grid">
+        {% for h in hearings %}
+        <div class="hearing-card">
+            <div>
+                <div class="hearing-header">
+                    <div>
+                        <h4 class="hearing-title">{{ h.title }}</h4>
+                        {% if h.status_key == 'completed' %}
+                        <span class="status-badge status-completed"><i class="fa-solid fa-circle-check"></i> مكتملة</span>
+                        {% else %}
+                        <span class="status-badge status-pending"><i class="fa-solid fa-clock"></i> مرتقبة / قيد النظر</span>
+                        {% endif %}
+                    </div>
+                    <div class="hearing-date-badge">
+                        <span class="day">{{ h.hearing_at[8:10] if h.hearing_at else '--' }}</span>
+                        <span class="month">{{ h.hearing_at[5:7] if h.hearing_at else '--' }}</span>
+                    </div>
+                </div>
+
+                <div class="hearing-meta">
+                    <div class="hearing-meta-item">
+                        <i class="fa-solid fa-landmark" style="color: #64748b; width: 16px;"></i>
+                        <span>المحكمة: {{ h.court_name or 'المحكمة المختصة' }}</span>
+                    </div>
+                    {% if h.court_case_number %}
+                    <div class="hearing-meta-item">
+                        <i class="fa-solid fa-hashtag" style="color: #64748b; width: 16px;"></i>
+                        <span>رقم القيد في المحكمة: {{ h.court_case_number }}</span>
+                    </div>
+                    {% endif %}
+                    {% if h.hearing_time %}
+                    <div class="hearing-meta-item">
+                        <i class="fa-regular fa-clock" style="color: #64748b; width: 16px;"></i>
+                        <span>الوقت: {{ h.hearing_time }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if h.result_summary %}
+            <div style="background: #f8fafc; border-radius: 8px; padding: 10px 12px; font-size: 0.85rem; color: #334155; margin-top: 10px; border-right: 3px solid var(--accent-color, #d4af37);">
+                <strong>قرار / ملخص الجلسة:</strong> {{ h.result_summary }}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fa-solid fa-calendar-xmark"></i>
+        <h4>لا توجد جلسات معلنة حالياً</h4>
+        <p>سيتم إشعارك فور إدراج أي جلسة قضائية جديدة من قبل فريق المحامين المسؤول.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -27,6 +27,8 @@ from database.security_models import (
 from dependencies import get_current_user, templates
 from core.security_center.scanner_engine import LawSaaSScanner
 from core.security_center.alert_service import get_or_create_alert_settings
+from core.security_center.remediation_engine import AutoRemediationEngine
+from core.security_center.monitor_middleware import get_active_defense_status, unban_ip
 
 router = APIRouter()
 
@@ -114,6 +116,13 @@ async def security_center_dashboard(
         ip_address=request.client.host if request.client else None
     )
 
+    # فحص سلامة سلسلة التدقيق المشفرة (Immutable Audit Chain)
+    try:
+        from core.security_center.audit_chain import verify_audit_chain
+        audit_chain_status = verify_audit_chain(db, max_records=200)
+    except Exception:
+        audit_chain_status = {"is_valid": True, "status": "unknown", "verified_count": 0}
+
     return templates.TemplateResponse(
         "security_center.html",
         {
@@ -129,9 +138,21 @@ async def security_center_dashboard(
             "findings": findings,
             "recent_events": recent_events,
             "recent_alerts": recent_alerts,
-            "alert_settings": alert_settings
+            "alert_settings": alert_settings,
+            "audit_chain_status": audit_chain_status
         }
     )
+
+
+@router.get("/api/superadmin/security/audit-chain/verify")
+async def verify_audit_chain_endpoint(
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(require_superadmin)
+):
+    """التحقق البرمجي المباشر من سلامة سلسلة سجلات التدقيق المشفرة"""
+    from core.security_center.audit_chain import verify_audit_chain
+    res = verify_audit_chain(db)
+    return JSONResponse(res)
 
 
 # =========================================================================
@@ -146,34 +167,45 @@ async def trigger_security_scan(
 ):
     """بدء عملية فحص أمني شاملة للمنصة"""
     require_superadmin(user)
-    scanner = LawSaaSScanner(root_dir=".", db=db)
-    scan = scanner.run_full_scan(trigger_type=scan_type, triggered_by=user.id)
+    try:
+        scanner = LawSaaSScanner(root_dir=".", db=db)
+        scan = scanner.run_full_scan(trigger_type=scan_type, triggered_by=user.id)
 
-    log_admin_audit(
-        db=db,
-        user_id=user.id,
-        action="trigger_security_scan",
-        target_type="security_scan",
-        target_id=str(scan.id),
-        details=f"Type: {scan_type}, Findings: {scan.findings_count}, Files: {scan.files_scanned}",
-        ip_address=request.client.host if request.client else None
-    )
+        log_admin_audit(
+            db=db,
+            user_id=user.id,
+            action="trigger_security_scan",
+            target_type="security_scan",
+            target_id=str(scan.id),
+            details=f"Type: {scan_type}, Findings: {scan.findings_count}, Files: {scan.files_scanned}",
+            ip_address=request.client.host if request.client else None
+        )
 
-    return {
-        "status": "success",
-        "message": "تم إكمال الفحص الأمني بنجاح وتحديث كافة السجلات وقاعدة البيانات.",
-        "scan": {
-            "id": scan.id,
-            "status": scan.status,
-            "findings_count": scan.findings_count,
-            "critical_count": scan.critical_count,
-            "high_count": scan.high_count,
-            "medium_count": scan.medium_count,
-            "low_count": scan.low_count,
-            "files_scanned": scan.files_scanned,
-            "completed_at": scan.completed_at
+        return {
+            "status": "success",
+            "message": "تم إكمال الفحص الأمني بنجاح وتحديث كافة السجلات وقاعدة البيانات.",
+            "scan": {
+                "id": scan.id,
+                "status": scan.status,
+                "findings_count": scan.findings_count,
+                "critical_count": scan.critical_count,
+                "high_count": scan.high_count,
+                "medium_count": scan.medium_count,
+                "low_count": scan.low_count,
+                "files_scanned": scan.files_scanned,
+                "completed_at": scan.completed_at
+            }
         }
-    }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JSONResponse(
+            status_code=500,
+            content={
+                "status": "error",
+                "message": f"فشل تشغيل الفحص الأمني: {str(e)}"
+            }
+        )
 
 
 @router.get("/api/superadmin/security/scans")
@@ -403,3 +435,107 @@ async def update_alert_settings(
     )
 
     return {"status": "success", "message": "تم حفظ وتحديث إعدادات التنبيهات بنجاح."}
+
+
+# =========================================================================
+# 8. الإصلاح التلقائي والذاتي للثغرات (Autonomous Remediation API)
+# =========================================================================
+@router.get("/api/superadmin/security/findings/{finding_id}/preview-fix")
+async def preview_finding_fix(
+    finding_id: int,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(require_superadmin)
+):
+    """معاينة الإصلاح الذاتي المقترح للملاحظة الأمنية"""
+    require_superadmin(user)
+    finding = db.query(SecurityFindings).filter(SecurityFindings.id == finding_id).first()
+    if not finding:
+        raise HTTPException(status_code=404, detail="Finding not found")
+
+    engine = AutoRemediationEngine()
+    preview = engine.preview_fix(finding)
+    return preview
+
+
+@router.post("/api/superadmin/security/findings/{finding_id}/auto-fix")
+async def auto_fix_finding(
+    request: Request,
+    finding_id: int,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(require_superadmin)
+):
+    """تطبيق الإصلاح الآلي التلقائي لملاحظة أمنية محددة"""
+    require_superadmin(user)
+    engine = AutoRemediationEngine()
+    result = engine.apply_fix(finding_id=finding_id, db=db, actor_user_id=user.id)
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("error", "فشل تطبيق الإصلاح"))
+
+    log_admin_audit(
+        db=db,
+        user_id=user.id,
+        action="apply_auto_remediation",
+        target_type="security_finding",
+        target_id=str(finding_id),
+        details=f"Applied auto-remediation for finding #{finding_id}: {result.get('summary')}",
+        ip_address=request.client.host if request.client else None
+    )
+    return result
+
+
+@router.post("/api/superadmin/security/auto-fix-all")
+async def auto_fix_all_findings(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(require_superadmin)
+):
+    """إصلاح كافة الملاحظات القابلة للعلاج الآلي بنقرة واحدة"""
+    require_superadmin(user)
+    engine = AutoRemediationEngine()
+    result = engine.remediate_all(db=db, actor_user_id=user.id)
+
+    log_admin_audit(
+        db=db,
+        user_id=user.id,
+        action="apply_all_auto_remediations",
+        details=f"Remediated {result.get('remediated_count')} findings automatically. Skipped {result.get('skipped_count')}.",
+        ip_address=request.client.host if request.client else None
+    )
+    return result
+
+
+# =========================================================================
+# 9. الدرع التلقائي الحي ومكافحة التسلل (Active Defense IPS API)
+# =========================================================================
+@router.get("/api/superadmin/security/active-defense/status")
+async def get_defense_status(
+    user: AccessProfiles = Depends(require_superadmin)
+):
+    """الحصول على حالة الدرع التلقائي الحي وقائمة العناوين المحظورة"""
+    require_superadmin(user)
+    return get_active_defense_status()
+
+
+@router.post("/api/superadmin/security/active-defense/unban/{ip}")
+async def unban_ip_endpoint(
+    request: Request,
+    ip: str,
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(require_superadmin)
+):
+    """فك الحظر يدوياً عن عنوان IP محظور"""
+    require_superadmin(user)
+    success = unban_ip(ip)
+    if not success:
+        raise HTTPException(status_code=404, detail="العنوان غير موجود في قائمة الحظر الحالية.")
+
+    log_admin_audit(
+        db=db,
+        user_id=user.id,
+        action="manual_ip_unban",
+        target_type="ip_address",
+        target_id=ip,
+        details=f"SuperAdmin unbanned IP address {ip}",
+        ip_address=request.client.host if request.client else None
+    )
+    return {"status": "success", "message": f"تم فك الحظر بنجاح عن العنوان {ip}"}

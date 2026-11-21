@@ -1,0 +1,441 @@
+{% extends "client_portal/base.html" %}
+
+{% block title %}توكيل العقود والوكالات الرسمية | بوابة الموكلين{% endblock %}
+{% block page_title %}توكيل العقود والوكالات الرسمية{% endblock %}
+
+{% block extra_css %}
+<style>
+    .contracts-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 25px;
+    }
+    .kpi-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    .kpi-card {
+        background: white;
+        padding: 20px 24px;
+        border-radius: 14px;
+        border: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03);
+    }
+    .kpi-card h4 {
+        margin: 0 0 6px 0;
+        font-size: 0.88rem;
+        color: var(--text-muted);
+    }
+    .kpi-card .val {
+        font-size: 1.6rem;
+        font-weight: 800;
+        color: var(--text-main);
+    }
+    .contract-item-card {
+        background: white;
+        border-radius: 16px;
+        border: 1px solid var(--border-color);
+        padding: 24px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .contract-item-card:hover {
+        box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+    }
+    .poa-badge {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .badge-pending {
+        background: #fef3c7;
+        color: #b45309;
+        border: 1px solid #fde68a;
+    }
+    .badge-signed {
+        background: #dcfce7;
+        color: #15803d;
+        border: 1px solid #bbf7d0;
+    }
+    
+    /* Modal Sign Pad */
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.7);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        padding: 20px;
+    }
+    .modal-overlay.active {
+        display: flex;
+    }
+    .modal-box {
+        background: white;
+        border-radius: 20px;
+        max-width: 650px;
+        width: 100%;
+        padding: 30px;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+    }
+    .canvas-wrapper {
+        border: 2px dashed #cbd5e1;
+        border-radius: 14px;
+        background: #fafafa;
+        margin: 15px 0;
+        touch-action: none;
+        position: relative;
+    }
+    canvas {
+        width: 100%;
+        height: 180px;
+        display: block;
+        border-radius: 14px;
+        cursor: crosshair;
+    }
+    .btn-action-sign {
+        background: #10b981;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 700;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: 0.2s;
+    }
+    .btn-action-sign:hover {
+        background: #059669;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="contracts-header">
+    <div>
+        <h2 style="font-weight: 800; color: #1e293b; margin: 0 0 5px 0;">
+            <i class="fa-solid fa-file-signature" style="color: var(--accent-color);"></i>
+            توكيل العقود والوكالات الرسمية
+        </h2>
+        <p style="color: var(--text-muted); margin: 0; font-size: 0.92rem;">
+            استعراض وتوقيع وكالات التمثيل القانوني والعقود الموجهة لك من مكتب المحاماة.
+        </p>
+    </div>
+</div>
+
+<!-- KPIs -->
+<div class="kpi-row">
+    <div class="kpi-card" style="border-right: 4px solid #3b82f6;">
+        <div>
+            <h4>إجمالي الوكالات والعقود</h4>
+            <div class="val">{{ poas|length }}</div>
+        </div>
+        <div style="width: 44px; height: 44px; border-radius: 10px; background: #eff6ff; color: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">
+            <i class="fa-solid fa-file-contract"></i>
+        </div>
+    </div>
+
+    <div class="kpi-card" style="border-right: 4px solid #f59e0b;">
+        <div>
+            <h4>بانتظار توقيعك واعتمادك</h4>
+            <div class="val" style="color: #d97706;">{{ pending_sign_count }}</div>
+        </div>
+        <div style="width: 44px; height: 44px; border-radius: 10px; background: #fffbeb; color: #f59e0b; display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">
+            <i class="fa-solid fa-clock"></i>
+        </div>
+    </div>
+
+    <div class="kpi-card" style="border-right: 4px solid #10b981;">
+        <div>
+            <h4>وكالات موقعة رسمياً</h4>
+            <div class="val" style="color: #059669;">{{ signed_count }}</div>
+        </div>
+        <div style="width: 44px; height: 44px; border-radius: 10px; background: #ecfdf5; color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">
+            <i class="fa-solid fa-circle-check"></i>
+        </div>
+    </div>
+</div>
+
+<!-- Contracts & POAs List -->
+{% if poas %}
+    {% for p in poas %}
+    <div class="contract-item-card">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 15px; margin-bottom: 16px;">
+            <div>
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                    <h3 style="margin: 0; font-size: 1.2rem; color: #0f172a; font-weight: 800;">
+                        وكالة شرعية ورسمية #{{ p.agency_number }}
+                    </h3>
+                    {% if p.is_signed == 1 %}
+                    <span class="poa-badge badge-signed">
+                        <i class="fa-solid fa-check"></i> موقّعة رسمياً
+                    </span>
+                    {% else %}
+                    <span class="poa-badge badge-pending">
+                        <i class="fa-solid fa-pen-nib"></i> بانتظار توقيعك
+                    </span>
+                    {% endif %}
+                </div>
+                <div style="color: #64748b; font-size: 0.88rem;">
+                    الموكل (الموكِّل): <strong style="color: #334155;">{{ p.principal_name }}</strong>
+                    | الوكيل المفوض: <strong style="color: #334155;">{{ p.agent_name or 'المكتب / المحامي' }}</strong>
+                </div>
+            </div>
+
+            <div>
+                {% if p.is_signed == 1 %}
+                <button type="button" class="btn-gold" onclick="viewSignedDetails('{{ p.agency_number }}', '{{ p.signed_at }}', '{{ p.verification_hash }}', '{{ p.signature_base64 }}')">
+                    <i class="fa-solid fa-shield-halved"></i> تفاصيل التوثيق
+                </button>
+                {% else %}
+                <button type="button" class="btn-action-sign" onclick="openSignModal({{ p.id }}, '{{ p.agency_number }}', '{{ p.principal_name }}', '{{ p.scope_of_powers or 'المرافعة والمدافعة وتقديم اللوائح' }}')">
+                    <i class="fa-solid fa-file-pen"></i> التوقيع على الوكالة الآن
+                </button>
+                {% endif %}
+            </div>
+        </div>
+
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 18px; margin-bottom: 15px; font-size: 0.92rem; line-height: 1.7; color: #334155;">
+            <strong>نطاق الصلاحيات والتفويض:</strong>
+            <p style="margin: 4px 0 0 0; color: #475569;">
+                {{ p.scope_of_powers or 'مفوض بالمرافعة والمدافعة وحضور الجلسات واستلام الأحكام والقرارات وإيداع المذكرات.' }}
+            </p>
+        </div>
+
+        <div style="display: flex; gap: 20px; flex-wrap: wrap; font-size: 0.85rem; color: #64748b; border-top: 1px solid #f1f5f9; padding-top: 12px;">
+            <span><i class="fa-solid fa-landmark"></i> جهة التوثيق: <strong>{{ p.issuing_authority or 'قلم التوثيق بالمحكمة' }}</strong></span>
+            <span><i class="fa-solid fa-calendar-days"></i> تاريخ الإصدار: <strong>{{ p.issue_date or '-' }}</strong></span>
+            <span><i class="fa-solid fa-calendar-xmark"></i> تاريخ الانتهاء: <strong>{{ p.expiry_date or 'سارية المفعول' }}</strong></span>
+            {% if p.is_signed == 1 and p.verification_hash %}
+            <span><i class="fa-solid fa-fingerprint"></i> كود التحقق الرقمي: <code style="color: #4f46e5; font-weight: bold;">{{ p.verification_hash }}</code></span>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+    <div class="vip-card" style="text-align: center; padding: 60px 20px; color: var(--text-muted);">
+        <i class="fa-solid fa-folder-open" style="font-size: 3.5rem; color: #cbd5e1; margin-bottom: 15px;"></i>
+        <h3 style="color: #475569; margin-bottom: 8px;">لا توجد وكالات أو عقود موجهة إليك حالياً</h3>
+        <p style="font-size: 0.9rem; max-width: 450px; margin: 0 auto;">
+            عندما يقوم محامي مكتبك بإنشاء وكالة أو عقد تمثيل لك، ستظهر هنا فوراً لتتمكن من مراجعتها وتوقيعها إلكترونياً.
+        </p>
+    </div>
+{% endif %}
+
+<!-- E-Signature Modal -->
+<div class="modal-overlay" id="signModal">
+    <div class="modal-box">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;">
+            <h3 style="margin: 0; color: #0f172a; font-size: 1.25rem;">
+                <i class="fa-solid fa-signature" style="color: #10b981;"></i> توقيع عقد التوكيل الرسمي
+            </h3>
+            <button type="button" onclick="closeSignModal()" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #64748b;">✕</button>
+        </div>
+
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 16px; font-size: 0.9rem; line-height: 1.6;">
+            <div>رقم الوكالة: <strong id="mPoaNumber" style="color: #1e40af;"></strong></div>
+            <div>الموكل: <strong id="mPrincipalName"></strong></div>
+            <div style="margin-top: 6px; color: #475569;">
+                <strong>إقرار التفويض:</strong>
+                <span id="mScope"></span>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 8px; font-weight: 700; font-size: 0.9rem; color: #1e293b;">
+            <i class="fa-solid fa-pen-nib" style="color: #10b981;"></i> ارسم توقيعك بيدك أو باللمس داخل الإطار:
+        </div>
+        <div class="canvas-wrapper">
+            <canvas id="signaturePad" width="550" height="180"></canvas>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <button type="button" onclick="clearCanvas()" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; cursor: pointer; color: #475569;">
+                <i class="fa-solid fa-rotate-left"></i> مسح وإعادة الرسم
+            </button>
+            <span style="font-size: 0.8rem; color: #64748b;">يعتبر هذا التوقيع إقراراً رسمياً ملزماً بموجب اللائحة</span>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <button type="button" class="btn-action-sign" id="btnSubmitSign" onclick="submitSignature()" style="flex: 1; justify-content: center; padding: 12px; font-size: 1rem;">
+                <i class="fa-solid fa-check"></i> اعتماد التوقيع رسمياً
+            </button>
+            <button type="button" onclick="closeSignModal()" style="background: white; border: 1px solid #cbd5e1; padding: 12px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; color: #64748b;">
+                إلغاء
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Details Modal -->
+<div class="modal-overlay" id="detailsModal">
+    <div class="modal-box" style="text-align: center;">
+        <div style="width: 60px; height: 60px; border-radius: 50%; background: #dcfce7; color: #166534; display: inline-flex; align-items: center; justify-content: center; font-size: 1.8rem; margin-bottom: 12px;">
+            <i class="fa-solid fa-shield-check"></i>
+        </div>
+        <h3 style="margin: 0 0 8px 0; color: #0f172a;">توثيق التوقيع الإلكتروني الرسمي</h3>
+        <p style="color: #64748b; font-size: 0.88rem; margin-bottom: 20px;">تم اعتماد توقيع هذه الوكالة وتوثيقها بالبصمة الرقمية المعتمدة.</p>
+
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; text-align: right; margin-bottom: 20px; font-size: 0.9rem;">
+            <div style="margin-bottom: 8px;">رقم صك الوكالة: <strong id="dPoaNum"></strong></div>
+            <div style="margin-bottom: 8px;">تاريخ ووقت التوقيع: <strong id="dSignDate"></strong></div>
+            <div style="margin-bottom: 12px;">كود التحقق الرقمي: <code id="dSignHash" style="color: #4f46e5; font-weight: bold;"></code></div>
+            <div>معاينة التوقيع:</div>
+            <div style="text-align: center; margin-top: 8px; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 10px; background: white;">
+                <img id="dSignImg" src="" alt="التوقيع" style="max-height: 90px; max-width: 100%;">
+            </div>
+        </div>
+
+        <button type="button" onclick="closeDetailsModal()" class="btn-gold" style="width: 100%; justify-content: center;">
+            إغلاق
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let activePoaId = null;
+    let canvas, ctx, isDrawing = false, hasDrawn = false;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        canvas = document.getElementById('signaturePad');
+        ctx = canvas.getContext('2d');
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#0f172a';
+
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            if (e.touches && e.touches.length > 0) {
+                return {
+                    x: (e.touches[0].clientX - rect.left) * scaleX,
+                    y: (e.touches[0].clientY - rect.top) * scaleY
+                };
+            }
+            return {
+                x: (e.clientX - rect.left) * scaleX,
+                y: (e.clientY - rect.top) * scaleY
+            };
+        }
+
+        function startDraw(e) {
+            isDrawing = true;
+            hasDrawn = true;
+            const pos = getPos(e);
+            ctx.beginPath();
+            ctx.moveTo(pos.x, pos.y);
+            e.preventDefault();
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            const pos = getPos(e);
+            ctx.lineTo(pos.x, pos.y);
+            ctx.stroke();
+            e.preventDefault();
+        }
+
+        function stopDraw() {
+            isDrawing = false;
+        }
+
+        canvas.addEventListener('mousedown', startDraw);
+        canvas.addEventListener('mousemove', draw);
+        window.addEventListener('mouseup', stopDraw);
+
+        canvas.addEventListener('touchstart', startDraw, { passive: false });
+        canvas.addEventListener('touchmove', draw, { passive: false });
+        window.addEventListener('touchend', stopDraw);
+    });
+
+    function clearCanvas() {
+        if (ctx && canvas) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            hasDrawn = false;
+        }
+    }
+
+    function openSignModal(id, num, name, scope) {
+        activePoaId = id;
+        document.getElementById('mPoaNumber').textContent = num;
+        document.getElementById('mPrincipalName').textContent = name;
+        document.getElementById('mScope').textContent = scope;
+        clearCanvas();
+        document.getElementById('signModal').classList.add('active');
+    }
+
+    function closeSignModal() {
+        document.getElementById('signModal').classList.remove('active');
+        activePoaId = null;
+    }
+
+    async function submitSignature() {
+        if (!hasDrawn) {
+            alert('يرجى رسم التوقيع أولاً في المربع المخصص قبل الاعتماد.');
+            return;
+        }
+        const sigBase64 = canvas.toDataURL('image/png');
+        const btn = document.getElementById('btnSubmitSign');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري اعتماد التوقيع...';
+
+        try {
+            const csrfToken = document.cookie.split('; ').find(r => r.startsWith('csrf_token='))?.split('=')[1] || '';
+            const res = await fetch(`/client-portal/poa/${activePoaId}/sign`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                body: JSON.stringify({ signature: sigBase64 })
+            });
+            const data = await res.json();
+            if (data.ok) {
+                alert('✅ ' + data.message);
+                location.reload();
+            } else {
+                alert('خطأ: ' + (data.error || 'فشل التوقيع'));
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-check"></i> اعتماد التوقيع رسمياً';
+            }
+        } catch (e) {
+            alert('حدث خطأ في الاتصال بالسيرفر');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> اعتماد التوقيع رسمياً';
+        }
+    }
+
+    function viewSignedDetails(num, dateStr, hash, imgBase64) {
+        document.getElementById('dPoaNum').textContent = num;
+        document.getElementById('dSignDate').textContent = dateStr;
+        document.getElementById('dSignHash').textContent = hash;
+        document.getElementById('dSignImg').src = imgBase64;
+        document.getElementById('detailsModal').classList.add('active');
+    }
+
+    function closeDetailsModal() {
+        document.getElementById('detailsModal').classList.remove('active');
+    }
+</script>
+{% endblock %}

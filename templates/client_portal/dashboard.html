@@ -130,15 +130,22 @@
             <div class="number">{{ total_cases }}</div>
         </div>
     </div>
-    <div class="stat-card">
+    <a href="/client-portal/contracts" class="stat-card" style="text-decoration: none; color: inherit;">
         <div class="stat-icon icon-gold">
-            <i class="fa-solid fa-file-contract"></i>
+            <i class="fa-solid fa-file-signature"></i>
         </div>
         <div class="stat-info">
-            <h4>العقود والمستندات</h4>
-            <div class="number">--</div>
+            <h4>توكيل العقود والوكالات</h4>
+            <div class="number">
+                {{ total_contracts }}
+                {% if pending_contracts > 0 %}
+                <span style="font-size: 0.8rem; background: #fee2e2; color: #b91c1c; padding: 2px 8px; border-radius: 8px; margin-right: 6px; font-weight: bold;">
+                    {{ pending_contracts }} بانتظار توقيعك
+                </span>
+                {% endif %}
+            </div>
         </div>
-    </div>
+    </a>
     <div class="stat-card">
         <div class="stat-icon icon-red">
             <i class="fa-solid fa-money-bill-wave"></i>

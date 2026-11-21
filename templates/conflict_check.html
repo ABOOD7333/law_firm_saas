@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+{% block title %}فحص تعارض المصالح القضائي والمهني | LawSaaS{% endblock %}
+
+{% block content %}
+<div class="conflict-check-container" style="max-width: 1200px; margin: 0 auto;">
+
+    <!-- Page Header -->
+    <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 24px;">
+        <div>
+            <h1 style="font-size: 1.6rem; color: #1e293b; margin: 0 0 6px 0; font-weight: 800; display: flex; align-items: center; gap: 10px;">
+                <i class="fa-solid fa-scale-unbalanced-flip" style="color: #2563eb;"></i>
+                فحص تعارض المصالح القضائي والمهني (Conflict of Interest)
+            </h1>
+            <p style="color: #64748b; margin: 0; font-size: 0.95rem;">
+                فحص أمني استباقي لكافة أطراف النزاع، الموكلين، والشركات لحماية المكتب من مخالفة آداب المهنة وضمان النزاهة القانونية.
+            </p>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <a href="/parties" class="btn" style="background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; padding: 10px 16px; border-radius: 8px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; text-decoration: none;">
+                <i class="fa-solid fa-people-arrows"></i> سجل الأطراف
+            </a>
+            <a href="/clients" class="btn" style="background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; padding: 10px 16px; border-radius: 8px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; text-decoration: none;">
+                <i class="fa-solid fa-users"></i> سجل الموكلين
+            </a>
+        </div>
+    </div>
+
+    <!-- Search / Screening Box -->
+    <div class="card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 26px;">
+        <div style="font-weight: 800; font-size: 1.05rem; color: #1e3a8a; margin-bottom: 18px; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-shield-halved"></i> معايير الفحص الأمني السريع
+        </div>
+
+        <form action="/conflict-check" method="get">
+            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #334155; font-size: 0.9rem;">
+                        اسم الشخص أو المنشأة المراد فحصها <span style="color: #ef4444;">*</span>
+                    </label>
+                    <input type="text" name="q_name" value="{{ q_name }}" placeholder="أدخل الاسم الرباعي أو الاسم التجاري..." style="width: 100%; padding: 11px 14px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.92rem;" autofocus>
+                </div>
+
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #334155; font-size: 0.9rem;">
+                        رقم الهوية الوطنية / الإقامة
+                    </label>
+                    <input type="text" name="q_id" value="{{ q_id }}" dir="ltr" placeholder="رقم الهوية / الجواز" style="width: 100%; padding: 11px 14px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.92rem;">
+                </div>
+
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #334155; font-size: 0.9rem;">
+                        رقم السجل التجاري
+                    </label>
+                    <input type="text" name="q_cr" value="{{ q_cr }}" dir="ltr" placeholder="السجل التجاري (للشركات)" style="width: 100%; padding: 11px 14px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.92rem;">
+                </div>
+
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 6px; font-weight: 700; color: #334155; font-size: 0.9rem;">
+                        رقم الهاتف / الجوال
+                    </label>
+                    <input type="text" name="q_phone" value="{{ q_phone }}" dir="ltr" placeholder="مثال: 777123456" style="width: 100%; padding: 11px 14px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.92rem;">
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; padding-top: 10px; border-top: 1px solid #f1f5f9;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <label style="font-weight: 700; color: #334155; font-size: 0.9rem;">الصفة المستهدفة بالتمثيل في القضية:</label>
+                    <select name="target_role" style="padding: 9px 14px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; font-weight: 600; font-size: 0.9rem; background: #f8fafc;">
+                        <option value="خصم" {% if target_role == 'خصم' %}selected{% endif %}>خصم (معارض لموكلنا في الدعوى)</option>
+                        <option value="موكل" {% if target_role == 'موكل' %}selected{% endif %}>موكل (طالب التمثيل والتوكيل من المكتب)</option>
+                        <option value="طرف" {% if target_role == 'طرف' %}selected{% endif %}>طرف عام / شاهد / خبير</option>
+                    </select>
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                    <a href="/conflict-check" class="btn" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 10px 18px; border-radius: 8px; font-weight: 700; text-decoration: none;">
+                        <i class="fa-solid fa-rotate-left"></i> مسح الحقول
+                    </a>
+                    <button type="submit" class="btn-primary" style="padding: 10px 24px; font-family: 'Cairo', sans-serif; font-weight: 800; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; background: #2563eb; color: #fff; border: none; box-shadow: 0 2px 6px rgba(37,99,235,0.25);">
+                        <i class="fa-solid fa-magnifying-glass"></i> تشغيل الفحص الأمني
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Results Section -->
+    {% if has_searched and result %}
+    <div class="results-wrapper">
+
+        <!-- Result Banner -->
+        {% if result.status == 'HIGH_CONFLICT' %}
+        <div style="background: #fef2f2; border: 2px solid #ef4444; border-radius: 12px; padding: 20px 24px; margin-bottom: 24px; box-shadow: 0 4px 12px rgba(239,68,68,0.1);">
+            <div style="display: flex; align-items: flex-start; gap: 16px;">
+                <div style="width: 52px; height: 52px; border-radius: 12px; background: #fee2e2; color: #dc2626; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; flex-shrink: 0;">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <div style="flex: 1;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 6px;">
+                        <span style="font-size: 1.25rem; font-weight: 900; color: #991b1b;">
+                            {{ result.badge_text }}
+                        </span>
+                        <span style="background: #dc2626; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.82rem; font-weight: 800;">
+                            درجة الخطورة: حرجة جداً (يحظر التمثيل)
+                        </span>
+                    </div>
+                    <p style="color: #7f1d1d; font-size: 0.98rem; font-weight: 600; margin: 0 0 10px 0; line-height: 1.6;">
+                        {{ result.summary }}
+                    </p>
+                    <div style="font-size: 0.88rem; color: #991b1b; background: rgba(239,68,68,0.08); padding: 8px 12px; border-radius: 6px;">
+                        ⚖️ <b>التوجيه القانوني:</b> يحظر ميثاق شرف المحاماة قبول خصومة ضد موكل حالي للمكتب، أو تمثيل خصم قائم لموكل آخر دون موافقة كتابية صريحة.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% elif result.status == 'POTENTIAL_CONFLICT' %}
+        <div style="background: #fffbeb; border: 2px solid #f59e0b; border-radius: 12px; padding: 20px 24px; margin-bottom: 24px; box-shadow: 0 4px 12px rgba(245,158,11,0.1);">
+            <div style="display: flex; align-items: flex-start; gap: 16px;">
+                <div style="width: 52px; height: 52px; border-radius: 12px; background: #fef3c7; color: #d97706; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; flex-shrink: 0;">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                </div>
+                <div style="flex: 1;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 6px;">
+                        <span style="font-size: 1.25rem; font-weight: 900; color: #92400e;">
+                            {{ result.badge_text }}
+                        </span>
+                        <span style="background: #d97706; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.82rem; font-weight: 800;">
+                            درجة التدقيق: متوسطة (سوابق مسجلة)
+                        </span>
+                    </div>
+                    <p style="color: #78350f; font-size: 0.98rem; font-weight: 600; margin: 0 0 10px 0; line-height: 1.6;">
+                        {{ result.summary }}
+                    </p>
+                    <div style="font-size: 0.88rem; color: #92400e; background: rgba(245,158,11,0.1); padding: 8px 12px; border-radius: 6px;">
+                        ℹ️ <b>التوجيه المهني:</b> يرجى التحقق من موضوع القضايا السابقة والتأكد من عدم وجود تداخل موضوعي أو إفشاء لمعلومات سرية سابقة.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% else %}
+        <div style="background: #f0fdf4; border: 2px solid #10b981; border-radius: 12px; padding: 20px 24px; margin-bottom: 24px; box-shadow: 0 4px 12px rgba(16,185,129,0.08);">
+            <div style="display: flex; align-items: flex-start; gap: 16px;">
+                <div style="width: 52px; height: 52px; border-radius: 12px; background: #dcfce7; color: #059669; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; flex-shrink: 0;">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+                <div style="flex: 1;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 6px;">
+                        <span style="font-size: 1.25rem; font-weight: 900; color: #065f46;">
+                            {{ result.badge_text }}
+                        </span>
+                        <span style="background: #059669; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.82rem; font-weight: 800;">
+                            الحالة: مبرأ ومطابق (Clearance Approved)
+                        </span>
+                    </div>
+                    <p style="color: #064e3b; font-size: 0.98rem; font-weight: 600; margin: 0 0 10px 0; line-height: 1.6;">
+                        {{ result.summary }}
+                    </p>
+                    <div style="font-size: 0.88rem; color: #047857; background: rgba(16,185,129,0.08); padding: 8px 12px; border-radius: 6px;">
+                        ✅ <b>التوجيه المهني:</b> يمكن قبول الوكالة وإضافة الطرف ومباشرة إجراءات التعاقد بأمان تام.
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Quick Actions & Print Certificate -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
+            <div style="font-weight: 800; color: #1e293b; font-size: 1.1rem;">
+                📋 السجلات المطابقة في النظام (إجمالي {{ result.total_matches }} تطابق)
+            </div>
+            <div>
+                <button onclick="window.print()" class="btn" style="background: #1e293b; color: white; border: none; padding: 9px 18px; border-radius: 8px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-family: 'Cairo', sans-serif;">
+                    <i class="fa-solid fa-print"></i> طباعة محضر فحص تعارض المصالح
+                </button>
+            </div>
+        </div>
+
+        <!-- Matches Table -->
+        {% if result.matches %}
+        <div class="card" style="background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; margin-bottom: 30px;">
+            <table style="width: 100%; border-collapse: collapse; text-align: right; font-size: 0.92rem;">
+                <thead>
+                    <tr style="background: #f8fafc; border-bottom: 1.5px solid #e2e8f0; color: #475569;">
+                        <th style="padding: 12px 16px;">المصدر / السجل</th>
+                        <th style="padding: 12px 16px;">الاسم المسجل</th>
+                        <th style="padding: 12px 16px;">الصفة والدور</th>
+                        <th style="padding: 12px 16px;">رقم الهوية / الهاتف</th>
+                        <th style="padding: 12px 16px;">القضية / الملف المرتبط</th>
+                        <th style="padding: 12px 16px;">سبب التطابق</th>
+                        <th style="padding: 12px 16px; text-align: center;">مستوى التعارض</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in result.matches %}
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 12px 16px; font-weight: 700; color: #1e3a8a;">{{ m.category }}</td>
+                        <td style="padding: 12px 16px; font-weight: 800; color: #0f172a;">{{ m.name }}</td>
+                        <td style="padding: 12px 16px;">
+                            <span style="background: #f1f5f9; color: #334155; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 700;">
+                                {{ m.role }}
+                            </span>
+                        </td>
+                        <td style="padding: 12px 16px; font-family: monospace; font-size: 0.88rem; color: #475569;">
+                            {{ m.id_number }} <br> <span style="color: #64748b;">{{ m.phone }}</span>
+                        </td>
+                        <td style="padding: 12px 16px;">
+                            <b>{{ m.case_number }}</b><br>
+                            <span style="color: #64748b; font-size: 0.85rem;">{{ m.case_title }}</span>
+                        </td>
+                        <td style="padding: 12px 16px; color: #334155;">
+                            {% for r in m.reasons %}
+                            <div>• {{ r }}</div>
+                            {% endfor %}
+                        </td>
+                        <td style="padding: 12px 16px; text-align: center;">
+                            {% if m.risk_level == 'عالي' %}
+                            <span style="background: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 20px; font-size: 0.82rem; font-weight: 800;">حرج ⚠️</span>
+                            {% elif m.risk_level == 'متوسط' %}
+                            <span style="background: #fef3c7; color: #92400e; padding: 4px 10px; border-radius: 20px; font-size: 0.82rem; font-weight: 800;">متوسط</span>
+                            {% else %}
+                            <span style="background: #e0f2fe; color: #0369a1; padding: 4px 10px; border-radius: 20px; font-size: 0.82rem; font-weight: 700;">منخفض</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="background: #ffffff; border: 1px dashed #cbd5e1; border-radius: 12px; padding: 30px; text-align: center; color: #64748b; margin-bottom: 30px;">
+            <i class="fa-solid fa-clipboard-check" style="font-size: 2.2rem; color: #10b981; margin-bottom: 10px;"></i>
+            <div style="font-weight: 700; font-size: 1rem; color: #334155;">لا توجد أي سجلات أو أطراف سابقة مطابقة لهذه البيانات.</div>
+            <div style="font-size: 0.88rem; color: #64748b; margin-top: 4px;">الطرف جاهز للتمثيل والإضافة دون أي تعارض مصالح مسجل.</div>
+        </div>
+        {% endif %}
+
+        <!-- Printable Clearance Certificate (Shown on Print) -->
+        <div class="print-only-certificate" style="display: none; padding: 30px; border: 2px solid #0f172a; border-radius: 8px; margin-top: 30px; font-family: 'Cairo', sans-serif;">
+            <div style="text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 15px; margin-bottom: 20px;">
+                <h2 style="margin: 0 0 5px 0;">محضر واستمارة فحص تعارض المصالح القضائي والمهني</h2>
+                <div style="font-size: 0.9rem; color: #475569;">منصة إدارة مكاتب المحاماة (LawSaaS) — توثيق رسمي لملف القضية</div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; font-size: 0.95rem;">
+                <div><b>الاسم المفحوص:</b> {{ q_name or '-' }}</div>
+                <div><b>الصفة المستهدفة:</b> {{ target_role }}</div>
+                <div><b>رقم الهوية:</b> {{ q_id or '-' }}</div>
+                <div><b>رقم الهاتف / السجل:</b> {{ q_phone or q_cr or '-' }}</div>
+                <div><b>تاريخ وساعة الفحص:</b> {{ request.state.now if request.state.now else 'تاريخ إلكتروني موثق' }}</div>
+                <div><b>المستخدم القائم بالفحص:</b> {{ user.name if user.name else user.username }}</div>
+            </div>
+
+            <div style="border: 1px solid #cbd5e1; padding: 15px; border-radius: 6px; margin-bottom: 25px; background: #f8fafc;">
+                <b>النتيجة الرسمية للفحص:</b>
+                <div style="font-size: 1.1rem; font-weight: bold; margin-top: 6px; color: {% if result.status == 'HIGH_CONFLICT' %}#dc2626{% elif result.status == 'POTENTIAL_CONFLICT' %}#d97706{% else %}#059669{% endif %};">
+                    {{ result.badge_text }}
+                </div>
+                <div style="margin-top: 6px; font-size: 0.92rem; color: #334155;">{{ result.summary }}</div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; margin-top: 50px; padding-top: 20px; border-top: 1px dashed #94a3b8;">
+                <div style="text-align: center; width: 220px;">
+                    <div><b>توقيع المحامي المسؤول</b></div>
+                    <div style="margin-top: 40px; border-bottom: 1px solid #0f172a;"></div>
+                </div>
+                <div style="text-align: center; width: 220px;">
+                    <div><b>اعتماد مدير المكتب / الشريك</b></div>
+                    <div style="margin-top: 40px; border-bottom: 1px solid #0f172a;"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    {% endif %}
+
+</div>
+
+<style>
+    @media print {
+        body * {
+            visibility: hidden;
+        }
+        .print-only-certificate, .print-only-certificate * {
+            visibility: visible;
+        }
+        .print-only-certificate {
+            display: block !important;
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}

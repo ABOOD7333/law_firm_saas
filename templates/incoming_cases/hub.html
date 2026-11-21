@@ -1,0 +1,552 @@
+{% extends "base.html" %}
+
+{% block title %}القضايا الواردة | LawSaaS{% endblock %}
+
+{% block content %}
+<div class="incoming-hub-container" style="max-width: 1380px; margin: 0 auto; padding: 10px 0 30px 0;">
+
+    <!-- Top Header -->
+    <div style="text-align: center; margin-bottom: 28px;">
+        <h1 style="font-size: 2rem; font-weight: 800; color: #0f172a; margin-bottom: 8px;">
+            القضايا الواردة
+        </h1>
+        <p style="font-size: 1.05rem; color: #64748b; font-weight: 600;">
+            اختر الجهة التي ورد منها الملف لتسجيل قضية جديدة
+        </p>
+    </div>
+
+    <!-- Quick Stats Bar -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin-bottom: 32px;">
+        <div style="background: rgba(255,255,255,0.85); backdrop-filter: blur(12px); border: 1px solid rgba(226,232,240,0.8); border-radius: 14px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 15px rgba(0,0,0,0.02);">
+            <div>
+                <span style="font-size: 0.85rem; color: #64748b; font-weight: 600;">إجمالي الملفات الواردة</span>
+                <h3 style="font-size: 1.6rem; font-weight: 800; color: #0f172a; margin-top: 4px;">{{ total_files }}</h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: rgba(79, 70, 229, 0.1); color: #4f46e5; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fa-solid fa-inbox"></i>
+            </div>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.85); backdrop-filter: blur(12px); border: 1px solid rgba(226,232,240,0.8); border-radius: 14px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 15px rgba(0,0,0,0.02);">
+            <div>
+                <span style="font-size: 0.85rem; color: #b45309; font-weight: 600;">قيد المراجعة</span>
+                <h3 style="font-size: 1.6rem; font-weight: 800; color: #d97706; margin-top: 4px;">{{ pending_count }}</h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: rgba(245, 158, 11, 0.1); color: #d97706; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+            </div>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.85); backdrop-filter: blur(12px); border: 1px solid rgba(226,232,240,0.8); border-radius: 14px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 15px rgba(0,0,0,0.02);">
+            <div>
+                <span style="font-size: 0.85rem; color: #15803d; font-weight: 600;">مكتمل المستندات</span>
+                <h3 style="font-size: 1.6rem; font-weight: 800; color: #16a34a; margin-top: 4px;">{{ completed_count }}</h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: rgba(16, 185, 129, 0.1); color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fa-solid fa-check-double"></i>
+            </div>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.85); backdrop-filter: blur(12px); border: 1px solid rgba(226,232,240,0.8); border-radius: 14px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 15px rgba(0,0,0,0.02);">
+            <div>
+                <span style="font-size: 0.85rem; color: #be123c; font-weight: 600;">ناقص المستندات</span>
+                <h3 style="font-size: 1.6rem; font-weight: 800; color: #e11d48; margin-top: 4px;">{{ incomplete_count }}</h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: rgba(244, 63, 94, 0.1); color: #f43f5e; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.85); backdrop-filter: blur(12px); border: 1px solid rgba(226,232,240,0.8); border-radius: 14px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 15px rgba(0,0,0,0.02);">
+            <div>
+                <span style="font-size: 0.85rem; color: #4338ca; font-weight: 600;">قضايا المكتب الفعلية</span>
+                <h3 style="font-size: 1.6rem; font-weight: 800; color: #4f46e5; margin-top: 4px;">{{ unique_cases_count }}</h3>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: rgba(99, 102, 241, 0.1); color: #6366f1; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                <i class="fa-solid fa-scale-balanced"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- The 7 Main Cards Section (Including 0. قيد ورفع دعوى جديدة) -->
+    <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 14px; margin-top: 10px;" class="hub-cards-grid">
+
+        <!-- 0. قيد ورفع دعوى جديدة -->
+        <div class="incoming-card" style="background: #ffffff; border: 2px solid #f59e0b; border-radius: 18px; padding: 24px 14px 20px 14px; text-align: center; box-shadow: 0 8px 25px rgba(245, 158, 11, 0.08); display: flex; flex-direction: column; justify-content: space-between; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); min-height: 290px;">
+            <div>
+                <!-- Circular Icon -->
+                <div style="width: 68px; height: 68px; margin: 0 auto 16px auto; border-radius: 50%; background: linear-gradient(135deg, #d97706, #b45309); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; box-shadow: 0 8px 20px rgba(180, 83, 9, 0.28);">
+                    <i class="fa-solid fa-file-signature"></i>
+                </div>
+                <!-- Title -->
+                <h2 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin-bottom: 8px; line-height: 1.4;">
+                    قيد ورفع<br>دعوى جديدة
+                </h2>
+                <div style="display: inline-block; background: #fef3c7; color: #92400e; padding: 4px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; margin-bottom: 16px;">
+                    {{ section_stats['new_claim'] or 0 }} دعوى مقيدة
+                </div>
+            </div>
+            <!-- Enter Button -->
+            <a href="/incoming-cases/new_claim" style="display: block; width: 100%; background: linear-gradient(135deg, #d97706, #b45309); color: #ffffff; text-decoration: none; padding: 10px 0; border-radius: 10px; font-weight: 800; font-size: 0.92rem; box-shadow: 0 4px 12px rgba(180, 83, 9, 0.25); transition: all 0.2s ease;">
+                دخول
+            </a>
+        </div>
+
+        <!-- 1. الشرطة -->
+        <div class="incoming-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 24px 14px 20px 14px; text-align: center; box-shadow: 0 8px 25px rgba(0,0,0,0.04); display: flex; flex-direction: column; justify-content: space-between; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); min-height: 290px;">
+            <div>
+                <!-- Circular Icon -->
+                <div style="width: 68px; height: 68px; margin: 0 auto 16px auto; border-radius: 50%; background: #0284c7; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; box-shadow: 0 8px 20px rgba(2, 132, 199, 0.25);">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <!-- Title -->
+                <h2 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin-bottom: 8px; line-height: 1.4;">
+                    القضايا المعروضة<br>أمام الشرطة
+                </h2>
+                <div style="display: inline-block; background: #e0f2fe; color: #0369a1; padding: 4px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; margin-bottom: 16px;">
+                    {{ section_stats['police'] }} ملف مسجل
+                </div>
+            </div>
+            <!-- Enter Button -->
+            <a href="/incoming-cases/police" style="display: block; width: 100%; background: #0284c7; color: #ffffff; text-decoration: none; padding: 10px 0; border-radius: 10px; font-weight: 800; font-size: 0.92rem; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25); transition: all 0.2s ease;">
+                دخول
+            </a>
+        </div>
+
+        <!-- 2. النيابة العامة -->
+        <div class="incoming-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 24px 14px 20px 14px; text-align: center; box-shadow: 0 8px 25px rgba(0,0,0,0.04); display: flex; flex-direction: column; justify-content: space-between; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); min-height: 290px;">
+            <div>
+                <!-- Circular Icon -->
+                <div style="width: 68px; height: 68px; margin: 0 auto 16px auto; border-radius: 50%; background: #059669; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; box-shadow: 0 8px 20px rgba(5, 150, 105, 0.25);">
+                    <i class="fa-solid fa-scale-balanced"></i>
+                </div>
+                <!-- Title -->
+                <h2 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin-bottom: 8px; line-height: 1.4;">
+                    القضايا المنظورة<br>أمام النيابة
+                </h2>
+                <div style="display: inline-block; background: #d1fae5; color: #065f46; padding: 4px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; margin-bottom: 16px;">
+                    {{ section_stats['prosecution'] }} ملف مسجل
+                </div>
+            </div>
+            <!-- Enter Button -->
+            <a href="/incoming-cases/prosecution" style="display: block; width: 100%; background: #059669; color: #ffffff; text-decoration: none; padding: 10px 0; border-radius: 10px; font-weight: 800; font-size: 0.92rem; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25); transition: all 0.2s ease;">
+                دخول
+            </a>
+        </div>
+
+        <!-- 3. المحكمة الابتدائية -->
+        <div class="incoming-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 24px 14px 20px 14px; text-align: center; box-shadow: 0 8px 25px rgba(0,0,0,0.04); display: flex; flex-direction: column; justify-content: space-between; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); min-height: 290px;">
+            <div>
+                <!-- Circular Icon -->
+                <div style="width: 68px; height: 68px; margin: 0 auto 16px auto; border-radius: 50%; background: #1d4ed8; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; box-shadow: 0 8px 20px rgba(29, 78, 216, 0.25);">
+                    <i class="fa-solid fa-landmark"></i>
+                </div>
+                <!-- Title -->
+                <h2 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin-bottom: 8px; line-height: 1.4;">
+                    القضايا المنظورة<br>أمام المحكمة الابتدائية
+                </h2>
+                <div style="display: inline-block; background: #dbeafe; color: #1e40af; padding: 4px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; margin-bottom: 16px;">
+                    {{ section_stats['first_instance'] }} ملف مسجل
+                </div>
+            </div>
+            <!-- Enter Button -->
+            <a href="/incoming-cases/first_instance" style="display: block; width: 100%; background: #1d4ed8; color: #ffffff; text-decoration: none; padding: 10px 0; border-radius: 10px; font-weight: 800; font-size: 0.92rem; box-shadow: 0 4px 12px rgba(29, 78, 216, 0.25); transition: all 0.2s ease;">
+                دخول
+            </a>
+        </div>
+
+        <!-- 4. محكمة الاستئناف -->
+        <div class="incoming-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 24px 14px 20px 14px; text-align: center; box-shadow: 0 8px 25px rgba(0,0,0,0.04); display: flex; flex-direction: column; justify-content: space-between; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); min-height: 290px;">
+            <div>
+                <!-- Circular Icon -->
+                <div style="width: 68px; height: 68px; margin: 0 auto 16px auto; border-radius: 50%; background: #7c3aed; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; box-shadow: 0 8px 20px rgba(124, 58, 237, 0.25);">
+                    <i class="fa-solid fa-building-columns"></i>
+                </div>
+                <!-- Title -->
+                <h2 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin-bottom: 8px; line-height: 1.4;">
+                    القضايا المنظورة<br>أمام محكمة الاستئناف
+                </h2>
+                <div style="display: inline-block; background: #ede9fe; color: #5b21b6; padding: 4px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; margin-bottom: 16px;">
+                    {{ section_stats['appeal'] }} ملف مسجل
+                </div>
+            </div>
+            <!-- Enter Button -->
+            <a href="/incoming-cases/appeal" style="display: block; width: 100%; background: #7c3aed; color: #ffffff; text-decoration: none; padding: 10px 0; border-radius: 10px; font-weight: 800; font-size: 0.92rem; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25); transition: all 0.2s ease;">
+                دخول
+            </a>
+        </div>
+
+        <!-- 5. المحكمة العليا / الطعون بالنقض -->
+        <div class="incoming-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 24px 14px 20px 14px; text-align: center; box-shadow: 0 8px 25px rgba(0,0,0,0.04); display: flex; flex-direction: column; justify-content: space-between; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); min-height: 290px;">
+            <div>
+                <!-- Circular Icon -->
+                <div style="width: 68px; height: 68px; margin: 0 auto 16px auto; border-radius: 50%; background: #b45309; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; box-shadow: 0 8px 20px rgba(180, 83, 9, 0.25);">
+                    <i class="fa-solid fa-gavel"></i>
+                </div>
+                <!-- Title -->
+                <h2 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin-bottom: 8px; line-height: 1.4;">
+                    القضايا المنظورة<br>أمام المحكمة العليا
+                </h2>
+                <div style="display: inline-block; background: #fef3c7; color: #92400e; padding: 4px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; margin-bottom: 16px;">
+                    {{ section_stats['supreme'] }} ملف مسجل
+                </div>
+            </div>
+            <!-- Enter Button -->
+            <a href="/incoming-cases/supreme" style="display: block; width: 100%; background: #b45309; color: #ffffff; text-decoration: none; padding: 10px 0; border-radius: 10px; font-weight: 800; font-size: 0.92rem; box-shadow: 0 4px 12px rgba(180, 83, 9, 0.25); transition: all 0.2s ease;">
+                دخول
+            </a>
+        </div>
+
+        <!-- 6. التنفيذ -->
+        <div class="incoming-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 24px 14px 20px 14px; text-align: center; box-shadow: 0 8px 25px rgba(0,0,0,0.04); display: flex; flex-direction: column; justify-content: space-between; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); min-height: 290px;">
+            <div>
+                <!-- Circular Icon -->
+                <div style="width: 68px; height: 68px; margin: 0 auto 16px auto; border-radius: 50%; background: #dc2626; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; box-shadow: 0 8px 20px rgba(220, 38, 38, 0.25);">
+                    <i class="fa-solid fa-stamp"></i>
+                </div>
+                <!-- Title -->
+                <h2 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin-bottom: 8px; line-height: 1.4;">
+                    القضايا المنظورة<br>أمام التنفيذ
+                </h2>
+                <div style="display: inline-block; background: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; margin-bottom: 16px;">
+                    {{ section_stats['enforcement'] }} ملف مسجل
+                </div>
+            </div>
+            <!-- Enter Button -->
+            <a href="/incoming-cases/enforcement" style="display: block; width: 100%; background: #dc2626; color: #ffffff; text-decoration: none; padding: 10px 0; border-radius: 10px; font-weight: 800; font-size: 0.92rem; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25); transition: all 0.2s ease;">
+                دخول
+            </a>
+        </div>
+
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- السجل الشامل لكافة القضايا الواردة (General Incoming Cases Register) -->
+    <!-- ========================================================================= -->
+    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 24px; margin-top: 32px; box-shadow: 0 4px 20px rgba(0,0,0,0.02);">
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 20px; border-bottom: 1px solid #f1f5f9; padding-bottom: 16px;">
+            <div>
+                <h2 style="font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 10px;">
+                    <i class="fa-solid fa-list-check" style="color: #4f46e5;"></i> سجل القضايا والملفات الواردة العام
+                </h2>
+                <p style="font-size: 0.88rem; color: #64748b; margin: 4px 0 0 0;">
+                    استعراض وبحث وفحص شامل لكافة الواردات عبر جميع الجهات القضائية والتنفيذية
+                </p>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 0.85rem; font-weight: 700; background: #f8fafc; border: 1px solid #e2e8f0; color: #334155; padding: 6px 14px; border-radius: 20px;">
+                    إجمالي السجلات: {{ all_records_count }}
+                </span>
+            </div>
+        </div>
+
+        <!-- شريط البحث والفلترة المتقدمة -->
+        <form method="get" action="/incoming-cases" style="display: flex; gap: 10px; align-items: center; margin-bottom: 20px; flex-wrap: wrap;">
+            <!-- البحث النصي -->
+            <div style="flex: 2; min-width: 240px; position: relative;">
+                <i class="fa-solid fa-magnifying-glass" style="position: absolute; right: 14px; top: 13px; color: #94a3b8; font-size: 0.95rem;"></i>
+                <input type="text" name="q" value="{{ q }}" placeholder="البحث برقم الوارد، اسم الموكل، رقم القضية، اسم المحكمة، جهة الشرطة..." style="width: 100%; padding: 10px 40px 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.9rem; background: #f8fafc; box-sizing: border-box;">
+            </div>
+
+            <!-- تصفية حسب الجهة القضائية -->
+            <div style="flex: 1; min-width: 170px;">
+                <select name="section_filter" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.88rem; background: #f8fafc; box-sizing: border-box;" onchange="this.form.submit()">
+                    <option value="">جميع الأقسام والجهات</option>
+                    <option value="new_claim" {% if section_filter == 'new_claim' %}selected{% endif %}>0. قيد ورفع دعوى جديدة</option>
+                    <option value="police" {% if section_filter == 'police' %}selected{% endif %}>1. المعروضة أمام الشرطة</option>
+                    <option value="prosecution" {% if section_filter == 'prosecution' %}selected{% endif %}>2. المنظورة أمام النيابة</option>
+                    <option value="first_instance" {% if section_filter == 'first_instance' %}selected{% endif %}>3. المحكمة الابتدائية</option>
+                    <option value="appeal" {% if section_filter == 'appeal' %}selected{% endif %}>4. محكمة الاستئناف</option>
+                    <option value="supreme" {% if section_filter == 'supreme' %}selected{% endif %}>5. المحكمة العليا / النقض</option>
+                    <option value="enforcement" {% if section_filter == 'enforcement' %}selected{% endif %}>6. المنظورة أمام التنفيذ</option>
+                </select>
+            </div>
+
+            <!-- تصفية حسب حالة الملف -->
+            <div style="flex: 1; min-width: 140px;">
+                <select name="status_filter" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.88rem; background: #f8fafc; box-sizing: border-box;" onchange="this.form.submit()">
+                    <option value="">جميع الحالات</option>
+                    <option value="under_review" {% if status_filter == 'under_review' %}selected{% endif %}>قيد المراجعة</option>
+                    <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>مكتمل المستندات</option>
+                    <option value="incomplete" {% if status_filter == 'incomplete' %}selected{% endif %}>ناقص المستندات</option>
+                </select>
+            </div>
+
+            <button type="submit" style="background: #1e293b; color: #ffffff; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; font-family: 'Cairo', sans-serif;">
+                <i class="fa-solid fa-filter"></i> تصفية
+            </button>
+
+            {% if q or section_filter or status_filter %}
+            <a href="/incoming-cases" style="background: #e2e8f0; color: #334155; text-decoration: none; padding: 10px 14px; border-radius: 8px; font-weight: 700; font-size: 0.88rem; font-family: 'Cairo', sans-serif;">
+                إلغاء التصفية
+            </a>
+            {% endif %}
+        </form>
+
+        <!-- جدول السجلات الشامل -->
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; text-align: right;">
+                <thead>
+                    <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+                        <th style="padding: 12px 14px; font-size: 0.86rem; font-weight: 800; color: #475569;">الجهة الوارد منها</th>
+                        <th style="padding: 12px 14px; font-size: 0.86rem; font-weight: 800; color: #475569;">الموكل / صفته</th>
+                        <th style="padding: 12px 14px; font-size: 0.86rem; font-weight: 800; color: #475569;">المحامي المختص</th>
+                        <th style="padding: 12px 14px; font-size: 0.86rem; font-weight: 800; color: #475569;">رقم القضية / المرجع</th>
+                        <th style="padding: 12px 14px; font-size: 0.86rem; font-weight: 800; color: #475569;">تاريخ الاستلام</th>
+                        <th style="padding: 12px 14px; font-size: 0.86rem; font-weight: 800; color: #475569;">الحالة</th>
+                        <th style="padding: 12px 14px; font-size: 0.86rem; font-weight: 800; color: #475569;">إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if all_records %}
+                        {% for r in all_records %}
+                        <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                            <td style="padding: 12px 14px;">
+                                {% set cfg = sections.get(r.section_key, {}) %}
+                                <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 700; color: {{ cfg.badge_color or '#334155' }}; background: #f8fafc; border: 1px solid #e2e8f0; padding: 4px 10px; border-radius: 6px;">
+                                    <i class="{{ cfg.icon or 'fa-solid fa-folder' }}"></i>
+                                    {{ cfg.title or r.section_key }}
+                                </span>
+                            </td>
+                            <td style="padding: 12px 14px;">
+                                <div style="font-weight: 700; color: #1e293b; font-size: 0.9rem;">
+                                    {{ r.client_name or (r.law_client.name if r.law_client else 'غير محدد') }}
+                                </div>
+                                {% if r.client_capacity %}
+                                <span style="display: inline-block; font-size: 0.74rem; background: #eff6ff; color: #1d4ed8; padding: 1px 6px; border-radius: 4px; font-weight: 600; margin-top: 2px;">
+                                    {{ r.client_capacity }}
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td style="padding: 12px 14px; font-size: 0.85rem; color: #334155; font-weight: 600;">
+                                {{ r.assigned_lawyer.name if r.assigned_lawyer else 'غير محدد' }}
+                            </td>
+                            <td style="padding: 12px 14px; font-size: 0.88rem; color: #0f172a;">
+                                {% if r.section_key == 'new_claim' %}
+                                    {{ r.internal_number or ('#' ~ r.id) }} ({{ r.target_authority or 'دعوى' }})
+                                {% elif r.section_key == 'police' %}
+                                    {{ r.police_report_number or '-' }}
+                                {% elif r.section_key == 'prosecution' %}
+                                    {{ r.prosecution_file_number or '-' }}
+                                {% elif r.section_key == 'first_instance' %}
+                                    {{ r.court_case_number or '-' }}
+                                {% elif r.section_key == 'appeal' %}
+                                    {{ r.appeal_case_number or '-' }}
+                                {% elif r.section_key == 'supreme' %}
+                                    {{ r.court_case_number or '-' }}
+                                {% elif r.section_key == 'enforcement' %}
+                                    {{ r.enforcement_file_number or '-' }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td style="padding: 12px 14px; font-size: 0.85rem; color: #64748b;">
+                                {{ r.reception_date }}
+                            </td>
+                            <td style="padding: 12px 14px;">
+                                {% if r.status_key == 'completed' %}
+                                    <span style="background: #dcfce7; color: #15803d; padding: 4px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 700;">مكتمل</span>
+                                {% elif r.status_key == 'incomplete' %}
+                                    <span style="background: #fee2e2; color: #b91c1c; padding: 4px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 700;">ناقص</span>
+                                {% else %}
+                                    <span style="background: #fef3c7; color: #b45309; padding: 4px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 700;">قيد المراجعة</span>
+                                {% endif %}
+                            </td>
+                            <td style="padding: 12px 14px;">
+                                <button type="button" onclick="openHubDetailsModal({{ r.id }})" style="background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; border-radius: 6px; padding: 5px 10px; cursor: pointer; font-size: 0.82rem; font-weight: 700; font-family: 'Cairo', sans-serif;">
+                                    <i class="fa-solid fa-eye"></i> عرض التفاصيل
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 40px; color: #94a3b8;">
+                                <i class="fa-regular fa-folder-open" style="font-size: 2.5rem; margin-bottom: 10px; display: block;"></i>
+                                لا توجد قضايا أو ملفات واردة مسجلة تطابق معايير البحث.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- الترقيم والصفحات -->
+        {% if total_pages > 1 %}
+        <div style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 24px;">
+            {% if current_page > 1 %}
+            <a href="/incoming-cases?page={{ current_page - 1 }}&q={{ q }}&section_filter={{ section_filter }}&status_filter={{ status_filter }}" style="padding: 6px 12px; border: 1px solid #cbd5e1; border-radius: 6px; background: #ffffff; color: #334155; text-decoration: none; font-weight: 700;">
+                &lt;
+            </a>
+            {% endif %}
+
+            {% for p in range(1, total_pages + 1) %}
+            <a href="/incoming-cases?page={{ p }}&q={{ q }}&section_filter={{ section_filter }}&status_filter={{ status_filter }}" style="padding: 6px 12px; border: 1px solid {% if p == current_page %}#4f46e5{% else %}#cbd5e1{% endif %}; border-radius: 6px; background: {% if p == current_page %}#4f46e5{% else %}#ffffff{% endif %}; color: {% if p == current_page %}#ffffff{% else %}#334155{% endif %}; text-decoration: none; font-weight: 700;">
+                {{ p }}
+            </a>
+            {% endfor %}
+
+            {% if current_page < total_pages %}
+            <a href="/incoming-cases?page={{ current_page + 1 }}&q={{ q }}&section_filter={{ section_filter }}&status_filter={{ status_filter }}" style="padding: 6px 12px; border: 1px solid #cbd5e1; border-radius: 6px; background: #ffffff; color: #334155; text-decoration: none; font-weight: 700;">
+                &gt;
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+
+    </div>
+
+    <!-- Informational Note Banner from Requirements Document -->
+    <div style="margin-top: 36px; background: #f8fafc; border-right: 4px solid #4f46e5; border-radius: 12px; padding: 16px 20px; display: flex; align-items: center; gap: 14px; border: 1px solid #e2e8f0;">
+        <i class="fa-solid fa-circle-info" style="font-size: 1.4rem; color: #4f46e5; flex-shrink: 0;"></i>
+        <div style="font-size: 0.9rem; color: #475569; line-height: 1.7;">
+            <strong>توجيه إداري:</strong> هذه الواجهة مخصصة لتنظيم وتوثيق استقبال الملفات والمستندات الورقية التي يحضر بها الموكلون إلى المكتب وفرزها فورياً بحسب الجهة القضائية أو التنفيذية. تسجيل ملف الاستقبال يولد تسلسلاً هجرياً تلقائياً لكل سنة، ولا يُعد قبولاً نهائياً للدعوى أو تعاقداً حتى تتم مراجعة السندات وتعيين المحامي المختص.
+        </div>
+    </div>
+
+</div>
+
+<!-- Modal: عرض التفاصيل الكاملة من الشاشة الرئيسية -->
+<div id="hubDetailsModal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 1200; align-items: center; justify-content: center; padding: 20px;">
+    <div style="background: #ffffff; border-radius: 16px; width: 100%; max-width: 720px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 40px rgba(0,0,0,0.2); padding: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 14px; margin-bottom: 18px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <i class="fa-solid fa-folder-open" style="font-size: 1.4rem; color: #4f46e5;"></i>
+                <h3 style="margin: 0; font-size: 1.2rem; font-weight: 800; color: #0f172a;" id="hubModalTitle">
+                    تفاصيل ملف الاستقبال
+                </h3>
+            </div>
+            <button type="button" onclick="closeHubDetailsModal()" style="background: none; border: none; font-size: 1.4rem; color: #64748b; cursor: pointer;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div id="hubModalBody" style="font-size: 0.92rem; color: #334155; line-height: 1.8;">
+            <div style="text-align: center; padding: 20px; color: #94a3b8;">
+                <i class="fa-solid fa-spinner fa-spin" style="font-size: 2rem;"></i>
+                <p>جاري تحميل التفاصيل...</p>
+            </div>
+        </div>
+
+        <div style="margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 14px; display: flex; justify-content: flex-end;">
+            <button type="button" onclick="closeHubDetailsModal()" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 8px 18px; border-radius: 8px; font-weight: 700; cursor: pointer; font-family: 'Cairo', sans-serif;">
+                إغلاق
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+function openHubDetailsModal(id) {
+    const modal = document.getElementById('hubDetailsModal');
+    const body = document.getElementById('hubModalBody');
+    const title = document.getElementById('hubModalTitle');
+
+    modal.style.display = 'flex';
+    body.innerHTML = '<div style="text-align: center; padding: 20px;"><i class="fa-solid fa-spinner fa-spin" style="font-size: 2rem; color: #4f46e5;"></i><p>جاري تحميل التفاصيل...</p></div>';
+
+    fetch(`/incoming-cases/api/details/${id}`)
+        .then(res => res.json())
+        .then(data => {
+            title.innerHTML = `تفاصيل ملف الاستقبال <span style="font-size: 0.85rem; color: #64748b;">(${data.section_title})</span>`;
+
+            let attachmentsHtml = '<p style="color: #94a3b8; font-size: 0.85rem;">لا توجد مستندات مرفوعة لهذا الملف.</p>';
+            if (data.attachments && data.attachments.length > 0) {
+                attachmentsHtml = '<div style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px;">';
+                data.attachments.forEach(att => {
+                    attachmentsHtml += `
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 700; color: #1e293b;"><i class="fa-solid fa-file" style="color: #6366f1; margin-left: 6px;"></i> ${att.name}</span>
+                            <a href="/${att.path}" target="_blank" style="background: #2563eb; color: #ffffff; text-decoration: none; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 700;">
+                                <i class="fa-solid fa-download"></i> فتح المستند
+                            </a>
+                        </div>
+                    `;
+                });
+                attachmentsHtml += '</div>';
+            }
+
+            let statusLabel = 'قيد المراجعة';
+            let statusColor = '#b45309';
+            let statusBg = '#fef3c7';
+            if (data.status_key === 'completed') {
+                statusLabel = 'مكتمل المستندات';
+                statusColor = '#15803d';
+                statusBg = '#dcfce7';
+            } else if (data.status_key === 'incomplete') {
+                statusLabel = 'ناقص المستندات';
+                statusColor = '#b91c1c';
+                statusBg = '#fee2e2';
+            }
+
+            body.innerHTML = `
+                <div style="margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;">
+                    <div><strong>الموكل:</strong> <span style="font-weight: 800; color: #0f172a; font-size: 1.05rem;">${data.client_name || '-'}</span> ${data.client_capacity ? `<span style="font-size: 0.8rem; background: #eff6ff; color: #1d4ed8; padding: 2px 8px; border-radius: 4px; font-weight: 700; margin-right: 6px;">(${data.client_capacity})</span>` : ''}</div>
+                    <div><span style="background: ${statusBg}; color: ${statusColor}; padding: 4px 12px; border-radius: 20px; font-size: 0.82rem; font-weight: 700;">${statusLabel}</span></div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; font-size: 0.88rem; color: #475569;">
+                    <div><strong>المحامي المختص:</strong> <span style="font-weight: 700; color: #0f172a;">${data.assigned_lawyer_name || 'غير محدد'}</span></div>
+                    <div><strong>تاريخ الاستلام في المكتب:</strong> ${data.reception_date}</div>
+                </div>
+                <div style="font-size: 0.84rem; color: #64748b; margin-bottom: 12px;">
+                    سجل بواسطة: ${data.created_by} (${data.created_at})
+                </div>
+
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; margin-bottom: 14px;">
+                    <strong>البيانات والمراجع القضائية:</strong>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; font-size: 0.88rem;">
+                        <div><strong>الجهة:</strong> ${data.section_title}</div>
+                        <div><strong>موضوع القضية:</strong> ${data.case_subject || '-'}</div>
+                        <div><strong>الخصم / المدعى عليه:</strong> ${data.opponent_name || '-'}</div>
+                        <div><strong>رقم القضية / البلاغ:</strong> ${data.police_report_number || data.prosecution_file_number || data.court_case_number || data.appeal_case_number || data.enforcement_file_number || (data.section_key === 'new_claim' ? (data.poa_number ? 'وكالة: ' + data.poa_number : 'قيد جديد') : '-')}</div>
+                        <div><strong>اسم الهيئة / المحكمة:</strong> ${data.target_authority || data.police_station || data.prosecution_name || data.court_name || data.appeal_court_name || data.supreme_court_name || data.enforcement_authority || '-'}</div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 14px;">
+                    <strong>ملاحظات الاستقبال:</strong>
+                    <p style="background: #f8fafc; padding: 10px; border-radius: 8px; margin-top: 4px; font-size: 0.88rem;">${data.notes || 'لا توجد ملاحظات.'}</p>
+                </div>
+
+                <div>
+                    <strong>المستندات المرفقة:</strong>
+                    ${attachmentsHtml}
+                </div>
+            `;
+        })
+        .catch(err => {
+            console.error(err);
+            body.innerHTML = '<p style="color: #e11d48; text-align: center;">تعذر تحميل بيانات الملف.</p>';
+        });
+}
+
+function closeHubDetailsModal() {
+    document.getElementById('hubDetailsModal').style.display = 'none';
+}
+</script>
+
+<style>
+@media (max-width: 1400px) {
+    .hub-cards-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+    }
+}
+@media (max-width: 900px) {
+    .hub-cards-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
+@media (max-width: 600px) {
+    .hub-cards-grid {
+        grid-template-columns: repeat(1, 1fr) !important;
+    }
+}
+.incoming-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08) !important;
+    border-color: #cbd5e1 !important;
+}
+</style>
+{% endblock %}

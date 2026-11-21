@@ -68,7 +68,10 @@ class GeminiLegalAssistant:
                     pass
 
             if not api_key:
-                api_key = "AQ.Ab8RN6JIQtFVp2wK-d5AROzv2faw7FqxFgCznjuxEwm1Pabxng"
+                self._init_error = "مفتاح GEMINI_API_KEY غير موجود في متغيرات البيئة."
+                logger.warning("⚠️ GEMINI_API_KEY is not configured in environment variables.")
+                self._available = False
+                return
 
             from google import genai
             self._client = genai.Client(api_key=api_key)

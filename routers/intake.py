@@ -16,10 +16,11 @@ from sqlalchemy.orm import Session
 from database.database import get_db
 from database.models import (
     AccessProfiles, LawOffices, LawClients, LawCases,
-    ClientIntakeForms, IntakeSubmissions, RetainerAgreements
+    ClientIntakeForms, IntakeSubmissions, RetainerAgreements, LawPowerOfAttorney
 )
 from dependencies import templates, get_current_user, check_user_permission
 from utils.conflict_checker import check_conflict_of_interest
+from core.rate_limiter import is_rate_limited, record_attempt
 
 router = APIRouter(tags=["Client Intake & E-Signature"])
 
@@ -42,7 +43,7 @@ async def intake_dashboard(
     user: AccessProfiles = Depends(get_authorized_user)
 ):
     if not check_user_permission(user, 'cases', 'view'):
-        return HTMLResponse("<script>alert('غير مصرح لك'); window.location.href='/dashboard';</script>")
+        raise HTTPException(status_code=403, detail="غير مصرح لك")
     
     # 1. جلب نماذج الاستقطاب النشطة للمكتب
     forms = db.query(ClientIntakeForms).filter(
@@ -71,21 +72,42 @@ async def intake_dashboard(
         IntakeSubmissions.office_id == user.office_id
     ).order_by(IntakeSubmissions.id.desc()).all()
 
-    # إحصائيات
+    # 3. جلب موكلي وقضايا المكتب لإنشاء عقود سريعة
+    clients = db.query(LawClients).filter(
+        LawClients.office_id == user.office_id,
+        LawClients.is_deleted == 0
+    ).order_by(LawClients.name.asc()).all()
+
+    cases = db.query(LawCases).filter(
+        LawCases.office_id == user.office_id,
+        LawCases.is_deleted == 0
+    ).order_by(LawCases.case_number.asc()).all()
+
+    # جلب جميع العقود المسجلة
+    agreements = db.query(RetainerAgreements).filter(
+        RetainerAgreements.office_id == user.office_id
+    ).order_by(RetainerAgreements.id.desc()).all()
+
+    # إحصائيات متقدمة
     total_submissions = len(submissions)
     pending_count = sum(1 for s in submissions if s.status == 'pending')
     signed_count = sum(1 for s in submissions if s.status in ['signed', 'converted'])
     conflict_count = sum(1 for s in submissions if s.conflict_status == 'conflict_detected')
+    total_fees_signed = sum(a.fee_amount or 0.0 for a in agreements if a.is_signed == 1)
 
     return templates.TemplateResponse("intake/intake_list.html", {
         "request": request,
         "user": user,
         "forms": forms,
         "submissions": submissions,
+        "clients": clients,
+        "cases": cases,
+        "agreements": agreements,
         "total_submissions": total_submissions,
         "pending_count": pending_count,
         "signed_count": signed_count,
         "conflict_count": conflict_count,
+        "total_fees_signed": total_fees_signed,
         "active_page": "intake"
     })
 
@@ -116,14 +138,84 @@ async def create_intake_form(
     db.commit()
     return RedirectResponse(url="/intake", status_code=303)
 
+@router.post("/intake/quick-contract")
+async def create_quick_contract(
+    client_name: str = Form(...),
+    client_phone: str = Form(...),
+    client_email: Optional[str] = Form(None),
+    client_national_id: Optional[str] = Form(None),
+    case_summary: str = Form(...),
+    fee_amount: float = Form(0.0),
+    retainer_text: Optional[str] = Form(None),
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_authorized_user)
+):
+    """إنشاء عقد توكيل سريع وإصدار رابط توقيع إلكتروني مباشر لمشاركته مع الموكل فوراً"""
+    if not check_user_permission(user, "cases", "add") or not user.office_id:
+        raise HTTPException(status_code=403, detail="غير مصرح")
+
+    # جلب أو إنشاء نموذج استقطاب افتراضي لربط السجل
+    default_form = db.query(ClientIntakeForms).filter(ClientIntakeForms.office_id == user.office_id).first()
+    if not default_form:
+        default_form = ClientIntakeForms(
+            office_id=user.office_id,
+            title="عقد تمثيل قانوني سريع",
+            form_token=uuid.uuid4().hex,
+            is_active=1,
+            require_signature=1,
+            created_by=user.id
+        )
+        db.add(default_form)
+        db.flush()
+
+    sub_token = str(uuid.uuid4())
+    sub = IntakeSubmissions(
+        form_id=default_form.id,
+        office_id=user.office_id,
+        submission_token=sub_token,
+        full_name=client_name.strip(),
+        phone=client_phone.strip(),
+        email=client_email.strip() if client_email else None,
+        national_id=client_national_id.strip() if client_national_id else None,
+        case_type="عقد تمثيل وتوكيل",
+        case_summary=case_summary.strip(),
+        conflict_status="safe",
+        status="pending"
+    )
+    db.add(sub)
+    db.flush()
+
+    # إنشاء سجل الاتفاقية برقم أتعاب محدد
+    agreement_num = f"AGR-{datetime.now().strftime('%Y%m')}-{uuid.uuid4().hex[:4].upper()}"
+    agreement_body = retainer_text.strip() if retainer_text and retainer_text.strip() else (
+        f"اتفاقية تمثيل وتوكيل قانوني — موضوع التمثيل: {case_summary.strip()}.\n"
+        f"قيمة الأتعاب المقررة: {fee_amount:,.2f} ريال."
+    )
+
+    new_agreement = RetainerAgreements(
+        submission_id=sub.id,
+        office_id=user.office_id,
+        agreement_number=agreement_num,
+        agreement_title="عقد تمثيل وتوكيل قانوني",
+        agreement_body=agreement_body,
+        fee_amount=fee_amount,
+        is_signed=0
+    )
+    db.add(new_agreement)
+    db.commit()
+
+    return RedirectResponse(url="/intake", status_code=303)
+
 @router.post("/intake/submission/{sub_id}/convert")
-async def convert_submission_to_case(
+async def convert_submission_to_poa(
     sub_id: int,
     db: Session = Depends(get_db),
     user: AccessProfiles = Depends(get_authorized_user)
 ):
-    if not check_user_permission(user, "cases", "add"):
-        raise HTTPException(status_code=403, detail="غير مصرح")
+    """
+    تحويل طلب الاستقطاب إلى وكالة رسمية موجهة للموكل مباشرة للتوقيع والاعتماد،
+    دون إنشاء أي قضية جديدة نهائياً.
+    """
     sub = db.query(IntakeSubmissions).filter(
         IntakeSubmissions.id == sub_id,
         IntakeSubmissions.office_id == user.office_id
@@ -132,49 +224,106 @@ async def convert_submission_to_case(
     if not sub:
         raise HTTPException(status_code=404, detail="الطلب غير موجود")
         
-    # 1. إنشاء الموكل إذا لم يكن موجوداً
+    # 1. إنشاء أو جلب سجل الموكل
     client = db.query(LawClients).filter(
         LawClients.office_id == user.office_id,
-        LawClients.phone == sub.phone.strip()
+        LawClients.phone == sub.phone.strip(),
+        LawClients.is_deleted == 0
     ).first()
     
     if not client:
         client = LawClients(
             office_id=user.office_id,
-            name=sub.full_name,
-            phone=sub.phone,
-            email=sub.email,
-            national_id=sub.national_id
+            name=sub.full_name.strip(),
+            phone=sub.phone.strip(),
+            email=sub.email.strip() if sub.email else None,
+            national_id=sub.national_id.strip() if sub.national_id else None,
+            client_type="individual",
+            portal_access=1
         )
         db.add(client)
-        db.commit()
-        db.refresh(client)
-        
-    # 2. إنشاء القضية
-    case_number = f"CASE-{datetime.now().strftime('%y%m')}-{uuid.uuid4().hex[:4].upper()}"
-    new_case = LawCases(
-        office_id=user.office_id,
-        case_number=case_number,
-        title=f"قضية: {sub.full_name} ({sub.case_type or 'عامة'})",
-        summary=sub.case_summary,
-        description=f"الخصم المذكور: {sub.opposing_party_name or 'غير محدد'}",
-        status_key="active",
-        visibility_mode="private",
-        lead_lawyer_id=user.id,
-        created_by_user_id=user.id
-    )
-    db.add(new_case)
-    db.commit()
-    db.refresh(new_case)
-    
-    # 3. تحديث حالة الطلب
-    sub.status = "converted"
+        db.flush()
+
+    # 2. إنشاء أو تحديث حساب دخول للموكل إذا لم يكن موجوداً
+    if not client.user_id:
+        existing_user = db.query(AccessProfiles).filter(
+            AccessProfiles.office_id == user.office_id,
+            (AccessProfiles.phone == sub.phone.strip()) | (AccessProfiles.name == sub.full_name.strip())
+        ).first()
+        if existing_user:
+            client.user_id = existing_user.id
+        else:
+            import secrets
+            from core.security import _hash_pin
+            clean_username = f"cli_{secrets.token_hex(4)}"
+            new_user = AccessProfiles(
+                name=sub.full_name.strip(),
+                username=clean_username,
+                email=sub.email.strip() if sub.email else f"{clean_username}@client.local",
+                phone=sub.phone.strip(),
+                role="موكل",
+                access_pin_hash=_hash_pin(secrets.token_urlsafe(8)),
+                office_id=user.office_id,
+                is_active=1
+            )
+            db.add(new_user)
+            db.flush()
+            client.user_id = new_user.id
+
+    # 3. إنشاء وكالة رسمية للموكل موجهة للتوقيع الإلكتروني
+    existing_poa = db.query(LawPowerOfAttorney).filter(
+        LawPowerOfAttorney.office_id == user.office_id,
+        LawPowerOfAttorney.principal_name == sub.full_name.strip(),
+        LawPowerOfAttorney.is_deleted == 0
+    ).first()
+
+    # التحقق من وجود توقيع مسبق في سجل الاتفاقيات
+    agr = db.query(RetainerAgreements).filter(
+        RetainerAgreements.submission_id == sub.id
+    ).first()
+
+    is_signed_val = 1 if (agr and agr.is_signed == 1) else 0
+    signed_at_val = agr.signed_at if (agr and agr.is_signed == 1) else None
+    sig_b64 = agr.signature_base64 if (agr and agr.is_signed == 1) else None
+    v_hash = agr.verification_hash if (agr and agr.is_signed == 1) else None
+
+    if not existing_poa:
+        agency_num = f"POA-{datetime.now().strftime('%Y%m')}-{uuid.uuid4().hex[:4].upper()}"
+        new_poa = LawPowerOfAttorney(
+            office_id=user.office_id,
+            principal_name=sub.full_name.strip(),
+            agent_name=user.name or "المكتب / المحامي",
+            agency_number=agency_num,
+            poa_type="litigation",
+            issuing_authority="توثيق إلكتروني - استقطاب الموكلين",
+            issue_date=datetime.now().strftime("%Y-%m-%d"),
+            scope_of_powers=sub.case_summary or "توكيل رسمي ومرافعة ومدافعة ومتابعة كافة الإجراءات",
+            status="active",
+            is_signed=is_signed_val,
+            signed_at=signed_at_val,
+            signature_base64=sig_b64,
+            verification_hash=v_hash
+        )
+        db.add(new_poa)
+    else:
+        if is_signed_val == 1 and getattr(existing_poa, 'is_signed', 0) == 0:
+            existing_poa.is_signed = 1
+            existing_poa.signed_at = signed_at_val
+            existing_poa.signature_base64 = sig_b64
+            existing_poa.verification_hash = v_hash
+
+    # 4. تحديث حالة الطلب إلى signed أو pending_sign دون إنشاء أي قضية
+    if is_signed_val == 1:
+        sub.status = "signed"
+    else:
+        sub.status = "pending"
+
     sub.converted_client_id = client.id
-    sub.converted_case_id = new_case.id
+    sub.converted_case_id = None  # ضمان عدم ربطه بأي قضية خاطئة
     sub.updated_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
     db.commit()
     
-    return RedirectResponse(url=f"/cases", status_code=303)
+    return RedirectResponse(url="/intake", status_code=303)
 
 
 # ============================================================================
@@ -206,6 +355,7 @@ async def public_intake_form(
 @router.post("/form/{form_token}/submit")
 async def submit_public_intake_form(
     form_token: str,
+    request: Request,
     full_name: str = Form(...),
     phone: str = Form(...),
     email: Optional[str] = Form(None),
@@ -216,6 +366,10 @@ async def submit_public_intake_form(
     opposing_party_id: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
+    client_ip = request.client.host if request.client else "unknown"
+    if is_rate_limited(client_ip, "public_intake", max_attempts=10, window_seconds=900):
+        raise HTTPException(status_code=429, detail="تجاوزت عدد الطلبات المسموح. حاول لاحقاً.")
+    record_attempt(client_ip, "public_intake")
     fields = (full_name, phone, email or "", national_id or "", case_type or "", case_summary,
               opposing_party_name or "", opposing_party_id or "")
     if any(len(value) > limit for value, limit in zip(fields, (200, 40, 254, 80, 120, 10000, 200, 80))):
@@ -364,8 +518,17 @@ async def process_e_signature(
             verification_hash=v_hash
         )
         db.add(agreement)
+    elif agreement.is_signed == 0:
+        # تحديث العقد المسبق الذي أُنشئ عبر العقد السريع
+        agreement.signature_base64 = signature_base64
+        agreement.signer_name = sub.full_name
+        agreement.signer_ip = client_ip
+        agreement.signer_user_agent = user_agent
+        agreement.is_signed = 1
+        agreement.signed_at = now_str
+        agreement.verification_hash = v_hash
     else:
-        return JSONResponse({"ok": False, "error": "تم اعتماد هذا العقد مسبقاً"}, status_code=409)
+        return JSONResponse({"ok": False, "error": "تم توقيع واعتماد هذا العقد مسبقاً"}, status_code=409)
 
     sub.status = "signed"
     sub.updated_at = now_str

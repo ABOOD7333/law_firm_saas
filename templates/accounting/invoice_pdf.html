@@ -376,10 +376,10 @@
                     <td style="color:#9ca3af;">{{ loop.index }}</td>
                     <td style="font-weight:600;">{{ item.description }}</td>
                     <td style="text-align:center;">{{ item.quantity|int }}</td>
-                    <td>{{ "%.2f"|format(item.unit_price) }} ر.س</td>
+                    <td>{{ "%.2f"|format(item.unit_price) }} ر.ي</td>
                     <td style="text-align:center;">{{ item.tax_rate|int }}%</td>
-                    <td style="color:#d97706;">{{ "%.2f"|format(item.tax_amount) }} ر.س</td>
-                    <td style="font-weight:700;color:#1e1b4b;">{{ "%.2f"|format(item.line_total) }} ر.س</td>
+                    <td style="color:#d97706;">{{ "%.2f"|format(item.tax_amount) }} ر.ي</td>
+                    <td style="font-weight:700;color:#1e1b4b;">{{ "%.2f"|format(item.line_total) }} ر.ي</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -389,10 +389,10 @@
     <!-- QR + Totals -->
     <div class="inv-footer-grid">
         <div class="qr-section">
-            <h4>رمز QR ZATCA</h4>
+            <h4>رمز التحقق السريع (QR)</h4>
             {% if invoice.zatca_qr %}
             <div id="zatca-qr-code" style="width:140px;height:140px;border:2px solid #e5e7eb;border-radius:12px;padding:8px;background:white;display:flex;align-items:center;justify-content:center;"></div>
-            <p class="qr-note">امسح الرمز للتحقق من صحة الفاتورة وفق متطلبات هيئة الزكاة والضريبة والجمارك</p>
+            <p class="qr-note">امسح الرمز للتحقق من صحة الفاتورة والبيانات المعتمدة</p>
             <script>
             // Store TLV data for QR generation
             window._zatcaTLV = "{{ invoice.zatca_qr }}";
@@ -407,24 +407,24 @@
         <div class="totals-section">
             <div class="t-row">
                 <span class="t-label">المجموع الجزئي (قبل الضريبة)</span>
-                <span class="t-val">{{ "%.2f"|format(invoice.subtotal) }} ر.س</span>
+                <span class="t-val">{{ "%.2f"|format(invoice.subtotal) }} ر.ي</span>
             </div>
             <div class="t-row">
                 <span class="t-label">ضريبة القيمة المضافة</span>
-                <span class="t-val" style="color:#d97706;">{{ "%.2f"|format(invoice.tax_total) }} ر.س</span>
+                <span class="t-val" style="color:#d97706;">{{ "%.2f"|format(invoice.tax_total) }} ر.ي</span>
             </div>
             <div class="t-row t-grand">
                 <span class="t-label">الإجمالي الكلي</span>
-                <span class="t-val">{{ "%.2f"|format(invoice.grand_total) }} ر.س</span>
+                <span class="t-val">{{ "%.2f"|format(invoice.grand_total) }} ر.ي</span>
             </div>
             {% if invoice.amount_paid > 0 %}
             <div class="t-row" style="margin-top:8px;border-top:1px solid #e5e7eb;padding-top:10px;">
                 <span class="t-label" style="color:#059669;">المبلغ المدفوع</span>
-                <span class="t-val" style="color:#059669;">{{ "%.2f"|format(invoice.amount_paid) }} ر.س</span>
+                <span class="t-val" style="color:#059669;">{{ "%.2f"|format(invoice.amount_paid) }} ر.ي</span>
             </div>
             <div class="t-row">
                 <span class="t-label" style="color:#dc2626;">المتبقي</span>
-                <span class="t-val" style="color:#dc2626;">{{ "%.2f"|format(invoice.grand_total - invoice.amount_paid) }} ر.س</span>
+                <span class="t-val" style="color:#dc2626;">{{ "%.2f"|format(invoice.grand_total - invoice.amount_paid) }} ر.ي</span>
             </div>
             {% endif %}
         </div>
