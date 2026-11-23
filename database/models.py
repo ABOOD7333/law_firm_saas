@@ -236,6 +236,8 @@ class LawOffices(Base):
     subscription_end: Mapped[Optional[str]] = mapped_column(Text)
     receipt_base64: Mapped[Optional[str]] = mapped_column(Text)
     receipt_status: Mapped[Optional[str]] = mapped_column(Text)
+    extra_seats: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text('0'))          # مقعد إضافي (0 أو 1 كحد أقصى)
+    logo_path: Mapped[Optional[str]] = mapped_column(Text)                                               # مسار شعار المكتب المرفوع
     is_active: Mapped[int] = mapped_column(Integer, CheckConstraint('is_active IN (0, 1)'), nullable=False, server_default=text('1'))
     is_deleted: Mapped[int] = mapped_column(Integer, CheckConstraint('is_deleted IN (0, 1)'), nullable=False, server_default=text('0'))
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=text('CURRENT_TIMESTAMP'))
