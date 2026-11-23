@@ -282,10 +282,10 @@ async def impersonate_office(office_id: int, request: Request, db: Session = Dep
         existing_admin_token = request.cookies.get("session_token")
         
         new_session = AuthSessions(
-            user_id=target_user.id,
             session_token=hashed,
-            ip_address=request.client.host if request.client else "unknown",
-            user_agent=request.headers.get("user-agent", "SuperAdmin-Impersonate"),
+            user_id=target_user.id,
+            device_id=f"impersonated_by_admin_{user.id}",
+            is_active=1,
             expires_at=expires.strftime("%Y-%m-%d %H:%M:%S")
         )
         db.add(new_session)
