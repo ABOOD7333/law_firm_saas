@@ -118,6 +118,18 @@
                     </td>
                     <td style="padding: 14px 16px; text-align: center;">
                         <div style="display: inline-flex; gap: 6px; align-items: center;">
+                            <!-- زر تذكير بالجلسة عبر واتساب (WhatsApp Click-to-Chat) -->
+                            <button type="button" class="btn" style="background: #25D366; color: white; border: none; padding: 6px 11px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; font-family: 'Cairo', sans-serif;" onclick="sendHearingWhatsAppReminder({
+                                title: {{ hearing.title|tojson }},
+                                caseNumber: {{ (hearing.law_case.case_number if hearing.law_case else '')|tojson }},
+                                court: {{ (hearing.court_name or ('النيابة العامة' if hearing.minutes_type == 'prosecution' else ('محكمة الاستئناف' if hearing.minutes_type == 'appeal' else ('المحكمة العليا' if hearing.minutes_type == 'supreme' else 'المحكمة الابتدائية'))))|tojson }},
+                                date: {{ (hearing.hearing_at or '')|tojson }},
+                                time: {{ (hearing.hearing_time or '')|tojson }},
+                                nextDate: {{ (hearing.next_hearing_date or '')|tojson }}
+                            })" title="إرسال تذكير بالجلسة عبر واتساب">
+                                <i class="fa-brands fa-whatsapp" style="font-size: 1rem;"></i> واتساب
+                            </button>
+
                             <!-- زر استعراض المحضر الرسمي والطباعة -->
                             <button type="button" class="btn" style="background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; font-family: 'Cairo', sans-serif;" onclick="viewHearingMinutes('{{ hearing.id }}')" title="عرض المحضر الرسمي">
                                 <i class="fa-solid fa-eye" style="color: #2563eb;"></i> عرض
@@ -1123,48 +1135,71 @@
                 `;
             }
 
+            const officeLogo = "{{ office.logo_path if office and office.logo_path else '' }}";
+            const officeName = "{{ office.name if office and office.name else 'مكتب المحاماة' }}";
+
             printArea.innerHTML = `
-                <div style="border: 2px solid #0f172a; padding: 30px; border-radius: 8px; background: #fff; line-height: 1.8;">
-                    <div style="text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 15px; margin-bottom: 20px;">
-                        <h2 style="margin: 0 0 5px 0; font-weight: 800; font-size: 1.5rem;">الجمهورية اليمنية</h2>
-                        <h3 style="margin: 0 0 5px 0; font-weight: 700; font-size: 1.25rem;">وزارة العدل — ${entityTitle}</h3>
-                        <h4 style="margin: 5px 0 0 0; color: #475569; font-weight: 600;">محضر رسمي — ${escapeHtml(h.session_type || h.title)}</h4>
+                <div style="border: 2px solid #0f172a; padding: 30px; border-radius: 8px; background: #fff; line-height: 1.8; position: relative;">
+                    <!-- Watermark -->
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 280px; height: 280px; opacity: 0.055; pointer-events: none; z-index: 0; display: flex; align-items: center; justify-content: center;">
+                        ${officeLogo ? `<img src="${officeLogo}" style="max-width: 100%; max-height: 100%; object-fit: contain; filter: grayscale(100%);">` : `<i class="fa-solid fa-scale-balanced" style="font-size: 14rem; color: #000;"></i>`}
                     </div>
 
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 0.95rem; background: #f8fafc; padding: 10px 14px; border-radius: 6px; border: 1px solid #e2e8f0;">
-                        <div><strong>رقم القضية:</strong> ${escapeHtml(h.case_number || 'غير محدد')} | <strong>نوعها:</strong> ${escapeHtml(h.case_type || 'عام')}</div>
-                        <div><strong>تاريخ الانعقاد:</strong> ${escapeHtml(h.hearing_at)}</div>
-                    </div>
-
-                    ${benchHtml}
-
-                    <div style="margin-bottom: 15px;">
-                        <strong>موضوع الجلسة والإجراء:</strong> ${escapeHtml(h.title)}
-                    </div>
-
-                    ${attendeesHtml}
-
-                    <div style="margin-top: 15px; margin-bottom: 20px;">
-                        <h4 style="margin: 0 0 8px 0; color: #1e3a8a; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">قرارات المحكمة / أوامر الجلسة</h4>
-                        <div style="background: #f8fafc; padding: 14px; border-radius: 8px; border: 1px solid #cbd5e1; font-weight: 600; white-space: pre-wrap;">
-                            ${escapeHtml(h.court_decision || 'لم تدون قرارات كتابية')}
+                    <div style="position: relative; z-index: 1;">
+                        <div style="border-bottom: 2px solid #0f172a; padding-bottom: 15px; margin-bottom: 20px;">
+                            <div style="text-align: center; font-size: 1.3rem; font-weight: 700; margin-bottom: 8px; font-family: 'Amiri', serif;">« بِسْمِ اللَّـهِ الرَّحْمَـٰنِ الرَّحِيمِ »</div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="text-align: right;">
+                                    <h2 style="margin: 0 0 3px 0; font-weight: 800; font-size: 1.25rem;">الجمهورية اليمنية</h2>
+                                    <h3 style="margin: 0 0 3px 0; font-weight: 700; font-size: 1.05rem; color: #334155;">وزارة العدل — ${entityTitle}</h3>
+                                    <h4 style="margin: 0; color: #1e1b4b; font-weight: 800; font-size: 1.1rem;">${escapeHtml(officeName)}</h4>
+                                </div>
+                                <div style="text-align: center;">
+                                    ${officeLogo ? `<img src="${officeLogo}" style="max-height: 75px; max-width: 100px; object-fit: contain;">` : `<i class="fa-solid fa-scale-balanced" style="font-size: 3rem; color: #64748b;"></i>`}
+                                </div>
+                                <div style="text-align: left; font-size: 0.85rem; color: #475569; line-height: 1.6;">
+                                    <div><strong>نوع الوثيقة:</strong> محضر قضائي</div>
+                                    <div><strong>تاريخ الطبع:</strong> ${new Date().toLocaleDateString('ar-SA')}</div>
+                                    <div><strong>رقم المحضر:</strong> ${escapeHtml(h.id)}</div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
 
-                    ${filesHtml}
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 0.95rem; background: #f8fafc; padding: 10px 14px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                            <div><strong>رقم القضية:</strong> ${escapeHtml(h.case_number || 'غير محدد')} | <strong>نوعها:</strong> ${escapeHtml(h.case_type || 'عام')}</div>
+                            <div><strong>تاريخ الانعقاد:</strong> ${escapeHtml(h.hearing_at)}</div>
+                        </div>
 
-                    <div style="display: flex; justify-content: space-between; margin-top: 40px; padding-top: 20px; border-top: 1px dashed #94a3b8; text-align: center;">
-                        <div style="width: 30%;">
-                            <strong>أمين السر / كاتب التحقيق</strong><br><br>
-                            ...................................
+                        ${benchHtml}
+
+                        <div style="margin-bottom: 15px;">
+                            <strong>موضوع الجلسة والإجراء:</strong> ${escapeHtml(h.title)}
                         </div>
-                        <div style="width: 30%;">
-                            <strong>ختم القيد والمكتب</strong><br><br>
-                            ...................................
+
+                        ${attendeesHtml}
+
+                        <div style="margin-top: 15px; margin-bottom: 20px;">
+                            <h4 style="margin: 0 0 8px 0; color: #1e3a8a; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">قرارات المحكمة / أوامر الجلسة</h4>
+                            <div style="background: #f8fafc; padding: 14px; border-radius: 8px; border: 1px solid #cbd5e1; font-weight: 600; white-space: pre-wrap;">
+                                ${escapeHtml(h.court_decision || 'لم تدون قرارات كتابية')}
+                            </div>
                         </div>
-                        <div style="width: 30%;">
-                            <strong>رئيس الجلسة / عضو النيابة</strong><br><br>
-                            ...................................
+
+                        ${filesHtml}
+
+                        <div style="display: flex; justify-content: space-between; margin-top: 40px; padding-top: 20px; border-top: 1px dashed #94a3b8; text-align: center;">
+                            <div style="width: 30%;">
+                                <strong>أمين السر / كاتب التحقيق</strong><br><br>
+                                ...................................
+                            </div>
+                            <div style="width: 30%;">
+                                <strong>ختم القيد والمكتب</strong><br><br>
+                                ...................................
+                            </div>
+                            <div style="width: 30%;">
+                                <strong>رئيس الجلسة / عضو النيابة</strong><br><br>
+                                ...................................
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1184,10 +1219,13 @@
             <html dir="rtl">
             <head>
                 <title>طباعة المحضر القضائي</title>
-                <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+                <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Amiri:wght@700&display=swap" rel="stylesheet">
                 <style>
                     body { font-family: 'Cairo', sans-serif; padding: 20px; color: #000; }
-                    @media print { body { padding: 0; } }
+                    @media print {
+                        body { padding: 0; }
+                        * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    }
                 </style>
             </head>
             <body>

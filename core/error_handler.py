@@ -71,7 +71,8 @@ def render_error_page(
     message: Optional[str] = None,
     detail: str = "",
     context: str = "",
-    can_retry: bool = True
+    can_retry: bool = True,
+    is_superadmin: bool = False
 ) -> HTMLResponse:
     """
     توليد واجهة HTML احترافية باللغة العربية توضح للمستخدم نوع الخطأ وسببه والحل المقترح.
@@ -81,6 +82,15 @@ def render_error_page(
     display_message = message or catalog["description"]
     icon_class = catalog["icon"]
     color = catalog["color"]
+
+    # تخصيص الرسالة للمكاتب العادية بدون مصطلحات برمجية
+    if not is_superadmin:
+        if status_code == 422:
+            display_title = "تنبيه في المدخلات"
+            display_message = "يرجى مراجعة الحقول التي قمت بإدخالها للتأكد من اكتمال وصحة البيانات."
+        elif status_code == 500:
+            display_title = "تعذر إكمال الطلب"
+            display_message = "حدث خطأ غير متوقع أثناء معالجة الصفحة، تم تسجيل التنبيه تلقائياً."
 
     # الكشف عن أخطاء CSRF لتقديم إرشاد دقيق للمستخدم
     is_csrf_error = False
@@ -102,20 +112,28 @@ def render_error_page(
         solution_text = "الحل الموصى به: تحقق من صلاحيات حسابك مع مدير المكتب، أو حدث الصفحة إذا كنت تتوقع أن الإجراء مسموح لك."
     elif status_code == 404:
         solution_text = "الحل الموصى به: تأكد من صحة الرابط أو استخدم زر العودة للوحة التحكم للوصول للبيانات."
+    elif status_code == 422 and not is_superadmin:
+        solution_text = "الحل الموصى به: تأكد من اختيار وتعبئة الحقول المطلوبة ثم أعد المحاولة."
 
     debug_section = ""
-    if detail:
+    if is_superadmin and detail:
         clean_detail = str(detail).replace("<", "&lt;").replace(">", "&gt;")
         debug_section = f"""
         <div style="margin-top: 20px; text-align: right; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 18px;">
             <div style="font-weight: 700; color: #475569; font-size: 0.88rem; margin-bottom: 6px;">
-                <i class="fa-solid fa-circle-info" style="color: #3b82f6;"></i> تفاصيل إضافية للخطأ:
+                <i class="fa-solid fa-circle-info" style="color: #3b82f6;"></i> تفاصيل إضافية للخطأ (خاصة بمدير المنصة العام):
             </div>
             <div style="font-family: monospace, 'Cairo'; font-size: 0.85rem; color: #1e293b; background: #ffffff; padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; direction: rtl; text-align: right;">
                 {clean_detail}
             </div>
         </div>
         """
+
+    impersonate_btn = ""
+    if is_superadmin:
+        impersonate_btn = """<a href="/api/superadmin/exit-impersonate" class="btn-action" style="background: #e11d48; color: #ffffff; text-decoration: none;">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i> إنهاء الدعم الفني والعودة للمنصة
+            </a>"""
 
     html_content = f"""<!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -269,9 +287,7 @@ def render_error_page(
             <a href="/dashboard" class="btn-action btn-secondary">
                 <i class="fa-solid fa-house"></i> لوحة التحكم
             </a>
-            <a href="/api/superadmin/exit-impersonate" class="btn-action" style="background: #e11d48; color: #ffffff; text-decoration: none;">
-                <i class="fa-solid fa-arrow-right-from-bracket"></i> إنهاء الدعم الفني والعودة للمنصة
-            </a>
+            {impersonate_btn}
             <a href="/logout" class="btn-action btn-secondary" style="color: #64748b;">
                 <i class="fa-solid fa-right-from-bracket"></i> تسجيل الخروج
             </a>

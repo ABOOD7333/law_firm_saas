@@ -94,35 +94,23 @@
                 </div>
             </div>
 
-            <!-- الخطوة 1: اختيار الدور -->
+            <!-- الخطوة 1: نوع الحساب (محامٍ) -->
             <div class="step active" id="step1">
-                <h2>إنشاء حساب جديد</h2>
-                <p class="subtitle">اختر طبيعة دورك في مكتب المحاماة</p>
+                <h2>إنشاء حساب محامٍ جديد</h2>
+                <p class="subtitle">التسجيل المباشر لمنظومة المحاماة السحابية</p>
 
-                <div class="role-grid">
-                    <div class="role-card" onclick="selectRole(this, 'مدير المكتب')">
-                        <span class="role-icon">🏛️</span>
-                        <div class="role-name">مدير المكتب</div>
-                        <div class="role-desc">صلاحيات كاملة وإدارة الفريق</div>
-                    </div>
-                    <div class="role-card" onclick="selectRole(this, 'محامٍ')">
-                        <span class="role-icon">⚖️</span>
-                        <div class="role-name">محامٍ</div>
-                        <div class="role-desc">إدارة القضايا والجلسات</div>
-                    </div>
-                    <div class="role-card" onclick="selectRole(this, 'مساعد قانوني')">
-                        <span class="role-icon">📋</span>
-                        <div class="role-name">مساعد قانوني</div>
-                        <div class="role-desc">متابعة المهام والمستندات</div>
-                    </div>
-                    <div class="role-card" onclick="selectRole(this, 'محاسب')">
-                        <span class="role-icon">💰</span>
-                        <div class="role-name">محاسب</div>
-                        <div class="role-desc">إدارة الشؤون المالية</div>
+                <div style="margin: 1.5rem 0;">
+                    <div class="role-card selected" style="border-color: #5c2d91; background: #f5f3ff; box-shadow: 0 4px 15px rgba(92, 45, 145, 0.12); cursor: default; padding: 20px;">
+                        <span class="role-icon" style="font-size: 2.4rem;">⚖️</span>
+                        <div class="role-name" style="color: #5c2d91; font-size: 1.15rem; font-weight: 800;">تسجيل كمحامي (إدارة المكتب والقضايا)</div>
+                        <div class="role-desc" style="color: #64748b; font-size: 0.88rem; margin-top: 6px;">حساب متكامل لإدارة القضايا، الجلسات، الموكلين، والفواتير السحابية</div>
+                        <div style="margin-top: 12px; display: inline-flex; align-items: center; gap: 6px; background: #e0e7ff; color: #4338ca; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700;">
+                            ✓ الباقة المعتمدة للمحامي
+                        </div>
                     </div>
                 </div>
 
-                <button class="btn-primary" onclick="goToStep(2)">التالي</button>
+                <button class="btn-primary" onclick="goToStep(2)">متابعة إدخال البيانات ←</button>
             </div>
 
             <!-- الخطوة 2: البيانات الشخصية -->
@@ -335,12 +323,10 @@ function updatePhoneCode() {
     }
 }
 
-let selectedRole = '';
+let selectedRole = 'محامٍ';
 
 function selectRole(card, role) {
-    document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
-    card.classList.add('selected');
-    selectedRole = role;
+    selectedRole = role || 'محامٍ';
 }
 
 function goToStep(step) {

@@ -7,7 +7,7 @@ from core.error_handler import safe_error_html
 
 from database.database import get_db
 from database.models import AccessProfiles, LawOffices, LawCases
-from dependencies import get_current_user, templates, SYSTEM_PERM_MODULES
+from dependencies import get_current_user, templates
 from core.logger import app_logger
 from core.audit import write_audit
 
@@ -23,13 +23,16 @@ async def team_page(request: Request, db: Session = Depends(get_db), user: Acces
         return RedirectResponse(url="/dashboard", status_code=303)
     try:
         import json
-        office_id = user.office_id
+        office_id = user.office_id or 1
         office = db.query(LawOffices).filter(LawOffices.id == office_id).first()
         owner = None
         if office and office.owner_user_id:
             owner = db.query(AccessProfiles).filter(AccessProfiles.id == office.owner_user_id).first()
         members = db.query(AccessProfiles).filter(AccessProfiles.office_id == office_id).all()
         cases = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0).all()
+        from core.subscription_tiers import get_office_max_users, can_office_buy_extra_seat
+        max_users = get_office_max_users(office)
+        can_add_seat = can_office_buy_extra_seat(office)
         members_json = json.dumps([{
             "id": m.id, "name": m.name, "username": m.username or "",
             "phone": m.phone or "", "email": m.email or "",
@@ -41,7 +44,9 @@ async def team_page(request: Request, db: Session = Depends(get_db), user: Acces
         } for m in members], ensure_ascii=False)
         return templates.TemplateResponse(request=request, name="team.html", context={
             "user": user, "active_page": "team", "office": office, "owner": owner,
-            "members": members, "cases": cases, "members_json": members_json, "perm_modules": SYSTEM_PERM_MODULES,
+            "members": members, "cases": cases, "members_json": members_json,
+            "max_users": max_users, "can_add_seat": can_add_seat,
+            "extra_seats": getattr(office, "extra_seats", 0) if office else 0
         })
     except Exception as exc:
         return safe_error_html(exc, context="team_management.py")
@@ -57,7 +62,7 @@ async def team_save(request: Request, db: Session = Depends(get_db), user: Acces
     try:
         import hashlib, json as _json
         data = await request.json()
-        office_id = user.office_id
+        office_id = user.office_id or 1
         name     = (data.get("name") or "").strip()
         username = (data.get("username") or "").strip()
         phone    = (data.get("phone") or "").strip()
@@ -118,6 +123,26 @@ async def team_save(request: Request, db: Session = Depends(get_db), user: Acces
             db.commit()
             return JSONResponse({"ok": True, "message": "تم تحديث بيانات العضو بنجاح"})
         else:
+            # التحقق من سقف المستخدمين للباقة والمقاعد الإضافية
+            office = db.query(LawOffices).filter(LawOffices.id == office_id).first()
+            from core.subscription_tiers import get_office_max_users, can_office_buy_extra_seat
+            max_users = get_office_max_users(office)
+            current_users_count = db.query(AccessProfiles).filter(
+                AccessProfiles.office_id == office_id,
+                AccessProfiles.role != 'موكل'
+            ).count()
+
+            if current_users_count >= max_users:
+                extra_hint = ""
+                if can_office_buy_extra_seat(office):
+                    extra_hint = " يمكنك طلب مقعد إضافي واحد للمكتب (100$ رسوم تأسيس و9.99$/شهرياً) من لوحة الإعدادات أو الاشتراكات."
+                elif office and office.subscription_plan in ('solo', 'trial'):
+                    extra_hint = " يرجى الترقية إلى باقة أعلى (المكتب الاحترافي أو الشركات) لزيادة سعة المستخدمين."
+                return JSONResponse({
+                    "ok": False,
+                    "message": f"عذراً، لقد بلغت السقف الأقصى للمستخدمين المسموح به في باقتك ({max_users} مستخدمين).{extra_hint}"
+                }, status_code=400)
+
             if not pin or len(pin) < 6:
                 return JSONResponse({"ok": False, "message": "رمز الدخول مطلوب (6 أحرف على الأقل) للحساب الجديد"})
             import os as _os, base64 as _b64
@@ -146,7 +171,7 @@ async def team_toggle(member_id: int, db: Session = Depends(get_db), user: Acces
     if user.role not in _ALLOWED_TEAM_ROLES:
         app_logger.warning(f"SECURITY | team_toggle blocked | actor={user.id} target={member_id}")
         return JSONResponse({"ok": False, "message": "ليس لديك صلاحية"}, status_code=403)
-    office_id = user.office_id
+    office_id = user.office_id or 1
     m = db.query(AccessProfiles).filter(
         AccessProfiles.id == member_id,
         AccessProfiles.office_id == office_id
@@ -169,7 +194,7 @@ async def team_delete(member_id: int, db: Session = Depends(get_db), user: Acces
     if user.role not in _ALLOWED_TEAM_ROLES:
         app_logger.warning(f"SECURITY | team_delete blocked | actor={user.id} target={member_id}")
         return JSONResponse({"ok": False, "message": "ليس لديك صلاحية"}, status_code=403)
-    office_id = user.office_id
+    office_id = user.office_id or 1
     m = db.query(AccessProfiles).filter(
         AccessProfiles.id == member_id,
         AccessProfiles.office_id == office_id

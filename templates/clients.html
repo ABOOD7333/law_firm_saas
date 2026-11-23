@@ -542,6 +542,14 @@
                                 </div>
                                 <div>
                                     <div style="font-weight: 800; color: #0f172a; font-size: 0.95rem;"><a href="/clients/{{ client.id }}" style="text-decoration: none; color: inherit;">{{ client.name }}</a></div>
+                                    <div style="margin-top: 3px; display: flex; gap: 4px; flex-wrap: wrap;">
+                                        {% if client.general_role %}
+                                        <span class="badge-pill badge-blue" style="font-size: 0.72rem; padding: 2px 6px;">{{ client.general_role }}</span>
+                                        {% endif %}
+                                        {% if client.legal_capacity %}
+                                        <span class="badge-pill badge-gray" style="font-size: 0.72rem; padding: 2px 6px;">{{ client.legal_capacity }}</span>
+                                        {% endif %}
+                                    </div>
                                     <div style="color: #64748b; font-size: 0.8rem; margin-top: 2px; display: flex; gap: 6px; align-items: center;">
                                         {% if client.username %}<span class="badge-pill badge-gray" dir="ltr">{{ client.username }}</span>{% endif %}
                                         {% if client.city %}<span><i class="fa-solid fa-location-dot" style="font-size: 0.75rem;"></i> {{ client.city }}</span>{% endif %}
@@ -575,7 +583,14 @@
                             {% endif %}
                         </td>
                         <td>
-                            <div style="font-weight: 700; color: #0f172a; font-size: 0.88rem;" dir="ltr">{{ client.phone or '-' }}</div>
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                {% if client.phone %}
+                                <a href="javascript:void(0)" onclick="sendClientWhatsAppMessage('{{ client.phone }}', '{{ client.name }}')" style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: #25D366; color: white; text-decoration: none; font-size: 0.82rem;" title="مراسلة الموكل عبر واتساب">
+                                    <i class="fa-brands fa-whatsapp"></i>
+                                </a>
+                                {% endif %}
+                                <div style="font-weight: 700; color: #0f172a; font-size: 0.88rem;" dir="ltr">{{ client.phone or '-' }}</div>
+                            </div>
                             {% if client.email %}
                             <div style="color: #64748b; font-size: 0.78rem;" dir="ltr">{{ client.email }}</div>
                             {% endif %}
@@ -602,6 +617,11 @@
                         </td>
                         <td style="text-align: center;">
                             <div class="action-btn-group">
+                                {% if client.phone %}
+                                <button type="button" class="btn-icon-action" style="background: #ecfdf5; color: #059669; border-color: #a7f3d0;" title="مراسلة عبر واتساب" onclick="sendClientWhatsAppMessage('{{ client.phone }}', '{{ client.name }}')">
+                                    <i class="fa-brands fa-whatsapp" style="color: #25D366; font-size: 1rem;"></i>
+                                </button>
+                                {% endif %}
                                 <a href="/clients/{{ client.id }}" class="btn-icon-action" style="background: #e0e7ff; color: #3730a3;" title="الملف التعريفي وسجل الممثلين">
                                     <i class="fa-solid fa-address-card"></i>
                                 </a>
@@ -616,6 +636,8 @@
                                         data-client-national-id="{{ client.national_id or '' }}"
                                         data-client-cr-number="{{ client.cr_number or '' }}"
                                         data-client-legal-rep="{{ client.legal_rep_name or '' }}"
+                                        data-client-general-role="{{ client.general_role or '' }}"
+                                        data-client-legal-capacity="{{ client.legal_capacity or '' }}"
                                         data-client-phone="{{ client.phone or '' }}"
                                         data-client-alt-phone="{{ client.alt_phone or '' }}"
                                         data-client-email="{{ client.email or '' }}"
@@ -717,6 +739,44 @@
                             <div class="custom-form-group" id="addLegalRepBox" style="display:none;">
                                 <label class="custom-label">اسم المفوض / الممثل القانوني للشركة</label>
                                 <input type="text" name="legal_rep_name" class="custom-input" placeholder="اسم المدير العام أو الوكيل المفوض">
+                            </div>
+                        </div>
+
+                        <div class="form-grid-2">
+                            <div class="custom-form-group">
+                                <label class="custom-label">الدور العام في القضية</label>
+                                <select name="general_role" class="custom-select" id="addClientRole">
+                                    <option value="">-- اختر الدور العام في القضية --</option>
+                                    <option value="مدعي">مدعي (المدعي الأصلي)</option>
+                                    <option value="مدعى عليه">مدعى عليه</option>
+                                    <option value="شاكي">شاكي (مقدم البلاغ)</option>
+                                    <option value="مشكو في حقه">مشكو في حقه</option>
+                                    <option value="مجني عليه">مجني عليه / متضرر</option>
+                                    <option value="متهم">متهم</option>
+                                    <option value="طالب تنفيذ">طالب تنفيذ</option>
+                                    <option value="منفذ ضده">منفذ ضده</option>
+                                    <option value="مستأنف">مستأنف</option>
+                                    <option value="مستأنف ضده">مستأنف ضده</option>
+                                    <option value="طاعن بالنقض">طاعن بالنقض</option>
+                                    <option value="مطعون ضده">مطعون ضده</option>
+                                    <option value="طرف ثالث / متدخل">طرف ثالث / متدخل</option>
+                                    <option value="شاهد / خبير">شاهد / خبير</option>
+                                </select>
+                            </div>
+                            <div class="custom-form-group">
+                                <label class="custom-label">الصفة القضائية الدقيقة</label>
+                                <select name="legal_capacity" class="custom-select" id="addClientCapacity">
+                                    <option value="">-- اختر الصفة القضائية --</option>
+                                    <option value="أصيل">أصيل (عن نفسه شخصياً)</option>
+                                    <option value="وكيل شرعي بموجب وكالة">وكيل شرعي بموجب وكالة</option>
+                                    <option value="ولي شرعي">ولي شرعي (طبيعي)</option>
+                                    <option value="وصي مختار / شرعي">وصي مختار / شرعي</option>
+                                    <option value="قيم / منصوب قضائي">قيم / منصوب قضائي</option>
+                                    <option value="حارس قضائي">حارس قضائي</option>
+                                    <option value="مصفٍّ قضائي / نظامي">مصفٍّ قضائي / نظامي</option>
+                                    <option value="ممثل نظامي / مفوض شركة">ممثل نظامي / مفوض شركة</option>
+                                    <option value="ناظر وقف">ناظر وقف</option>
+                                </select>
                             </div>
                         </div>
                     </div>
@@ -865,6 +925,44 @@
                         <div class="custom-form-group">
                             <label class="custom-label">الممثل القانوني للشركة</label>
                             <input type="text" name="legal_rep_name" id="edit_client_legal_rep_name" class="custom-input">
+                        </div>
+                    </div>
+
+                    <div class="form-grid-2">
+                        <div class="custom-form-group">
+                            <label class="custom-label">الدور العام في القضية</label>
+                            <select name="general_role" class="custom-select" id="edit_client_general_role">
+                                <option value="">-- اختر الدور العام --</option>
+                                <option value="مدعي">مدعي (المدعي الأصلي)</option>
+                                <option value="مدعى عليه">مدعى عليه</option>
+                                <option value="شاكي">شاكي (مقدم البلاغ)</option>
+                                <option value="مشكو في حقه">مشكو في حقه</option>
+                                <option value="مجني عليه">مجني عليه / متضرر</option>
+                                <option value="متهم">متهم</option>
+                                <option value="طالب تنفيذ">طالب تنفيذ</option>
+                                <option value="منفذ ضده">منفذ ضده</option>
+                                <option value="مستأنف">مستأنف</option>
+                                <option value="مستأنف ضده">مستأنف ضده</option>
+                                <option value="طاعن بالنقض">طاعن بالنقض</option>
+                                <option value="مطعون ضده">مطعون ضده</option>
+                                <option value="طرف ثالث / متدخل">طرف ثالث / متدخل</option>
+                                <option value="شاهد / خبير">شاهد / خبير</option>
+                            </select>
+                        </div>
+                        <div class="custom-form-group">
+                            <label class="custom-label">الصفة القضائية الدقيقة</label>
+                            <select name="legal_capacity" class="custom-select" id="edit_client_legal_capacity">
+                                <option value="">-- اختر الصفة القضائية --</option>
+                                <option value="أصيل">أصيل (عن نفسه شخصياً)</option>
+                                <option value="وكيل شرعي بموجب وكالة">وكيل شرعي بموجب وكالة</option>
+                                <option value="ولي شرعي">ولي شرعي (طبيعي)</option>
+                                <option value="وصي مختار / شرعي">وصي مختار / شرعي</option>
+                                <option value="قيم / منصوب قضائي">قيم / منصوب قضائي</option>
+                                <option value="حارس قضائي">حارس قضائي</option>
+                                <option value="مصفٍّ قضائي / نظامي">مصفٍّ قضائي / نظامي</option>
+                                <option value="ممثل نظامي / مفوض شركة">ممثل نظامي / مفوض شركة</option>
+                                <option value="ناظر وقف">ناظر وقف</option>
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -1022,6 +1120,8 @@ function openEditClientFromBtn(btn) {
         national_id: d.clientNationalId,
         cr_number: d.clientCrNumber,
         legal_rep_name: d.clientLegalRep,
+        general_role: d.clientGeneralRole,
+        legal_capacity: d.clientLegalCapacity,
         phone: d.clientPhone,
         alt_phone: d.clientAltPhone,
         email: d.clientEmail,
@@ -1040,6 +1140,8 @@ function openEditClientModal(client) {
     document.getElementById('edit_client_national_id').value = client.national_id || '';
     document.getElementById('edit_client_cr_number').value = client.cr_number || '';
     document.getElementById('edit_client_legal_rep_name').value = client.legal_rep_name || '';
+    document.getElementById('edit_client_general_role').value = client.general_role || '';
+    document.getElementById('edit_client_legal_capacity').value = client.legal_capacity || '';
     document.getElementById('edit_client_phone').value = client.phone || '';
     document.getElementById('edit_client_alt_phone').value = client.alt_phone || '';
     document.getElementById('edit_client_email').value = client.email || '';
