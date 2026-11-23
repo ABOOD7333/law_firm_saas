@@ -105,9 +105,9 @@ TIERS: Dict[str, Dict[str, Any]] = {
     },
     "lifetime": {
         "id": "lifetime",
-        "name_ar": "الترخيص الشامل الدائم",
-        "name_en": "Lifetime Unlimited",
-        "badge": "غير محدود",
+        "name_ar": "المكتب الاحترافي (ترخيص دائم)",
+        "name_en": "Lifetime Unlimited Pro",
+        "badge": "دائم لا يتطلب تجديد 👑",
         "color": "#d97706",
         "price_monthly_usd": 0.0,
         "price_yearly_usd": 0.0,
