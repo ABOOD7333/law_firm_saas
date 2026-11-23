@@ -4329,6 +4329,42 @@ app.include_router(incoming_cases_router.router)
 
 # ----------------------------------------------------------------------------
 
+@app.get("/subscription/invoice/{payment_id}")
+async def view_subscription_invoice(payment_id: int, request: Request, db: Session = Depends(get_db)):
+    """عرض وطباعة فاتورة الاشتراك الضريبية الرسمية والسند الإلكتروني."""
+    user = get_current_user(request, db)
+    if not user:
+        return RedirectResponse(url="/", status_code=303)
+
+    payment = db.query(PaymentRequest).filter(PaymentRequest.id == payment_id).first()
+    if not payment:
+        raise HTTPException(status_code=404, detail="فاتورة الاشتراك غير موجودة")
+
+    # حماية البيانات: فقط مدير المكتب صاحب الفاتورة أو السوبر أدمن يمكنه عرضها
+    if getattr(user, 'is_superadmin', 0) != 1 and user.office_id != payment.office_id:
+        raise HTTPException(status_code=403, detail="غير مصرح لك بعرض هذه الفاتورة")
+
+    office = db.query(LawOffices).filter(LawOffices.id == payment.office_id).first()
+
+    plan_titles = {
+        "solo": "باقة المحامي المستقل (Solo Lawyer)",
+        "pro": "باقة المكتب الاحترافي (Pro Law Firm)",
+        "enterprise": "باقة الشركات والمجموعات (Enterprise Group)",
+        "monthly": "الخطة الشهرية القياسية",
+        "yearly": "الخطة السنوية المتقدمة"
+    }
+    plan_title = plan_titles.get((payment.plan or "").lower(), f"باقة {payment.plan}")
+    duration_label = "سنة كاملة (12 شهراً)" if payment.plan in ("yearly", "enterprise") else "شهر واحد (30 يوماً)"
+
+    return templates.TemplateResponse("subscription_invoice_pdf.html", {
+        "request": request,
+        "payment": payment,
+        "office": office,
+        "user": user,
+        "plan_title": plan_title,
+        "duration_label": duration_label
+    })
+
 @app.get("/subscription")
 async def view_subscription(request: Request, db: Session = Depends(get_db)):
     user = get_current_user(request, db)

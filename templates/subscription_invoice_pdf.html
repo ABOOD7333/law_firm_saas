@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>فاتورة اشتراك ضريبية رسمية - {{ payment.transfer_ref or payment.id }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #1e3a8a;
+            --secondary: #0d9488;
+            --gold: #d97706;
+            --text-dark: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --bg-light: #f8fafc;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
+        body { background: #f1f5f9; color: var(--text-dark); padding: 40px 20px; }
+        
+        .invoice-wrapper {
+            max-width: 850px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.06);
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        
+        .invoice-header {
+            background: linear-gradient(135deg, #0f172a, #1e3a8a);
+            color: #ffffff;
+            padding: 36px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+        }
+        .invoice-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            left: 0;
+            height: 5px;
+            background: linear-gradient(90deg, var(--gold), #10b981);
+        }
+        .brand-title {
+            font-size: 1.8rem;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .brand-sub {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+        .invoice-badge-block {
+            text-align: left;
+        }
+        .invoice-badge-block .type {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: 0.5px;
+        }
+        .invoice-badge-block .inv-num {
+            font-size: 0.9rem;
+            color: #cbd5e1;
+            font-family: monospace;
+            margin-top: 4px;
+        }
+        
+        .invoice-body {
+            padding: 40px;
+        }
+        
+        .parties-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 35px;
+            padding-bottom: 25px;
+            border-bottom: 1px dashed var(--border);
+        }
+        .party-card {
+            background: var(--bg-light);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--border);
+        }
+        .party-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--secondary);
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .party-name {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: var(--text-dark);
+            margin-bottom: 6px;
+        }
+        .party-detail {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+        
+        .meta-strip {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 35px;
+        }
+        .meta-item { text-align: center; }
+        .meta-item label { font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 4px; }
+        .meta-item span { font-size: 0.95rem; font-weight: 700; color: var(--text-dark); }
+        .status-badge {
+            display: inline-block;
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+        .status-approved { background: #dcfce7; color: #15803d; }
+        .status-pending { background: #fef3c7; color: #b45309; }
+        
+        .table-wrap {
+            margin-bottom: 30px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: right;
+        }
+        th {
+            background: var(--bg-light);
+            color: var(--text-dark);
+            font-weight: 700;
+            font-size: 0.85rem;
+            padding: 14px 16px;
+            border-bottom: 2px solid var(--border);
+        }
+        td {
+            padding: 16px;
+            font-size: 0.95rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-dark);
+        }
+        
+        .summary-block {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 40px;
+        }
+        .summary-card {
+            width: 320px;
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+        .summary-row.total {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--primary);
+            border-top: 2px solid var(--border);
+            padding-top: 12px;
+            margin-top: 10px;
+            margin-bottom: 0;
+        }
+        
+        .seal-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 20px;
+            border-top: 1px dashed var(--border);
+        }
+        .qr-placeholder {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .qr-box {
+            width: 75px;
+            height: 75px;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2rem;
+            color: var(--primary);
+        }
+        .stamp-box {
+            border: 2px dashed #94a3b8;
+            border-radius: 12px;
+            padding: 12px 25px;
+            text-align: center;
+            color: #475569;
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+        
+        .actions-bar {
+            max-width: 850px;
+            margin: 20px auto 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .btn-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            transition: 0.2s;
+            border: none;
+        }
+        .btn-print { background: var(--primary); color: white; }
+        .btn-print:hover { background: #172554; }
+        .btn-back { background: #e2e8f0; color: #334155; }
+        .btn-back:hover { background: #cbd5e1; }
+        
+        @media print {
+            body { background: #ffffff; padding: 0; }
+            .invoice-wrapper { box-shadow: none; border: none; max-width: 100%; }
+            .actions-bar { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="actions-bar">
+        <a href="/subscription" class="btn-action btn-back"><i class="fa-solid fa-arrow-right"></i> العودة لصفحة الاشتراكات</a>
+        <button onclick="window.print()" class="btn-action btn-print"><i class="fa-solid fa-print"></i> طباعة / حفظ كـ PDF</button>
+    </div>
+
+    <div class="invoice-wrapper" style="margin-top: 15px;">
+        <!-- Header -->
+        <div class="invoice-header">
+            <div>
+                <div class="brand-title">
+                    <i class="fa-solid fa-scale-balanced" style="color: var(--gold);"></i> LawSaaS Platform
+                </div>
+                <div class="brand-sub">منظومة الإدارة القانونية والسحابية المتطورة للشركات والمحامين</div>
+            </div>
+            <div class="invoice-badge-block">
+                <div class="type">فاتورة ضريبية وسند رسمي</div>
+                <div class="inv-num">INV-SUB-{{ "%05d"|format(payment.id) }}</div>
+            </div>
+        </div>
+
+        <div class="invoice-body">
+            <!-- Parties Info -->
+            <div class="parties-grid">
+                <div class="party-card">
+                    <div class="party-label"><i class="fa-solid fa-building"></i> الجهة المصدِرة (المنصة)</div>
+                    <div class="party-name">منصة LawSaaS السحابية</div>
+                    <div class="party-detail">
+                        الجمهورية اليمنية — قطاع التقنية المالية السحابية<br>
+                        الحساب المعتمد: بنك الكريمي الإسلامي (خدمة حاسب: 2709660)<br>
+                        البريد المعتمد: lawsaas.platform@icloud.com
+                    </div>
+                </div>
+
+                <div class="party-card">
+                    <div class="party-label"><i class="fa-solid fa-user-tie"></i> المستفيد (المكتب المشترك)</div>
+                    <div class="party-name">{{ office.name }}</div>
+                    <div class="party-detail">
+                        <strong>المسؤول:</strong> {{ user.name }} ({{ user.email or '—' }})<br>
+                        <strong>رقم تعريف المكتب:</strong> #{{ office.id }}<br>
+                        <strong>خطة الترخيص:</strong> {{ plan_title }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Meta Strip -->
+            <div class="meta-strip">
+                <div class="meta-item">
+                    <label>تاريخ السداد</label>
+                    <span>{{ payment.submitted_at[:10] if payment.submitted_at else '—' }}</span>
+                </div>
+                <div class="meta-item">
+                    <label>مرجع التحويل (حاسب)</label>
+                    <span style="font-family: monospace;">{{ payment.transfer_ref or '—' }}</span>
+                </div>
+                <div class="meta-item">
+                    <label>طريقة الدفع</label>
+                    <span>بنك الكريمي (حاسب 2709660)</span>
+                </div>
+                <div class="meta-item">
+                    <label>حالة الفاتورة</label>
+                    {% if payment.status == 'approved' %}
+                        <span class="status-badge status-approved"><i class="fa-solid fa-check-circle"></i> مدفوعة ومؤكدة</span>
+                    {% else %}
+                        <span class="status-badge status-pending"><i class="fa-solid fa-clock"></i> قيد المراجعة</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Table of services -->
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 50%;">الوصف والخدمة القانونية</th>
+                            <th style="width: 20%; text-align: center;">المدة</th>
+                            <th style="width: 15%; text-align: center;">العملة</th>
+                            <th style="width: 15%; text-align: left;">المبلغ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <strong>ترخيص اشتراك منظومة LawSaaS — {{ plan_title }}</strong>
+                                <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 3px;">
+                                    يشمل إدارة القضايا والموكلين، التقويم القضائي، العقود، والأرشفة السحابية المشفرة.
+                                </div>
+                            </td>
+                            <td style="text-align: center;">{{ duration_label }}</td>
+                            <td style="text-align: center;">{{ payment.currency or 'USD' }}</td>
+                            <td style="text-align: left; font-weight: 800;">${{ "%.2f"|format(payment.amount or 0.0) }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Summary -->
+            <div class="summary-block">
+                <div class="summary-card">
+                    <div class="summary-row">
+                        <span>المبلغ الإجمالي قبل الضريبة:</span>
+                        <span>${{ "%.2f"|format(payment.amount or 0.0) }}</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>ضريبة القيمة المضافة (0%):</span>
+                        <span>$0.00</span>
+                    </div>
+                    <div class="summary-row total">
+                        <span>الإجمالي الصافي:</span>
+                        <span>${{ "%.2f"|format(payment.amount or 0.0) }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seal and Validation -->
+            <div class="seal-row">
+                <div class="qr-placeholder">
+                    <div class="qr-box"><i class="fa-solid fa-qrcode"></i></div>
+                    <div style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.5;">
+                        <strong>رمز التحقق المشفر</strong><br>
+                        تم التحقق والمصادقة السحابية الآلية عبر سحابة المنصة.<br>
+                        تاريخ التفعيل: {{ payment.reviewed_at or payment.submitted_at or '—' }}
+                    </div>
+                </div>
+                <div class="stamp-box">
+                    <i class="fa-solid fa-certificate" style="color: #10b981; font-size: 1.3rem; margin-bottom: 4px; display: block;"></i>
+                    سند إلكتروني رسمي معتمد
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</body>
+</html>
