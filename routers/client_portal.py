@@ -295,6 +295,32 @@ async def client_sign_poa(
     if not poa:
         return JSONResponse({"ok": False, "error": "الوكالة الرسمية غير موجودة"}, status_code=404)
 
+    # Preview users and other office members must never sign through the client
+    # portal. The signer must be bound to the principal or to the POA's case.
+    if user.role != "موكل":
+        raise HTTPException(status_code=403, detail="التوقيع متاح للموكل المرتبط بالوكالة فقط")
+
+    linked_clients = client_records_for_user(db, user)
+    linked_client_ids = {client.id for client in linked_clients}
+    linked_case_ids = {client.case_id for client in linked_clients if client.case_id is not None}
+    authorized = poa.case_id is not None and poa.case_id in linked_case_ids
+
+    if poa.case_id is None and poa.principal_name:
+        exact_name_clients = db.query(LawClients).filter(
+            LawClients.office_id == user.office_id,
+            LawClients.is_deleted == 0,
+            LawClients.name == poa.principal_name,
+        ).all()
+        # Legacy POAs without a case link are accepted only if an exact principal
+        # name resolves to one client record and that record is bound to this user.
+        authorized = (
+            len(exact_name_clients) == 1
+            and exact_name_clients[0].id in linked_client_ids
+        )
+
+    if not authorized:
+        raise HTTPException(status_code=403, detail="لا تملك صلاحية توقيع هذه الوكالة")
+
     if getattr(poa, 'is_signed', 0) == 1:
         return JSONResponse({"ok": False, "error": "تم توقيع هذه الوكالة مسبقاً بالفعل وموثقة في النظام"}, status_code=409)
 

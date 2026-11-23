@@ -73,15 +73,29 @@ def perform_conflict_check(
 
     if len(cleaned_name) >= 3:
         client_or_clauses.append(LawClients.name.ilike(f"%{cleaned_name}%"))
-    if cleaned_id:
-        client_or_clauses.append(LawClients.national_id == cleaned_id)
     if cleaned_phone and len(cleaned_phone) >= 6:
         client_or_clauses.append(LawClients.phone.ilike(f"%{cleaned_phone}%"))
 
     if client_or_clauses:
         client_filters.append(or_(*client_or_clauses))
         existing_clients = db.query(LawClients).filter(*client_filters).limit(10).all()
+    else:
+        existing_clients = []
 
+    # national_id is AES-GCM encrypted with a random nonce, so SQL equality
+    # cannot match it. Compare decrypted values in Python until a keyed blind
+    # index is introduced through a reviewed database migration.
+    if cleaned_id:
+        id_candidates = db.query(LawClients).filter(
+            LawClients.office_id == office_id
+        ).all()
+        existing_ids = {client.id for client in existing_clients}
+        existing_clients.extend(
+            client for client in id_candidates
+            if client.national_id == cleaned_id and client.id not in existing_ids
+        )
+
+    if existing_clients:
         for c in existing_clients:
             # Check for name match or id match
             match_reasons = []
