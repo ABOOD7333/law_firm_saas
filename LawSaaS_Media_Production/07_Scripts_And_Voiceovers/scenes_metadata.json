@@ -1,0 +1,75 @@
+{
+  "total_duration": 79.93,
+  "scenes": [
+    {
+      "index": 1,
+      "id": "scene1_problem",
+      "title": "التحدي وضياع الوقت",
+      "text": "هل ما زلت تدير أعمالك القانونية بطرق الأمس؟ تشتت الملفات، فوات الجلسات، وضياع المذكرات بين مئات المستندات؟",
+      "file": "LawSaaS_Media_Production\\07_Scripts_And_Voiceovers\\scene_1.mp3",
+      "duration": 11.09,
+      "start_time": 0.0,
+      "end_time": 11.09
+    },
+    {
+      "index": 2,
+      "id": "scene2_solution",
+      "title": "منظومة LawSaaS المتكاملة",
+      "text": "حان الوقت لترتقي بمكتبك إلى آفاق المستقبل الرقمي! نقدّم لك منصة LawSaaS: المنظومة السحابية المتكاملة لإدارة مكاتب المحاماة.",
+      "file": "LawSaaS_Media_Production\\07_Scripts_And_Voiceovers\\scene_2.mp3",
+      "duration": 11.93,
+      "start_time": 11.09,
+      "end_time": 23.02
+    },
+    {
+      "index": 3,
+      "id": "scene3_dashboard_cases",
+      "title": "لوحة تحكم ذكية وإدارة القضايا",
+      "text": "من لوحة تحكم واحدة فائقة الذكاء، تتبع كافة قضاياك، مراحل التقاضي، وتفاصيل أطراف النزاع في ثوانٍ معدودة.",
+      "file": "LawSaaS_Media_Production\\07_Scripts_And_Voiceovers\\scene_3.mp3",
+      "duration": 10.44,
+      "start_time": 23.02,
+      "end_time": 33.46
+    },
+    {
+      "index": 4,
+      "id": "scene4_calendar_hearings",
+      "title": "تقويم الجلسات والمدد القانونية",
+      "text": "لن تفوتك جلسة قضائية بعد اليوم! تنبيهات ذكية، تقويم تفاعلي، وجدولة دقيقة لكافة المواعيد والمهل القانونية.",
+      "file": "LawSaaS_Media_Production\\07_Scripts_And_Voiceovers\\scene_4.mp3",
+      "duration": 11.14,
+      "start_time": 33.46,
+      "end_time": 44.6
+    },
+    {
+      "index": 5,
+      "id": "scene5_docs_finance",
+      "title": "أرشفة سحابية ومحاسبة الأمانات",
+      "text": "أرشفة سحابية مشفرة لمذكراتك وعقودك، ونظام مالي وقانوني دقيق لإدارة الفواتير وحسابات أمانات العملاء بأعلى موثوقية.",
+      "file": "LawSaaS_Media_Production\\07_Scripts_And_Voiceovers\\scene_5.mp3",
+      "duration": 11.47,
+      "start_time": 44.6,
+      "end_time": 56.07
+    },
+    {
+      "index": 6,
+      "id": "scene6_team_cloud",
+      "title": "إدارة المهام والوصول السحابي",
+      "text": "سهولة في توزيع المهام على فريقك، وبوابة خاصة لعملائك، مع وصول سحابي فوري ومحمي من أي جهاز وفي أي وقت.",
+      "file": "LawSaaS_Media_Production\\07_Scripts_And_Voiceovers\\scene_6.mp3",
+      "duration": 10.54,
+      "start_time": 56.07,
+      "end_time": 66.61
+    },
+    {
+      "index": 7,
+      "id": "scene7_cta",
+      "title": "انضم إلى ريادة المستقبل",
+      "text": "مستقبلك القانوني يبدأ الآن. سجّل حسابك اليوم، واكتشف المعنى الحقيقي للاحترافية والريادة. زوروا موقعنا: waziruk.tech",
+      "file": "LawSaaS_Media_Production\\07_Scripts_And_Voiceovers\\scene_7.mp3",
+      "duration": 13.32,
+      "start_time": 66.61,
+      "end_time": 79.93
+    }
+  ]
+}

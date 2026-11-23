@@ -103,9 +103,8 @@ async def new_invoice_page(request: Request, db: Session = Depends(get_db), user
     clients = db.query(LawClients).filter(LawClients.office_id == user.office_id, LawClients.is_deleted == 0).all()
     cases = db.query(LawCases).filter(LawCases.office_id == user.office_id, LawCases.is_deleted == 0).all()
     
-    # Generate a draft invoice number
-    count = db.query(Invoices).filter(Invoices.office_id == user.office_id).count()
-    draft_number = f"INV-{datetime.now().strftime('%Y%m')}-{(count + 1):04d}"
+    # [BUG-015 FIX] رقم الفاتورة المبدئي للعرض فقط — الرقم الفعلي يُحسب عند الحفظ لتجنب race condition
+    draft_number = f"DRAFT-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
     
     return templates.TemplateResponse("accounting/invoice_form.html", {
         "request": request,
@@ -372,7 +371,11 @@ async def delete_invoice(uuid: str, db: Session = Depends(get_db), user: AccessP
         
     invoice.is_deleted = 1
     invoice.status = "Cancelled"
-    db.commit()
+    try:  # [BUG-004 FIX] rollback عند فشل الحذف
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        return JSONResponse({"ok": False, "message": f"فشل حذف الفاتورة: {str(e)}"}, status_code=500)
     return JSONResponse({"ok": True, "message": "تم إلغاء وحذف الفاتورة بنجاح"})
 
 @router.get("/invoices/{uuid}/pdf", response_class=HTMLResponse)

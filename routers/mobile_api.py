@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy import or_, func
 
 from database.database import get_db
+from core.rate_limiter import is_rate_limited, record_attempt  # [BUG-006 FIX] Rate limiting
 from database.models import (
     AccessProfiles, AuthSessions, AuthVerificationTokens, LawCases, LawDocuments,
     LawOffices, LawClients, LawHearings, LawTasks, LawParties, LawNotes, LawPleadings, LawJudgments,
@@ -91,13 +92,19 @@ def _verify_pin(pin: str, stored_hash: str) -> bool:
             expected_bytes = bytes.fromhex(stored_hash)
             actual_bytes = hashlib.sha256(normalized.encode('utf-8')).digest()
             return hmac.compare_digest(actual_bytes, expected_bytes)
-    except:
-        pass
+    except Exception:
+        pass  # [BUG-005 FIX] مقبول هنا: حماية التحقق من PIN من أخطاء هاش غير متوقعة
     return False
 
 @router.post("/login")
 async def login(req: LoginRequest, db: Session = Depends(get_db)):
     from email_service import generate_otp, store_otp, send_otp_email
+    
+    # [BUG-006 FIX] Rate limiting على Mobile Login
+    client_ip = getattr(req, '__client_ip__', 'unknown')
+    if is_rate_limited(req.email.strip().lower(), "mobile_login", max_attempts=10, window_seconds=300):
+        raise HTTPException(status_code=429, detail="تجاوزت عدد المحاولات المسموح بها. انتظر 5 دقائق.")
+    record_attempt(req.email.strip().lower(), "mobile_login", db)
     
     # Try finding user by username, email, or phone (case-insensitive)
     search_term = req.email.strip().lower()

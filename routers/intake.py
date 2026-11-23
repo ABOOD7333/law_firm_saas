@@ -466,6 +466,12 @@ async def process_e_signature(
     data: dict = Body(...),
     db: Session = Depends(get_db)
 ):
+    # [BUG-006 FIX] Rate limiting على التوقيع الإلكتروني
+    client_ip = request.client.host if request.client else "unknown"
+    if is_rate_limited(client_ip, "esign", max_attempts=10, window_seconds=900):
+        return JSONResponse({"ok": False, "error": "تجاوزت عدد المحاولات المسموح بها. انتظر 15 دقيقة."}, status_code=429)
+    record_attempt(client_ip, "esign", db)
+    
     sub = db.query(IntakeSubmissions).filter(
         IntakeSubmissions.submission_token == submission_token
     ).first()

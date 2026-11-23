@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}LawSaaS{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/dashboard.css?v=3.0">
+    <style>
+        /* Core Mobile Menu Fix - Guaranteed to apply */
+        @media (max-width: 992px) {
+            .mobile-menu-btn {
+                display: inline-flex !important;
+                align-items: center;
+                justify-content: center;
+                width: 45px;
+                height: 45px;
+                background-color: rgba(79, 70, 229, 0.08) !important;
+                border-radius: 10px !important;
+                border: 1px solid rgba(79, 70, 229, 0.2) !important;
+                z-index: 100;
+            }
+            .mobile-menu-btn i {
+                font-size: 1.4rem;
+                color: var(--primary-color) !important;
+            }
+            .mobile-close-btn {
+                display: block !important;
+            }
+        }
+        @media (min-width: 993px) {
+            .mobile-menu-btn, .mobile-close-btn {
+                display: none !important;
+            }
+        }
+        
+        /* 🚨 Bulletproof Mobile Topbar Fix */
+        @media (max-width: 992px) {
+            .topbar {
+                flex-wrap: wrap !important;
+                height: auto !important;
+                padding: 10px !important;
+            }
+            .search-bar {
+                flex: 1 1 100% !important;
+                order: 3 !important;
+                margin-top: 10px !important;
+            }
+            .mobile-menu-btn {
+                flex-shrink: 0 !important;
+            }
+        }
+        
+        /* ═══════════════════════════════════════════════════
+           ✨ Modern Classic 2026 Buttons - Ultra Premium UI
+           ═══════════════════════════════════════════════════ */
+        /* Global Base */
+        button, .btn, .btn-primary, .primary-btn, .submit-btn, .cancel-btn {
+            font-family: 'Cairo', sans-serif !important;
+            position: relative;
+            overflow: hidden;
+            box-sizing: border-box !important;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+
+        /* Primary Button (Add, Save, Submit) */
+        .btn-primary, .primary-btn, .submit-btn {
+            background: linear-gradient(135deg, #1e293b, #0f172a) !important; /* Classic Dark Slate */
+            color: #ffffff !important;
+            border: 1px solid rgba(255,255,255,0.1) !important;
+            padding: 10px 24px !important;
+            border-radius: 10px !important;
+            font-weight: 700 !important;
+            font-size: 0.95rem !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 8px !important;
+            box-shadow: 0 4px 15px rgba(15, 23, 42, 0.25), inset 0 1px 0 rgba(255,255,255,0.1) !important;
+            cursor: pointer !important;
+            text-decoration: none !important;
+            max-width: 100% !important;
+            white-space: normal !important;
+            text-align: center;
+        }
+
+        .btn-primary:hover, .primary-btn:hover, .submit-btn:hover {
+            transform: translateY(-2px) !important;
+            background: linear-gradient(135deg, #0f172a, #020617) !important;
+            box-shadow: 0 8px 25px rgba(15, 23, 42, 0.4), inset 0 1px 0 rgba(255,255,255,0.15) !important;
+        }
+
+        .btn-primary:active, .primary-btn:active, .submit-btn:active {
+            transform: translateY(1px) !important;
+            box-shadow: 0 2px 10px rgba(15, 23, 42, 0.2) !important;
+        }
+
+        /* Cancel / Secondary Button */
+        .cancel-btn, .secondary-btn {
+            background: #f8fafc !important;
+            color: #475569 !important;
+            border: 1px solid #cbd5e1 !important;
+            padding: 10px 24px !important;
+            border-radius: 10px !important;
+            font-weight: 700 !important;
+            font-size: 0.95rem !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 8px !important;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important;
+            cursor: pointer !important;
+            max-width: 100% !important;
+        }
+
+        .cancel-btn:hover, .secondary-btn:hover {
+            background: #e2e8f0 !important;
+            color: #0f172a !important;
+            border-color: #94a3b8 !important;
+            transform: translateY(-1px) !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05) !important;
+        }
+
+        /* Action Buttons (Table Row Actions) */
+        .action-btn {
+            border-radius: 8px !important;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important;
+        }
+        
+        .action-btn:hover {
+            border-radius: 8px !important;
+        }
+
+        /* Mobile Layout Protector */
+        @media (max-width: 768px) {
+            .btn-primary, .primary-btn, .submit-btn, .cancel-btn {
+                padding: 10px 16px !important; /* Slightly smaller padding for small screens */
+                font-size: 0.9rem !important;
+            }
+            .page-header > div:last-child {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                width: 100%;
+            }
+            /* Prevent buttons from overflowing */
+            button {
+                max-width: 100% !important;
+                flex-shrink: 1 !important;
+            }
+        }
+    </style>
+    <style>
+        /* ========================================================
+           حماية عامة لجميع الأزرار والجداول في كامل النظام
+           تمنع تماماً قص الكلمات أو ضغط الأزرار إلى مربعات ضيقة
+           ======================================================== */
+        
+        /* 1. منع قص الكلمات وإلغاء العرض الثابت الضيق لأي زر في أي جدول أو شاشة */
+        table button,
+        .data-table button,
+        .saas-table button,
+        .table-container button,
+        td button,
+        button.btn-action,
+        .btn-action,
+        .table-action-btns button {
+            width: auto !important;
+            min-width: fit-content !important;
+            height: auto !important;
+            min-height: 32px !important;
+            padding: 6px 14px !important;
+            white-space: nowrap !important;
+            overflow: visible !important;
+            text-overflow: clip !important;
+            font-size: 0.85rem !important;
+            font-weight: 700 !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 6px !important;
+            box-sizing: border-box !important;
+        }
+
+        /* 2. ضمان ظهور أيقونة الزر بجانب النص بشكل واضح */
+        button i,
+        .btn-action i,
+        .nav-item a i {
+            display: inline-block !important;
+            font-size: 0.95rem !important;
+            flex-shrink: 0 !important;
+        }
+
+        /* 3. حاوية أزرار الإجراءات في الجداول */
+        .table-action-btns,
+        td .table-action-btns,
+        td div[style*="inline-flex"],
+        td .actions-cell {
+            display: inline-flex !important;
+            flex-wrap: nowrap !important;
+            gap: 6px !important;
+            align-items: center !important;
+            justify-content: center !important;
+            white-space: nowrap !important;
+        }
+
+        /* 4. التأكد من أن خلايا الجداول التي تحوي أزراراً لا تضغطها */
+        table td:last-child,
+        .data-table td:last-child,
+        .saas-table td:last-child {
+            white-space: nowrap !important;
+            width: 1% !important;
+            min-width: max-content !important;
+        }
+
+        /* 5. ضبط القائمة الجانبية لتكون واضحة دائماً */
+        .nav-item a {
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 12px !important;
+        }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header" style="justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <i class="fa-solid fa-scale-balanced logo-icon"></i>
+                <h2>LawSaaS</h2>
+            </div>
+            <button class="mobile-close-btn" onclick="toggleSidebar()" style="background:none; border:none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <ul class="nav-menu">
+            {% set is_admin = user and user.role in ['صاحب المكتب', 'صاحب مكتب', 'مدير المكتب', 'مدير مكتب', 'مدير', 'مدير النظام'] %}
+            {% set is_lawyer = user and user.role in ['محامي', 'محامٍ'] %}
+            {% set is_sec = user and user.role == 'سكرتير' %}
+            {% set is_acc = user and user.role == 'محاسب' %}
+            {% set not_client = user and user.role != 'موكل' %}
+
+            <li class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
+                <a href="/dashboard"><i class="fa-solid fa-chart-pie"></i> {% if user and user.role == 'موكل' %}بوابتي (الرئيسية){% else %}لوحة التحكم{% endif %}</a>
+            </li>
+
+            {% if not_client %}
+            <li class="nav-item {% if active_page == 'yemeni-laws' %}active{% endif %}">
+                <a href="/yemeni-laws"><i class="fa-solid fa-scale-balanced"></i> القوانين واللوائح اليمنية</a>
+            </li>
+            {% endif %}
+            
+            {% if not_client %}
+                {% if (is_admin or is_lawyer or is_sec) and (has_perm(user, 'cases', 'view') or has_perm(user, 'hearings', 'view')) %}
+                <li class="nav-item {% if active_page == 'calendar' %}active{% endif %}">
+                    <a href="/calendar"><i class="fa-solid fa-calendar-week"></i> التقويم القضائي</a>
+                </li>
+                {% endif %}
+                
+                {% if has_perm(user, 'cases', 'view') or has_perm(user, 'clients', 'view') %}
+                <li class="nav-item {% if active_page == 'search' %}active{% endif %}">
+                    <a href="/search"><i class="fa-solid fa-magnifying-glass"></i> البحث المتقدم</a>
+                </li>
+                {% endif %}
+                
+                {% if (is_admin or is_lawyer or is_sec) and has_perm(user, 'cases', 'view') %}
+                <li class="nav-item {% if active_page == 'cases' %}active{% endif %}">
+                    <a href="/cases"><i class="fa-solid fa-gavel"></i> إدارة القضايا</a>
+                </li>
+                <li class="nav-item {% if active_page == 'incoming_cases' %}active{% endif %}">
+                    <a href="/incoming-cases"><i class="fa-solid fa-inbox"></i> القضايا الواردة</a>
+                </li>
+                {% if has_perm(user, 'parties', 'view') %}
+                <li class="nav-item {% if active_page == 'parties' %}active{% endif %}">
+                    <a href="/parties"><i class="fa-solid fa-people-arrows"></i> الأطراف والمتقاضون</a>
+                </li>
+                {% endif %}
+                {% endif %}
+                
+                {% if has_perm(user, 'clients', 'view') %}
+                <li class="nav-item {% if active_page == 'clients' %}active{% endif %}">
+                    <a href="/clients"><i class="fa-solid fa-users"></i> الموكلون</a>
+                </li>
+                {% if is_module_enabled(user, "intake") %}
+                <li class="nav-item {% if active_page == 'intake' %}active{% endif %}" style="background: rgba(16,185,129,0.08); border-right: 3px solid #10b981;">
+                    <a href="/intake" style="color: #059669; font-weight: bold;"><i class="fa-solid fa-file-signature"></i> استقطاب وتوقيع العقود ✍️</a>
+                </li>
+                {% endif %}
+                {% endif %}
+                
+                {% if is_admin or is_lawyer or is_sec %}
+                    {% if has_perm(user, 'hearings', 'view') %}
+                    <li class="nav-item {% if active_page == 'hearings' %}active{% endif %}">
+                        <a href="/hearings"><i class="fa-solid fa-calendar-days"></i> محاضر الجلسات</a>
+                    </li>
+                    {% endif %}
+                    {% if has_perm(user, 'documents', 'view') %}
+                    <li class="nav-item {% if active_page == 'documents' %}active{% endif %}">
+                        <a href="/documents"><i class="fa-solid fa-folder-open"></i> المستندات والأرشفة</a>
+                    </li>
+                    {% endif %}
+                    {% if has_perm(user, 'pleadings', 'view') %}
+                    <li class="nav-item {% if active_page == 'pleadings' %}active{% endif %}">
+                        <a href="/pleadings"><i class="fa-solid fa-scroll"></i> المرافعات والمذكرات</a>
+                    </li>
+                    {% endif %}
+                    {% if has_perm(user, 'judgments', 'view') %}
+                    <li class="nav-item {% if active_page == 'judgments' %}active{% endif %}">
+                        <a href="/judgments"><i class="fa-solid fa-scale-balanced"></i> الأحكام والقرارات</a>
+                    </li>
+                    {% endif %}
+                    {% if has_perm(user, 'notes', 'view') %}
+                    <li class="nav-item {% if active_page == 'notes' %}active{% endif %}">
+                        <a href="/notes"><i class="fa-solid fa-note-sticky"></i> الملاحظات والاتصالات</a>
+                    </li>
+                    {% endif %}
+                    {% if has_perm(user, 'correspondences', 'view') %}
+                    <li class="nav-item {% if active_page == 'correspondences' %}active{% endif %}">
+                        <a href="/correspondences"><i class="fa-solid fa-envelope"></i> المراسلات الرسمية</a>
+                    </li>
+                    {% endif %}
+                    {% if is_module_enabled(user, "automation") %}
+                    <li class="nav-item {% if active_page == 'automation' %}active{% endif %}">
+                        <a href="/automation"><i class="fa-solid fa-wand-magic-sparkles"></i> الأتمتة الذكية</a>
+                    </li>
+                    {% endif %}
+                    {% if has_perm(user, 'tasks', 'view') %}
+                    <li class="nav-item {% if active_page == 'tasks' %}active{% endif %}">
+                        <a href="/tasks"><i class="fa-solid fa-list-check"></i> المهام والمتابعة</a>
+                    </li>
+                    {% if is_module_enabled(user, "kanban") %}
+                    <li class="nav-item {% if active_page == 'kanban' %}active{% endif %}" style="background: rgba(79,70,229,0.05); border-right: 3px solid #4f46e5;">
+                        <a href="/kanban" style="color: #4f46e5; font-weight: bold;"><i class="fa-solid fa-objects-column"></i> لوحة الكانبان 🗂️</a>
+                    </li>
+                    {% endif %}
+                    {% endif %}
+                    {% if has_perm(user, 'cases', 'view') and is_module_enabled(user, "timeline") %}
+                    <li class="nav-item {% if active_page == 'timeline' %}active{% endif %}">
+                        <a href="/timeline"><i class="fa-solid fa-timeline"></i> الخط الزمني</a>
+                    </li>
+                    {% endif %}
+                {% endif %}
+                
+                {% if is_admin or is_acc %}
+                    {% if has_perm(user, 'finance', 'view') and is_module_enabled(user, "finance") %}
+                    <li class="nav-item {% if active_page == 'finance' %}active{% endif %}">
+                        <a href="/finance"><i class="fa-solid fa-file-invoice-dollar"></i> الحسابات والمالية</a>
+                    </li>
+                    {% endif %}
+                    {% if has_perm(user, 'expenses', 'view') and is_module_enabled(user, "expenses") %}
+                    <li class="nav-item {% if active_page == 'expenses' %}active{% endif %}">
+                        <a href="/expenses"><i class="fa-solid fa-money-bill-wave"></i> مصاريف القضية</a>
+                    </li>
+                    {% endif %}
+                    {% if has_perm(user, 'accounting', 'view') and is_module_enabled(user, "accounting") %}
+                    <li class="nav-item {% if active_page == 'accounting' %}active{% endif %}">
+                        <a href="/accounting/invoices"><i class="fa-solid fa-receipt"></i> الفوترة الإلكترونية 🧾</a>
+                    </li>
+                    {% endif %}
+                {% endif %}
+                
+                {% if (is_admin or is_acc or is_lawyer) and has_perm(user, 'timesheet', 'view') and is_module_enabled(user, "timesheet") %}
+                <li class="nav-item {% if active_page == 'timesheet' %}active{% endif %}">
+                    <a href="/timesheet"><i class="fa-solid fa-clock"></i> سجل الساعات</a>
+                </li>
+                {% endif %}
+                
+                {% if is_admin or is_lawyer or is_sec %}
+                    {% if has_perm(user, 'execution', 'view') and is_module_enabled(user, "execution") %}
+                    <li class="nav-item {% if active_page == 'execution' %}active{% endif %}">
+                        <a href="/execution"><i class="fa-solid fa-gavel"></i> إجراءات التنفيذ</a>
+                    </li>
+                    {% endif %}
+                    {% if has_perm(user, 'power_of_attorney', 'view') and is_module_enabled(user, "power_of_attorney") %}
+                    <li class="nav-item {% if active_page == 'power_of_attorney' %}active{% endif %}">
+                        <a href="/power_of_attorney"><i class="fa-solid fa-file-signature"></i> الوكالات الرسمية</a>
+                    </li>
+                    {% endif %}
+                {% endif %}
+                
+                {% if has_perm(user, 'reports', 'view') %}
+                <li class="nav-item {% if active_page == 'reports' %}active{% endif %}">
+                    <a href="/reports"><i class="fa-solid fa-chart-bar"></i> التقارير</a>
+                </li>
+                {% endif %}
+                
+                {% if user and user.role in ['صاحب المكتب', 'صاحب مكتب', 'مدير المكتب', 'مدير مكتب', 'مدير', 'مدير النظام'] %}
+                <li class="nav-item {% if active_page == 'team' %}active{% endif %}">
+                    <a href="/team"><i class="fa-solid fa-users-gear"></i> الفريق والصلاحيات</a>
+                </li>
+                {% endif %}
+                {% if has_perm(user, 'advanced_operations', 'view') and is_module_enabled(user, "advanced_operations") %}
+                <li class="nav-item {% if active_page == 'advanced_operations' %}active{% endif %}">
+                    <a href="/advanced_operations"><i class="fa-solid fa-microchip"></i> العمليات المتقدمة</a>
+                </li>
+                {% endif %}
+                {% if has_perm(user, 'legal_references', 'view') %}
+                <li class="nav-item {% if active_page == 'legal_references' %}active{% endif %}">
+                    <a href="/legal_references"><i class="fa-solid fa-book-open"></i> المراجع القانونية</a>
+                </li>
+                {% endif %}
+                {% if has_perm(user, 'limitations', 'view') %}
+                <li class="nav-item {% if active_page == 'limitations' %}active{% endif %}">
+                    <a href="/limitations"><i class="fa-solid fa-clock-rotate-left"></i> تنبيهات التقادم</a>
+                </li>
+                {% endif %}
+                <li class="nav-item {% if active_page == 'reference_data' %}active{% endif %}">
+                    <a href="/reference_data"><i class="fa-solid fa-table-list"></i> الجداول المرجعية</a>
+                </li>
+                <li class="nav-item {% if active_page == 'login_log' %}active{% endif %}">
+                    <a href="/login_log"><i class="fa-solid fa-shield-halved"></i> سجل الدخول</a>
+                </li>
+                <li class="nav-item {% if active_page == 'settings' %}active{% endif %}">
+                    <a href="/settings"><i class="fa-solid fa-gear"></i> الإعدادات</a>
+                </li>
+                <li class="nav-item {% if active_page == 'activity' %}active{% endif %}" style="margin-top:8px;border-top:1px solid var(--border-color);padding-top:8px;">
+                    <a href="/activity"><i class="fa-solid fa-chart-line"></i> نشاط الفريق</a>
+                </li>
+            {% endif %}
+            {% if user %}
+                {% if user.is_superadmin == 1 %}
+                <li class="nav-item {% if active_page == 'superadmin' %}active{% endif %}" style="margin-top:8px;border-top:1px solid var(--border-color);padding-top:8px; background-color: rgba(234, 179, 8, 0.05);">
+                    <a href="/superadmin" style="color: #b45309;"><i class="fa-solid fa-crown" style="color:#eab308;"></i> إدارة المنصة (SuperAdmin)</a>
+                </li>
+                {% endif %}
+            {% endif %}
+        </ul>
+        <div class="sidebar-footer">
+            {% if request.cookies.get('is_support_session') == '1' or (user and user.is_support_session) %}
+            <a href="/api/superadmin/exit-impersonate" class="logout-btn" style="width: 100%; display: flex; align-items: center; gap: 8px; justify-content: center; background: #dc2626; color: #fff; text-decoration: none; padding: 10px; border-radius: 8px; font-weight: bold; margin-bottom: 8px; box-sizing: border-box;">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i> إنهاء الدعم الفني
+            </a>
+            {% endif %}
+            <form action="/logout" method="POST" style="margin: 0; padding: 0;">
+                <button type="submit" class="logout-btn" style="width: 100%; border: none; background-color: transparent; text-align: right; font-family: inherit; font-size: inherit; cursor: pointer;">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i> تسجيل خروج
+                </button>
+            </form>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Technical Support Active Banner -->
+        {% if request.cookies.get('is_support_session') == '1' or (user and user.is_support_session) %}
+        <div style="background: linear-gradient(90deg, #991b1b, #dc2626); color: white; padding: 12px 24px; position: sticky; top: 0; z-index: 99999; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(220, 38, 38, 0.35); font-family: 'Cairo', sans-serif;">
+            <div style="display: flex; align-items: center; gap: 12px; font-size: 0.95rem;">
+                <i class="fa-solid fa-headset" style="font-size: 1.3rem;"></i>
+                <span><strong>وضع الدعم الفني النشط:</strong> أنت تتصفح هذا المكتب الآن كمدير عام / دعم فني.</span>
+            </div>
+            <a href="/api/superadmin/exit-impersonate" style="background: white; color: #dc2626; padding: 7px 18px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 0.9rem; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: inline-flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                إنهاء الدعم الفني والعودة للإدارة
+            </a>
+        </div>
+        {% endif %}
+
+        <!-- Topbar -->
+        <header class="topbar" style="flex-wrap: wrap; height: auto; min-height: 80px; padding-top: 10px; padding-bottom: 10px;">
+            <button class="mobile-menu-btn" onclick="toggleSidebar()" aria-label="القائمة الجانبية" title="القائمة الجانبية" style="cursor: pointer; margin-left: 10px;">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+            {% if not (user and user.role == 'موكل') %}
+            <div class="search-bar" onclick="window.location='/search'" style="cursor:pointer;">
+                <i class="fa-solid fa-search"></i>
+                <form action="/search" method="get" style="flex:1;display:flex;" onsubmit="event.stopPropagation();">
+                    <input type="text" name="q" placeholder="ابحث..." style="flex:1;border:none;background:transparent;outline:none;font-size:.95rem;font-family:'Cairo',sans-serif;" onclick="event.stopPropagation();">
+                </form>
+            </div>
+            {% else %}
+            <div style="flex:1;"></div>
+            {% endif %}
+            <div class="user-info">
+                <button class="notification-btn">
+                    <i class="fa-regular fa-bell"></i>
+                    <span class="badge">3</span>
+                </button>
+                <div class="profile-dropdown">
+                    <div class="avatar">{{ user.name[0] if user else 'م' }}</div>
+                    <span class="username">{{ user.name if user else 'مدير النظام' }}</span>
+                    <i class="fa-solid fa-chevron-down"></i>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dynamic Page Content -->
+        <div class="dashboard-container">
+            {% if user and user.subscription_plan == 'trial' %}
+            <div style="background: linear-gradient(90deg, #5c2d91, #8b5cf6); color: white; padding: 12px 20px; border-radius: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(92,45,145,0.2);">
+                <div>
+                    <i class="fa-solid fa-gift" style="margin-left: 8px; font-size: 1.2rem;"></i>
+                    <strong style="font-size: 1.05rem;">أنت الآن في فترة التجربة المجانية!</strong>
+                    <span style="opacity: 0.9; margin-right: 10px; font-size: 0.95rem;">متبقي لمكتبك {{ user.trial_days_left }} أيام.</span>
+                </div>
+                {% if user.role in ['مدير النظام', 'مدير', 'مدير المكتب', 'صاحب مكتب'] %}
+                <a href="/subscription" style="background: white; color: #5c2d91; padding: 6px 15px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 0.9rem; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">ترقية الآن</a>
+                {% endif %}
+            </div>
+            {% endif %}
+            {% block content %}
+            {% endblock %}
+        </div>
+    </main>
+
+    {% block scripts %}{% endblock %}
+    
+    <script>
+        function toggleSidebar() {
+            document.querySelector('.sidebar').classList.toggle('open');
+            document.querySelector('.sidebar-overlay').classList.toggle('active');
+        }
+    </script>
+
+    <!-- CSRF Protection Interceptor -->
+    <script>
+    document.addEventListener("DOMContentLoaded", () => {
+        // Function to get cookie value by name
+        const getCookie = (name) => {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        };
+
+        const csrfToken = getCookie('csrf_token');
+
+        if (csrfToken) {
+            // 1. Intercept all forms (POST/PUT/DELETE)
+            document.addEventListener('submit', (e) => {
+                const form = e.target;
+                if (form.tagName === 'FORM' && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(form.method.toUpperCase())) {
+                    // Inject hidden input if not exists
+                    if (!form.querySelector('input[name="csrf_token"]')) {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'csrf_token';
+                        input.value = csrfToken;
+                        form.appendChild(input);
+                    }
+                }
+            });
+
+            // 2. Intercept fetch API
+            const originalFetch = window.fetch;
+            window.fetch = async function() {
+                let [resource, config] = arguments;
+                if (!config) { config = {}; }
+                if (config.method && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(config.method.toUpperCase())) {
+                    config.headers = config.headers || {};
+                    config.headers['X-CSRF-Token'] = csrfToken;
+                }
+                return originalFetch(resource, config);
+            };
+        }
+    });
+    </script>
+    <!-- Case Number Autocomplete & Prefix Script -->
+    <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+        // 1. Auto-fill Case Number prefix when opening add case modal
+        const oldOpenAddCaseModal = window.openAddCaseModal;
+        if (typeof oldOpenAddCaseModal === 'function') {
+            window.openAddCaseModal = function() {
+                oldOpenAddCaseModal();
+                let today = new Date();
+                let yyyy = today.getFullYear();
+                let mm = String(today.getMonth() + 1).padStart(2, '0');
+                let prefix = `${yyyy}-${mm}-`;
+                
+                let caseInput = document.querySelector('#addCaseForm input[name="case_number"]');
+                if (caseInput && !caseInput.value) {
+                    caseInput.value = prefix;
+                }
+            };
+        }
+
+        // 2. Fetch and apply case numbers datalist
+        const caseInputs = document.querySelectorAll('input[name="case_number"], input#case_number, input#edit_case_number, input#edit_client_case_number');
+        if(caseInputs.length > 0) {
+            try {
+                const res = await fetch("/api/case-numbers");
+                if(res.ok) {
+                    const numbers = await res.json();
+                    const datalist = document.createElement("datalist");
+                    datalist.id = "global-case-numbers";
+                    numbers.forEach(num => {
+                        const opt = document.createElement("option");
+                        opt.value = num;
+                        datalist.appendChild(opt);
+                    });
+                    document.body.appendChild(datalist);
+                    
+                    caseInputs.forEach(input => {
+                        input.setAttribute("list", "global-case-numbers");
+                        input.setAttribute("autocomplete", "off");
+                    });
+                }
+            } catch(e) {
+                console.error("Failed to load case numbers", e);
+            }
+        }
+    });
+    </script>
+    <!-- Reference Data Dynamic Loader -->
+    <script>
+    async function loadRefDataDropdown(refType, selectSelector) {
+        try {
+            const res = await fetch(`/api/refdata/list/${refType}`);
+            if (res.ok) {
+                const names = await res.json();
+                const selects = document.querySelectorAll(selectSelector);
+                selects.forEach(select => {
+                    // check if option exists, if not append it
+                    names.forEach(name => {
+                        let exists = false;
+                        for (let i = 0; i < select.options.length; i++) {
+                            if (select.options[i].value === name) {
+                                exists = true;
+                                break;
+                            }
+                        }
+                        if (!exists) {
+                            const opt = document.createElement("option");
+                            opt.value = name;
+                            opt.text = name;
+                            select.appendChild(opt);
+                        }
+                    });
+                });
+            }
+        } catch(e) { console.error("Error loading ref data", e); }
+    }
+
+    async function addCustomRefData(refType, selectSelector, promptMsg) {
+        const newVal = prompt(promptMsg || "أدخل النوع/الحالة الجديدة:");
+        if (!newVal || newVal.trim() === "") return;
+        
+        try {
+            const res = await fetch("/api/refdata/save", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ ref_type: refType, ref_name: newVal.trim() })
+            });
+            const data = await res.json();
+            if (data.ok) {
+                alert("تمت الإضافة بنجاح");
+                // Immediately add to all relevant selects
+                const selects = document.querySelectorAll(selectSelector);
+                selects.forEach(select => {
+                    const opt = document.createElement("option");
+                    opt.value = newVal.trim();
+                    opt.text = newVal.trim();
+                    select.appendChild(opt);
+                    // Optionally select it
+                    select.value = newVal.trim();
+                });
+            } else {
+                alert("حدث خطأ: " + data.message);
+            }
+        } catch(e) {
+            alert("حدث خطأ في الاتصال بالخادم");
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // تحويل أزرار الإجراءات الفارغة (المربعات الصامتة) إلى أزرار مقروءة بأسماء واضحة لجميع واجهات النظام
+        document.querySelectorAll('.action-btn, a[class*="action-btn"], button[class*="action-btn"]').forEach(btn => {
+            const title = btn.getAttribute('title');
+            if (title && btn.textContent.trim() === '') {
+                const span = document.createElement('span');
+                span.textContent = title;
+                span.style.fontFamily = "'Cairo', sans-serif";
+                span.style.fontSize = "0.8rem";
+                span.style.fontWeight = "700";
+                btn.appendChild(span);
+                
+                // يجب استخدام setProperty مع important لكسر قواعد الـ CSS السابقة (34px)
+                btn.style.setProperty('display', 'inline-flex', 'important');
+                btn.style.setProperty('align-items', 'center', 'important');
+                btn.style.setProperty('justify-content', 'center', 'important');
+                btn.style.setProperty('gap', '4px', 'important');
+                btn.style.setProperty('padding', '6px 12px', 'important');
+                btn.style.setProperty('border-radius', '8px', 'important');
+                btn.style.setProperty('width', 'max-content', 'important');
+                btn.style.setProperty('min-width', 'auto', 'important');
+                btn.style.setProperty('height', 'auto', 'important');
+                btn.style.setProperty('text-decoration', 'none', 'important');
+                
+                btn.removeAttribute('title');
+            }
+        });
+
+        // ── Autofill Country Code for Phone Inputs ──
+        const userPhone = "{{ user.phone if user else '' }}";
+        let defaultCode = "";
+        if (userPhone.startsWith("+")) {
+            const countryCodes = ["+20", "+212", "+213", "+216", "+218", "+222", "+249", "+252", "+253", "+269", "+961", "+962", "+963", "+964", "+965", "+966", "+967", "+968", "+970", "+971", "+973", "+974"];
+            for (let code of countryCodes) {
+                if (userPhone.startsWith(code)) {
+                    defaultCode = code;
+                    break;
+                }
+            }
+            if (!defaultCode) {
+                const match = userPhone.match(/^\+\d{1,3}/);
+                if (match) defaultCode = match[0];
+            }
+        }
+
+        if (defaultCode) {
+            function applyDefaultPhoneCode() {
+                const phoneInputs = document.querySelectorAll('input[name="phone"], input[name="mobile"], input[name="phone_number"], input[name="alt_phone"], input[type="tel"]');
+                phoneInputs.forEach(input => {
+                    // Only set if input is empty
+                    if (!input.value || input.value.trim() === "") {
+                        input.value = defaultCode;
+                        input.style.direction = "ltr";
+                        input.style.textAlign = "left";
+                    }
+                });
+            }
+            
+            // Apply immediately on page load
+            applyDefaultPhoneCode();
+            
+            // Re-apply when a modal is opened
+            const observer = new MutationObserver(mutations => {
+                mutations.forEach(mutation => {
+                    if (mutation.attributeName === "class" || mutation.attributeName === "style") {
+                        if (mutation.target.classList.contains("active") || mutation.target.style.display === "block") {
+                            setTimeout(applyDefaultPhoneCode, 50);
+                        }
+                    }
+                });
+            });
+            
+            document.querySelectorAll('.modal-overlay, .modal').forEach(modal => {
+                observer.observe(modal, { attributes: true });
+            });
+            
+            // Add focus event to inputs to handle edge cases where React/Alpine clears it
+            document.querySelectorAll('input[name="phone"], input[name="mobile"], input[name="phone_number"], input[name="alt_phone"], input[type="tel"]').forEach(input => {
+                input.addEventListener('focus', function() {
+                    if (!this.value || this.value.trim() === "") {
+                        this.value = defaultCode;
+                        this.style.direction = "ltr";
+                        this.style.textAlign = "left";
+                    }
+                });
+            });
+        }
+    });
+    </script>
+
+<script>
+// 🛡️ Global CSRF Auto-Protection for All Forms & Requests
+(function() {
+    function getCsrfCookie() {
+        const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
+        return match ? decodeURIComponent(match[1]) : '';
+    }
+
+    function syncFormCsrfTokens() {
+        const token = getCsrfCookie();
+        if (!token) return;
+        document.querySelectorAll('form').forEach(function(form) {
+            const method = (form.getAttribute('method') || 'GET').toUpperCase();
+            if (method === 'POST') {
+                let input = form.querySelector('input[name="csrf_token"]');
+                if (!input) {
+                    input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'csrf_token';
+                    form.appendChild(input);
+                }
+                if (!input.value) {
+                    input.value = token;
+                }
+            }
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', syncFormCsrfTokens);
+    } else {
+        syncFormCsrfTokens();
+    }
+
+    document.addEventListener('submit', function(e) {
+        const form = e.target;
+        if (form && form.tagName === 'FORM') {
+            const method = (form.getAttribute('method') || 'GET').toUpperCase();
+            if (method === 'POST') {
+                const token = getCsrfCookie();
+                let input = form.querySelector('input[name="csrf_token"]');
+                if (!input) {
+                    input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'csrf_token';
+                    form.appendChild(input);
+                }
+                if (token && (!input.value || input.value.trim() === '')) {
+                    input.value = token;
+                }
+            }
+        }
+    }, true);
+})();
+</script>
+</body>
+</html>

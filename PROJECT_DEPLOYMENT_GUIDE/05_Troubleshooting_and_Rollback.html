@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>دليل استكشاف الأعطال والإصلاح والرجوع لإصدار سابق</title>
+    <style>
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Tajawal:wght@400;500;700;800&family=Fira+Code:wght@400;500;600&display=swap');
+
+@page {
+    size: A4 portrait;
+    margin: 16mm 14mm 18mm 14mm;
+    @bottom-center {
+        content: counter(page);
+        font-family: 'Cairo', sans-serif;
+        font-size: 9pt;
+        color: #64748b;
+    }
+    @bottom-left {
+        content: "دليل نشر وإدارة LawSaaS";
+        font-family: 'Cairo', sans-serif;
+        font-size: 8pt;
+        color: #94a3b8;
+    }
+    @bottom-right {
+        content: "منصة وزيرك (Waziruk)";
+        font-family: 'Cairo', sans-serif;
+        font-size: 8pt;
+        color: #94a3b8;
+    }
+}
+
+*, *:before, *:after { box-sizing: border-box; }
+
+body {
+    font-family: 'Cairo', 'Tajawal', Tahoma, sans-serif;
+    direction: rtl;
+    text-align: right;
+    background-color: #ffffff;
+    color: #0f172a;
+    font-size: 10pt;
+    line-height: 1.65;
+    margin: 0;
+    padding: 0;
+}
+
+.doc-header {
+    background: linear-gradient(135deg, #0b132b 0%, #1c2541 100%);
+    color: #ffffff;
+    padding: 22px 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border-right: 6px solid #d4af37;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+
+.doc-badge {
+    display: inline-block;
+    background: rgba(212, 175, 55, 0.2);
+    color: #d4af37;
+    border: 1px solid #d4af37;
+    padding: 3px 12px;
+    border-radius: 20px;
+    font-size: 9pt;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.doc-title {
+    font-size: 18pt;
+    font-weight: 900;
+    margin: 0 0 4px 0;
+    color: #ffffff;
+}
+
+.doc-subtitle {
+    font-size: 10.5pt;
+    color: #cbd5e1;
+    margin: 0;
+}
+
+h1, h2, h3 {
+    font-family: 'Cairo', sans-serif;
+    color: #0f172a;
+    font-weight: 800;
+}
+
+h1 {
+    font-size: 14pt;
+    border-right: 5px solid #1e3a8a;
+    padding-right: 10px;
+    background: #f8fafc;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    margin-top: 22px;
+    border-radius: 0 4px 4px 0;
+}
+
+h2 {
+    font-size: 12pt;
+    color: #1e3a8a;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 4px;
+    margin-top: 18px;
+}
+
+h3 {
+    font-size: 10.5pt;
+    color: #334155;
+    margin-top: 12px;
+}
+
+p { margin: 5px 0 8px 0; text-align: justify; }
+
+.callout {
+    padding: 10px 14px;
+    border-radius: 6px;
+    margin: 10px 0;
+    font-size: 9.5pt;
+    page-break-inside: avoid;
+}
+
+.callout-info { background: #eff6ff; border-right: 4px solid #3b82f6; color: #1e40af; }
+.callout-warn { background: #fffbeb; border-right: 4px solid #f59e0b; color: #92400e; }
+.callout-danger { background: #fef2f2; border-right: 4px solid #ef4444; color: #991b1b; }
+.callout-success { background: #f0fdf4; border-right: 4px solid #10b981; color: #065f46; }
+
+.callout-title {
+    font-weight: 800;
+    margin-bottom: 3px;
+    font-size: 10pt;
+}
+
+.term-box {
+    background: #0f172a;
+    border-radius: 6px;
+    margin: 12px 0;
+    overflow: hidden;
+    border: 1px solid #334155;
+    page-break-inside: avoid;
+}
+
+.term-header {
+    background: #1e293b;
+    padding: 5px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #334155;
+}
+
+.term-dots { display: flex; gap: 5px; }
+.term-dot { width: 9px; height: 9px; border-radius: 50%; }
+.dot-red { background: #ef4444; }
+.dot-yellow { background: #f59e0b; }
+.dot-green { background: #10b981; }
+
+.term-title {
+    color: #94a3b8;
+    font-size: 8pt;
+    font-family: 'Fira Code', monospace;
+    direction: ltr;
+}
+
+.term-body {
+    padding: 10px 14px;
+    font-family: 'Fira Code', monospace;
+    font-size: 8.5pt;
+    line-height: 1.5;
+    color: #38bdf8;
+    direction: ltr;
+    text-align: left;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.cmd-comment { color: #64748b; }
+.cmd-prompt { color: #10b981; font-weight: bold; }
+.cmd-text { color: #f8fafc; font-weight: bold; }
+.cmd-arg { color: #fbbf24; }
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0 14px 0;
+    font-size: 9pt;
+    page-break-inside: avoid;
+}
+
+th {
+    background: #1e293b;
+    color: #ffffff;
+    font-weight: 700;
+    padding: 6px 8px;
+    border: 1px solid #334155;
+    text-align: right;
+}
+
+td {
+    padding: 6px 8px;
+    border: 1px solid #e2e8f0;
+    vertical-align: top;
+    line-height: 1.45;
+}
+
+tbody tr:nth-child(even) { background-color: #f8fafc; }
+
+.step-card {
+    display: flex;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    margin: 8px 0;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    page-break-inside: avoid;
+}
+
+.step-num-badge {
+    background: #1e3a8a;
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 11pt;
+    width: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.step-details {
+    padding: 8px 12px;
+    flex-grow: 1;
+}
+
+.step-name {
+    font-weight: 700;
+    font-size: 10pt;
+    color: #0f172a;
+    margin-bottom: 2px;
+}
+
+.step-text {
+    font-size: 9pt;
+    color: #475569;
+}
+
+.page-break { page-break-before: always; }
+</style>
+</head>
+<body>
+    <div class="doc-header">
+        <div class="doc-badge">الدليل 05 • استكشاف الأخطاء و Rollback</div>
+        <div class="doc-title">دليل استكشاف الأعطال والإصلاح والرجوع لإصدار سابق</div>
+        <div class="doc-subtitle">حل مشكلات السيرفر، أخطاء 500 و 502، والتعافي السريع من أخطاء النشر</div>
+    </div>
+    
+<h1>1. تشخيص وحل أشهر 5 مشاكل تواجه المطورين عند النشر</h1>
+
+<div class="callout callout-danger">
+    <div class="callout-title">🔥 المشكلة 1: خطأ 502 Bad Gateway بعد النشر</div>
+    <p>
+        <strong>المعنى:</strong> خادم Nginx يعمل بنجاح، لكنه عاجز عن الاتصال بتطبيق FastAPI لأن الحاوية متوقفة أو فشلت في الإقلاع.
+        <br><strong>خطوات التشخيص الفوري:</strong>
+        <br>1. افحص حالة الحاوية: <code>docker ps -a</code> (ستجد حالتها Exited).
+        <br>2. اقرأ سبب الانهيار: <code>docker logs --tail 50 lawsaas_app</code>
+        <br><strong>أشهر سبب:</strong> وجود خطأ تركيبي (SyntaxError) أو استيراد مفقود (ImportError) في ملف بايثون. أصلح الخطأ في الكود وأعد بناء الحاوية.
+    </p>
+</div>
+
+<div class="callout callout-warn">
+    <div class="callout-title">⚠️ المشكلة 2: خطأ 500 Internal Server Error في صفحة معينة</div>
+    <p>
+        <strong>المعنى:</strong> الموقع يعمل، ولكن عند الدخول لصفحة محددة (مثل القضايا الواردة) يظهر خطأ 500.
+        <br><strong>السبب:</strong> وجود متغير ناقص في قالب Jinja2، أو استعلام قاعدة بيانات يستعلم عن حقل غير موجود.
+        <br><strong>طريقة الحل:</strong> افتح سجلات التطبيق أثناء تحديث الصفحة لمشاهدة الـ Traceback الدقيق:
+        <br><code>docker logs -f lawsaas_app</code>
+    </p>
+</div>
+
+<div class="callout callout-info">
+    <div class="callout-title">💡 المشكلة 3: التعديلات لا تظهر في المتصفح بعد النشر</div>
+    <p>
+        <strong>السبب:</strong> المتصفح يحتفظ بنسخة قديمة مؤقتة من ملفات الـ CSS والـ JavaScript (Browser Cache).
+        <br><strong>الحل السريع:</strong> اضغط في المتصفح على <strong>Ctrl + Shift + R</strong> أو <strong>Ctrl + F5</strong> لفرض تحديث كامل بدون كاش، أو افتح نافذة تصفح خفي (Incognito).
+    </p>
+</div>
+
+<h1>2. السيناريوهات العملية الخمسة لإدارة التحديثات</h1>
+
+<h2>السيناريو 1: عدلت قالباً أو صفحة HTML وأريد نشرها بسرعة</h2>
+<ol>
+    <li>عدل القالب محلياً واختبره.</li>
+    <li>احفظ وادفع التعديل: <code>git add . && git commit -m "تعديل واجهة القضايا" && git push origin main</code></li>
+    <li>على السيرفر: <code>cd /opt/lawsaas && git pull origin main</code></li>
+    <li>أعد تشغيل التطبيق: <code>docker restart lawsaas_app</code> (لا حاجة لإعادة البناء الكامل لأن القوالب تُحدث فوراً).</li>
+</ol>
+
+<h2>السيناريو 2: أضفت ميزة جديدة تتضمن عموداً جديداً في قاعدة البيانات</h2>
+<ol>
+    <li>أضف العمود في <code>database/models.py</code> ومحرك الترقية التلقائية في <code>database/database.py</code>.</li>
+    <li>ارفع التعديل إلى GitHub بـ <code>git push origin main</code>.</li>
+    <li>على السيرفر: اسحب التعديلات وأعد بناء الحاوية:
+        <br><code>docker compose up -d --build app</code>
+    </li>
+    <li>يقوم التطبيق عند انطلاقه بفحص الجدول وإضافة العمود تلقائياً.</li>
+</ol>
+
+<h2>السيناريو 3: حدث خطأ طارئ بعد النشر وأريد الرجوع فوراً لإصدار سابق (Rollback)</h2>
+<p>
+إذا نشرت تحديثاً وتسبب في مشكلة وتريد إرجاع الموقع خلال ثوانٍ إلى النسخة السابقة التي كانت تعمل:
+</p>
+
+<div class="term-box">
+    <div class="term-header">
+        <div class="term-title">خطوات الـ Rollback الفوري</div>
+    </div>
+    <div class="term-body"><span class="cmd-comment"># 1. الدخول لمجلد المشروع على السيرفر:</span>
+<span class="cmd-prompt">root@lawsaas-vps:~#</span> <span class="cmd-text">cd /opt/lawsaas</span>
+
+<span class="cmd-comment"># 2. عرض آخر التعديلات لمعرفة رقم الـ Commit السابق:</span>
+<span class="cmd-prompt">root@lawsaas-vps:/opt/lawsaas#</span> <span class="cmd-text">git log --oneline -n 5</span>
+<span class="cmd-comment"># يظهر مثلاً:</span>
+a1b2c3d (HEAD -> main) التحديث الجديد الذي سبب المشكلة
+793d3b0 التحديث القديم المستقر
+
+<span class="cmd-comment"># 3. العودة الفورية للإصدار القديم المستقر:</span>
+<span class="cmd-prompt">root@lawsaas-vps:/opt/lawsaas#</span> <span class="cmd-text">git checkout 793d3b0</span>
+
+<span class="cmd-comment"># 4. إعادة تشغيل الحاوية فوراً:</span>
+<span class="cmd-prompt">root@lawsaas-vps:/opt/lawsaas#</span> <span class="cmd-text">docker compose up -d --build app</span>
+<span class="cmd-comment"># عاد موقعك الآن للعمل بسلام في أقل من دقيقة!</span></div>
+</div>
+
+</body>
+</html>

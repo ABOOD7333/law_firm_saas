@@ -68,8 +68,29 @@
         </div>
     </div>
 
-    <!-- The 6 Main Cards Section (Exactly matching judicial and enforcement sections) -->
-    <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; margin-top: 10px;" class="hub-cards-grid">
+    <!-- The 7 Main Cards Section (Including 0. قيد ورفع دعوى جديدة) -->
+    <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 14px; margin-top: 10px;" class="hub-cards-grid">
+
+        <!-- 0. قيد ورفع دعوى جديدة -->
+        <div class="incoming-card" style="background: #ffffff; border: 2px solid #f59e0b; border-radius: 18px; padding: 24px 14px 20px 14px; text-align: center; box-shadow: 0 8px 25px rgba(245, 158, 11, 0.08); display: flex; flex-direction: column; justify-content: space-between; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); min-height: 290px;">
+            <div>
+                <!-- Circular Icon -->
+                <div style="width: 68px; height: 68px; margin: 0 auto 16px auto; border-radius: 50%; background: linear-gradient(135deg, #d97706, #b45309); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; box-shadow: 0 8px 20px rgba(180, 83, 9, 0.28);">
+                    <i class="fa-solid fa-file-signature"></i>
+                </div>
+                <!-- Title -->
+                <h2 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin-bottom: 8px; line-height: 1.4;">
+                    قيد ورفع<br>دعوى جديدة
+                </h2>
+                <div style="display: inline-block; background: #fef3c7; color: #92400e; padding: 4px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; margin-bottom: 16px;">
+                    {{ section_stats['new_claim'] or 0 }} دعوى مقيدة
+                </div>
+            </div>
+            <!-- Enter Button -->
+            <a href="/incoming-cases/new_claim" style="display: block; width: 100%; background: linear-gradient(135deg, #d97706, #b45309); color: #ffffff; text-decoration: none; padding: 10px 0; border-radius: 10px; font-weight: 800; font-size: 0.92rem; box-shadow: 0 4px 12px rgba(180, 83, 9, 0.25); transition: all 0.2s ease;">
+                دخول
+            </a>
+        </div>
 
         <!-- 1. الشرطة -->
         <div class="incoming-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 24px 14px 20px 14px; text-align: center; box-shadow: 0 8px 25px rgba(0,0,0,0.04); display: flex; flex-direction: column; justify-content: space-between; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); min-height: 290px;">
@@ -231,7 +252,8 @@
             <!-- تصفية حسب الجهة القضائية -->
             <div style="flex: 1; min-width: 170px;">
                 <select name="section_filter" style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 0.88rem; background: #f8fafc; box-sizing: border-box;" onchange="this.form.submit()">
-                    <option value="">جميع الجهات القضائية</option>
+                    <option value="">جميع الأقسام والجهات</option>
+                    <option value="new_claim" {% if section_filter == 'new_claim' %}selected{% endif %}>0. قيد ورفع دعوى جديدة</option>
                     <option value="police" {% if section_filter == 'police' %}selected{% endif %}>1. المعروضة أمام الشرطة</option>
                     <option value="prosecution" {% if section_filter == 'prosecution' %}selected{% endif %}>2. المنظورة أمام النيابة</option>
                     <option value="first_instance" {% if section_filter == 'first_instance' %}selected{% endif %}>3. المحكمة الابتدائية</option>
@@ -301,7 +323,9 @@
                                 {{ r.assigned_lawyer.name if r.assigned_lawyer else 'غير محدد' }}
                             </td>
                             <td style="padding: 12px 14px; font-size: 0.88rem; color: #0f172a;">
-                                {% if r.section_key == 'police' %}
+                                {% if r.section_key == 'new_claim' %}
+                                    {{ r.internal_number or ('#' ~ r.id) }} ({{ r.target_authority or 'دعوى' }})
+                                {% elif r.section_key == 'police' %}
                                     {{ r.police_report_number or '-' }}
                                 {% elif r.section_key == 'prosecution' %}
                                     {{ r.prosecution_file_number or '-' }}
@@ -475,8 +499,9 @@ function openHubDetailsModal(id) {
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; font-size: 0.88rem;">
                         <div><strong>الجهة:</strong> ${data.section_title}</div>
                         <div><strong>موضوع القضية:</strong> ${data.case_subject || '-'}</div>
-                        <div><strong>رقم القضية / البلاغ:</strong> ${data.police_report_number || data.prosecution_file_number || data.court_case_number || data.appeal_case_number || data.enforcement_file_number || '-'}</div>
-                        <div><strong>اسم الهيئة / المحكمة:</strong> ${data.police_station || data.prosecution_name || data.court_name || data.appeal_court_name || data.supreme_court_name || data.enforcement_authority || '-'}</div>
+                        <div><strong>الخصم / المدعى عليه:</strong> ${data.opponent_name || '-'}</div>
+                        <div><strong>رقم القضية / البلاغ:</strong> ${data.police_report_number || data.prosecution_file_number || data.court_case_number || data.appeal_case_number || data.enforcement_file_number || (data.section_key === 'new_claim' ? (data.poa_number ? 'وكالة: ' + data.poa_number : 'قيد جديد') : '-')}</div>
+                        <div><strong>اسم الهيئة / المحكمة:</strong> ${data.target_authority || data.police_station || data.prosecution_name || data.court_name || data.appeal_court_name || data.supreme_court_name || data.enforcement_authority || '-'}</div>
                     </div>
                 </div>
 

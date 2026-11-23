@@ -111,6 +111,7 @@
     <h3 style="color: var(--primary-color); margin-bottom: 5px;">رفع مستند جديد لملف القضية</h3>
     <p style="color: var(--text-muted); font-size: 0.9rem;">اضغط هنا لاختيار الملف (PDF, صورة, Word)</p>
     <form action="#" method="post" enctype="multipart/form-data" style="display: none;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <input type="file" id="file-upload" name="document" onchange="alert('ميزة الرفع قيد التطوير وسيتم تفعيلها قريباً')">
     </form>
 </div>

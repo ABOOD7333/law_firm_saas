@@ -350,6 +350,8 @@
         }
     </style>
     {% block head %}{% endblock %}
+    <!-- DOMPurify: تعقيم HTML قبل إدراجه في innerHTML [BUG-008 FIX] -->
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
 </head>
 <body>
     <!-- Sidebar Overlay -->

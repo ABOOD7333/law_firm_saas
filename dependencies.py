@@ -220,10 +220,8 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
                     if admin_user and getattr(admin_user, 'is_superadmin', 0) == 1:
                         is_support_session = True
                         
-        # 3. Fallback cookie flag check
-        if not is_support_session and request.cookies.get("is_support_session") == "1":
-            is_support_session = True
-        
+        # NOTE: Cookie-based fallback for is_support_session was removed (security risk).
+        # Only database-backed checks (device_id or superadmin_session_token) are trusted.
         user.is_support_session = is_support_session
 
         # Superadmins bypass office blocks
@@ -252,8 +250,8 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
                             user.subscription_expired = True
                         elif user.subscription_plan == 'trial':
                             user.trial_days_left = diff
-                    except:
-                        pass
+                    except Exception:
+                        pass  # [BUG-005 FIX] تاريخ انتهاء اشتراك غير صالح — نتجاهل ونكمل
                 
                 # تحميل الموديولات المقفلة على هذا المكتب (Feature Flagging)
                 import json

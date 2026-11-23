@@ -1,4 +1,4 @@
-"""
+﻿"""
 Database Configuration — LawSaaS
 يقرأ DATABASE_URL من ملف .env تلقائياً عبر python-dotenv
 """
@@ -6,6 +6,11 @@ from sqlalchemy import create_engine, event, inspect, text as _sql_text
 from sqlalchemy.orm import sessionmaker
 from .models import Base
 import os
+import logging
+import re  # [BUG-001 FIX] للتحقق من أسماء الجداول والأعمدة
+
+# [BUG-020 FIX] استخدام logger بدلاً من print
+_db_logger = logging.getLogger("lawsaas.database")
 
 # تحميل ملف .env — لكن لا يتغلب على متغيرات Railway (override=False)
 try:
@@ -67,7 +72,7 @@ def init_db():
     """
     try:
         Base.metadata.create_all(bind=engine)
-        print("[Database] create_all completed successfully.")
+        _db_logger.info("[Database] create_all completed successfully.")  # [BUG-020 FIX]
     except Exception:
         # Do not print the connection URL or driver exception (which may embed
         # deployment credentials). A partially initialized app must not start.
@@ -126,7 +131,7 @@ def init_db():
                 for obsolete_table in ("ai_chat_history", "ai_knowledge", "ai_user_quotas", "rag_chunk_metadata"):
                     if obsolete_table in inspect(conn).get_table_names():
                         conn.execute(_sql_text(f"DROP TABLE {obsolete_table}"))
-        print("[Database] Obsolete AI/RAG data removed; Yemeni-law records retained.")
+        _db_logger.info("[Database] Obsolete AI/RAG data removed; Yemeni-law records retained.")  # [BUG-020 FIX]
     except Exception:
         # A failed destructive migration must abort startup rather than leave the
         # application partially migrated or continue serving obsolete features.
@@ -177,20 +182,6 @@ def init_db():
     except Exception:
         pass
 
-    try:
-        from sqlalchemy import text
-        with engine.begin() as conn:
-            conn.execute(text("ALTER TABLE law_audit_log ADD COLUMN prev_hash TEXT;"))
-    except Exception:
-        pass
-
-    try:
-        from sqlalchemy import text
-        with engine.begin() as conn:
-            conn.execute(text("ALTER TABLE law_audit_log ADD COLUMN entry_hash TEXT;"))
-    except Exception:
-        pass
-
     # تجديد خطط المكاتب التجريبية المنتهية لضمان عمل واجهات النظام والمستخدمين التجريبيين دون حظر
     try:
         from sqlalchemy import text
@@ -199,7 +190,7 @@ def init_db():
                 "UPDATE law_offices SET subscription_plan = 'yearly', subscription_end = '2030-01-01 00:00:00', is_active = 1 WHERE is_active = 1 AND (subscription_plan = 'trial' OR subscription_end IS NULL OR subscription_end < '2027-01-01');"
             ))
     except Exception as e:
-        print(f"[Database Auto-Renew] {e}")
+        _db_logger.info(f"[Database Auto-Renew] {e}")  # [BUG-020 FIX]
     # إزالة حقول درجات التقاضي وبيانات المحكمة والنتائج من جدول law_cases نهائياً
     cols_to_drop = [
         'litigation_level_key',
@@ -268,6 +259,19 @@ def init_db():
 
     # Add judicial section fields to law_incoming_cases if not exists
     new_incoming_cols = [
+        ('target_authority', 'TEXT'),
+        ('opponent_name', 'TEXT'),
+        ('opponent_id_number', 'TEXT'),
+        ('opponent_phone', 'TEXT'),
+        ('opponent_address', 'TEXT'),
+        ('opponent_type', 'TEXT'),
+        ('poa_number', 'TEXT'),
+        ('poa_date', 'TEXT'),
+        ('claim_amount', 'REAL'),
+        ('claim_requests', 'TEXT'),
+        ('claim_grounds', 'TEXT'),
+        ('hijri_year', 'TEXT'),
+        ('incoming_sequence', 'INTEGER'),
         ('case_subject', 'TEXT'),
         ('crime_classification', 'TEXT'),
         ('client_capacity', 'TEXT'),
@@ -654,16 +658,7 @@ def init_db():
         except Exception:
             pass
 
-    # Migration for law_cases consultation_client_name
-    try:
-        from sqlalchemy import text
-        with engine.begin() as conn:
-            conn.execute(text("ALTER TABLE law_cases ADD COLUMN consultation_client_name TEXT;"))
-    except Exception:
-        pass
-
     # Migrations for law_timesheets
-
     ts_cols = [
         ("is_billed", "INTEGER DEFAULT 0"),
         ("invoice_id", "INTEGER"),
@@ -701,6 +696,8 @@ def init_db():
         pass
 
     # Dynamic Column Synchronization (Ensures PostgreSQL on Railway has all model columns)
+    # [BUG-001 FIX] التحقق من أسماء الجداول والأعمدة قبل استخدامها في SQL
+    _SAFE_IDENTIFIER = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]{0,63}$')
     try:
         import sqlalchemy as sa
         insp = sa.inspect(engine)
@@ -711,222 +708,22 @@ def init_db():
                     existing_cols = {c['name'] for c in insp.get_columns(t_name)}
                     for col in t_obj.columns:
                         if col.name not in existing_cols:
+                            # [BUG-001 FIX] التحقق من صحة اسم العمود والجدول قبل تنفيذ SQL
+                            if not _SAFE_IDENTIFIER.match(t_name) or not _SAFE_IDENTIFIER.match(col.name):
+                                _db_logger.warning(f"[Migration] Skipped unsafe identifier: table={t_name!r} col={col.name!r}")
+                                continue
                             try:
                                 col_type_str = col.type.compile(engine.dialect)
                                 sql_str = f'ALTER TABLE "{t_name}" ADD COLUMN "{col.name}" {col_type_str}'
                                 conn.execute(text(sql_str))
-                                print(f"[Migration] Auto-added column {col.name} ({col_type_str}) to table {t_name}")
+                                _db_logger.info(f"[Migration] Auto-added column {col.name} ({col_type_str}) to table {t_name}")  # [BUG-020 FIX]
                             except Exception:
                                 pass
     except Exception as sync_exc:
-        print(f"[Migration Notice] Auto-sync column check: {sync_exc}")
-
-    # Call cleanup on startup only if explicitly requested to prevent accidental data loss in production
-    if os.getenv("RUN_STARTUP_OFFICE_CLEANUP", "false").lower() in ("true", "1"):
-        try:
-            cleanup_and_keep_official_offices()
-        except Exception as e:
-            print(f"[Startup Cleanup Warning] {e}")
+        _db_logger.info(f"[Migration Notice] Auto-sync column check: {sync_exc}")  # [BUG-020 FIX]
 
     # Never log DATABASE_URL: it may contain a username and password.
-    print(f"[Database] Connected using dialect: {engine.dialect.name}")
-    print(f"[Database] Tables initialized successfully.")
-
-
-def cleanup_and_keep_official_offices(db_session=None):
-    """
-    بتر وحذف نهائي قطعي من قاعدة البيانات:
-    1. حذف وشطب كافة المكاتب الأخرى (المهندس الفخري، محمد العليمي، عمرو العليمي، أريج محمد) نهائياً مع كافة مستخدميها وبياناتها
-    2. تصفية وحذف كافة القضايا والموكلين والجلسات والبيانات التجريبية من مكتب 1 (مكتب عبدالله العليمي للمحاماة)
-    3. الإبقاء الحصري فقط على: مكتب عبدالله العليمي للمحاماة ومكتب هشام دغيش للمحاماة
-    """
-    from sqlalchemy import text
-    from sqlalchemy.orm import Session
-    import traceback
-    
-    if isinstance(db_session, Session):
-        db = db_session
-        should_close = False
-    else:
-        db = SessionLocal()
-        should_close = True
-
-    try:
-        # 1. فك قيود المفاتيح مؤقتاً لضمان الحذف الجذري
-        is_pg = "postgresql" in str(db.bind.url) if db.bind else False
-        if is_pg:
-            try:
-                db.execute(text("SET session_replication_role = 'replica';"))
-            except Exception:
-                pass
-        else:
-            try:
-                db.execute(text("PRAGMA foreign_keys = OFF;"))
-            except Exception:
-                pass
-
-        # 2. تحديد المكاتب المطلوب الإبقاء عليها والمكاتب المطلوب بترها
-        law_offices_tbl = Base.metadata.tables.get('law_offices')
-        invoices_tbl = Base.metadata.tables.get('invoices')
-        invoice_items_tbl = Base.metadata.tables.get('invoice_items')
-        access_profiles_tbl = Base.metadata.tables.get('access_profiles')
-        auth_sessions_tbl = Base.metadata.tables.get('auth_sessions')
-
-        keep_offices = db.execute(
-            text("SELECT id FROM law_offices WHERE id IN (1, 6) OR name LIKE :p"),
-            {"p": "%هشام دغيش%"}
-        ).fetchall()
-        keep_ids = [r[0] for r in keep_offices]
-        if 1 not in keep_ids:
-            keep_ids.append(1)
-            
-        all_offices = db.execute(text("SELECT id, name FROM law_offices")).fetchall()
-        del_ids = [r[0] for r in all_offices if r[0] not in keep_ids and 'هشام دغيش' not in (r[1] or '')]
-
-        valid_tables = [
-            'law_client_representatives', 'retainer_agreements',
-            'law_trust_transactions', 'law_trust_accounts',
-            'client_payments', 'invoices', 'payment_requests',
-            'law_document_versions', 'law_documents',
-            'law_pleadings', 'law_executions', 'law_judgments',
-            'law_tasks', 'law_hearings', 'law_parties',
-            'law_limitations', 'law_notes', 'law_correspondences',
-            'law_expenses', 'law_transactions', 'law_power_of_attorney',
-            'law_timesheets', 'law_incoming_cases', 'law_cases',
-            'law_clients', 'client_intake_forms', 'intake_submissions'
-        ]
-
-        if del_ids:
-            # أ) فك المفاتيح الدائرية
-            if law_offices_tbl is not None:
-                try:
-                    db.execute(law_offices_tbl.update().where(law_offices_tbl.c.id.in_(del_ids)).values(owner_user_id=None))
-                except Exception:
-                    pass
-
-            # ب) حذف عناصر الفواتير للمكاتب المحذوفة
-            if invoice_items_tbl is not None and invoices_tbl is not None:
-                try:
-                    del_inv_rows = db.execute(invoices_tbl.select().where(invoices_tbl.c.office_id.in_(del_ids))).fetchall()
-                    del_inv_ids = [r[0] for r in del_inv_rows]
-                    if del_inv_ids:
-                        db.execute(invoice_items_tbl.delete().where(invoice_items_tbl.c.invoice_id.in_(del_inv_ids)))
-                except Exception:
-                    pass
-
-            # ج) حذف كافة السجلات التابعة لتلك المكاتب من جميع الجداول عبر Table Objects الآمنة
-            for tbl_name in valid_tables:
-                t_obj = Base.metadata.tables.get(tbl_name)
-                if t_obj is not None and 'office_id' in t_obj.c:
-                    try:
-                        db.execute(t_obj.delete().where(t_obj.c.office_id.in_(del_ids)))
-                    except Exception:
-                        pass
-
-            # د) حذف الجلسات وحسابات المستخدمين لتلك المكاتب
-            if auth_sessions_tbl is not None and access_profiles_tbl is not None:
-                try:
-                    u_rows = db.execute(access_profiles_tbl.select().where(access_profiles_tbl.c.office_id.in_(del_ids))).fetchall()
-                    u_ids = [r[0] for r in u_rows]
-                    if u_ids:
-                        db.execute(auth_sessions_tbl.delete().where(auth_sessions_tbl.c.user_id.in_(u_ids)))
-                    db.execute(access_profiles_tbl.delete().where(access_profiles_tbl.c.office_id.in_(del_ids)))
-                except Exception:
-                    pass
-                
-            # هـ) حذف سجلات المكاتب نفسها نهائياً من قاعدة البيانات
-            if law_offices_tbl is not None:
-                db.execute(law_offices_tbl.delete().where(law_offices_tbl.c.id.in_(del_ids)))
-            print(f"[Cleanup] Permanently deleted offices: {del_ids}")
-
-        # 3. تصفية وبتر البيانات التجريبية نهائياً من مكتب 1 (مكتب عبدالله العليمي للمحاماة)
-        if invoice_items_tbl is not None and invoices_tbl is not None:
-            try:
-                inv_1 = db.execute(invoices_tbl.select().where(invoices_tbl.c.office_id == 1)).fetchall()
-                inv_1_ids = [r[0] for r in inv_1]
-                if inv_1_ids:
-                    db.execute(invoice_items_tbl.delete().where(invoice_items_tbl.c.invoice_id.in_(inv_1_ids)))
-            except Exception:
-                pass
-            
-        for tbl_name in valid_tables:
-            t_obj = Base.metadata.tables.get(tbl_name)
-            if t_obj is not None and 'office_id' in t_obj.c:
-                try:
-                    db.execute(t_obj.delete().where(t_obj.c.office_id == 1))
-                except Exception:
-                    pass
-
-        # حذف كافة المستخدمين التجريبيين في مكتب 1 والإبقاء حصرياً على حساب ABOOD
-        if auth_sessions_tbl is not None and access_profiles_tbl is not None:
-            try:
-                non_abood_users = db.execute(
-                    access_profiles_tbl.select().where(
-                        (access_profiles_tbl.c.office_id == 1) & (access_profiles_tbl.c.username != 'ABOOD')
-                    )
-                ).fetchall()
-                non_abood_ids = [r[0] for r in non_abood_users]
-                if non_abood_ids:
-                    db.execute(auth_sessions_tbl.delete().where(auth_sessions_tbl.c.user_id.in_(non_abood_ids)))
-                db.execute(
-                    access_profiles_tbl.delete().where(
-                        (access_profiles_tbl.c.office_id == 1) & (access_profiles_tbl.c.username != 'ABOOD')
-                    )
-                )
-            except Exception:
-                pass
-
-        # 4. تثبيت وتحديث مكتب 1 وتعيين ABOOD كمالك وحيد
-        db.execute(text(
-            "UPDATE law_offices SET name = 'مكتب عبدالله العليمي للمحاماة', is_active = 1, is_deleted = 0, "
-            "status_key = 'active', subscription_plan = 'yearly', subscription_end = '2030-01-01 00:00:00' WHERE id = 1"
-        ))
-        abood = db.execute(text("SELECT id FROM access_profiles WHERE username = 'ABOOD'")).first()
-        if abood:
-            db.execute(text(
-                "UPDATE access_profiles SET name = 'عبدالله العليمي (المدير العام)', role = 'مدير', is_superadmin = 1, "
-                "office_id = 1, is_active = 1, is_deleted = 0 WHERE id = :uid"
-            ), {"uid": abood[0]})
-            db.execute(text("UPDATE law_offices SET owner_user_id = :uid WHERE id = 1"), {"uid": abood[0]})
-
-        # 5. تثبيت وتحديث مكتب هشام دغيش (ID: 6)
-        off6 = db.execute(text("SELECT id FROM law_offices WHERE id = 6 OR name LIKE '%هشام دغيش%'")).first()
-        if off6:
-            db.execute(text(
-                "UPDATE law_offices SET name = 'مكتب هشام دغيش للمحاماة', is_active = 1, is_deleted = 0, "
-                "status_key = 'active', subscription_plan = 'yearly', subscription_end = '2030-01-01 00:00:00' WHERE id = :oid"
-            ), {"oid": off6[0]})
-        else:
-            db.execute(text(
-                "INSERT INTO law_offices (id, name, is_active, is_deleted, status_key, subscription_plan, subscription_end) "
-                "VALUES (6, 'مكتب هشام دغيش للمحاماة', 1, 0, 'active', 'yearly', '2030-01-01 00:00:00')"
-            ))
-
-        # إعادة تفعيل قيود المفاتيح الأجنبية
-        if is_pg:
-            try:
-                db.execute(text("SET session_replication_role = 'origin';"))
-            except Exception:
-                pass
-        else:
-            try:
-                db.execute(text("PRAGMA foreign_keys = ON;"))
-            except Exception:
-                pass
-
-        db.commit()
-        print("[Cleanup] SUCCESS: Permanent hard deletion and purge complete!")
-        return {"success": True, "message": "تم الحذف والبتر النهائي بنجاح"}
-    except Exception as e:
-        db.rollback()
-        err = f"{e}\n{traceback.format_exc()}"
-        print(f"[Cleanup Fatal Error] {err}")
-        return {"success": False, "error": str(e), "traceback": err}
-    finally:
-        if should_close:
-            db.close()
-
-
-
+    _db_logger.info(f"[Database] Connected using dialect: {engine.dialect.name}")  # [BUG-020 FIX]
+    _db_logger.info(f"[Database] Tables initialized successfully.")  # [BUG-020 FIX]
 
 

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>الدليل الشامل لـ Git و GitHub للمبتدئين</title>
+    <style>
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Tajawal:wght@400;500;700;800&family=Fira+Code:wght@400;500;600&display=swap');
+
+@page {
+    size: A4 portrait;
+    margin: 16mm 14mm 18mm 14mm;
+    @bottom-center {
+        content: counter(page);
+        font-family: 'Cairo', sans-serif;
+        font-size: 9pt;
+        color: #64748b;
+    }
+    @bottom-left {
+        content: "دليل نشر وإدارة LawSaaS";
+        font-family: 'Cairo', sans-serif;
+        font-size: 8pt;
+        color: #94a3b8;
+    }
+    @bottom-right {
+        content: "منصة وزيرك (Waziruk)";
+        font-family: 'Cairo', sans-serif;
+        font-size: 8pt;
+        color: #94a3b8;
+    }
+}
+
+*, *:before, *:after { box-sizing: border-box; }
+
+body {
+    font-family: 'Cairo', 'Tajawal', Tahoma, sans-serif;
+    direction: rtl;
+    text-align: right;
+    background-color: #ffffff;
+    color: #0f172a;
+    font-size: 10pt;
+    line-height: 1.65;
+    margin: 0;
+    padding: 0;
+}
+
+.doc-header {
+    background: linear-gradient(135deg, #0b132b 0%, #1c2541 100%);
+    color: #ffffff;
+    padding: 22px 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border-right: 6px solid #d4af37;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+
+.doc-badge {
+    display: inline-block;
+    background: rgba(212, 175, 55, 0.2);
+    color: #d4af37;
+    border: 1px solid #d4af37;
+    padding: 3px 12px;
+    border-radius: 20px;
+    font-size: 9pt;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.doc-title {
+    font-size: 18pt;
+    font-weight: 900;
+    margin: 0 0 4px 0;
+    color: #ffffff;
+}
+
+.doc-subtitle {
+    font-size: 10.5pt;
+    color: #cbd5e1;
+    margin: 0;
+}
+
+h1, h2, h3 {
+    font-family: 'Cairo', sans-serif;
+    color: #0f172a;
+    font-weight: 800;
+}
+
+h1 {
+    font-size: 14pt;
+    border-right: 5px solid #1e3a8a;
+    padding-right: 10px;
+    background: #f8fafc;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    margin-top: 22px;
+    border-radius: 0 4px 4px 0;
+}
+
+h2 {
+    font-size: 12pt;
+    color: #1e3a8a;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 4px;
+    margin-top: 18px;
+}
+
+h3 {
+    font-size: 10.5pt;
+    color: #334155;
+    margin-top: 12px;
+}
+
+p { margin: 5px 0 8px 0; text-align: justify; }
+
+.callout {
+    padding: 10px 14px;
+    border-radius: 6px;
+    margin: 10px 0;
+    font-size: 9.5pt;
+    page-break-inside: avoid;
+}
+
+.callout-info { background: #eff6ff; border-right: 4px solid #3b82f6; color: #1e40af; }
+.callout-warn { background: #fffbeb; border-right: 4px solid #f59e0b; color: #92400e; }
+.callout-danger { background: #fef2f2; border-right: 4px solid #ef4444; color: #991b1b; }
+.callout-success { background: #f0fdf4; border-right: 4px solid #10b981; color: #065f46; }
+
+.callout-title {
+    font-weight: 800;
+    margin-bottom: 3px;
+    font-size: 10pt;
+}
+
+.term-box {
+    background: #0f172a;
+    border-radius: 6px;
+    margin: 12px 0;
+    overflow: hidden;
+    border: 1px solid #334155;
+    page-break-inside: avoid;
+}
+
+.term-header {
+    background: #1e293b;
+    padding: 5px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #334155;
+}
+
+.term-dots { display: flex; gap: 5px; }
+.term-dot { width: 9px; height: 9px; border-radius: 50%; }
+.dot-red { background: #ef4444; }
+.dot-yellow { background: #f59e0b; }
+.dot-green { background: #10b981; }
+
+.term-title {
+    color: #94a3b8;
+    font-size: 8pt;
+    font-family: 'Fira Code', monospace;
+    direction: ltr;
+}
+
+.term-body {
+    padding: 10px 14px;
+    font-family: 'Fira Code', monospace;
+    font-size: 8.5pt;
+    line-height: 1.5;
+    color: #38bdf8;
+    direction: ltr;
+    text-align: left;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.cmd-comment { color: #64748b; }
+.cmd-prompt { color: #10b981; font-weight: bold; }
+.cmd-text { color: #f8fafc; font-weight: bold; }
+.cmd-arg { color: #fbbf24; }
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0 14px 0;
+    font-size: 9pt;
+    page-break-inside: avoid;
+}
+
+th {
+    background: #1e293b;
+    color: #ffffff;
+    font-weight: 700;
+    padding: 6px 8px;
+    border: 1px solid #334155;
+    text-align: right;
+}
+
+td {
+    padding: 6px 8px;
+    border: 1px solid #e2e8f0;
+    vertical-align: top;
+    line-height: 1.45;
+}
+
+tbody tr:nth-child(even) { background-color: #f8fafc; }
+
+.step-card {
+    display: flex;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    margin: 8px 0;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    page-break-inside: avoid;
+}
+
+.step-num-badge {
+    background: #1e3a8a;
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 11pt;
+    width: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.step-details {
+    padding: 8px 12px;
+    flex-grow: 1;
+}
+
+.step-name {
+    font-weight: 700;
+    font-size: 10pt;
+    color: #0f172a;
+    margin-bottom: 2px;
+}
+
+.step-text {
+    font-size: 9pt;
+    color: #475569;
+}
+
+.page-break { page-break-before: always; }
+</style>
+</head>
+<body>
+    <div class="doc-header">
+        <div class="doc-badge">الدليل 01 • الأساسيات والنظرية</div>
+        <div class="doc-title">الدليل الشامل لـ Git و GitHub للمبتدئين</div>
+        <div class="doc-subtitle">دليل تأسيسي عملي: من فهم المفاهيم الأساسية وحتى إدارة الفروع والتعامل مع الأخطاء</div>
+    </div>
+    
+<h1>1. ما هو Git وما هو GitHub؟ وما الفرق الجوهري بينهما؟</h1>
+<p>
+كثير من المبتدئين يخلطون بين Git و GitHub ويعتقدون أنهما شيء واحد. الحقيقة أنهما أداتان مختلفتان تعملان معاً:
+</p>
+
+<table>
+    <thead>
+        <tr>
+            <th style="width: 20%;">المعيار</th>
+            <th style="width: 40%;">Git (الأداة المحلية)</th>
+            <th style="width: 40%;">GitHub (المنصة السحابية)</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>ما هو؟</strong></td>
+            <td>برنامج مثبت على جهاز الكمبيوتر الخاص بك، وظيفته تسجيل تاريخ تعديلات الملفات مثل (آلة الزمن).</td>
+            <td>موقع ويب وخدمة سحابية على الإنترنت تستضيف المستودعات التي تدار بواسطة Git لمشاركتها وحفظها.</td>
+        </tr>
+        <tr>
+            <td><strong>أين يعمل؟</strong></td>
+            <td>محلياً على جهازك (Offline) دون الحاجة لاتصال بالإنترنت.</td>
+            <td>على خوادم شركة مايكروسوفت/GitHub وتتطلب اتصالاً بالإنترنت للوصول إليها.</td>
+        </tr>
+        <tr>
+            <td><strong>المسؤولية</strong></td>
+            <td>تتبع التغييرات، إنشاء الفروع، دمج الأكواد، وتسجيل الالتزامات (Commits).</td>
+            <td>النسخ الاحتياطي السحابي، إدارة الفرق، مراجعة الأكواد (Pull Requests)، والأتمتة (Actions).</td>
+        </tr>
+        <tr>
+            <td><strong>المكافئ الواقعي</strong></td>
+            <td>دفتر يومياتك الشخصي الذي تدون فيه كل خطوة بيدك.</td>
+            <td>المكتبة العامة أو الخزينة السحابية التي تضع فيها نسخة من دفترك ليعود إليها الجميع.</td>
+        </tr>
+    </tbody>
+</table>
+
+<h1>2. كيف تعرف المستودع المرتبط بمشروعك؟</h1>
+<p>
+لمعرفة رابط المستودع السحابي على GitHub المرتبط بمجلد مشروعك الحالي، افتح نافذة الأوامر (Terminal) في مجلد المشروع واكتب:
+</p>
+
+<div class="term-box">
+    <div class="term-header">
+        <div class="term-dots"><span class="term-dot dot-red"></span><span class="term-dot dot-yellow"></span><span class="term-dot dot-green"></span></div>
+        <div class="term-title">PowerShell / Bash</div>
+    </div>
+    <div class="term-body"><span class="cmd-prompt">PS ></span> <span class="cmd-text">git remote -v</span>
+<span class="cmd-comment"># النتيجة في مشروع LawSaaS الفعلي:</span>
+origin  https://ABOOD7333@github.com/ABOOD7333/law_firm_saas.git (fetch)
+origin  https://ABOOD7333@github.com/ABOOD7333/law_firm_saas.git (push)</div>
+</div>
+
+<p>
+<strong>شرح النتيجة:</strong> كلمة <code>origin</code> هي الاسم المستعار الافتراضي للمستودع السحابي، والرابط يوضح أن مشروعك مرتبط بحساب <code>ABOOD7333</code> في المستودع <code>law_firm_saas</code>.
+</p>
+
+<h1>3. دورة حياة الملفات في Git (المراحل الثلاث)</h1>
+<p>
+عندما تعدل أي ملف في مشروعك، يمر الملف بثلاث مناطق رئيسية قبل أن يصل إلى GitHub:
+</p>
+
+<div class="step-card">
+    <div class="step-num-badge">1</div>
+    <div class="step-details">
+        <div class="step-name">منطقة العمل المحلية (Working Directory)</div>
+        <div class="step-text">الملفات التي فتحتها في المحرر وقمت بتعديلها أو إضافتها. تظهر باللون الأحمر عند فحص الحالة لأن Git رصد التغيير لكنه لم يجهزه للحفظ بعد.</div>
+    </div>
+</div>
+
+<div class="step-card">
+    <div class="step-num-badge">2</div>
+    <div class="step-details">
+        <div class="step-name">منطقة التجهيز (Staging Area)</div>
+        <div class="step-text">تصل إليها بعد تنفيذ أمر <code>git add</code>. تعني أنك اخترت هذه التعديلات بالتحديد لتكون جزءاً من الحزمة القادمة. تظهر باللون الأخضر.</div>
+    </div>
+</div>
+
+<div class="step-card">
+    <div class="step-num-badge">3</div>
+    <div class="step-details">
+        <div class="step-name">المستودع المحلي المحفوظ (Local Repository)</div>
+        <div class="step-text">تصل إليها بعد تنفيذ أمر <code>git commit</code>. هنا يُسجل التعديل نهائياً في سجل تاريخ المشروع المحلي برمز تجزئة فريد (Commit Hash) ورسالة وصفية.</div>
+    </div>
+</div>
+
+<div class="step-card">
+    <div class="step-num-badge">4</div>
+    <div class="step-details">
+        <div class="step-name">المستودع السحابي (Remote GitHub)</div>
+        <div class="step-text">تصل إليها بعد تنفيذ أمر <code>git push</code>. تُرسل الحزم المحفوظة من جهازك عبر الإنترنت لتستقر في خوادم GitHub.</div>
+    </div>
+</div>
+
+<h1>4. الأوامر الأساسية اليومية بالتفصيل</h1>
+
+<h2>أ) فحص التغييرات: git status و git diff</h2>
+<div class="term-box">
+    <div class="term-body"><span class="cmd-prompt">PS ></span> <span class="cmd-text">git status</span>
+<span class="cmd-comment"># يخبرك: ما هو الفرع الحالي؟ ما هي الملفات التي عدلتها؟ وما هي الملفات الجديدة؟</span>
+
+<span class="cmd-prompt">PS ></span> <span class="cmd-text">git diff</span>
+<span class="cmd-comment"># يوضح لك بالتفصيل الأسطر التي حذفتها (-) والأسطر التي أضفتها (+) داخل الأكواد</span></div>
+</div>
+
+<h2>ب) تجهيز الملفات: git add</h2>
+<div class="term-box">
+    <div class="term-body"><span class="cmd-comment"># لتجهيز ملف واحد محدد:</span>
+<span class="cmd-prompt">PS ></span> <span class="cmd-text">git add</span> <span class="cmd-arg">routers/incoming_cases.py</span>
+
+<span class="cmd-comment"># لتجهيز كافة الملفات المعدلة والجديدة دفعة واحدة:</span>
+<span class="cmd-prompt">PS ></span> <span class="cmd-text">git add .</span></div>
+</div>
+
+<h2>ج) حفظ الالتزام: git commit</h2>
+<div class="term-box">
+    <div class="term-body"><span class="cmd-prompt">PS ></span> <span class="cmd-text">git commit -m</span> <span class="cmd-arg">"إضافة حقول الدعاوى الجديدة وتحديث التوجيه"</span>
+<span class="cmd-comment"># الرمز -m اختصار لـ Message. اكتب دائماً رسالة واضحة تلخص ما قمت بعمله.</span></div>
+</div>
+
+<h2>د) رفع التعديلات وسحبها: git push و git pull</h2>
+<div class="term-box">
+    <div class="term-body"><span class="cmd-comment"># رفع تعديلاتك من جهازك إلى فرع main على GitHub:</span>
+<span class="cmd-prompt">PS ></span> <span class="cmd-text">git push origin main</span>
+
+<span class="cmd-comment"># سحب آخر التعديلات الموجودة على GitHub وتحديث جهازك بها:</span>
+<span class="cmd-prompt">PS ></span> <span class="cmd-text">git pull origin main</span></div>
+</div>
+
+<div class="page-break"></div>
+<h1>5. الفروع (Branches) وإدارتها باحتراف</h1>
+<p>
+<strong>ما هو الفرع؟</strong> الفرع هو مسار عمل مستقل ومنعزل تماماً عن الكود الأصلي. تخيل أنك تبني ميزة تجريبية جديدة، بدلاً من تعديل كود <code>main</code> المستقر، تفتح فرعاً مستقلاً وتجرب فيه بحرية؛ إن نجحت دمجته، وإن فشلت حذفته دون أن يتأثر موقعك الحي!
+</p>
+
+<table>
+    <thead>
+        <tr>
+            <th style="width: 35%;">الأمر</th>
+            <th style="width: 65%;">الوظيفة العملية</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code>git branch</code></td>
+            <td>عرض قائمة بكافة الفروع المحلية مع وضع علامة (*) بجانب الفرع الفعال حالياً.</td>
+        </tr>
+        <tr>
+            <td><code>git checkout -b feature-name</code></td>
+            <td>إنشاء فرع جديد باسم <code>feature-name</code> والانتقال إليه فوراً.</td>
+        </tr>
+        <tr>
+            <td><code>git switch main</code></td>
+            <td>التبديل والرجوع إلى الفرع الرئيسي <code>main</code>.</td>
+        </tr>
+        <tr>
+            <td><code>git merge feature-name</code></td>
+            <td>دمج تعديلات الفرع <code>feature-name</code> داخل الفرع الذي تقف عليه حالياً.</td>
+        </tr>
+        <tr>
+            <td><code>git branch -d feature-name</code></td>
+            <td>حذف الفرع محلياً بعد الانتهاء من دمجه بنجاح.</td>
+        </tr>
+    </tbody>
+</table>
+
+<h1>6. أشهر أخطاء Git وحلولها السريعة للمبتدئين</h1>
+
+<div class="callout callout-danger">
+    <div class="callout-title">⚠️ الخطأ الأول: Updates were rejected because the remote contains work (التعارض عند الرفع)</div>
+    <p>
+        <strong>السبب:</strong> يوجد تعديل جديد على GitHub لم تسحبه إلى جهازك أولاً (قام به زميل أو تم تعديله على السيرفر).
+        <br><strong>الحل السحري:</strong> قم بسحب التعديلات أولاً ثم أعد الرفع:
+        <br><code>git pull --rebase origin main</code> ثم <code>git push origin main</code>
+    </p>
+</div>
+
+<div class="callout callout-warn">
+    <div class="callout-title">⚠️ الخطأ الثاني: تراجعت عن تعديلات ملف معين قبل عمل Commit</div>
+    <p>
+        إذا عدلت ملفاً بالخطأ وأردت إلغاء كل تعديلاتك وإرجاعه تماماً كما كان في آخر Commit:
+        <br><code>git restore path/to/file.py</code>
+    </p>
+</div>
+
+<div class="callout callout-info">
+    <div class="callout-title">💡 الخطأ الثالث: كتبت رسالة Commit خاطئة وتريد تعديلها</div>
+    <p>
+        طالما أنك لم ترفع التعديل بعد بـ Push، يمكنك تعديل آخر رسالة عبر:
+        <br><code>git commit --amend -m "الرسالة الصحيحة الجديدة"</code>
+    </p>
+</div>
+
+</body>
+</html>

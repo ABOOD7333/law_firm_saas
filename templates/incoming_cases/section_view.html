@@ -422,6 +422,9 @@ input[type="date"].custom-input {
         <a href="/incoming-cases" class="section-nav-tab">
             <i class="fa-solid fa-arrow-right"></i> لوحة القضايا الواردة (الرئيسية)
         </a>
+        <a href="/incoming-cases/new_claim" class="section-nav-tab {% if section_key == 'new_claim' %}active{% endif %}" style="{% if section_key == 'new_claim' %}border-color: #b45309; color: #b45309;{% endif %}">
+            <i class="fa-solid fa-file-signature"></i> 0. قيد ورفع دعوى جديدة
+        </a>
         <a href="/incoming-cases/police" class="section-nav-tab {% if section_key == 'police' %}active{% endif %}">
             <i class="fa-solid fa-shield-halved"></i> 1. المعروضة أمام الشرطة
         </a>
@@ -549,7 +552,9 @@ input[type="date"].custom-input {
                             </td>
                             <td>
                                 <strong style="color: #0f172a;">
-                                {% if section_key == 'police' %}
+                                {% if section_key == 'new_claim' %}
+                                    {{ r.internal_number or ('#' ~ r.id) }} ({{ r.poa_number or 'جديد' }})
+                                {% elif section_key == 'police' %}
                                     {{ r.police_report_number or '-' }}
                                 {% elif section_key == 'prosecution' %}
                                     {{ r.prosecution_file_number or '-' }}
@@ -565,7 +570,9 @@ input[type="date"].custom-input {
                                 </strong>
                             </td>
                             <td>
-                                {% if section_key == 'police' %}
+                                {% if section_key == 'new_claim' %}
+                                    {{ r.target_authority or 'الجهة القضائية' }}
+                                {% elif section_key == 'police' %}
                                     {{ r.police_station or '-' }}
                                 {% elif section_key == 'prosecution' %}
                                     {{ r.prosecution_name or '-' }}
@@ -751,7 +758,12 @@ input[type="date"].custom-input {
                         <div class="custom-form-group" id="clientCapacityWrapper">
                             <label class="custom-label">مركز الموكل في القضية <span style="color: #e11d48;">*</span></label>
                             <select name="client_capacity" id="clientCapacitySelect" class="custom-select" required>
-                                {% if section_key == 'police' %}
+                                {% if section_key == 'new_claim' %}
+                                    <option value="المدعي (صاحب الحق)" selected>المدعي (صاحب الحق)</option>
+                                    <option value="وكيل شرعي / نظامي">وكيل شرعي / نظامي</option>
+                                    <option value="الشاكي / طالب التنفيذ">الشاكي / طالب التنفيذ</option>
+                                    <option value="ولي / وصي">ولي / وصي</option>
+                                {% elif section_key == 'police' %}
                                     <option value="شاكي" selected>شاكي</option>
                                     <option value="مشكو في حقه">مشكو في حقه</option>
                                     <option value="مدعي">مدعي</option>
@@ -788,7 +800,178 @@ input[type="date"].custom-input {
                         <i class="fa-solid fa-scale-balanced"></i> البيانات القضائية والإجرائية الخاصة بـ {{ cfg.title }}
                     </div>
 
-                    {% if section_key == 'police' %}
+                    {% if section_key == 'new_claim' %}
+                        <!-- 0. قيد ورفع دعوى جديدة ديناميكية -->
+                        <div style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+                            <label class="custom-label" style="font-weight: 800; color: #92400e; font-size: 0.95rem; margin-bottom: 10px; display: block;">
+                                <i class="fa-solid fa-compass"></i> حدد الجهة / المسار الإجرائي المطلوب لرفع الدعوى <span style="color: #e11d48;">*</span>
+                            </label>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;">
+                                <label style="display: flex; align-items: center; gap: 8px; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 10px 14px; cursor: pointer; font-weight: 700; font-size: 0.88rem; transition: all 0.2s;" id="labelAuthCourt">
+                                    <input type="radio" name="target_authority" value="المحكمة الابتدائية" checked onchange="onTargetAuthorityChanged(this.value)" style="accent-color: #b45309;">
+                                    <span>🏛️ دعوى محكمة ابتدائية</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 10px 14px; cursor: pointer; font-weight: 700; font-size: 0.88rem; transition: all 0.2s;" id="labelAuthPolice">
+                                    <input type="radio" name="target_authority" value="قسم الشرطة" onchange="onTargetAuthorityChanged(this.value)" style="accent-color: #b45309;">
+                                    <span>🚨 بلاغ / شكوى شرطة</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 10px 14px; cursor: pointer; font-weight: 700; font-size: 0.88rem; transition: all 0.2s;" id="labelAuthPros">
+                                    <input type="radio" name="target_authority" value="النيابة العامة" onchange="onTargetAuthorityChanged(this.value)" style="accent-color: #b45309;">
+                                    <span>⚖️ عريضة أمام النيابة</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 10px 14px; cursor: pointer; font-weight: 700; font-size: 0.88rem; transition: all 0.2s;" id="labelAuthEnf">
+                                    <input type="radio" name="target_authority" value="محكمة التنفيذ" onchange="onTargetAuthorityChanged(this.value)" style="accent-color: #b45309;">
+                                    <span>⚡ طلب تنفيذ مباشر</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- بيانات الخصم (المدعى عليه / المشكو في حقه) -->
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+                            <div style="font-weight: 800; color: #1e293b; font-size: 0.92rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                                <i class="fa-solid fa-user-xmark" style="color: #ef4444;"></i> بيانات الخصم (المدّعى عليه / المشكو في حقه)
+                            </div>
+                            <div class="form-grid-3">
+                                <div class="custom-form-group">
+                                    <label class="custom-label">صفة / نوع الخصم <span style="color: #e11d48;">*</span></label>
+                                    <select name="opponent_type" class="custom-select" required>
+                                        <option value="فرد" selected>فرد (شخص طبيعي)</option>
+                                        <option value="شركة / مؤسسة">شركة أو مؤسسة تجارية</option>
+                                        <option value="جهة حكومية">جهة حكومية / عامة</option>
+                                    </select>
+                                </div>
+                                <div class="custom-form-group">
+                                    <label class="custom-label">الاسم الكامل للخصم <span style="color: #e11d48;">*</span></label>
+                                    <input type="text" name="opponent_name" required class="custom-input" placeholder="الاسم الرباعي أو اسم المنشأة...">
+                                </div>
+                                <div class="custom-form-group">
+                                    <label class="custom-label">رقم الهوية / السجل التجاري للخصم</label>
+                                    <input type="text" name="opponent_id_number" class="custom-input" placeholder="رقم الهوية الوطنية أو السجل التجاري...">
+                                </div>
+                            </div>
+                            <div class="form-grid-2" style="margin-top: 12px;">
+                                <div class="custom-form-group">
+                                    <label class="custom-label">رقم هاتف الخصم (للتبليغ القضائي) <span style="color: #e11d48;">*</span></label>
+                                    <input type="text" name="opponent_phone" required class="custom-input" placeholder="05XXXXXXXX">
+                                </div>
+                                <div class="custom-form-group">
+                                    <label class="custom-label">مقر الإقامة / العنوان الوطني للخصم</label>
+                                    <input type="text" name="opponent_address" class="custom-input" placeholder="المدينة، الحي، العنوان الوطني المعتمد...">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- الحقول القضائية للمحكمة (تظهر افتراضياً عند اختيار المحكمة) -->
+                        <div id="newClaimCourtFields" style="display: block;">
+                            <div class="form-grid-3">
+                                <div class="custom-form-group">
+                                    <label class="custom-label">نوع المحكمة المختصة <span style="color: #e11d48;">*</span></label>
+                                    <select name="court_name" id="courtNameSelect" class="custom-select">
+                                        <option value="المحكمة التجارية" selected>المحكمة التجارية</option>
+                                        <option value="المحكمة العامة">المحكمة العامة</option>
+                                        <option value="المحكمة العمالية">المحكمة العمالية</option>
+                                        <option value="محكمة الأحوال الشخصية">محكمة الأحوال الشخصية</option>
+                                        <option value="المحكمة الجزائية">المحكمة الجزائية</option>
+                                    </select>
+                                </div>
+                                <div class="custom-form-group">
+                                    <label class="custom-label">مدينة المحكمة (الاختصاص المكاني)</label>
+                                    <input type="text" name="case_subject" class="custom-input" placeholder="الرياض، جدة، الدمام...">
+                                </div>
+                                <div class="custom-form-group">
+                                    <label class="custom-label">قيمة المطالبة المالية الإجمالية (ر.س)</label>
+                                    <input type="number" step="0.01" name="claim_amount" class="custom-input" placeholder="0.00">
+                                </div>
+                            </div>
+                            <div class="form-grid-2" style="margin-top: 12px;">
+                                <div class="custom-form-group">
+                                    <label class="custom-label">أسانيد الدعوى والنصوص النظامية المستند إليها</label>
+                                    <textarea name="claim_grounds" rows="2" class="custom-textarea" placeholder="المواد النظامية، بنود العقد المبرم، السوابق القضائية..."></textarea>
+                                </div>
+                                <div class="custom-form-group">
+                                    <label class="custom-label">الطلبات الختامية الموجهة للقاضي <span style="color: #e11d48;">*</span></label>
+                                    <textarea name="claim_requests" rows="2" class="custom-textarea" placeholder="الطلبات الأصلية والاحتياطية (إلزام المدعى عليه بمبلغ... وأتعاب المحاماة)"></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- حقول الشرطة (تظهر عند اختيار بلاغ شرطة) -->
+                        <div id="newClaimPoliceFields" style="display: none;">
+                            <div class="form-grid-2">
+                                <div class="custom-form-group">
+                                    <label class="custom-label">اسم مركز / قسم الشرطة المختص <span style="color: #e11d48;">*</span></label>
+                                    <input type="text" name="police_station" class="custom-input" placeholder="مثلاً: قسم شرطة العليا">
+                                </div>
+                                <div class="custom-form-group">
+                                    <label class="custom-label">تصنيف الجرم المشكو منه</label>
+                                    <select name="crime_classification" class="custom-select">
+                                        <option value="شيك بدون رصيد">شيك بدون رصيد</option>
+                                        <option value="نصب واحتيال مالي">نصب واحتيال مالي</option>
+                                        <option value="سرقة / خيانة أمانة">سرقة / خيانة أمانة</option>
+                                        <option value="نزاع حيازة وعقار">نزاع حيازة وعقار</option>
+                                        <option value="مشاجرة واعتداء">مشاجرة واعتداء</option>
+                                        <option value="أخرى">أخرى</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="custom-form-group" style="margin-top: 10px;">
+                                <label class="custom-label">الطلبات من جهة الضبط (الشرطة)</label>
+                                <input type="text" name="police_referral_status" class="custom-input" placeholder="فتح محضر ضبط، استدعاء المشكو في حقه، سماع الأقوال...">
+                            </div>
+                        </div>
+
+                        <!-- حقول النيابة (تظهر عند اختيار عريضة نيابة) -->
+                        <div id="newClaimProsecutionFields" style="display: none;">
+                            <div class="form-grid-2">
+                                <div class="custom-form-group">
+                                    <label class="custom-label">دائرة النيابة العامة المختصة <span style="color: #e11d48;">*</span></label>
+                                    <input type="text" name="prosecution_name" class="custom-input" placeholder="مثلاً: نيابة الجرائم الاقتصادية والأموال">
+                                </div>
+                                <div class="custom-form-group">
+                                    <label class="custom-label">رقم محضر الشرطة المسبق (إن وجد)</label>
+                                    <input type="text" name="prosecution_file_number" class="custom-input" placeholder="رقم المحضر المحال من الشرطة...">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- حقول التنفيذ (تظهر عند اختيار طلب تنفيذ) -->
+                        <div id="newClaimEnforcementFields" style="display: none;">
+                            <div class="form-grid-3">
+                                <div class="custom-form-group">
+                                    <label class="custom-label">محكمة التنفيذ المختصة <span style="color: #e11d48;">*</span></label>
+                                    <input type="text" name="enforcement_authority" class="custom-input" placeholder="محكمة التنفيذ بالرياض">
+                                </div>
+                                <div class="custom-form-group">
+                                    <label class="custom-label">نوع السند التنفيذي <span style="color: #e11d48;">*</span></label>
+                                    <select name="execution_type" class="custom-select">
+                                        <option value="سند لأمر">سند لأمر</option>
+                                        <option value="شيك مصرفي">شيك مصرفي</option>
+                                        <option value="كمبيالة">كمبيالة</option>
+                                        <option value="عقد إيجار موثق">عقد إيجار موثق</option>
+                                        <option value="حكم قضائي قطعي">حكم قضائي قطعي</option>
+                                        <option value="قرار تحكيم">قرار تحكيم مكتسب القطعية</option>
+                                    </select>
+                                </div>
+                                <div class="custom-form-group">
+                                    <label class="custom-label">رقم السند التنفيذي</label>
+                                    <input type="text" name="enforcement_file_number" class="custom-input" placeholder="رقم السند أو القرار...">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- بيانات الوكالة وسند التوكيل -->
+                        <div class="form-grid-2" style="margin-top: 16px;">
+                            <div class="custom-form-group">
+                                <label class="custom-label">رقم الوكالة الرسمية للمحامي <span style="color: #e11d48;">*</span></label>
+                                <input type="text" name="poa_number" required class="custom-input" placeholder="رقم الوكالة الصادرة من كتابة العدل...">
+                            </div>
+                            <div class="custom-form-group">
+                                <label class="custom-label">تاريخ إصدار الوكالة</label>
+                                <input type="date" name="poa_date" class="custom-input">
+                            </div>
+                        </div>
+
+                    {% elif section_key == 'police' %}
                         <!-- 1. القضايا المعروضة أمام الشرطة -->
                         <div class="form-grid-2">
                             <div class="custom-form-group">
@@ -1569,6 +1752,28 @@ function closeIncomingCreateModal() {
 }
 
 // 3. Dynamically handle client selection
+function onTargetAuthorityChanged(val) {
+    const courtBox = document.getElementById('newClaimCourtFields');
+    const policeBox = document.getElementById('newClaimPoliceFields');
+    const prosBox = document.getElementById('newClaimProsecutionFields');
+    const enfBox = document.getElementById('newClaimEnforcementFields');
+
+    if (courtBox) courtBox.style.display = 'none';
+    if (policeBox) policeBox.style.display = 'none';
+    if (prosBox) prosBox.style.display = 'none';
+    if (enfBox) enfBox.style.display = 'none';
+
+    if (val === 'المحكمة الابتدائية' && courtBox) {
+        courtBox.style.display = 'block';
+    } else if (val === 'قسم الشرطة' && policeBox) {
+        policeBox.style.display = 'block';
+    } else if (val === 'النيابة العامة' && prosBox) {
+        prosBox.style.display = 'block';
+    } else if (val === 'محكمة التنفيذ' && enfBox) {
+        enfBox.style.display = 'block';
+    }
+}
+
 function onClientFieldChanged() {
     const wrapper = document.getElementById('clientCapacityWrapper');
     const capSelect = document.getElementById('clientCapacitySelect');

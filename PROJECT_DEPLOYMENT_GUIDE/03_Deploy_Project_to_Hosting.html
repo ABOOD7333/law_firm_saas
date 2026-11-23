@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>دليل النشر والاستضافة السحابية لـ LawSaaS</title>
+    <style>
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Tajawal:wght@400;500;700;800&family=Fira+Code:wght@400;500;600&display=swap');
+
+@page {
+    size: A4 portrait;
+    margin: 16mm 14mm 18mm 14mm;
+    @bottom-center {
+        content: counter(page);
+        font-family: 'Cairo', sans-serif;
+        font-size: 9pt;
+        color: #64748b;
+    }
+    @bottom-left {
+        content: "دليل نشر وإدارة LawSaaS";
+        font-family: 'Cairo', sans-serif;
+        font-size: 8pt;
+        color: #94a3b8;
+    }
+    @bottom-right {
+        content: "منصة وزيرك (Waziruk)";
+        font-family: 'Cairo', sans-serif;
+        font-size: 8pt;
+        color: #94a3b8;
+    }
+}
+
+*, *:before, *:after { box-sizing: border-box; }
+
+body {
+    font-family: 'Cairo', 'Tajawal', Tahoma, sans-serif;
+    direction: rtl;
+    text-align: right;
+    background-color: #ffffff;
+    color: #0f172a;
+    font-size: 10pt;
+    line-height: 1.65;
+    margin: 0;
+    padding: 0;
+}
+
+.doc-header {
+    background: linear-gradient(135deg, #0b132b 0%, #1c2541 100%);
+    color: #ffffff;
+    padding: 22px 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border-right: 6px solid #d4af37;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+
+.doc-badge {
+    display: inline-block;
+    background: rgba(212, 175, 55, 0.2);
+    color: #d4af37;
+    border: 1px solid #d4af37;
+    padding: 3px 12px;
+    border-radius: 20px;
+    font-size: 9pt;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.doc-title {
+    font-size: 18pt;
+    font-weight: 900;
+    margin: 0 0 4px 0;
+    color: #ffffff;
+}
+
+.doc-subtitle {
+    font-size: 10.5pt;
+    color: #cbd5e1;
+    margin: 0;
+}
+
+h1, h2, h3 {
+    font-family: 'Cairo', sans-serif;
+    color: #0f172a;
+    font-weight: 800;
+}
+
+h1 {
+    font-size: 14pt;
+    border-right: 5px solid #1e3a8a;
+    padding-right: 10px;
+    background: #f8fafc;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    margin-top: 22px;
+    border-radius: 0 4px 4px 0;
+}
+
+h2 {
+    font-size: 12pt;
+    color: #1e3a8a;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 4px;
+    margin-top: 18px;
+}
+
+h3 {
+    font-size: 10.5pt;
+    color: #334155;
+    margin-top: 12px;
+}
+
+p { margin: 5px 0 8px 0; text-align: justify; }
+
+.callout {
+    padding: 10px 14px;
+    border-radius: 6px;
+    margin: 10px 0;
+    font-size: 9.5pt;
+    page-break-inside: avoid;
+}
+
+.callout-info { background: #eff6ff; border-right: 4px solid #3b82f6; color: #1e40af; }
+.callout-warn { background: #fffbeb; border-right: 4px solid #f59e0b; color: #92400e; }
+.callout-danger { background: #fef2f2; border-right: 4px solid #ef4444; color: #991b1b; }
+.callout-success { background: #f0fdf4; border-right: 4px solid #10b981; color: #065f46; }
+
+.callout-title {
+    font-weight: 800;
+    margin-bottom: 3px;
+    font-size: 10pt;
+}
+
+.term-box {
+    background: #0f172a;
+    border-radius: 6px;
+    margin: 12px 0;
+    overflow: hidden;
+    border: 1px solid #334155;
+    page-break-inside: avoid;
+}
+
+.term-header {
+    background: #1e293b;
+    padding: 5px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #334155;
+}
+
+.term-dots { display: flex; gap: 5px; }
+.term-dot { width: 9px; height: 9px; border-radius: 50%; }
+.dot-red { background: #ef4444; }
+.dot-yellow { background: #f59e0b; }
+.dot-green { background: #10b981; }
+
+.term-title {
+    color: #94a3b8;
+    font-size: 8pt;
+    font-family: 'Fira Code', monospace;
+    direction: ltr;
+}
+
+.term-body {
+    padding: 10px 14px;
+    font-family: 'Fira Code', monospace;
+    font-size: 8.5pt;
+    line-height: 1.5;
+    color: #38bdf8;
+    direction: ltr;
+    text-align: left;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.cmd-comment { color: #64748b; }
+.cmd-prompt { color: #10b981; font-weight: bold; }
+.cmd-text { color: #f8fafc; font-weight: bold; }
+.cmd-arg { color: #fbbf24; }
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0 14px 0;
+    font-size: 9pt;
+    page-break-inside: avoid;
+}
+
+th {
+    background: #1e293b;
+    color: #ffffff;
+    font-weight: 700;
+    padding: 6px 8px;
+    border: 1px solid #334155;
+    text-align: right;
+}
+
+td {
+    padding: 6px 8px;
+    border: 1px solid #e2e8f0;
+    vertical-align: top;
+    line-height: 1.45;
+}
+
+tbody tr:nth-child(even) { background-color: #f8fafc; }
+
+.step-card {
+    display: flex;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    margin: 8px 0;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    page-break-inside: avoid;
+}
+
+.step-num-badge {
+    background: #1e3a8a;
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 11pt;
+    width: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.step-details {
+    padding: 8px 12px;
+    flex-grow: 1;
+}
+
+.step-name {
+    font-weight: 700;
+    font-size: 10pt;
+    color: #0f172a;
+    margin-bottom: 2px;
+}
+
+.step-text {
+    font-size: 9pt;
+    color: #475569;
+}
+
+.page-break { page-break-before: always; }
+</style>
+</head>
+<body>
+    <div class="doc-header">
+        <div class="doc-badge">الدليل 03 • الاستضافة السحابية و VPS</div>
+        <div class="doc-title">دليل النشر والاستضافة السحابية لـ LawSaaS</div>
+        <div class="doc-subtitle">تشغيل وإدارة المنصة على السيرفر الفعلي، ربط الدومين، وحاويات Docker</div>
+    </div>
+    
+<h1>1. كيف يعمل مشروع LawSaaS على السيرفر الفعلي؟</h1>
+<p>
+تم نشر واستضافة منصة <strong>LawSaaS (وزيرك)</strong> على سيرفر سحابي خاص (VPS) بإعدادات إنتاج متطورة تضمن الاستقرار والأداء العالي:
+</p>
+
+<table>
+    <thead>
+        <tr>
+            <th style="width: 25%;">المكون</th>
+            <th style="width: 35%;">الإعداد الفعلي للمشروع</th>
+            <th style="width: 40%;">الدور والمسؤولية</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>عنوان السيرفر (IP)</strong></td>
+            <td><code>179.198.198.38</code></td>
+            <td>الخادم السحابي المستضيف لنظام Linux Ubuntu.</td>
+        </tr>
+        <tr>
+            <td><strong>اسم النطاق (Domain)</strong></td>
+            <td><code>https://waziruk.tech</code></td>
+            <td>الدومين الرسمي الموجه للسيرفر والمحمي بشهادة أمان SSL (Let's Encrypt).</td>
+        </tr>
+        <tr>
+            <td><strong>مسار المشروع</strong></td>
+            <td><code>/opt/lawsaas/</code></td>
+            <td>المجلد الفعلي الذي يحتوي على أكواد وملفات المشروع على السيرفر.</td>
+        </tr>
+        <tr>
+            <td><strong>حاوية التطبيق</strong></td>
+            <td><code>lawsaas_app</code> (Docker)</td>
+            <td>الحاوية التي تشغل خادم FastAPI بواسطة Uvicorn على المنفذ الداخلي <code>8000</code>.</td>
+        </tr>
+        <tr>
+            <td><strong>الخادم الوكيل (Proxy)</strong></td>
+            <td><code>Nginx</code></td>
+            <td>يستقبل الزوار على المنفذ 443 و 80 ويمرر الطلبات بأمان إلى الحاوية.</td>
+        </tr>
+    </tbody>
+</table>
+
+<h1>2. الدخول إلى السيرفر عبر SSH</h1>
+<p>
+للتحكم في السيرفر وإدارته من جهازك، افتح نافذة PowerShell واكتب أمر الاتصال الآمن (SSH):
+</p>
+
+<div class="term-box">
+    <div class="term-header">
+        <div class="term-title">الاتصال بالسيرفر</div>
+    </div>
+    <div class="term-body"><span class="cmd-prompt">PS ></span> <span class="cmd-text">ssh root@179.198.198.38</span>
+<span class="cmd-comment"># أدخل كلمة المرور الخاصة بالسيرفر عند طلبها</span>
+<span class="cmd-prompt">root@lawsaas-vps:~#</span> <span class="cmd-comment"># أنت الآن داخل السيرفر بنجاح!</span></div>
+</div>
+
+<h1>3. خطوات نشر تحديث جديد على السيرفر (Production Deployment)</h1>
+<p>
+عندما ترفع كوداً جديداً إلى GitHub وتريد تحديث الموقع الحي على السيرفر، اتبع الخطوات الأربع التالية:
+</p>
+
+<div class="step-card">
+    <div class="step-num-badge">1</div>
+    <div class="step-details">
+        <div class="step-name">الدخول إلى مجلد المشروع على السيرفر</div>
+        <div class="step-text">انتقل للمجلد الرسمي للتطبيق: <code>cd /opt/lawsaas</code></div>
+    </div>
+</div>
+
+<div class="step-card">
+    <div class="step-num-badge">2</div>
+    <div class="step-details">
+        <div class="step-name">سحب آخر التعديلات من GitHub</div>
+        <div class="step-text">اكتب <code>git pull origin main</code> لجلب التعديلات الجديدة التي رفعتها.</div>
+    </div>
+</div>
+
+<div class="step-card">
+    <div class="step-num-badge">3</div>
+    <div class="step-details">
+        <div class="step-name">إعادة بناء وتشغيل الحاوية السحابية</div>
+        <div class="step-text">اكتب <code>docker compose -f docker-compose.yml up -d --build app</code> لتطبيق التحديث وتحديث الحاوية في الخلفية.</div>
+    </div>
+</div>
+
+<div class="step-card">
+    <div class="step-num-badge">4</div>
+    <div class="step-details">
+        <div class="step-name">مراقبة السجلات والتأكد من انطلاق الخادم</div>
+        <div class="step-text">اكتب <code>docker logs -f --tail 50 lawsaas_app</code> للتأكد من رسالة <code>Application startup complete</code>.</div>
+    </div>
+</div>
+
+<div class="term-box">
+    <div class="term-header">
+        <div class="term-title">الأوامر مجمعة للنشر السريع</div>
+    </div>
+    <div class="term-body"><span class="cmd-prompt">root@lawsaas-vps:~#</span> <span class="cmd-text">cd /opt/lawsaas</span>
+<span class="cmd-prompt">root@lawsaas-vps:/opt/lawsaas#</span> <span class="cmd-text">git pull origin main</span>
+<span class="cmd-prompt">root@lawsaas-vps:/opt/lawsaas#</span> <span class="cmd-text">docker compose up -d --build app</span>
+<span class="cmd-prompt">root@lawsaas-vps:/opt/lawsaas#</span> <span class="cmd-text">docker logs --tail 30 lawsaas_app</span></div>
+</div>
+
+<div class="page-break"></div>
+<h1>4. إدارة متغيرات البيئة (.env) على السيرفر</h1>
+<p>
+ملف <code>.env</code> على السيرفر يحتوي على البيانات الحقيقية السرية لقاعدة البيانات ومفاتيح الـ API. لتعديل أي إعداد (مثل إضافة مفتاح جديد لـ Gemini أو إعدادات بريد SMTP):
+</p>
+
+<div class="term-box">
+    <div class="term-body"><span class="cmd-prompt">root@lawsaas-vps:/opt/lawsaas#</span> <span class="cmd-text">nano .env</span>
+<span class="cmd-comment"># عدل القيمة المطلوبة في المحرر، ثم اضغط Ctrl + O للحفظ، ثم Enter، ثم Ctrl + X للخروج.</span>
+
+<span class="cmd-comment"># بعد تعديل .env، يجب دائماً إعادة تشغيل الحاوية لتقرأ القيم الجديدة:</span>
+<span class="cmd-prompt">root@lawsaas-vps:/opt/lawsaas#</span> <span class="cmd-text">docker restart lawsaas_app</span></div>
+</div>
+
+<h1>5. كيف تتأكد أن الموقع يعمل بنجاح بعد التحديث؟</h1>
+<ol>
+    <li><strong>الفحص السريع من الطرفية (Terminal):</strong>
+        <br>اكتب <code>curl -I https://waziruk.tech</code> وتأكد من استلام كود الحالة <code>HTTP/2 200</code> أو <code>HTTP/2 303</code>.
+    </li>
+    <li><strong>الفحص البصري من المتصفح:</strong>
+        <br>افتح المتصفح في وضع التصفح الخفي (Incognito) وادخل إلى <code>https://waziruk.tech</code>، وتأكد من تسجيل الدخول وتجربة الميزة الجديدة التي قمت بنشرها.
+    </li>
+    <li><strong>فحص سجلات الأخطاء في Nginx:</strong>
+        <br>اكتب <code>tail -f /var/log/nginx/error.log</code> للتأكد من عدم وجود أخطاء في تمرير الاتصال.
+    </li>
+</ol>
+
+</body>
+</html>

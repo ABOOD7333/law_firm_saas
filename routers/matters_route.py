@@ -44,7 +44,9 @@ async def matters_page(
     status_filter: Optional[str] = None,
     lawyer_filter: Optional[int] = None,
     client_filter: Optional[int] = None,
-    q: Optional[str] = None
+    q: Optional[str] = None,
+    page: int = 1,  # [BUG-009 FIX] pagination
+    per_page: int = 50  # [BUG-009 FIX] حد أقصى 50 سجل لكل صفحة
 ):
     if not user:
         return RedirectResponse(url="/", status_code=303)
@@ -58,7 +60,7 @@ async def matters_page(
         LawCases.matter_category == "matter"
     )
 
-    if user.role in ['محامي', 'باحث']:
+    if user.role in ['محامي', 'باحث'] and not getattr(user, 'can_view_all_cases', 0):  # [BUG-016 FIX] احترام can_view_all_cases
         query = query.filter(LawCases.lead_lawyer_id == user.id)
 
     # Filters
@@ -84,9 +86,13 @@ async def matters_page(
         )
 
 
-    matters = query.order_by(LawCases.created_at.desc()).all()
+    per_page = max(10, min(per_page, 100))  # بين 10 و100
+    page = max(1, page)
+    offset = (page - 1) * per_page
+    total_count = query.count()  # [BUG-009 FIX] عدّ الكل بدون تحميل الكل
+    matters = query.order_by(LawCases.created_at.desc()).offset(offset).limit(per_page).all()  # [BUG-009 FIX]
 
-    # Statistics Counters
+    # Statistics Counters — [BUG-009 FIX] استخدام COUNT بدلاً من تحميل كل السجلات
     all_matters_query = db.query(LawCases).filter(
         LawCases.office_id == office_id,
         LawCases.is_deleted == 0,
@@ -95,13 +101,12 @@ async def matters_page(
     if user.role in ['محامي', 'باحث']:
         all_matters_query = all_matters_query.filter(LawCases.lead_lawyer_id == user.id)
 
-    all_matters = all_matters_query.all()
     stats = {
-        "total": len(all_matters),
-        "advisory": len([m for m in all_matters if m.case_type_key in ['استشارة قانونية', 'advisory', 'consultation']]),
-        "contracts": len([m for m in all_matters if m.case_type_key in ['صياغة وتدقيق عقود', 'contracts', 'contract_drafting']]),
-        "corporate": len([m for m in all_matters if m.case_type_key in ['تأسيس شركات', 'corporate', 'incorporation']]),
-        "completed": len([m for m in all_matters if m.status_key in ['closed', 'completed', 'مكتملة', 'معتمدة']])
+        "total": all_matters_query.count(),
+        "advisory": all_matters_query.filter(LawCases.case_type_key.in_(['استشارة قانونية', 'advisory', 'consultation'])).count(),
+        "contracts": all_matters_query.filter(LawCases.case_type_key.in_(['صياغة وتدقيق عقود', 'contracts', 'contract_drafting'])).count(),
+        "corporate": all_matters_query.filter(LawCases.case_type_key.in_(['تأسيس شركات', 'corporate', 'incorporation'])).count(),
+        "completed": all_matters_query.filter(LawCases.status_key.in_(['closed', 'completed', 'مكتملة', 'معتمدة'])).count()
     }
 
     # Lawyers & Clients for Dropdowns
@@ -141,7 +146,11 @@ async def matters_page(
             "status_filter": status_filter,
             "lawyer_filter": lawyer_filter,
             "client_filter": client_filter,
-            "q": q
+            "q": q,
+            "page": page,              # [BUG-009 FIX] pagination
+            "per_page": per_page,
+            "total_count": total_count,
+            "total_pages": max(1, (total_count + per_page - 1) // per_page)
         }
     )
 

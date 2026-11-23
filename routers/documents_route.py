@@ -325,7 +325,11 @@ async def add_document(
         created_by_user_id=user.id
     )
     db.add(d)
-    db.commit()
+    try:  # [BUG-004 FIX] rollback عند فشل الحفظ
+        db.commit()
+    except Exception as _commit_err:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"فشل حفظ البيانات: {_commit_err}")
     db.refresh(d)
 
     # Automatic Initial Version Creation (v1.0)
@@ -342,7 +346,11 @@ async def add_document(
             uploaded_by_user_id=user.id
         )
         db.add(v1)
-        db.commit()
+        try:  # [BUG-004 FIX] rollback عند فشل الحفظ
+            db.commit()
+        except Exception as _commit_err:
+            db.rollback()
+            raise HTTPException(status_code=500, detail=f"فشل حفظ البيانات: {_commit_err}")
 
     log_document_audit(db, office_id, user, "إضافة مستند", d, f"النوع: {document_type_key}")
     return RedirectResponse(url="/documents?msg=added", status_code=303)
@@ -467,7 +475,11 @@ async def edit_document(
     d.notes = notes or description
     d.updated_by_user_id = user.id
 
-    db.commit()
+    try:  # [BUG-004 FIX] rollback عند فشل الحفظ
+        db.commit()
+    except Exception as _commit_err:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"فشل حفظ البيانات: {_commit_err}")
     log_document_audit(db, office_id, user, "تعديل مستند", d, "تم تحديث بيانات المستند")
     return RedirectResponse(url="/documents?msg=updated", status_code=303)
 
@@ -511,7 +523,11 @@ async def archive_document(
         log_document_audit(db, office_id, user, "أرشفة مستند", d, "تم نقل المستند إلى الأرشيف بأمان")
         msg = "archived"
 
-    db.commit()
+    try:  # [BUG-004 FIX] rollback عند فشل الحفظ
+        db.commit()
+    except Exception as _commit_err:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"فشل حفظ البيانات: {_commit_err}")
     return RedirectResponse(url=f"/documents?msg={msg}", status_code=303)
 
 
@@ -748,7 +764,11 @@ async def upload_document_version(
     doc.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     doc.updated_by_user_id = user.id
 
-    db.commit()
+    try:  # [BUG-004 FIX] rollback عند فشل الحفظ
+        db.commit()
+    except Exception as _commit_err:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"فشل حفظ البيانات: {_commit_err}")
     log_document_audit(db, user.office_id, user, "رفع إصدار مسودة جديد", doc, f"الإصدار v{next_v}.0: {summary_text}")
 
     if redirect_to == "case" and doc.case_id:
@@ -795,7 +815,11 @@ async def restore_document_version(
     doc.updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     doc.updated_by_user_id = user.id
 
-    db.commit()
+    try:  # [BUG-004 FIX] rollback عند فشل الحفظ
+        db.commit()
+    except Exception as _commit_err:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"فشل حفظ البيانات: {_commit_err}")
     log_document_audit(db, user.office_id, user, "استعادة إصدار سابق", doc, f"تمت استعادة المسودة رقم v{target_v.version_number}.0 لتكون النسخة المعتمدة")
 
     return JSONResponse(content={"success": True, "restored_version": target_v.version_number})

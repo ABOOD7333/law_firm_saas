@@ -1,0 +1,7 @@
+file 'C:/Users/Roots/.gemini/antigravity/worktrees/law_firm1/analyze_missing_features/LawSaaS_Media_Production/08_Project_Source_Files/render_1x1/seg_1.mp4'
+file 'C:/Users/Roots/.gemini/antigravity/worktrees/law_firm1/analyze_missing_features/LawSaaS_Media_Production/08_Project_Source_Files/render_1x1/seg_2.mp4'
+file 'C:/Users/Roots/.gemini/antigravity/worktrees/law_firm1/analyze_missing_features/LawSaaS_Media_Production/08_Project_Source_Files/render_1x1/seg_3.mp4'
+file 'C:/Users/Roots/.gemini/antigravity/worktrees/law_firm1/analyze_missing_features/LawSaaS_Media_Production/08_Project_Source_Files/render_1x1/seg_4.mp4'
+file 'C:/Users/Roots/.gemini/antigravity/worktrees/law_firm1/analyze_missing_features/LawSaaS_Media_Production/08_Project_Source_Files/render_1x1/seg_5.mp4'
+file 'C:/Users/Roots/.gemini/antigravity/worktrees/law_firm1/analyze_missing_features/LawSaaS_Media_Production/08_Project_Source_Files/render_1x1/seg_6.mp4'
+file 'C:/Users/Roots/.gemini/antigravity/worktrees/law_firm1/analyze_missing_features/LawSaaS_Media_Production/08_Project_Source_Files/render_1x1/seg_7.mp4'

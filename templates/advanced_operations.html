@@ -328,7 +328,7 @@ async function loadCaseHealth() {
       let color = w.status === "مكتمل" ? "#059669" : (w.status === "متأخر" ? "#e11d48" : "#d97706");
       wfHtml += `<tr><td>${esc(w.stage)}</td><td>${esc(w.user)}</td><td><span style="color:${color};font-weight:bold;">${esc(w.status)}</span></td><td>${esc(w.start)}</td><td>${esc(w.due)}</td></tr>`;
     });
-    document.querySelector('#tab-workflow .data-table tbody').innerHTML = wfHtml;
+    document.querySelector('#tab-workflow .data-table tbody').innerHTML = DOMPurify.sanitize(wfHtml);  // [BUG-008 FIX]
     
     let clHtml = "";
     data.checklist.forEach(c => {
@@ -336,7 +336,7 @@ async function loadCaseHealth() {
       let icon = c.status === "منجز" ? "✔️" : "❌";
       clHtml += `<tr><td>${esc(c.item)}</td><td><span style="color:${color};">${icon} ${esc(c.status)}</span></td><td>النظام الذكي</td></tr>`;
     });
-    document.querySelectorAll('#tab-workflow .data-table tbody')[1].innerHTML = clHtml;
+    document.querySelectorAll('#tab-workflow .data-table tbody')[1].innerHTML = DOMPurify.sanitize(clHtml);  // [BUG-008 FIX]
     
   } catch(e) {
     console.error("Error fetching health data:", e);

@@ -1,0 +1,82 @@
+{
+  "total_duration": 69.29,
+  "scenes": [
+    {
+      "index": 1,
+      "id": "scene1_problem",
+      "title": "التحدي في إدارة مكاتب المحاماة",
+      "badge": "التحديات اليومية",
+      "text": "هل تعاني من فوضى الملفات وتداخل المواعيد؟ وضياع المذكرات بين مئات الأوراق والمستندات؟",
+      "file": "C:\\Users\\Roots\\.gemini\\antigravity\\worktrees\\law_firm1\\analyze_missing_features\\LawSaaS_Media_Production\\07_Scripts_And_Voiceovers\\waziruk_scene_1.mp3",
+      "duration": 8.62,
+      "start_time": 0.0,
+      "end_time": 8.62
+    },
+    {
+      "index": 2,
+      "id": "scene2_solution",
+      "title": "الحل الرقمي: منصة وزيرك",
+      "badge": "منظومة سحابية متكاملة",
+      "text": "إليك منصة وزيرك: المنظومة السحابية المتكاملة لإدارة مكاتب المحاماة والأعمال القانونية!",
+      "file": "C:\\Users\\Roots\\.gemini\\antigravity\\worktrees\\law_firm1\\analyze_missing_features\\LawSaaS_Media_Production\\07_Scripts_And_Voiceovers\\waziruk_scene_2.mp3",
+      "duration": 8.35,
+      "start_time": 8.62,
+      "end_time": 16.97
+    },
+    {
+      "index": 3,
+      "id": "scene3_dashboard_cases",
+      "title": "لوحة تحكم ذكية وإدارة مركزية للقضايا",
+      "badge": "إدارة القضايا والنزاعات",
+      "text": "من لوحة تحكم ذكية، تتبع قضاياك، مراحل التقاضي، وأطراف النزاع بدقة ولحظياً في ثوانٍ معدودة.",
+      "file": "C:\\Users\\Roots\\.gemini\\antigravity\\worktrees\\law_firm1\\analyze_missing_features\\LawSaaS_Media_Production\\07_Scripts_And_Voiceovers\\waziruk_scene_3.mp3",
+      "duration": 9.77,
+      "start_time": 16.97,
+      "end_time": 26.74
+    },
+    {
+      "index": 4,
+      "id": "scene4_calendar_hearings",
+      "title": "التقويم القضائي الذكي وجدولة الجلسات",
+      "badge": "الجلسات والمهل القانونية",
+      "text": "لن تفوتك جلسة بعد اليوم! تنبيهات ذكية، تقويم تفاعلي، وجدولة دقيقة لكافة المواعيد والمهل القانونية.",
+      "file": "C:\\Users\\Roots\\.gemini\\antigravity\\worktrees\\law_firm1\\analyze_missing_features\\LawSaaS_Media_Production\\07_Scripts_And_Voiceovers\\waziruk_scene_4.mp3",
+      "duration": 10.94,
+      "start_time": 26.74,
+      "end_time": 37.68
+    },
+    {
+      "index": 5,
+      "id": "scene5_docs_finance",
+      "title": "أمانات العملاء والفوترة الإلكترونية",
+      "badge": "أمانات العملاء والمالية",
+      "text": "أمانات موكليك في أمان تام، مع نظام مالي متقدم للفواتير وسندات القبض والصرف بأعلى موثوقية.",
+      "file": "C:\\Users\\Roots\\.gemini\\antigravity\\worktrees\\law_firm1\\analyze_missing_features\\LawSaaS_Media_Production\\07_Scripts_And_Voiceovers\\waziruk_scene_5.mp3",
+      "duration": 8.88,
+      "start_time": 37.68,
+      "end_time": 46.56
+    },
+    {
+      "index": 6,
+      "id": "scene6_team_cloud",
+      "title": "إدارة المهام والوصول السحابي الآمن",
+      "badge": "العمل الجماعي والأمان",
+      "text": "وزّع المهام على فريقك بسهولة، وتواصل مع موكليك من أي جهاز وفي أي وقت بأعلى درجات الأمان والتشفير.",
+      "file": "C:\\Users\\Roots\\.gemini\\antigravity\\worktrees\\law_firm1\\analyze_missing_features\\LawSaaS_Media_Production\\07_Scripts_And_Voiceovers\\waziruk_scene_6.mp3",
+      "duration": 9.48,
+      "start_time": 46.56,
+      "end_time": 56.040000000000006
+    },
+    {
+      "index": 7,
+      "id": "scene7_cta",
+      "title": "ابدأ الآن مع منصة وزيرك",
+      "badge": "سجّل حسابك اليوم",
+      "text": "ارتقِ بمكتبك إلى المستقبل الرقمي. سجّل حسابك اليوم واكتشف قوة الإدارة القانونية الذكية. زوروا موقعنا: waziruk.tech",
+      "file": "C:\\Users\\Roots\\.gemini\\antigravity\\worktrees\\law_firm1\\analyze_missing_features\\LawSaaS_Media_Production\\07_Scripts_And_Voiceovers\\waziruk_scene_7.mp3",
+      "duration": 13.25,
+      "start_time": 56.040000000000006,
+      "end_time": 69.29
+    }
+  ]
+}

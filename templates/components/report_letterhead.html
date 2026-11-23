@@ -1,0 +1,181 @@
+{# Reusable Legal Report Letterhead & Faint Watermark Component #}
+<style>
+  .official-report-letterhead {
+    border-bottom: 2px solid #1e293b;
+    padding-bottom: 16px;
+    margin-bottom: 24px;
+    position: relative;
+    font-family: 'Cairo', 'Amiri', serif, sans-serif;
+    color: #0f172a;
+    background: transparent;
+  }
+  .official-report-letterhead .header-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr 1fr;
+    align-items: center;
+    gap: 15px;
+  }
+  .official-report-letterhead .header-right {
+    text-align: right;
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+  .official-report-letterhead .header-right .country-title {
+    font-weight: 800;
+    font-size: 1.05rem;
+    color: #0f172a;
+  }
+  .official-report-letterhead .header-right .ministry-title {
+    font-size: 0.85rem;
+    color: #475569;
+    font-weight: 600;
+  }
+  .official-report-letterhead .header-right .firm-name {
+    font-size: 1.18rem;
+    font-weight: 900;
+    color: #1e1b4b;
+    margin-top: 3px;
+  }
+  .official-report-letterhead .header-right .license-no {
+    font-size: 0.82rem;
+    color: #64748b;
+    font-weight: 600;
+  }
+  
+  .official-report-letterhead .header-center {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .official-report-letterhead .basmala {
+    font-family: 'Amiri', 'Traditional Arabic', serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+  }
+  .official-report-letterhead .header-logo {
+    max-width: 95px;
+    max-height: 95px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 5px rgba(0,0,0,0.06));
+  }
+  .official-report-letterhead .header-logo-placeholder {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 2px solid #cbd5e1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.4rem;
+    color: #475569;
+    background: #f8fafc;
+  }
+
+  .official-report-letterhead .header-left {
+    text-align: left;
+    font-size: 0.86rem;
+    line-height: 1.6;
+    color: #334155;
+  }
+  .official-report-letterhead .header-left .meta-row {
+    margin-bottom: 3px;
+  }
+  .official-report-letterhead .header-left strong {
+    color: #0f172a;
+    font-weight: 700;
+  }
+
+  /* Center-of-page Watermark (العلامة المائية الخافتة بمنتصف الصفحة) */
+  .report-watermark-overlay {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 360px;
+    height: 360px;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.055;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+  }
+  .report-watermark-overlay img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    filter: grayscale(100%);
+  }
+  .report-watermark-overlay .watermark-placeholder-icon {
+    font-size: 17rem;
+    color: #0f172a;
+  }
+
+  @media print {
+    .official-report-letterhead {
+      border-bottom: 2px solid #000000 !important;
+      padding-bottom: 14px !important;
+      margin-bottom: 20px !important;
+      page-break-inside: avoid;
+    }
+    .report-watermark-overlay {
+      position: fixed;
+      opacity: 0.06 !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+  }
+</style>
+
+<!-- Watermark in Background -->
+<div class="report-watermark-overlay" aria-hidden="true">
+  {% if office and office.logo_path %}
+    <img src="{{ office.logo_path }}" alt="Watermark Logo">
+  {% else %}
+    <i class="fa-solid fa-scale-balanced watermark-placeholder-icon"></i>
+  {% endif %}
+</div>
+
+<!-- Letterhead Header -->
+<header class="official-report-letterhead">
+  <div class="header-grid">
+    <!-- Right: Official Ministry & Law Firm Title -->
+    <div class="header-right">
+      <div class="country-title">الجمهورية اليمنية</div>
+      <div class="ministry-title">وزارة العدل — نقابة المحامين</div>
+      <div class="firm-name">{{ office.name if office and office.name else 'مكتب المحاماة والاستشارات القانونية' }}</div>
+      {% if office and office.license_number %}
+        <div class="license-no"><i class="fa-solid fa-certificate"></i> {{ office.license_number }}</div>
+      {% endif %}
+    </div>
+
+    <!-- Center: Basmala + Law Firm Logo -->
+    <div class="header-center">
+      <div class="basmala">« بِسْمِ اللَّـهِ الرَّحْمَـٰنِ الرَّحِيمِ »</div>
+      {% if office and office.logo_path %}
+        <img src="{{ office.logo_path }}" alt="شعار المكتب" class="header-logo">
+      {% else %}
+        <div class="header-logo-placeholder">
+          <i class="fa-solid fa-scale-balanced"></i>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Left: Report Metadata & Issue Info -->
+    <div class="header-left">
+      <div class="meta-row"><strong>تاريخ الإصدار:</strong> <span>{{ report_date if report_date else '' }}<script>if(!'{{ report_date }}') document.write(new Date().toLocaleDateString('ar-SA'));</script></span></div>
+      <div class="meta-row"><strong>الرقم المرجعي:</strong> <span dir="ltr">{{ report_ref if report_ref else ('REP-' ~ (office.id if office else '1') ~ '-' ~ (user.id if user else '0') ~ '-' ~ (cases_data|length if cases_data is defined else '01')) }}</span></div>
+      <div class="meta-row"><strong>مُصدر التقرير:</strong> <span>{{ user.name if user else 'مدير النظام' }} ({{ user.role if user else 'محامٍ' }})</span></div>
+      {% if sub_status_text or (office and office.subscription_end) %}
+      <div class="meta-row"><strong>صلاحية الاشتراك:</strong> <span style="color: #1d4ed8; font-weight: 700;">{{ sub_status_text if sub_status_text else ('حتى ' ~ office.subscription_end[:10]) }}</span></div>
+      {% endif %}
+      <div class="meta-row"><strong>نوع الوثيقة:</strong> <span>{{ report_type_title if report_type_title else 'تقرير قضائي رسمي موحد' }}</span></div>
+    </div>
+  </div>
+</header>
