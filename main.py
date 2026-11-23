@@ -2878,19 +2878,29 @@ async def settings_page(request: Request, db: Session = Depends(get_db), user: A
         office_id = user.office_id
 
         # فقط مستخدمو نفس المكتب
-
         users = db.query(AccessProfiles).filter(AccessProfiles.office_id == office_id).all()
-
         office = db.query(LawOffices).filter(LawOffices.id == office_id).first()
 
+        from core.subscription_tiers import get_tier, get_office_max_users, can_office_buy_extra_seat
+        plan_id = (office.subscription_plan if office else "trial") or "trial"
+        tier = get_tier(plan_id)
+        max_users = get_office_max_users(office)
+        extra_seats = getattr(office, "extra_seats", 0) if office else 0
+        can_add_seat = can_office_buy_extra_seat(office, len(users))
+
         return templates.TemplateResponse(
-
             request=request,
-
             name="settings.html",
-
-            context={"user": user, "users": users, "office": office, "active_page": "settings"}
-
+            context={
+                "user": user,
+                "users": users,
+                "office": office,
+                "active_page": "settings",
+                "tier": tier,
+                "max_users": max_users,
+                "extra_seats": extra_seats,
+                "can_add_seat": can_add_seat
+            }
         )
 
     except Exception as e:
@@ -4425,12 +4435,24 @@ async def view_subscription(request: Request, db: Session = Depends(get_db)):
         if any(r.status == "pending" for r in payment_requests):
             pending_request = True
 
+    from core.subscription_tiers import get_tier, EXTRA_SEAT_SETUP_FEE_USD, EXTRA_SEAT_RENEWAL_FEE_USD, can_office_buy_extra_seat
+    extra_seats = getattr(office, "extra_seats", 0) if office else 0
+    current_users_count = db.query(AccessProfiles).filter(
+        AccessProfiles.office_id == office.id,
+        AccessProfiles.role != 'موكل'
+    ).count() if office else 0
+    can_add_seat = can_office_buy_extra_seat(office, current_users_count) if office else False
+
     return templates.TemplateResponse("subscription.html", {
         "request": request,
         "user": user,
         "office": office,
         "payment_requests": payment_requests,
-        "pending_request": pending_request
+        "pending_request": pending_request,
+        "extra_seats": extra_seats,
+        "can_add_seat": can_add_seat,
+        "extra_seat_fee": EXTRA_SEAT_SETUP_FEE_USD,
+        "extra_seat_renewal_fee": EXTRA_SEAT_RENEWAL_FEE_USD
     })
 
 @app.post("/api/subscription/checkout")
@@ -4449,12 +4471,31 @@ async def api_subscription_checkout(request: Request, db: Session = Depends(get_
     transfer_ref = data.get("transfer_ref")
     receipt_base64 = data.get("receipt_base64", "")
 
-    if plan not in ['monthly', 'yearly']:
+    valid_plans = [
+        'monthly', 'yearly', 'extra_seat',
+        'solo_monthly', 'solo_yearly',
+        'pro_monthly', 'pro_yearly',
+        'enterprise_monthly', 'enterprise_yearly',
+        'solo', 'pro', 'enterprise'
+    ]
+    if plan not in valid_plans:
         return _J({"success": False, "error": "خطة غير صالحة"}, status_code=400)
 
     office = db.query(LawOffices).filter(LawOffices.id == user.office_id).first()
     if not office:
         return _J({"success": False, "error": "المكتب غير موجود"}, status_code=404)
+
+    if plan == 'extra_seat':
+        from core.subscription_tiers import can_office_buy_extra_seat
+        current_users_count = db.query(AccessProfiles).filter(
+            AccessProfiles.office_id == office.id,
+            AccessProfiles.role != 'موكل'
+        ).count()
+        if not can_office_buy_extra_seat(office, current_users_count):
+            return _J({
+                "success": False,
+                "error": "المكتب غير مؤهل لشراء مقعد إضافي. هذه الميزة متاحة حصراً للباقة المتوسطة والسوبر عند اكتمال سعة المستخدمين، وتتاح لمرة واحدة فقط لكل مكتب."
+            }, status_code=400)
 
     if not receipt_base64 or not transfer_ref:
         return _J({"success": False, "error": "يرجى إرفاق صورة السند ورقم المرجع"}, status_code=400)

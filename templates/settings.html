@@ -99,15 +99,15 @@
                 {% if extra_seats and extra_seats >= 1 %}
                     <div style="padding: 8px 12px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; color: #065f46; font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; gap: 6px;">
                         <i class="fa-solid fa-circle-check" style="color: #10b981;"></i>
-                        <span>تم تفعيل المقعد الإضافي (+1 مستخدم) — رسوم التجديد: $9.99/شهر</span>
+                        <span>تم تفعيل المقعد الإضافي (+1 مستخدم) — رسوم التجديد: $19 (19% من سعر الشراء) تضاف مع كل تجديد</span>
                     </div>
                 {% elif can_add_seat %}
                     <div style="margin-top: 10px; padding: 10px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;">
                         <div style="font-size: 0.8rem; color: #1e40af; margin-bottom: 8px; line-height: 1.4;">
-                            <i class="fa-solid fa-user-plus"></i> <strong>ترقية سعة الفريق:</strong> يمكنك إضافة مقعد مستخدم إضافي واحد لمكتبك ($100 رسوم تأسيس لمرة واحدة + $9.99/شهرياً تضاف للتجديد).
+                            <i class="fa-solid fa-user-plus"></i> <strong>ترقية سعة الفريق:</strong> لقد اكتملت سعة مستخدمي باقتك! يمكنك الآن إضافة مستخدم إضافي واحد لمكتبك ($100 تدفع لمرة واحدة عند الشراء + تجديد بقيمة 19$ بنسبة 19% مع كل تجديد لاشتراك المكتب).
                         </div>
                         <button type="button" onclick="openExtraSeatModal()" style="width: 100%; padding: 8px; background: #2563eb; color: white; border: none; border-radius: 6px; font-weight: 700; font-size: 0.82rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
-                            <i class="fa-solid fa-cart-plus"></i> طلب شراء مقعد إضافي واحد ($100)
+                            <i class="fa-solid fa-cart-plus"></i> طلب شراء مقعد إضافي واحد ($100 لمرة واحدة)
                         </button>
                     </div>
                 {% endif %}
@@ -314,9 +314,9 @@
         <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 14px; margin-bottom: 20px; font-size: 0.88rem; color: #1e3a8a; line-height: 1.6;">
             <div><strong>تفاصيل التكلفة والشروط:</strong></div>
             <ul style="margin: 8px 18px 0 0; padding: 0;">
-                <li><strong>رسوم التأسيس الأولية:</strong> 100 دولار تدفع لمرة واحدة عند الشراء.</li>
-                <li><strong>رسوم التجديد الشهرية:</strong> 9.99 دولار تضاف تلقائياً مع فاتورة تجديد باقة المكتب.</li>
-                <li><strong>الحد الأقصى:</strong> يسمح بمقعد إضافي واحد فقط لكل مكتب على الباقة المتوسطة أو الكبرى.</li>
+                <li><strong>سعر الشراء:</strong> 100 دولار تدفع لمرة واحدة فقط عند الشراء.</li>
+                <li><strong>رسوم التجديد:</strong> نسبة 19% من سعر الشراء (19 دولار) تضاف تلقائياً مع كل تجديد لاشتراك باقة المكتب.</li>
+                <li><strong>الحد الأقصى:</strong> يسمح بمقعد إضافي واحد فقط لكل مكتب على الباقة المتوسطة أو السوبر عند اكتمال سعة المستخدمين.</li>
             </ul>
         </div>
 

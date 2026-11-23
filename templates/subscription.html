@@ -439,7 +439,7 @@
                     <div class="limits-row">
                         <div class="limit-col" style="background: #f5f3ff;">
                             <div class="limit-label">المستخدمين</div>
-                            <div class="limit-val" style="color: var(--primary);">5 محامين</div>
+                            <div class="limit-val" style="color: var(--primary);">5 مستخدمين</div>
                         </div>
                         <div class="limit-col" style="background: #f5f3ff;">
                             <div class="limit-label">القضايا</div>
@@ -475,11 +475,11 @@
                         </div>
                         <span class="plan-tag" style="background: #fef3c7; color: #d97706;">الشركات الكبرى</span>
                     </div>
-                    <div class="plan-title">الشركات والمجموعات</div>
+                    <div class="plan-title">الشركات والمجموعات (السوبر)</div>
                     <div class="plan-desc">للمجموعات القانونية والشركات ذات العمليات المالية المتقدمة.</div>
 
                     <div class="price-box">
-                        <span class="price-amount" id="price-enterprise">$99.99</span>
+                        <span class="price-amount" id="price-enterprise">$100.00</span>
                         <span class="price-period" id="period-enterprise">/ شهرياً</span>
                         <div id="saving-enterprise" style="display: none;" class="saving-tag">توفير $250 سنوياً + VIP</div>
                     </div>
@@ -487,7 +487,7 @@
                     <div class="limits-row">
                         <div class="limit-col">
                             <div class="limit-label">المستخدمين</div>
-                            <div class="limit-val">10 مستخدمين</div>
+                            <div class="limit-val">8 مستخدمين</div>
                         </div>
                         <div class="limit-col">
                             <div class="limit-label">القضايا</div>
@@ -495,7 +495,7 @@
                         </div>
                         <div class="limit-col">
                             <div class="limit-label">التخزين</div>
-                            <div class="limit-val">500 GB</div>
+                            <div class="limit-val">100 GB</div>
                         </div>
                     </div>
 
@@ -514,6 +514,37 @@
             </div>
 
         </div>
+
+        <!-- Extra Seat Card / Status -->
+        {% if extra_seats and extra_seats >= 1 %}
+        <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 14px; padding: 16px 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <i class="fa-solid fa-circle-check" style="color: #10b981; font-size: 1.5rem;"></i>
+                <div>
+                    <div style="font-weight: 800; color: #065f46; font-size: 1rem;">المقعد الإضافي (+1 مستخدم) مفعّل رسمياً لمكتبكم</div>
+                    <div style="color: #047857; font-size: 0.85rem;">رسوم التجديد: $19 (بنسبة 19% من سعر الشراء) تضاف تلقائياً مع كل تجديد لاشتراك باقتكم.</div>
+                </div>
+            </div>
+            <span style="background: #10b981; color: white; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 0.82rem;">مفعّل</span>
+        </div>
+        {% elif can_add_seat %}
+        <div style="background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%); border: 1px solid #bfdbfe; border-radius: 14px; padding: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <div style="width: 48px; height: 48px; border-radius: 12px; background: #2563eb; color: white; display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">
+                    <i class="fa-solid fa-user-plus"></i>
+                </div>
+                <div>
+                    <div style="font-weight: 800; color: #1e3a8a; font-size: 1.05rem;">ترقية سعة الفريق: إضافة مقعد مستخدم جديد (+1)</div>
+                    <div style="color: #3b82f6; font-size: 0.88rem; margin-top: 3px;">
+                        لقد اكتملت سعة مستخدمي باقتكم! يمكنك الآن طلب مقعد إضافي واحد لمكتبكم مقابل <strong>100 دولار</strong> تدفع لمرة واحدة عند الشراء (وتجدد بنسبة 19% بقيمة 19$ مع كل تجديد لاشتراك باقة المكتب).
+                    </div>
+                </div>
+            </div>
+            <button onclick="openExtraSeatCheckout()" style="background: #2563eb; color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 800; font-size: 0.9rem; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);">
+                <i class="fa-solid fa-cart-plus"></i> شراء مقعد إضافي ($100)
+            </button>
+        </div>
+        {% endif %}
 
         <!-- Kuraimi Bank Haseb Integration Banner -->
         <div class="kuraimi-section">
@@ -641,7 +672,7 @@
         const TIERS_DATA = {
             solo: { name: "المحامي المستقل", monthly: 19.99, yearly: 180.0 },
             pro: { name: "المكتب الاحترافي", monthly: 49.99, yearly: 480.0 },
-            enterprise: { name: "الشركات والمجموعات", monthly: 99.99, yearly: 950.0 }
+            enterprise: { name: "الشركات والمجموعات (السوبر)", monthly: 100.0, yearly: 950.0 }
         };
 
         const EXCHANGE_RATES = {
@@ -650,6 +681,7 @@
             SAR: 3.75
         };
 
+        const hasOfficeExtraSeat = {{ 1 if extra_seats and extra_seats >= 1 else 0 }};
         let currentCycle = 'monthly';
         let currentCurrency = 'USD';
         let base64Receipt = '';
@@ -695,16 +727,35 @@
 
         function openCheckoutModal(tierKey) {
             const tier = TIERS_DATA[tierKey];
-            const usd = currentCycle === 'yearly' ? tier.yearly : tier.monthly;
+            let usd = currentCycle === 'yearly' ? tier.yearly : tier.monthly;
+            let cycleText = currentCycle === 'yearly' ? 'اشتراك سنوي (توفير شهرين)' : 'اشتراك شهري';
+            
+            if (hasOfficeExtraSeat && (tierKey === 'pro' || tierKey === 'enterprise')) {
+                usd += 19.0;
+                cycleText += ' + شامل 19$ تجديد المقعد الإضافي (بنسبة 19%)';
+            }
             const formatted = formatCurrency(usd);
 
             document.getElementById('modalPlanName').innerText = tier.name;
-            document.getElementById('modalCycleName').innerText = currentCycle === 'yearly' ? 'اشتراك سنوي (توفير شهرين)' : 'اشتراك شهري';
+            document.getElementById('modalCycleName').innerText = cycleText;
             document.getElementById('modalAmount').innerText = formatted;
             document.getElementById('modalCurrencyTag').innerText = currentCurrency;
 
             document.getElementById('selectedPlanKey').value = `${tierKey}_${currentCycle}`;
             document.getElementById('selectedAmount').value = usd;
+            document.getElementById('selectedCurrency').value = currentCurrency;
+
+            document.getElementById('checkoutModal').classList.add('open');
+        }
+
+        function openExtraSeatCheckout() {
+            document.getElementById('modalPlanName').innerText = "مقعد مستخدم إضافي (+1)";
+            document.getElementById('modalCycleName').innerText = "رسوم تأسيس وشراء تدفع لمرة واحدة ($100)، وتجدد لاحقاً بنسبة 19% ($19) مع تجديد المكتب";
+            document.getElementById('modalAmount').innerText = formatCurrency(100.0);
+            document.getElementById('modalCurrencyTag').innerText = currentCurrency;
+
+            document.getElementById('selectedPlanKey').value = "extra_seat";
+            document.getElementById('selectedAmount').value = 100.0;
             document.getElementById('selectedCurrency').value = currentCurrency;
 
             document.getElementById('checkoutModal').classList.add('open');

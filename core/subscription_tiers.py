@@ -70,15 +70,15 @@ TIERS: Dict[str, Dict[str, Any]] = {
     },
     "enterprise": {
         "id": "enterprise",
-        "name_ar": "الشركات والمجموعات",
+        "name_ar": "الشركات والمجموعات (السوبر)",
         "name_en": "Enterprise Legal Group",
         "badge": "النخبة 👑",
         "color": "#8b5cf6",
-        "price_monthly_usd": 99.99,
+        "price_monthly_usd": 100.00,
         "price_yearly_usd": 950.00,
-        "max_users": 7,
+        "max_users": 8,
         "max_active_cases": 500,
-        "storage_gb": 500,
+        "storage_gb": 100,
         "disabled_modules": [],       # كافة الميزات مفتوحة 100% (مع حصر SOC للمشرف العام فقط)
         "features": [
             "كافة ميزات باقة المكتب الاحترافي",
@@ -213,11 +213,14 @@ def calculate_price_in_currency(amount_usd: float, currency: str, rates: Optiona
 # ----------------------------------------------------------------------------
 # نظام المقعد الإضافي الواحد (Single Extra Seat Add-on System)
 # ----------------------------------------------------------------------------
-# متاح حصراً للباقة المتوسطة (pro) والباقة الكبرى (enterprise)
-# مقعد واحد إضافي كحد أقصى لكل مكتب (extra_seats <= 1)
-EXTRA_SEAT_SETUP_FEE_USD: float = 100.00     # رسم تأسيسي يدفع لمرة واحدة عند الشراء
-EXTRA_SEAT_MONTHLY_FEE_USD: float = 9.99    # رسم شهري متكرر يضاف إلى فاتورة التجديد الشهرية
-MAX_EXTRA_SEATS_PER_OFFICE: int = 1         # مسموح بمقعد واحد إضافي فقط
+# متاح حصراً للباقة المتوسطة (pro) والباقة الكبرى السوبر (enterprise)
+# يتاح فقط عندما يمتلئ عدد المستخدمين المسموح بهم للباقة
+# مقعد واحد إضافي كحد أقصى لكل مكتب (extra_seats <= 1) - يشترى مرة واحدة فقط
+EXTRA_SEAT_SETUP_FEE_USD: float = 100.00     # رسم تأسيسي يدفع لمرة واحدة عند الشراء ($100)
+EXTRA_SEAT_RENEWAL_RATE: float = 0.19        # نسبة تجديد المقعد الإضافي (19% من سعر الشراء)
+EXTRA_SEAT_RENEWAL_FEE_USD: float = 19.00    # قيمة التجديد الدورية (19$) تضاف مع كل تجديد لاشتراك المكتب
+EXTRA_SEAT_MONTHLY_FEE_USD: float = 19.00    # للتوافق البرمجي العكسي
+MAX_EXTRA_SEATS_PER_OFFICE: int = 1         # مسموح بمقعد واحد إضافي فقط لكل مكتب
 
 
 def get_office_max_users(office: Any) -> int:
@@ -225,8 +228,8 @@ def get_office_max_users(office: Any) -> int:
     حساب سقف المستخدمين الأقصى المسموح به للمكتب.
     المعادلة: سقف الباقة الأساسي + المقعد الإضافي (بحد أقصى مقعد واحد للباقة المتوسطة أو الكبرى).
     - باقة المستقل: 1
-    - الباقة المتوسطة: 5 (مدير + 4 أعضاء) أو 6 مع المقعد الإضافي
-    - الباقة الكبرى: 7 (مدير + 6 أعضاء) أو 8 مع المقعد الإضافي
+    - الباقة المتوسطة: 5 (صاحب المكتب + 4 أعضاء) أو 6 مع المقعد الإضافي
+    - الباقة الكبرى (السوبر): 8 (صاحب المكتب + 7 أعضاء) أو 9 مع المقعد الإضافي
     """
     if not office:
         return 1
@@ -242,11 +245,12 @@ def get_office_max_users(office: Any) -> int:
     return base_users
 
 
-def can_office_buy_extra_seat(office: Any) -> bool:
+def can_office_buy_extra_seat(office: Any, current_users_count: Optional[int] = None) -> bool:
     """
     التحقق من أهلية المكتب لشراء مقعد إضافي:
-    1. يجب أن يكون على الباقة المتوسطة (pro) أو الكبرى (enterprise).
-    2. لم يسبق له شراء المقعد الإضافي (extra_seats < 1).
+    1. يجب أن يكون على الباقة المتوسطة (pro) أو الكبرى السوبر (enterprise).
+    2. لم يسبق له شراء المقعد الإضافي (extra_seats < 1) - متاح مرة واحدة فقط كحد أقصى.
+    3. يشترط أن يكون المكتب قد استنفد/ملأ سقف المستخدمين الأساسي لباقته (إذا تم تمرير عدد المستخدمين الحالي).
     """
     if not office:
         return False
@@ -254,5 +258,14 @@ def can_office_buy_extra_seat(office: Any) -> bool:
     if plan_id not in ("pro", "enterprise", "monthly", "yearly"):
         return False
     current_extra = getattr(office, "extra_seats", 0) or 0
-    return int(current_extra) < MAX_EXTRA_SEATS_PER_OFFICE
+    if int(current_extra) >= MAX_EXTRA_SEATS_PER_OFFICE:
+        return False
+
+    if current_users_count is not None:
+        tier = get_tier(plan_id)
+        base_users = tier.get("max_users", 1)
+        if current_users_count < base_users:
+            return False
+
+    return True
 

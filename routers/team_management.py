@@ -32,7 +32,7 @@ async def team_page(request: Request, db: Session = Depends(get_db), user: Acces
         cases = db.query(LawCases).filter(LawCases.office_id == office_id, LawCases.is_deleted == 0).all()
         from core.subscription_tiers import get_office_max_users, can_office_buy_extra_seat
         max_users = get_office_max_users(office)
-        can_add_seat = can_office_buy_extra_seat(office)
+        can_add_seat = can_office_buy_extra_seat(office, len(members))
         members_json = json.dumps([{
             "id": m.id, "name": m.name, "username": m.username or "",
             "phone": m.phone or "", "email": m.email or "",
@@ -134,8 +134,8 @@ async def team_save(request: Request, db: Session = Depends(get_db), user: Acces
 
             if current_users_count >= max_users:
                 extra_hint = ""
-                if can_office_buy_extra_seat(office):
-                    extra_hint = " يمكنك طلب مقعد إضافي واحد للمكتب (100$ رسوم تأسيس و9.99$/شهرياً) من لوحة الإعدادات أو الاشتراكات."
+                if can_office_buy_extra_seat(office, current_users_count):
+                    extra_hint = " يمكنك طلب مقعد إضافي واحد للمكتب (100$ رسوم تأسيس تدفع مرة واحدة عند الشراء + 19$ بنسبة 19% تضاف مع كل تجديد) من لوحة الإعدادات أو الاشتراكات."
                 elif office and office.subscription_plan in ('solo', 'trial'):
                     extra_hint = " يرجى الترقية إلى باقة أعلى (المكتب الاحترافي أو الشركات) لزيادة سعة المستخدمين."
                 return JSONResponse({

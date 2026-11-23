@@ -49,7 +49,7 @@ async def superadmin_page(request: Request, db: Session = Depends(get_db), user:
         enterprise_count = sum(1 for o in offices if getattr(o, 'subscription_plan', '') == 'enterprise')
         lifetime_count = sum(1 for o in offices if getattr(o, 'subscription_plan', '') == 'lifetime')
         
-        # Calculate Estimated MRR ($19.99 solo, $49.99 pro, $99.99 enterprise)
+        # Calculate Estimated MRR ($19.99 solo, $49.99 pro, $100.00 enterprise + $19 extra seats)
         mrr = 0.0
         for o in offices:
             if o.is_active == 1:
@@ -61,7 +61,9 @@ async def superadmin_page(request: Request, db: Session = Depends(get_db), user:
                 elif plan == 'yearly':
                     mrr += (480.0 / 12.0)
                 elif plan == 'enterprise':
-                    mrr += 99.99
+                    mrr += 100.00
+                if getattr(o, 'extra_seats', 0) and getattr(o, 'extra_seats', 0) >= 1:
+                    mrr += 19.00
         
         # Payment requests
         payment_requests = db.query(PaymentRequest).order_by(PaymentRequest.id.desc()).all()
