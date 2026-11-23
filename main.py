@@ -4524,6 +4524,54 @@ async def yemeni_laws_page(request: Request, db: Session = Depends(get_db)):
         "can_manage": can_manage,
     })
 
+
+# ----------------------------------------------------------------------------
+# GitHub Auto-Deployment Webhook (Hostinger Production)
+# ----------------------------------------------------------------------------
+@app.post("/api/v1/deploy-webhook")
+async def github_deploy_webhook(request: Request):
+    """
+    استقبال إشعار الدفع من GitHub وتحديث السيرفر تلقائياً:
+    1. يتحقق من توقيع GitHub HMAC SHA256 لضمان أن الطلب صادر فعلياً من GitHub.
+    2. يشغل سكربت deploy.sh في الخلفية لسحب الكود وتحديث قاعدة البيانات وإعادة التشغيل.
+    """
+    import hmac
+    import hashlib
+    import subprocess
+    import os
+    from fastapi.responses import JSONResponse as _J
+
+    webhook_secret = os.getenv("GITHUB_WEBHOOK_SECRET", "lawsaas_deploy_secret_2026")
+    signature_header = request.headers.get("X-Hub-Signature-256")
+
+    body_bytes = await request.body()
+
+    if signature_header:
+        # التحقق من التوقيع الأمني
+        expected_sig = "sha256=" + hmac.new(
+            webhook_secret.encode("utf-8"),
+            body_bytes,
+            hashlib.sha256
+        ).hexdigest()
+        if not hmac.compare_digest(signature_header, expected_sig):
+            return _J({"success": False, "error": "Invalid signature"}, status_code=403)
+
+    event_type = request.headers.get("X-GitHub-Event", "push")
+    if event_type == "ping":
+        return _J({"success": True, "message": "Pong! Webhook connected successfully."})
+
+    # تشغيل سكربت النشر الآلي deploy.sh
+    script_path = os.path.join(os.path.dirname(__file__), "deploy.sh")
+    if os.path.exists(script_path):
+        try:
+            # تشغيل السكربت في الخلفية
+            subprocess.Popen(["bash", script_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return _J({"success": True, "message": "Deployment triggered successfully"})
+        except Exception as e:
+            return _J({"success": False, "error": str(e)}, status_code=500)
+
+    return _J({"success": False, "error": "deploy.sh not found"}, status_code=404)
+
 # [SECURITY FIX CRITICAL] تم حذف endpoint التشخيصي /debug-login-test
 # كان هذا الـ endpoint يُتيح اختبار كلمات المرور وعرض بيانات المستخدمين دون مصادقة.
 # لا تُضف أي endpoints تشخيصية مشابهة في بيئة الإنتاج.
