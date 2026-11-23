@@ -604,29 +604,35 @@ async def api_forgot_send_otp(request: Request, db: Session = Depends(get_db)):
 
         return _enum_error
 
-    if user.phone != phone:
+    # تنظيف وتنسيق أرقام الهواتف للمقارنة المرنة
+    import re as _re
+    clean_input_phone = _re.sub(r'[\s\-\+\(\)]', '', phone)
+    clean_user_phone = _re.sub(r'[\s\-\+\(\)]', '', (user.phone or ""))
 
+    # تطابق الهاتف مع مراعاة أصفار البداية ومفتاح الدولة (مثال 967 و 00967)
+    phone_matched = False
+    if clean_input_phone == clean_user_phone:
+        phone_matched = True
+    elif clean_input_phone.endswith(clean_user_phone) or clean_user_phone.endswith(clean_input_phone):
+        phone_matched = True
+
+    if not phone_matched:
         return _enum_error
 
-    # Rate Limiting Check (3 محاولات كل 15 دقيقة)
-
-    if is_rate_limited(email, "otp", max_attempts=3, window_seconds=900):
-
+    # Rate Limiting Check (5 محاولات كل 15 دقيقة)
+    if is_rate_limited(email, "otp", max_attempts=5, window_seconds=900):
         return _JSONResponse({"success": False, "error": "تجاوزت الحد المسموح من المحاولات. يرجى الانتظار 15 دقيقة."}, status_code=429)
 
     record_attempt(email, "otp")
 
     code = generate_otp(6)
-
     store_otp(email, code, purpose="forgot_password")
-
     sent = send_otp_email(email, code, "forgot_password")
 
     if sent:
+        return _JSONResponse({"success": True, "message": "تم إرسال رمز التحقق بنجاح"})
 
-        return _JSONResponse({"success": True, "message": "تم إرسال رمز التحقق"})
-
-    return _JSONResponse({"success": False, "error": "فشل إرسال البريد الإلكتروني"}, status_code=500)
+    return _JSONResponse({"success": False, "error": "تعذر إرسال البريد الإلكتروني. يرجى التأكد من اتصال الخادم بالإنترنت."}, status_code=500)
 
 @app.post("/api/forgot-verify-otp")
 
@@ -3568,10 +3574,16 @@ async def api_verify_register_otp(request: Request, db: Session = Depends(get_db
             return _J({"success": False, "error": "البيانات غير مكتملة"}, status_code=400)
 
         now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
-        pending_record = db.query(PendingRegistrations).filter(
+        # التوافق مع محركات قواعد البيانات (SQLite لا تدعم FOR UPDATE)
+        query = db.query(PendingRegistrations).filter(
             PendingRegistrations.email == email,
             PendingRegistrations.expires_at > now,
-        ).with_for_update().first()
+        )
+        try:
+            pending_record = query.with_for_update().first()
+        except Exception:
+            pending_record = query.first()
+
         if not pending_record:
             return _J({"success": False, "error": "انتهت صلاحية جلسة التسجيل، يرجى إعادة تعبئة البيانات"}, status_code=400)
 
