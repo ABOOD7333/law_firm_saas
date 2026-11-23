@@ -39,54 +39,22 @@ def _get_db():
 
 def _load_smtp_config() -> dict:
     """
-    يقرأ إعدادات SMTP من متغيرات البيئة أولاً،
-    ويدعم إعدادات iCloud الرسمية كـ fallback تلقائي موثوق،
-    ثم يرجع لـ smtp.conf كـ fallback للتوافق مع الإصدارات القديمة.
+    يقرأ إعدادات SMTP المخصصة لإرسال البريد للعملاء (OTP والتنبيهات) من ملف .env
+    البريد المعتمد: lawsaas90@gmail.com
     """
-    # أولاً: من متغيرات البيئة (.env)
     env_config = {
-        "host":     os.getenv("SMTP_HOST", ""),
-        "port":     os.getenv("SMTP_PORT", "587"),
-        "username": os.getenv("SMTP_USERNAME", ""),
-        "password": os.getenv("SMTP_PASSWORD", ""),
-        "sender":   os.getenv("SMTP_SENDER", "") or os.getenv("SMTP_USERNAME", ""),
+        "host":     os.getenv("SMTP_HOST", "smtp.gmail.com") or "smtp.gmail.com",
+        "port":     os.getenv("SMTP_PORT", "587") or "587",
+        "username": os.getenv("SMTP_USERNAME", "lawsaas90@gmail.com") or "lawsaas90@gmail.com",
+        "password": os.getenv("SMTP_PASSWORD", "") or "qahm emng xosx yddr",
+        "sender":   os.getenv("SMTP_SENDER", "LawSaaS") or "LawSaaS",
         "use_tls":  os.getenv("SMTP_USE_TLS", "true"),
     }
 
     if env_config["username"] and env_config["password"]:
-        if not env_config["host"]:
-            env_config["host"] = "smtp.gmail.com"
         return env_config
 
-    # ثانياً: الاعتماد المباشر على سحابة Apple iCloud إذا توفرت بيانات حساب المنصة
-    icloud_user = os.getenv("KURAIMI_ICLOUD_EMAIL", "lawsaas.platform@icloud.com")
-    icloud_pass = os.getenv("KURAIMI_ICLOUD_APP_PASSWORD", "euty-xcfr-vphl-norv")
-    if icloud_user and icloud_pass:
-        return {
-            "host": "smtp.mail.me.com",
-            "port": "587",
-            "username": icloud_user,
-            "password": icloud_pass,
-            "sender": icloud_user,
-            "use_tls": "true"
-        }
-
-    # Fallback: smtp.conf (للتوافق مع الإصدارات القديمة)
-    config = {}
-    conf_path = os.path.join(os.path.dirname(__file__), "smtp.conf")
-    try:
-        with open(conf_path, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith("#") and "=" in line:
-                    key, val = line.split("=", 1)
-                    config[key.strip()] = val.strip()
-        if config:
-            print("[EmailService] يُنصح بنقل إعدادات SMTP إلى ملف .env")
-    except Exception as e:
-        print(f"[EmailService] Failed to load smtp.conf: {e}")
-
-    return config
+    return env_config
 
 
 def generate_otp(length: int = 6) -> str:

@@ -470,15 +470,16 @@ from dependencies import templates, get_current_user, check_user_permission, req
 from core.upload_security import save_upload
 
 @app.get("/", response_class=HTMLResponse)
-async def login_page(request: Request, user: AccessProfiles = Depends(get_current_user)):
-    # إذا كان المستخدم مسجل دخول مسبقاً، نوجهه للوحة التحكم مباشرة
+async def landing_page(request: Request, user: AccessProfiles = Depends(get_current_user)):
+    # إذا كان المستخدم مسجل دخول مسبقاً، نوجهه للوحة التحكم
     if user:
         return RedirectResponse(url="/dashboard", status_code=303)
-    return templates.TemplateResponse(request=request, name="login.html")
+    # الصفحة الترويجية الرسمية لمنصة وزيرك (Landing Page)
+    return templates.TemplateResponse(request=request, name="landing.html")
 
 
 @app.get("/login", response_class=HTMLResponse)
-async def login_page_alias(request: Request, user: AccessProfiles = Depends(get_current_user)):
+async def login_page(request: Request, user: AccessProfiles = Depends(get_current_user)):
     if user:
         return RedirectResponse(url="/dashboard", status_code=303)
     return templates.TemplateResponse(request=request, name="login.html")
