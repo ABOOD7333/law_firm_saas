@@ -74,6 +74,24 @@ async def startup_event():
     except Exception as e:
         print(f"[Startup Warning] Could not spawn SOC Watchdog: {e}")
 
+    # Spawn Kuraimi Cloud iCloud Listener Loop (Auto-activates payments every 5 minutes)
+    async def kuraimi_cloud_sync_loop():
+        from core.kuraimi_cloud_listener import verify_and_activate_pending_requests
+        from database.database import SessionLocal
+        while True:
+            try:
+                db_sync = SessionLocal()
+                verify_and_activate_pending_requests(db_sync)
+                db_sync.close()
+            except Exception as _e_sync:
+                pass
+            await asyncio.sleep(300) # Every 5 minutes
+
+    try:
+        asyncio.create_task(kuraimi_cloud_sync_loop())
+    except Exception as _e_sched:
+        pass
+
     # Transparent Field-Level Encryption Migration (AES-256-GCM)
     try:
         from core.security_center.crypto_fields import migrate_and_encrypt_existing_records
@@ -4379,31 +4397,49 @@ async def api_subscription_checkout(request: Request, db: Session = Depends(get_
     if existing_pending:
         return _J({"success": False, "error": "يوجد لديك طلب دفع قيد المراجعة بالفعل."})
 
+    # [KURAIMI ANTI-FRAUD] فحص صارم لمنع تكرار استخدام نفس رقم العملية المرجعي
+    existing_ref = db.query(PaymentRequest).filter(
+        PaymentRequest.transfer_ref == transfer_ref.strip()
+    ).first()
+    if existing_ref:
+        return _J({"success": False, "error": "رقم عملية التحويل مستخدم مسبقاً، يرجى التأكد من بيانات السداد الصحيحة."}, status_code=400)
+
     new_req = PaymentRequest(
         office_id=office.id,
         user_id=user.id,
         plan=plan,
         amount=amount,
-        transfer_ref=transfer_ref,
+        transfer_ref=transfer_ref.strip(),
         receipt_base64=receipt_base64,
         status='pending'
     )
     db.add(new_req)
     db.commit()
 
+    # محاولة التحقق السحابي الفوري عبر سحابة iCloud (iCloud Mail Listener)
+    auto_activated = False
+    try:
+        from core.kuraimi_cloud_listener import verify_and_activate_pending_requests
+        activated_list = verify_and_activate_pending_requests(db)
+        if any(item.get("request_id") == new_req.id for item in activated_list):
+            auto_activated = True
+    except Exception as _e_auto:
+        pass
+
     try:
         from email_service import send_email_async
         import asyncio
+        status_badge = "✅ تم التفعيل آلياً عبر سحابة iCloud" if auto_activated else "⏳ قيد المراجعة"
         html_content = f"""
         <div dir="rtl" style="font-family: Arial, sans-serif;">
-            <h2 style="color: #5c2d91;">طلب دفع جديد 💰</h2>
+            <h2 style="color: #5c2d91;">طلب دفع واشتراك جديد 💰</h2>
             <p><strong>المكتب:</strong> {office.name}</p>
             <p><strong>المبلغ:</strong> ${amount} ({plan})</p>
-            <p><strong>المرجع:</strong> {transfer_ref}</p>
-            <p>يرجى الدخول إلى لوحة تحكم SuperAdmin لمراجعة الإيصال وتفعيل الحساب.</p>
+            <p><strong>المرجع / رقم العملية:</strong> {transfer_ref}</p>
+            <p><strong>الحالة:</strong> {status_badge}</p>
         </div>
         """
-        asyncio.create_task(send_email_async("aboodalalimi@icloud.com", f"💰 طلب دفع جديد - {office.name}", html_content))
+        asyncio.create_task(send_email_async("lawsaas.platform@icloud.com", f"💰 إشعار اشتراك جديد - {office.name}", html_content))
     except Exception as e:
         pass
 
@@ -4416,10 +4452,12 @@ async def api_subscription_checkout(request: Request, db: Session = Depends(get_
         office_id=office.id,
         entity_type="payment_request",
         entity_id=new_req.id,
-        details=f"Submitted payment request for {plan}"
+        details=f"Submitted payment request for {plan} (Auto-activated: {auto_activated})"
     )
 
-    return _J({"success": True, "message": "تم إرسال السند بنجاح"})
+    if auto_activated:
+        return _J({"success": True, "auto_activated": True, "message": "تم التحقق من إشعار بنك الكريمي سحابياً وتفعيل اشتراكك بنجاح!"})
+    return _J({"success": True, "auto_activated": False, "message": "تم استلام السند بنجاح وجارٍ التحقق السحابي الآلي من العملية."})
 
 @app.get("/yemeni-laws")
 async def yemeni_laws_page(request: Request, db: Session = Depends(get_db)):

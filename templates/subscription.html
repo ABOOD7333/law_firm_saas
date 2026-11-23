@@ -417,19 +417,28 @@
                 <div class="bank-card-header">
                     <div class="bank-logo">🏦</div>
                     <div>
-                        <div class="bank-name">بنك الكريمي الإسلامي</div>
-                        <div class="bank-sub">Al-Kuraimi Islamic Bank — Yemen</div>
+                        <div class="bank-name">خدمة حاسب — بنك الكريمي الإسلامي</div>
+                        <div class="bank-sub">Al-Kuraimi Islamic Bank (Haseb Service)</div>
                     </div>
                 </div>
                 <div class="bank-fields-grid">
                     <div class="bank-field">
-                        <label>اسم صاحب الحساب</label>
-                        <div class="value" style="font-size: 0.88rem; letter-spacing: 0;">
+                        <label>رقم نقطة حاسب المعتمدة</label>
+                        <div class="value" style="color: #10b981; font-weight: 800; font-size: 1.15rem;">
+                            <span id="haseb-point-num">2709660</span>
+                            <button class="copy-btn" onclick="copyText('2709660', this)">
+                                <i class="fa-solid fa-copy"></i> نسخ النقطة
+                            </button>
+                        </div>
+                    </div>
+                    <div class="bank-field">
+                        <label>اسم صاحب الحساب / النقطة</label>
+                        <div class="value" style="font-size: 0.95rem; letter-spacing: 0;">
                             عبدالله محمد العليمي
                         </div>
                     </div>
                     <div class="bank-field">
-                        <label>رقم الحساب (USD)</label>
+                        <label>رقم الحساب التجاري (USD)</label>
                         <div class="value">
                             <span id="acc-num">3079083282</span>
                             <button class="copy-btn" onclick="copyText('3079083282', this)">
@@ -438,12 +447,10 @@
                         </div>
                     </div>
                     <div class="bank-field">
-                        <label>العملة</label>
-                        <div class="value">دولار أمريكي (USD)</div>
-                    </div>
-                    <div class="bank-field">
-                        <label>البنك</label>
-                        <div class="value" style="font-size: 0.88rem; letter-spacing: 0;">بنك الكريمي — اليمن</div>
+                        <label>آلية التحقق السحابي</label>
+                        <div class="value" style="font-size: 0.88rem; color: #3b82f6; letter-spacing: 0;">
+                            <i class="fa-solid fa-bolt"></i> تفعيل فوري آلي عبر السحابة
+                        </div>
                     </div>
                 </div>
             </div>
