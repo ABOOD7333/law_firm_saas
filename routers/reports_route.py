@@ -11,7 +11,7 @@ from core.error_handler import safe_error_html
 
 from database.database import get_db
 from database.models import (
-    AccessProfiles, LawCases, LawHearings, LawJudgments, LawIncomingCases,
+    AccessProfiles, LawOffices, LawCases, LawHearings, LawJudgments, LawIncomingCases,
     LawTransactions, LawExpenses, LawTasks, LawClients, LawParties, Invoices,
     LawTimesheets, LawPowerOfAttorney, LawDocuments, LawAuditLog
 )
@@ -697,6 +697,7 @@ async def reports_page(
 
     try:
         office_id = user.office_id
+        office = db.query(LawOffices).filter(LawOffices.id == office_id).first()
         now = datetime.now()
         start_date = None
 
@@ -933,6 +934,7 @@ async def reports_page(
         context_data = {
             "request": request,
             "user": user,
+            "office": office,
             "active_page": "reports",
             "period": period,
             "reports_catalog": REPORTS_CATALOG,

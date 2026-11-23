@@ -1,3 +1,4 @@
+from typing import Optional, List
 # -*- coding: utf-8 -*-
 from fastapi import APIRouter, Request, Depends, Form, UploadFile, File, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, FileResponse
@@ -66,12 +67,12 @@ def generate_document_code(db: Session, office_id: int) -> str:
 async def documents_page(
     request: Request,
     view: str = "active",  # 'active', 'archived', 'all'
-    q: str = None,
-    doc_type: str = None,
-    client_id: int = None,
-    case_id: int = None,
-    date_from: str = None,
-    date_to: str = None,
+    q: Optional[str] = None,
+    doc_type: Optional[str] = None,
+    client_id: Optional[str] = None,
+    case_id: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
     db: Session = Depends(get_db),
     user: AccessProfiles = Depends(get_current_user)
 ):
@@ -131,13 +132,22 @@ async def documents_page(
         if doc_type and doc_type.strip():
             docs_query = docs_query.filter(LawDocuments.document_type_key == doc_type.strip())
 
+        # Safe ID parsing to prevent 422 errors on empty strings
+        parsed_client_id = None
+        if client_id is not None and str(client_id).strip().isdigit():
+            parsed_client_id = int(str(client_id).strip())
+
+        parsed_case_id = None
+        if case_id is not None and str(case_id).strip().isdigit():
+            parsed_case_id = int(str(case_id).strip())
+
         # Client Filter
-        if client_id:
-            docs_query = docs_query.filter(LawDocuments.client_id == client_id)
+        if parsed_client_id:
+            docs_query = docs_query.filter(LawDocuments.client_id == parsed_client_id)
 
         # Case Filter
-        if case_id:
-            docs_query = docs_query.filter(LawDocuments.case_id == case_id)
+        if parsed_case_id:
+            docs_query = docs_query.filter(LawDocuments.case_id == parsed_case_id)
 
         # Date Range Filter (doc_date or received_date)
         if date_from:

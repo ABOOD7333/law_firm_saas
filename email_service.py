@@ -1,17 +1,17 @@
 """
-Email service module — LawSaaS Platform
+Email service module — LawSaaS
 يقرأ إعدادات SMTP من متغيرات البيئة (.env)
-Used for OTP verification in forgot_password and register flows.
+يدعم إرسال رسائل التحقق (OTP)، إشعارات الفواتير، الجلسات، واشتراكات المنصة بشكل متزامن وغير متزامن.
 """
 import smtplib
 import os
 import secrets
 import hmac
-import hashlib
-import string
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
+from typing import Optional
+import asyncio
 
 # تحميل ملف .env
 try:
@@ -20,57 +20,82 @@ try:
 except ImportError:
     pass
 
-# ──────────────────────────────────────────────────────────────────────
-# OTP Storage — مدعوم بقاعدة البيانات (AuthVerificationTokens)
-# يعمل بشكل صحيح مع عدة Workers ويحافظ على الرموز عند إعادة التشغيل.
-# ──────────────────────────────────────────────────────────────────────
-
-
-def _hash_otp(code: str, identifier: str) -> str:
-    """Hash an OTP with its normalized identifier to avoid cross-user collisions."""
-    return hashlib.sha256(f"{identifier}:{code}".encode("utf-8")).hexdigest()
-
-
-def _get_db():
-    """Get a disposable database session for OTP operations."""
-    from database.database import SessionLocal
-    return SessionLocal()
+# In-memory OTP store: { email: { code, expires_at } }
+_otp_store: dict = {}
 
 
 def _load_smtp_config() -> dict:
     """
-    يقرأ إعدادات SMTP من متغيرات البيئة أولاً،
-    ثم يرجع لـ smtp.conf كـ fallback للتوافق مع الإصدارات القديمة.
+    يقرأ إعدادات SMTP من متغيرات البيئة أولاً (.env)
     """
-    # أولاً: من متغيرات البيئة (.env)
+    raw_password = os.getenv("SMTP_PASSWORD", "")
+    # تنظيف المسافات من كلمة مرور تطبيقات جوجل (App Password)
+    clean_password = raw_password.replace(" ", "") if raw_password else ""
+
     env_config = {
         "host":     os.getenv("SMTP_HOST", "smtp.gmail.com") or "smtp.gmail.com",
-        "port":     os.getenv("SMTP_PORT", "587") or "587",
-        "username": os.getenv("SMTP_USERNAME", ""),
-        "password": os.getenv("SMTP_PASSWORD", ""),
-        "sender":   os.getenv("SMTP_SENDER", "") or os.getenv("SMTP_USERNAME", ""),
-        "use_tls":  os.getenv("SMTP_USE_TLS", "true"),
+        "port":     int(os.getenv("SMTP_PORT", "587") or "587"),
+        "username": os.getenv("SMTP_USERNAME", "").strip(),
+        "password": clean_password,
+        "sender":   os.getenv("SMTP_SENDER", "LawSaaS").strip() or "LawSaaS",
+        "use_tls":  str(os.getenv("SMTP_USE_TLS", "true")).lower() in ("true", "1", "yes"),
     }
 
-    if env_config["username"] and env_config["password"]:
-        return env_config
+    return env_config
 
-    # Fallback: smtp.conf (للتوافق مع الإصدارات القديمة)
-    config = {}
-    conf_path = os.path.join(os.path.dirname(__file__), "smtp.conf")
+
+def send_email(to_email: str, subject: str, html_content: str, sender_name: Optional[str] = None) -> bool:
+    """
+    إرسال بريد إلكتروني حقيقي عبر SMTP بتنسيق HTML متكامل.
+    """
+    config = _load_smtp_config()
+    username = config.get("username")
+    password = config.get("password")
+
+    if not username or not password:
+        print("[EmailService] ⚠️ لا توجد بيانات SMTP كافية (username/password مفقودة).")
+        return False
+
+    display_name = sender_name or config.get("sender") or "LawSaaS"
+
     try:
-        with open(conf_path, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith("#") and "=" in line:
-                    key, val = line.split("=", 1)
-                    config[key.strip()] = val.strip()
-        if config:
-            print("[EmailService] يُنصح بنقل إعدادات SMTP إلى ملف .env")
-    except Exception as e:
-        print(f"[EmailService] Failed to load smtp.conf: {e}")
+        msg = MIMEMultipart("alternative")
+        msg["From"] = f"{display_name} <{username}>"
+        msg["To"] = to_email
+        msg["Subject"] = subject
+        msg.attach(MIMEText(html_content, "html", "utf-8"))
 
-    return config
+        host = config.get("host", "smtp.gmail.com")
+        port = config.get("port", 587)
+
+        print(f"[EmailService] Connecting to SMTP {host}:{port} for {to_email}...")
+        server = smtplib.SMTP(host, port, timeout=20)
+        server.ehlo()
+        if config.get("use_tls"):
+            server.starttls()
+            server.ehlo()
+
+        server.login(username, password)
+        server.send_message(msg)
+        server.quit()
+
+        print(f"[EmailService] ✅ Email sent successfully to: {to_email}")
+        return True
+    except Exception as e:
+        print(f"[EmailService] ❌ Failed to send email to {to_email}: {e}")
+        return False
+
+
+async def send_email_async(to_email: str, subject: str, html_content: str, sender_name: Optional[str] = None) -> bool:
+    """
+    إرسال بريد إلكتروني في الخلفية دون تعطيل استجابة الخادم (Non-blocking Asynchronous).
+    """
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = asyncio.get_event_loop()
+
+    return await loop.run_in_executor(None, send_email, to_email, subject, html_content, sender_name)
 
 
 def generate_otp(length: int = 6) -> str:
@@ -80,219 +105,79 @@ def generate_otp(length: int = 6) -> str:
     return f"{secrets.randbelow(10 ** length):0{length}d}"
 
 
-def _otp_scoped_identifier(identifier: str, purpose: str = "default") -> str:
-    allowed = {"default", "forgot_password", "2fa", "register", "email_verification"}
-    normalized_purpose = (purpose or "default").strip().lower()
-    normalized_identifier = (identifier or "").lower().strip()
-    if normalized_purpose not in allowed or not normalized_identifier or len(normalized_identifier) > 320:
-        raise ValueError("OTP identifier or purpose is invalid")
-    return f"{normalized_purpose}:{normalized_identifier}"
+def store_otp(identifier: str, code: str, ttl_minutes: int = 10, purpose: str = None, **kwargs):
+    """يحفظ رمز OTP لمعرف معين (email/phone) لمدة ttl_minutes."""
+    _otp_store[identifier.lower()] = {
+        "code": code,
+        "expires_at": datetime.now() + timedelta(minutes=ttl_minutes),
+        "attempts": 0,
+    }
 
 
-def store_otp(identifier: str, code: str, ttl_minutes: int = 10, purpose: str = "default"):
-    """يحفظ رمز OTP مرتبطاً بمعرفه والغرض منه."""
-    from database.models import AuthOtpTokens
-    db = _get_db()
-    try:
-        ident = _otp_scoped_identifier(identifier, purpose)
-        expires = (datetime.now() + timedelta(minutes=ttl_minutes)).strftime("%Y-%m-%d %H:%M:%S")
-        # حذف الرموز القديمة غير المستهلكة لنفس المعرف
-        old_tokens = db.query(AuthOtpTokens).filter(AuthOtpTokens.identifier == ident).all()
-        for t in old_tokens:
-            db.delete(t)
-        new_token = AuthOtpTokens(
-            identifier=ident,
-            token_hash=_hash_otp(code, ident),
-            expires_at=expires,
-            attempts=0,
-        )
-        db.add(new_token)
-        db.commit()
-    except Exception as e:
-        db.rollback()
-        print(f"[OTP] Error storing OTP: {e}")
-        raise
-    finally:
-        db.close()
-
-
-def verify_otp(identifier: str, code: str, purpose: str = "default") -> bool:
-    """يتحقق من صحة رمز OTP والغرض المرتبط به وصلاحيته."""
-    from database.models import AuthOtpTokens
-    db = _get_db()
-    try:
-        ident = _otp_scoped_identifier(identifier, purpose)
-        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        entry = db.query(AuthOtpTokens).filter(
-            AuthOtpTokens.identifier == ident,
-            AuthOtpTokens.consumed_at.is_(None),
-            AuthOtpTokens.expires_at > now_str,
-            AuthOtpTokens.attempts < 5,
-        ).first()
-        if not entry:
-            return False
-        if hmac.compare_digest(entry.token_hash, _hash_otp(code, ident)):
-            entry.consumed_at = now_str
-            db.commit()
-            return True
-        entry.attempts += 1
-        if entry.attempts >= 5:
-            entry.consumed_at = now_str  # استنفد المحاولات
-        db.commit()
+def verify_otp(identifier: str, code: str, purpose: str = None, **kwargs) -> bool:
+    """يتحقق من صحة رمز OTP وصلاحيته الزمنية."""
+    entry = _otp_store.get(identifier.lower())
+    if not entry:
         return False
-    except Exception as e:
-        db.rollback()
-        print(f"[OTP] Error verifying OTP: {e}")
+    if datetime.now() > entry["expires_at"]:
+        del _otp_store[identifier.lower()]
         return False
-    finally:
-        db.close()
+    if hmac.compare_digest(str(entry["code"]), str(code)):
+        del _otp_store[identifier.lower()]
+        return True
+    entry["attempts"] += 1
+    if entry["attempts"] >= 5:
+        del _otp_store[identifier.lower()]
+    return False
 
 
 def send_otp_email(to_email: str, otp_code: str, purpose: str = "forgot_password") -> bool:
     """
     يرسل رمز OTP عبر البريد الإلكتروني.
-    يعيد True عند النجاح، False عند الفشل.
     """
-    config = _load_smtp_config()
-    if not config:
-        print("[EmailService] لا توجد إعدادات SMTP.")
-        return False
-
     if purpose == "forgot_password":
         subject = "رمز استعادة كلمة المرور - LawSaaS"
         body_html = f"""
-        <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 500px; margin: auto; padding: 20px;">
-            <h2 style="color: #0f172a;">🔐 استعادة كلمة المرور</h2>
-            <p>مرحباً،</p>
-            <p>تلقينا طلباً لاستعادة كلمة مرور حسابك في <strong>LawSaaS</strong>.</p>
-            <p>رمز التحقق الخاص بك:</p>
-            <div style="background: #eff6ff; border: 2px solid #3b82f6; border-radius: 12px; padding: 20px; text-align: center; margin: 20px 0;">
-                <span style="font-size: 36px; font-weight: bold; letter-spacing: 12px; color: #1d4ed8;">{otp_code}</span>
+        <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 500px; margin: auto; padding: 20px; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0;">
+            <h2 style="color: #0f172a; text-align: center;">🔐 استعادة كلمة المرور</h2>
+            <p style="color: #334155; font-size: 15px;">مرحباً،</p>
+            <p style="color: #334155; font-size: 15px;">تلقينا طلباً لاستعادة كلمة مرور حسابك في <strong>LawSaaS</strong>.</p>
+            <div style="background: #eff6ff; border: 2px dashed #3b82f6; border-radius: 12px; padding: 18px; text-align: center; margin: 20px 0;">
+                <span style="font-size: 32px; font-weight: bold; letter-spacing: 10px; color: #1d4ed8; font-family: monospace;">{otp_code}</span>
             </div>
-            <p style="color: #64748b; font-size: 14px;">⏰ صالح لمدة <strong>10 دقائق</strong> فقط.</p>
-            <p style="color: #64748b; font-size: 14px;">إذا لم تطلب هذا الرمز، تجاهل هذا البريد.</p>
+            <p style="color: #64748b; font-size: 13px; text-align: center;">⏰ الرمز صالح لمدة <strong>10 دقائق</strong> فقط.</p>
             <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
-            <p style="color: #94a3b8; font-size: 12px;">LawSaaS - نظام إدارة مكاتب المحاماة السحابي</p>
+            <p style="color: #94a3b8; font-size: 12px; text-align: center;">LawSaaS - نظام إدارة مكاتب المحاماة السحابي</p>
         </div>
         """
     elif purpose == "2fa":
         subject = "رمز التحقق الثنائي (2FA) - LawSaaS"
         body_html = f"""
-        <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 500px; margin: auto; padding: 20px;">
-            <h2 style="color: #0f172a;">🔐 رمز التحقق الثنائي (2FA)</h2>
-            <p>مرحباً،</p>
-            <p>يرجى استخدام الرمز التالي لإتمام تسجيل الدخول إلى حسابك:</p>
-            <div style="background: #eff6ff; border: 2px solid #3b82f6; border-radius: 12px; padding: 20px; text-align: center; margin: 20px 0;">
-                <span style="font-size: 36px; font-weight: bold; letter-spacing: 12px; color: #1d4ed8;">{otp_code}</span>
+        <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 500px; margin: auto; padding: 20px; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0;">
+            <h2 style="color: #0f172a; text-align: center;">🔐 رمز التحقق الثنائي (2FA)</h2>
+            <p style="color: #334155; font-size: 15px;">مرحباً،</p>
+            <p style="color: #334155; font-size: 15px;">يرجى استخدام الرمز التالي لتأكيد الدخول إلى حسابك في <strong>LawSaaS</strong>:</p>
+            <div style="background: #eff6ff; border: 2px dashed #3b82f6; border-radius: 12px; padding: 18px; text-align: center; margin: 20px 0;">
+                <span style="font-size: 32px; font-weight: bold; letter-spacing: 10px; color: #1d4ed8; font-family: monospace;">{otp_code}</span>
             </div>
-            <p style="color: #64748b; font-size: 14px;">⏰ صالح لمدة <strong>10 دقائق</strong> فقط.</p>
-            <p style="color: #64748b; font-size: 14px;">إذا لم تقم بطلب هذا الرمز، يرجى تغيير كلمة المرور الخاصة بك فوراً.</p>
+            <p style="color: #64748b; font-size: 13px; text-align: center;">⏰ صالح لمدة <strong>10 دقائق</strong> فقط.</p>
             <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
-            <p style="color: #94a3b8; font-size: 12px;">LawSaaS - نظام إدارة مكاتب المحاماة السحابي</p>
+            <p style="color: #94a3b8; font-size: 12px; text-align: center;">LawSaaS - نظام إدارة مكاتب المحاماة السحابي</p>
         </div>
         """
     else:  # register
         subject = "تأكيد إنشاء حسابك - LawSaaS"
         body_html = f"""
-        <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 500px; margin: auto; padding: 20px;">
-            <h2 style="color: #0f172a;">🎉 مرحباً بك في LawSaaS</h2>
-            <p>شكراً لتسجيلك! استخدم رمز التحقق التالي لتأكيد بريدك الإلكتروني:</p>
-            <div style="background: #f0fdf4; border: 2px solid #22c55e; border-radius: 12px; padding: 20px; text-align: center; margin: 20px 0;">
-                <span style="font-size: 36px; font-weight: bold; letter-spacing: 12px; color: #16a34a;">{otp_code}</span>
+        <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 500px; margin: auto; padding: 20px; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0;">
+            <h2 style="color: #059669; text-align: center;">🎉 مرحباً بك في LawSaaS</h2>
+            <p style="color: #334155; font-size: 15px;">شكراً لانضمامك! استخدم رمز التحقق التالي لتفعيل بريدك الإلكتروني:</p>
+            <div style="background: #f0fdf4; border: 2px dashed #22c55e; border-radius: 12px; padding: 18px; text-align: center; margin: 20px 0;">
+                <span style="font-size: 32px; font-weight: bold; letter-spacing: 10px; color: #15803d; font-family: monospace;">{otp_code}</span>
             </div>
-            <p style="color: #64748b; font-size: 14px;">⏰ صالح لمدة <strong>10 دقائق</strong> فقط.</p>
+            <p style="color: #64748b; font-size: 13px; text-align: center;">⏰ الرمز صالح لمدة <strong>10 دقائق</strong> فقط.</p>
             <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
-            <p style="color: #94a3b8; font-size: 12px;">LawSaaS - نظام إدارة مكاتب المحاماة السحابي</p>
+            <p style="color: #94a3b8; font-size: 12px; text-align: center;">LawSaaS - نظام إدارة مكاتب المحاماة السحابي</p>
         </div>
         """
 
-    try:
-        sender_email = config.get("username", "noreply@lawsaas.com")
-        webhook_url = os.getenv("GMAIL_WEBHOOK_URL")
-
-        # 1. إرسال عبر Webhook (لتجاوز حظر Railway للمنافذ)
-        if webhook_url:
-            import urllib.request
-            import json
-            
-            payload = {
-                "to": to_email,
-                "subject": subject,
-                "html": body_html
-            }
-            data = json.dumps(payload).encode("utf-8")
-            req = urllib.request.Request(webhook_url, data=data)
-            req.add_header("Content-Type", "application/json")
-            
-            print(f"[EmailService] Sending via Gmail Webhook to {to_email}")
-            with urllib.request.urlopen(req, timeout=15) as response:
-                print(f"[EmailService] Webhook response: {response.status}")
-                return True
-
-        # 2. الإرسال بالطريقة العادية SMTP (تعمل محلياً أو إذا كان السيرفر مدفوعاً)
-        else:
-            import smtplib
-            from email.mime.text import MIMEText
-            from email.mime.multipart import MIMEMultipart
-            
-            smtp_host = config.get("host", "smtp.gmail.com")
-            port = int(config.get("port", 587))
-            
-            msg = MIMEMultipart()
-            msg['From'] = f"LawSaaS <{sender_email}>"
-            msg['To'] = to_email
-            msg['Subject'] = subject
-            msg.attach(MIMEText(body_html, 'html'))
-            
-            print(f"[EmailService] Sending via Standard SMTP ({smtp_host}:{port}) to {to_email}")
-            
-            server = smtplib.SMTP(smtp_host, port)
-            server.ehlo()
-            server.starttls()
-            if config.get("username") and config.get("password"):
-                server.login(config.get("username"), config.get("password"))
-            server.send_message(msg)
-            server.quit()
-            print("[EmailService] Email sent successfully via SMTP.")
-            return True
-
-    except Exception as e:
-        print(f"[EmailService] Failed to send email: {e}")
-        return False
-
-
-async def send_email_async(to_email: str, subject: str, html_content: str) -> bool:
-    """Send an application email without blocking the event loop."""
-    import asyncio
-
-    def _send() -> bool:
-        config = _load_smtp_config()
-        if not config:
-            return False
-        try:
-            webhook_url = os.getenv("GMAIL_WEBHOOK_URL")
-            if webhook_url:
-                import json
-                import urllib.request
-                payload = json.dumps({"to": to_email, "subject": subject, "html": html_content}).encode("utf-8")
-                req = urllib.request.Request(webhook_url, data=payload, headers={"Content-Type": "application/json"})
-                with urllib.request.urlopen(req, timeout=15) as response:
-                    return 200 <= response.status < 300
-
-            message = MIMEMultipart()
-            message["From"] = f"LawSaaS <{config.get('sender') or config.get('username', '')}>"
-            message["To"] = to_email
-            message["Subject"] = subject
-            message.attach(MIMEText(html_content, "html", "utf-8"))
-            with smtplib.SMTP(config.get("host", "smtp.gmail.com"), int(config.get("port", 587)), timeout=15) as server:
-                if str(config.get("use_tls", "true")).lower() in {"1", "true", "yes"}:
-                    server.starttls()
-                if config.get("username") and config.get("password"):
-                    server.login(config["username"], config["password"])
-                server.send_message(message)
-            return True
-        except Exception as exc:
-            print(f"[EmailService] Notification delivery failed: {type(exc).__name__}")
-            return False
-
-    return await asyncio.to_thread(_send)
+    return send_email(to_email, subject, body_html)

@@ -451,7 +451,7 @@ async def login_page(request: Request, user: AccessProfiles = Depends(get_curren
     # إذا كان المستخدم مسجل دخول مسبقاً، نوجهه للوحة التحكم مباشرة
     if user:
         return RedirectResponse(url="/dashboard", status_code=303)
-    return templates.TemplateResponse(request=request, name="login.html")
+    return templates.TemplateResponse(request=request, name="landing.html")
 
 
 @app.get("/login", response_class=HTMLResponse)
@@ -937,6 +937,8 @@ async def login_submit(
 
                 app_logger.info(f"LOGIN_2FA_TRIGGERED | user={user.id} | email={user.email}")
 
+                is_secure = (request.url.scheme == "https") or (request.headers.get("x-forwarded-proto") == "https")
+
                 response = RedirectResponse(url="/login-2fa", status_code=303)
 
                 response.set_cookie(
@@ -949,7 +951,7 @@ async def login_submit(
 
                     max_age=300, # Valid for 5 minutes
 
-                    secure=not (request.url.hostname in ["127.0.0.1", "localhost"]),
+                    secure=is_secure,
 
                     samesite="Lax"
 
@@ -986,7 +988,7 @@ async def login_submit(
 
             app_logger.info(f"LOGIN_OK | user={user.id} | role={user.role} | office={user.office_id}")
 
-            is_secure = not (request.url.hostname in ["127.0.0.1", "localhost"])
+            is_secure = (request.url.scheme == "https") or (request.headers.get("x-forwarded-proto") == "https")
 
             target_url = "/dashboard"
             if user.role == "موكل":
@@ -1167,9 +1169,8 @@ async def login_2fa_submit(
 
         app_logger.info(f"LOGIN_OK_2FA | user={user.id} | role={user.role} | office={user.office_id}")
 
-        # Enforce secure cookies dynamically based on hostname
-
-        is_secure = not (request.url.hostname in ["127.0.0.1", "localhost"])
+        # Enforce secure cookies dynamically based on actual request scheme/proxy
+        is_secure = (request.url.scheme == "https") or (request.headers.get("x-forwarded-proto") == "https")
 
         target_url = "/dashboard"
         if user.role == "موكل":
@@ -1969,28 +1970,45 @@ async def export_case_report(
 
     office = db.query(LawOffices).filter(LawOffices.id == office_id).first()
 
+    sub_status_text = "غير محدد"
+    days_left = None
+    if office:
+        if office.subscription_plan == 'lifetime':
+            sub_status_text = "اشتراك دائم (مدى الحياة)"
+            days_left = 9999
+        elif office.subscription_end:
+            try:
+                end_dt = datetime.strptime(office.subscription_end[:19], "%Y-%m-%d %H:%M:%S")
+                diff = (end_dt - datetime.utcnow()).days
+                if diff < 0:
+                    sub_status_text = f"منتهي منذ {abs(diff)} يوم ({office.subscription_end[:10]})"
+                    days_left = 0
+                elif diff == 0:
+                    sub_status_text = f"ينتهي اليوم ({office.subscription_end[:10]})"
+                    days_left = 0
+                else:
+                    days_left = diff
+                    sub_status_text = f"متبقي {diff} يوم (حتى {office.subscription_end[:10]})"
+            except Exception:
+                sub_status_text = f"صالح حتى {office.subscription_end[:10]}"
+                days_left = getattr(user, 'trial_days_left', 0)
+        elif getattr(user, 'trial_days_left', None) is not None:
+            days_left = user.trial_days_left
+            sub_status_text = f"متبقي {days_left} يوم تجريبي"
+
     return templates.TemplateResponse(
-
         request=request,
-
         name="case_report.html",
-
         context={
-
             "user": user,
-
             "office": office,
-
+            "sub_status_text": sub_status_text,
+            "days_left": days_left,
             "cases_data": cases_data,
-
             "start_date": start_date,
-
             "end_date": end_date,
-
             "is_single": bool(case_number or case_title)
-
         }
-
     )
 
 @app.get("/cases/{case_id}", response_class=HTMLResponse)
@@ -2852,47 +2870,57 @@ async def settings_page(request: Request, db: Session = Depends(get_db), user: A
         return _safe_error(traceback.format_exc())
 
 @app.post("/settings/update_office")
-
 async def update_office(
-
     request: Request,
-
-    office_id: int = Form(None),
-
+    office_id: Optional[int] = Form(None),
     name: str = Form(...),
-
+    license_number: Optional[str] = Form(None),
+    logo_base64: Optional[str] = Form(None),
     db: Session = Depends(get_db),
-
     user: AccessProfiles = Depends(get_current_user)
-
 ):
-
     if not user:
-
         return RedirectResponse(url="/", status_code=303)
 
-    if user.role not in ['مدير', 'مدير المكتب', 'صاحب المكتب'] and getattr(user, 'is_superadmin', 0) != 1:
+    allowed_roles = ['مدير', 'مدير المكتب', 'صاحب المكتب', 'صاحب مكتب', 'مدير مكتب', 'مدير النظام']
+    if user.role not in allowed_roles and getattr(user, 'is_superadmin', 0) != 1:
         raise HTTPException(status_code=403, detail="غير مصرح لك بتعديل بيانات المكتب")
 
     if office_id and office_id != user.office_id and getattr(user, 'is_superadmin', 0) != 1:
         raise HTTPException(status_code=403, detail="غير مصرح لك بتعديل بيانات مكتب آخر")
 
-    office_id_to_update = user.office_id if getattr(user, 'is_superadmin', 0) != 1 else (office_id or user.office_id)
-    if office_id_to_update:
-        office = db.query(LawOffices).filter(LawOffices.id == office_id_to_update).first()
-        if office and (user.office_id == office.id or getattr(user, 'is_superadmin', 0) == 1):
-            office.name = name
+    try:
+        office_id_to_update = user.office_id if getattr(user, 'is_superadmin', 0) != 1 else (office_id or user.office_id)
+        if office_id_to_update:
+            office = db.query(LawOffices).filter(LawOffices.id == office_id_to_update).first()
+            if office and (user.office_id == office.id or getattr(user, 'is_superadmin', 0) == 1):
+                office.name = name.strip() if name else office.name
+                if license_number is not None:
+                    office.license_number = license_number.strip()
+                if logo_base64 == "REMOVE":
+                    office.logo_path = None
+                elif logo_base64 and len(logo_base64.strip()) > 10:
+                    office.logo_path = logo_base64.strip()
+                db.commit()
+        else:
+            new_logo = None
+            if logo_base64 and logo_base64 != "REMOVE" and len(logo_base64.strip()) > 10:
+                new_logo = logo_base64.strip()
+            office = LawOffices(
+                name=name.strip(),
+                license_number=license_number.strip() if license_number else None,
+                logo_path=new_logo
+            )
+            db.add(office)
             db.commit()
+            if user:
+                user.office_id = office.id
+                db.commit()
 
-    else:
-
-        office = LawOffices(name=name)
-
-        db.add(office)
-
-        db.commit()
-
-    return RedirectResponse(url="/settings", status_code=303)
+        return RedirectResponse(url="/settings?msg=office_updated", status_code=303)
+    except Exception as e:
+        app_logger.error(f"Error updating office settings: {e}")
+        return RedirectResponse(url="/settings?msg=error", status_code=303)
 
 @app.post("/settings/add_user")
 
@@ -3525,6 +3553,7 @@ async def api_register_secure(request: Request, db: Session = Depends(get_db)):
 async def api_verify_register_otp(request: Request, db: Session = Depends(get_db)):
 
     from fastapi.responses import JSONResponse as _J
+    from datetime import datetime, timezone, timedelta
 
     try:
 
@@ -3558,7 +3587,7 @@ async def api_verify_register_otp(request: Request, db: Session = Depends(get_db
 
         # إنشاء مكتب جديد (مساحة عمل معزولة) لكل مستخدم يسجل من الخارج
 
-        from datetime import datetime, timezone, timedelta
+        # datetime already imported above
 
         sub_end = (datetime.now(timezone.utc) + timedelta(days=14)).replace(tzinfo=None).strftime("%Y-%m-%d %H:%M:%S")
 

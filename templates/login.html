@@ -3,7 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تسجيل الدخول - نظام إدارة مكاتب المحاماة السحابي</title>
+    <title>وزيرك | منصة وزيرك السحابية لإدارة مكاتب المحاماة والقضايا</title>
+    <meta name="description" content="منصة وزيرك (Waziruk) - النظام السحابي المتكامل لإدارة مكاتب المحاماة، القضايا، الجلسات القضائية، الموكلين، الفواتير، والأتمتة الذكية بكل أمان واحترافية.">
+    <meta name="keywords" content="وزيرك, منصة وزيرك, موقع وزيرك, نظام وزيرك, إدارة مكاتب المحاماة, برنامج محاماة, نظام إدارة القضايا, Waziruk, LawSaaS">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://waziruk.tech/login">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/img/waziruk-logo.png">
+    <link rel="apple-touch-icon" href="/static/img/waziruk-logo.png">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="ar_AR">
+    <meta property="og:site_name" content="وزيرك | Waziruk">
+    <meta property="og:title" content="وزيرك - منصة إدارة مكاتب المحاماة السحابية">
+    <meta property="og:description" content="منصة وزيرك (Waziruk): إدارة شاملة للقضايا، الجلسات، الموكلين، الأتعاب، والأتمتة الذكية لمكاتب المحاماة.">
+    <meta property="og:url" content="https://waziruk.tech/login">
+    <meta property="og:image" content="https://waziruk.tech/static/img/waziruk-og.jpg">
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "وزيرك",
+      "alternateName": ["منصة وزيرك", "Waziruk", "LawSaaS"],
+      "url": "https://waziruk.tech/"
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "منصة وزيرك لإدارة مكاتب المحاماة",
+      "alternateName": ["وزيرك", "Waziruk", "LawSaaS"],
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web, Android",
+      "url": "https://waziruk.tech/"
+    }
+    </script>
     <link rel="stylesheet" href="/static/css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
@@ -81,10 +115,10 @@
                         <path d="M2 17L12 22L22 17" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         <path d="M2 12L12 17L22 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
-                    <span>LawSaaS</span>
+                    <span>وزيرك <small style="font-size: 0.65em; opacity: 0.85;">| LawSaaS</small></span>
                 </div>
-                <h1>مستقبل إدارة<br>مكاتب المحاماة</h1>
-                <p>قم بإدارة قضاياك، عملائك، وفريق عملك بذكاء وسهولة عبر سحابة آمنة وموثوقة.</p>
+                <h1>منصة وزيرك<br>لمستقبل إدارة مكاتب المحاماة</h1>
+                <p>مع منصة وزيرك السحابية: قم بإدارة قضاياك، جلساتك، عملائك، وفريق عملك بذكاء وسهولة عبر سحابة آمنة وموثوقة.</p>
             </div>
             <div class="shapes">
                 <div class="shape shape-1"></div>
@@ -100,7 +134,7 @@
                     {{ error }}
                 </div>
                 {% endif %}
-                <form action="/" method="post" id="login-form">
+                <form action="/login" method="post" id="login-form">
                     <input type="hidden" name="csrf_token" id="csrf-field" value="">
                     <div class="input-group">
                         <label for="email">اسم المستخدم أو البريد الإلكتروني</label>
@@ -132,6 +166,7 @@
                 </script>
                 <div class="form-footer">
                     <p>ليس لديك حساب؟ <a onclick="openModal('register-modal')">إنشاء حساب جديد</a></p>
+                    <p style="margin-top: 10px;"><a href="/" style="color: #64748b; font-size: 0.88rem;">← العودة إلى الصفحة الرئيسية (منصة وزيرك)</a></p>
                 </div>
             </div>
         </div>
@@ -155,7 +190,7 @@
                 </div>
                 <div class="form-group">
                     <label>رقم الهاتف</label>
-                    <input type="tel" id="forgot-phone" placeholder="05xxxxxxxxx">
+                    <input type="tel" id="forgot-phone" placeholder="مثال: 77xxxxxxx أو 05xxxxxxxx">
                 </div>
                 <button class="btn-submit" onclick="forgotSendOTP()" id="btn-forgot-send">إرسال رمز التحقق</button>
             </div>
@@ -252,7 +287,7 @@
                 </div>
                 <div class="form-group">
                     <label>كلمة المرور (رمز الدخول)</label>
-                    <input type="password" id="reg-pass" placeholder="أدخل كلمة مرور قوية (12 حرفاً على الأقل)">
+                    <input type="password" id="reg-pass" placeholder="أدخل كلمة مرور قوية (8 أحرف على الأقل)">
                 </div>
                 <div style="display: flex; gap: 10px; margin-top: 20px;">
                     <button class="btn-submit" style="background: #f1f5f9; color: #475569;" onclick="regShowStep(1)">رجوع</button>
@@ -415,7 +450,7 @@
             const pass = document.getElementById('forgot-new-pass').value;
             const confirm = document.getElementById('forgot-new-pass-confirm').value;
 
-            if(pass.length < 12) { showAlert('forgot-alert', 'كلمة المرور يجب أن تكون 12 حرفاً على الأقل'); return; }
+            if(pass.length < 8) { showAlert('forgot-alert', 'كلمة المرور يجب أن تكون 8 أحرف على الأقل'); return; }
             if(pass !== confirm) { showAlert('forgot-alert', 'كلمتا المرور غير متطابقتين'); return; }
 
             const btn = document.getElementById('btn-forgot-reset');
@@ -438,7 +473,7 @@
         }
 
         // ==================== REGISTER FLOW ====================
-        let currentRole = '';
+        let currentRole = 'محامٍ';
         
         function regShowStep(step) {
             document.querySelectorAll('#register-modal .modal-step').forEach(s => s.classList.remove('active'));
@@ -461,19 +496,26 @@
         async function regSubmitForm() {
             const rawCode = document.getElementById('reg-phone-code') ? document.getElementById('reg-phone-code').value : '';
             const pureCode = rawCode.replace(/[^0-9+]/g, '');
+            const localPhone = (document.getElementById('reg-phone').value || '').replace(/^0+/, '');
             const payload = {
-                role: currentRole,
-                username: document.getElementById('reg-username').value,
-                name: document.getElementById('reg-name').value,
-                phone: pureCode + document.getElementById('reg-phone').value,
-                email: document.getElementById('reg-email').value,
+                role: currentRole || 'محامٍ',
+                username: (document.getElementById('reg-username').value || '').trim(),
+                name: (document.getElementById('reg-name').value || '').trim(),
+                phone: pureCode + localPhone,
+                email: (document.getElementById('reg-email').value || '').trim(),
                 birth_date: document.getElementById('reg-birth').value,
                 access_pin: document.getElementById('reg-pass').value,
                 lawyer_name: document.getElementById('reg-lawyer-name').value
             };
 
-            if(!payload.username || !payload.name || !payload.email || !payload.birth_date || !payload.access_pin) {
-                showAlert('reg-alert', 'الرجاء تعبئة جميع الحقول الأساسية'); return;
+            if(!payload.username || !payload.name || !localPhone || !payload.email || !payload.birth_date || !payload.access_pin) {
+                showAlert('reg-alert', 'الرجاء تعبئة جميع الحقول الأساسية بما فيها رقم الهاتف'); return;
+            }
+            if(localPhone.length < 7) {
+                showAlert('reg-alert', 'الرجاء إدخال رقم هاتف صحيح'); return;
+            }
+            if(payload.access_pin.length < 8) {
+                showAlert('reg-alert', 'كلمة المرور يجب أن تكون 8 أحرف على الأقل'); return;
             }
 
             const btn = document.getElementById('btn-reg-submit');
@@ -525,6 +567,11 @@
             if (event.target.classList.contains('modal-overlay')) {
                 event.target.classList.remove('active');
             }
+        }
+
+        // فتح نافذة التسجيل تلقائياً عند القدوم من زر إنشاء حساب
+        if (new URLSearchParams(window.location.search).get('register') === '1') {
+            openModal('register-modal');
         }
     </script>
 </body>

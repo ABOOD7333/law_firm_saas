@@ -38,60 +38,29 @@
             max-width: 1000px;
             margin: 0 auto;
             background: var(--bg-card);
-            border-radius: 20px;
+            border-radius: 16px;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.08);
             overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            padding: 2.5rem 2.5rem 3rem;
+            position: relative;
         }
 
-        /* Header Section */
-        .report-header {
-            background: linear-gradient(135deg, var(--primary), #1e293b);
-            color: white;
-            padding: 3rem 2.5rem;
+        /* Scope & Filter Strip */
+        .report-scope-strip {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            position: relative;
-            overflow: hidden;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 12px 18px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            font-size: 0.88rem;
         }
-
-        .report-header::before {
-            content: '';
-            position: absolute;
-            top: -50%; right: -20%;
-            width: 300px; height: 300px;
-            background: radial-gradient(circle, rgba(59,130,246,0.3) 0%, transparent 70%);
-            border-radius: 50%;
+        .report-scope-strip .scope-item strong {
+            color: #0f172a;
         }
-
-        .header-content h1 {
-            font-size: 2.2rem;
-            font-weight: 800;
-            margin-bottom: 0.5rem;
-            letter-spacing: -0.5px;
-        }
-
-        .header-content p {
-            color: #cbd5e1;
-            font-size: 1.1rem;
-        }
-
-        .header-meta {
-            text-align: left;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 1.5rem;
-            border-radius: 16px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .header-meta .meta-item {
-            margin-bottom: 0.5rem;
-            font-size: 0.95rem;
-        }
-        .header-meta .meta-item:last-child { margin-bottom: 0; }
-        .header-meta strong { color: #f8fafc; }
 
         /* Summary Section */
         .summary-bar {
@@ -280,42 +249,32 @@
 
     <div class="report-container">
         
-        <!-- Header -->
-        <header class="report-header">
-            <div class="header-content">
-                <h1>{{ office.name if office else 'مكتب المحاماة' }}</h1>
-                <p>تقرير النشاط القضائي الموحد</p>
+        <!-- Official Legal Letterhead & Center Watermark -->
+        {% include "components/report_letterhead.html" %}
+
+        <!-- Scope & Filter Strip -->
+        <div class="report-scope-strip">
+            <div class="scope-item">
+                <i class="fa-solid fa-calendar-days" style="color: #6366f1; margin-left: 6px;"></i>
+                <span>النطاق الزمني:</span>
+                <strong>
+                    {% if start_date and end_date %}
+                        من {{ start_date }} إلى {{ end_date }}
+                    {% elif start_date %}
+                        من {{ start_date }} وما بعد
+                    {% elif end_date %}
+                        حتى {{ end_date }}
+                    {% else %}
+                        سجل شامل (كافة التواريخ)
+                    {% endif %}
+                </strong>
             </div>
-            <div class="header-center-icon" style="text-align: center; color: #cbd5e1; font-size: 4.5rem; opacity: 0.9;">
-                <i class="fa-solid fa-scale-balanced"></i>
+            <div class="scope-item">
+                <i class="fa-solid fa-filter" style="color: #6366f1; margin-left: 6px;"></i>
+                <span>نوع التقرير:</span>
+                <strong>{{ 'قضية محددة' if is_single else 'شامل لكافة القضايا' }}</strong>
             </div>
-            <div class="header-meta">
-                <div class="meta-item">
-                    <span>مُصدر التقرير:</span> <strong>{{ user.name }} ({{ user.role }})</strong>
-                </div>
-                <div class="meta-item">
-                    <span>تاريخ الإصدار:</span> <strong><script>document.write(new Date().toLocaleDateString('ar-SA'))</script></strong>
-                </div>
-                <div class="meta-item">
-                    <span>النطاق الزمني:</span> 
-                    <strong>
-                        {% if start_date and end_date %}
-                            من {{ start_date }} إلى {{ end_date }}
-                        {% elif start_date %}
-                            من {{ start_date }} وما بعد
-                        {% elif end_date %}
-                            حتى {{ end_date }}
-                        {% else %}
-                            سجل شامل (جميع التواريخ)
-                        {% endif %}
-                    </strong>
-                </div>
-                <div class="meta-item">
-                    <span>نوع التقرير:</span> 
-                    <strong>{{ 'قضية محددة' if is_single else 'شامل لجميع القضايا' }}</strong>
-                </div>
-            </div>
-        </header>
+        </div>
 
         <!-- Analytics Summary -->
         <div class="summary-bar">

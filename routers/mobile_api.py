@@ -1131,7 +1131,7 @@ async def get_mobile_legal_references(
 
 @router.get("/search")
 async def get_mobile_search(
-    q: str,
+    q: str = "",
     db: Session = Depends(get_db),
     user: AccessProfiles = Depends(get_current_user)
 ):
@@ -1184,13 +1184,12 @@ async def get_mobile_automation(
     if not user or not user.office_id:
         raise HTTPException(status_code=401, detail="غير مصرح")
     rules = db.query(LawWorkflowRules).filter(
-        LawWorkflowRules.office_id == user.office_id,
-        LawWorkflowRules.is_deleted == 0
+        LawWorkflowRules.office_id == user.office_id
     ).order_by(LawWorkflowRules.id.desc()).limit(100).all()
     return [{
         "id": r.id,
         "name": r.name or "قاعدة أتمتة",
-        "trigger_event": getattr(r, "trigger_event", "") or "",
+        "trigger_event": getattr(r, "trigger_key", "") or getattr(r, "trigger_event", "") or "",
         "action_type": getattr(r, "action_type", "") or "",
         "is_active": getattr(r, "is_active", 1) or 1,
         "description": getattr(r, "description", "") or ""
@@ -1331,18 +1330,17 @@ async def get_mobile_reference_data(
     if not user or not user.office_id:
         raise HTTPException(status_code=401, detail="غير مصرح")
     query = db.query(LawReferenceData).filter(
-        LawReferenceData.office_id == user.office_id,
-        LawReferenceData.is_deleted == 0
+        LawReferenceData.office_id == user.office_id
     )
     if category:
-        query = query.filter(LawReferenceData.category_key == category)
+        query = query.filter(LawReferenceData.ref_type == category)
     items = query.order_by(LawReferenceData.id.asc()).limit(100).all()
     return [{
         "id": it.id,
-        "category_key": it.category_key or "general",
-        "data_code": it.data_code or "",
-        "name_ar": it.name_ar or "",
-        "is_active": it.is_active
+        "category_key": getattr(it, "ref_type", "general") or "general",
+        "data_code": str(it.id),
+        "name_ar": getattr(it, "ref_name", "") or "",
+        "is_active": 1
     } for it in items]
 
 
@@ -1359,11 +1357,11 @@ async def get_mobile_login_log(
     ).order_by(AuthSessions.id.desc()).limit(20).all()
     return [{
         "id": s.id,
-        "created_at": s.created_at or "",
-        "last_activity_at": s.last_activity_at or "",
-        "ip_address": s.ip_address or "127.0.0.1",
-        "user_agent": (s.user_agent or "Mobile Device")[:50],
-        "is_active": s.is_active == 1
+        "created_at": getattr(s, "created_at", "") or "",
+        "last_activity_at": getattr(s, "created_at", "") or "",
+        "ip_address": "127.0.0.1",
+        "user_agent": getattr(s, "device_id", "Mobile Device") or "Mobile Device",
+        "is_active": getattr(s, "is_active", 0) == 1
     } for s in sessions]
 
 
@@ -1595,3 +1593,59 @@ async def post_mobile_conflict_check(
     )
     return res or {"conflicts_found": False, "results": [], "risk_level": "safe"}
 
+
+
+# =========================================================================
+# Subscription Plans & Currency API (Mobile Native)
+# =========================================================================
+
+@router.get("/subscription/plans")
+async def get_mobile_subscription_plans(
+    currency: Optional[str] = "USD",
+    billing_cycle: Optional[str] = "monthly",
+    db: Session = Depends(get_db),
+    user: AccessProfiles = Depends(get_current_user)
+):
+    """جلب باقات الاشتراكات الثلاثة مع المعادل للعملة المختارة (USD, YER, SAR)"""
+    from core.subscription_tiers import TIERS, DEFAULT_EXCHANGE_RATES, calculate_price_in_currency
+    
+    target_curr = (currency or "USD").upper()
+    plans_out = []
+    
+    for tier_key in ["solo", "pro", "enterprise"]:
+        t = TIERS[tier_key]
+        price_usd = t["price_yearly_usd"] if billing_cycle == "yearly" else t["price_monthly_usd"]
+        price_converted = calculate_price_in_currency(price_usd, target_curr, DEFAULT_EXCHANGE_RATES)
+        
+        plans_out.append({
+            "id": t["id"],
+            "name_ar": t["name_ar"],
+            "name_en": t["name_en"],
+            "badge": t.get("badge", ""),
+            "price_usd": price_usd,
+            "price_formatted": f"{price_converted:,.2f}" if target_curr != "YER" else f"{price_converted:,.0f}",
+            "currency": target_curr,
+            "billing_cycle": billing_cycle,
+            "max_users": t["max_users"],
+            "max_active_cases": t["max_active_cases"],
+            "storage_gb": t["storage_gb"],
+            "features": t.get("features", []),
+            "disabled_modules": t.get("disabled_modules", [])
+        })
+
+    current_plan = getattr(user, "subscription_plan", "trial") if user else "trial"
+
+    return {
+        "success": True,
+        "current_plan": current_plan,
+        "selected_currency": target_curr,
+        "exchange_rates": DEFAULT_EXCHANGE_RATES,
+        "plans": plans_out,
+        "payment_info": {
+            "bank_name": "بنك الكريمي للتمويل الأصغر الإسلامي",
+            "service_name": "حاسب (Haseb)",
+            "pos_code": "2709660",
+            "pos_name": "LawSaaS",
+            "currency": "USD"
+        }
+    }

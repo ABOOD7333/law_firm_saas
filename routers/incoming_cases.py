@@ -43,6 +43,16 @@ DOCUMENTS_UPLOAD_DIR = "private_uploads/documents"
 os.makedirs(DOCUMENTS_UPLOAD_DIR, exist_ok=True)
 
 SECTION_CONFIG = {
+    "new_claim": {
+        "key": "new_claim",
+        "num": "0",
+        "title": "قيد ورفع دعوى جديدة",
+        "badge_color": "#b45309",
+        "icon": "fa-solid fa-file-signature",
+        "ref_field_label": "رقم مسودة الدعوى",
+        "authority_field_label": "الجهة الموجه إليها",
+        "base_number": 100,
+    },
     "police": {
         "key": "police",
         "num": "1",
@@ -428,6 +438,18 @@ async def create_incoming_case(
     crime_classification: Optional[str] = Form(None),
     client_capacity: Optional[str] = Form(None),
     incoming_status_at_reception: Optional[str] = Form(None),
+    # New Claim / Lawsuit Intake General Fields
+    target_authority: Optional[str] = Form(None),
+    opponent_name: Optional[str] = Form(None),
+    opponent_id_number: Optional[str] = Form(None),
+    opponent_phone: Optional[str] = Form(None),
+    opponent_address: Optional[str] = Form(None),
+    opponent_type: Optional[str] = Form("individual"),
+    poa_number: Optional[str] = Form(None),
+    poa_date: Optional[str] = Form(None),
+    claim_amount: Optional[float] = Form(None),
+    claim_requests: Optional[str] = Form(None),
+    claim_grounds: Optional[str] = Form(None),
     # Police fields
     police_station: Optional[str] = Form(None),
     police_report_number: Optional[str] = Form(None),
@@ -622,6 +644,18 @@ async def create_incoming_case(
         client_capacity=client_capacity,
         incoming_status_at_reception=incoming_status_at_reception,
         created_by_user_id=user.id,
+        # New Claim fields
+        target_authority=target_authority,
+        opponent_name=opponent_name,
+        opponent_id_number=opponent_id_number,
+        opponent_phone=opponent_phone,
+        opponent_address=opponent_address,
+        opponent_type=opponent_type,
+        poa_number=poa_number,
+        poa_date=poa_date,
+        claim_amount=claim_amount,
+        claim_requests=claim_requests,
+        claim_grounds=claim_grounds,
         # Police
         police_station=police_station,
         police_report_number=police_report_number,
@@ -760,6 +794,18 @@ async def get_incoming_case_details(
         "created_at": item.created_at,
         "is_cancelled": item.is_cancelled,
         "cancellation_reason": item.cancellation_reason or "",
+        # New Claim
+        "target_authority": item.target_authority or "",
+        "opponent_name": item.opponent_name or "",
+        "opponent_id_number": item.opponent_id_number or "",
+        "opponent_phone": item.opponent_phone or "",
+        "opponent_address": item.opponent_address or "",
+        "opponent_type": item.opponent_type or "individual",
+        "poa_number": item.poa_number or "",
+        "poa_date": item.poa_date or "",
+        "claim_amount": item.claim_amount or 0.0,
+        "claim_requests": item.claim_requests or "",
+        "claim_grounds": item.claim_grounds or "",
         # Police
         "police_station": item.police_station or "",
         "police_report_number": item.police_report_number or "",

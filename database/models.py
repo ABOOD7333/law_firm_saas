@@ -1045,6 +1045,19 @@ class LawIncomingCases(Base):
     crime_classification: Mapped[Optional[str]] = mapped_column(Text)
     client_capacity: Mapped[Optional[str]] = mapped_column(Text)
 
+    # 0. New Claim / Lawsuit Intake General Fields (قيد ورفع دعوى جديدة)
+    target_authority: Mapped[Optional[str]] = mapped_column(Text)  # police, prosecution, court, enforcement
+    opponent_name: Mapped[Optional[str]] = mapped_column(Text, index=True)
+    opponent_id_number: Mapped[Optional[str]] = mapped_column(Text, index=True)
+    opponent_phone: Mapped[Optional[str]] = mapped_column(Text)
+    opponent_address: Mapped[Optional[str]] = mapped_column(Text)
+    opponent_type: Mapped[Optional[str]] = mapped_column(Text)  # individual, company, government
+    poa_number: Mapped[Optional[str]] = mapped_column(Text)
+    poa_date: Mapped[Optional[str]] = mapped_column(Text)
+    claim_amount: Mapped[Optional[float]] = mapped_column(REAL)
+    claim_requests: Mapped[Optional[str]] = mapped_column(Text)
+    claim_grounds: Mapped[Optional[str]] = mapped_column(Text)
+
     # 1. Police section fields (القضايا المعروضة أمام الشرطة)
     police_station: Mapped[Optional[str]] = mapped_column(Text)
     police_report_number: Mapped[Optional[str]] = mapped_column(Text, index=True)
