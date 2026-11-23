@@ -49,12 +49,12 @@ async def daily_scheduler():
             print("[Scheduler] Running daily limitation checks...")
             db = SessionLocal()
             run_daily_limitation_checks(db)
-            print("[Scheduler] Daily limitation checks completed.")
+            app_logger.info("[Scheduler] Daily limitation checks completed.")  # [BUG-014 FIX]
             # تنظيف سجلات Rate Limiting القديمة (أكثر من ساعة)
             cleanup_old_attempts(older_than_seconds=3600)
-            print("[Scheduler] Rate limit cleanup completed.")
+            app_logger.info("[Scheduler] Rate limit cleanup completed.")  # [BUG-014 FIX]
         except Exception as e:
-            print(f"[Scheduler Error] {e}")
+            app_logger.error(f"[Scheduler Error] {e}")  # [BUG-014 FIX]
         finally:
             if db:
                 db.close()
@@ -202,6 +202,11 @@ class CSRFMiddleware(BaseHTTPMiddleware):
             "/api/register-send-otp",
             "/api/verify-register-otp",
         }
+        # نموذج الاستقبال العام (بدون تسجيل دخول) — يُعفى من CSRF لأنه متاح للعموم
+        # [BUG-002 FIX] إعفاء مسارات /form/*/submit من CSRF
+        import re as _re
+        if _re.match(r'^/form/[^/]+/submit$', request.url.path):
+            return await call_next(request)
         is_secure = (request.url.scheme == "https") or (request.headers.get("x-forwarded-proto") == "https")
 
         if request.url.path in PRE_AUTH_PATHS:
@@ -226,8 +231,8 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                     async def receive_again():
                         return {"type": "http.request", "body": body_bytes}
                     request._receive = receive_again
-                except:
-                    pass
+                except Exception:
+                    pass  # [BUG-005 FIX] CSRF form parse error — نتجاهل ونكمل (الرمز سيُرفض بعدها)
 
             submitted_token = csrf_header or form_token
 
@@ -475,7 +480,7 @@ async def health_check(db: Session = Depends(get_db)):
 @app.get("/api/version")
 async def get_version():
     return JSONResponse({
-        "version": "v2.2-enterprise-reports",
+        "version": "v2.2-enterprise-reports",  # [BUG-013] TODO: قرأها من ملف VERSION عند الحاجة للتحديث
         "sidebar_sections": 7,
         "reports_count": 32,
         "status": "deployed",
@@ -1072,6 +1077,7 @@ async def logout(request: Request, db: Session = Depends(get_db)):
     response = RedirectResponse(url="/", status_code=303)
 
     response.delete_cookie("session_token")
+    response.delete_cookie("csrf_token")  # [BUG-012 FIX] حذف CSRF token عند تسجيل الخروج
 
     return response
 

@@ -1189,3 +1189,9 @@ try:
     from . import security_models  # noqa: F401
 except Exception:
     pass
+
+# Import AI models to register them on Base.metadata  [BUG-022 FIX]
+try:
+    from .ai_models import AIChatHistory, AIKnowledge, AIUserQuota  # noqa: F401
+except Exception:
+    pass

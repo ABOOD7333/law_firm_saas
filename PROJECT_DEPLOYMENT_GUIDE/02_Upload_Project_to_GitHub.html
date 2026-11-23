@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>الدليل التطبيقي لرفع وتحديث LawSaaS على GitHub</title>
+    <style>
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Tajawal:wght@400;500;700;800&family=Fira+Code:wght@400;500;600&display=swap');
+
+@page {
+    size: A4 portrait;
+    margin: 16mm 14mm 18mm 14mm;
+    @bottom-center {
+        content: counter(page);
+        font-family: 'Cairo', sans-serif;
+        font-size: 9pt;
+        color: #64748b;
+    }
+    @bottom-left {
+        content: "دليل نشر وإدارة LawSaaS";
+        font-family: 'Cairo', sans-serif;
+        font-size: 8pt;
+        color: #94a3b8;
+    }
+    @bottom-right {
+        content: "منصة وزيرك (Waziruk)";
+        font-family: 'Cairo', sans-serif;
+        font-size: 8pt;
+        color: #94a3b8;
+    }
+}
+
+*, *:before, *:after { box-sizing: border-box; }
+
+body {
+    font-family: 'Cairo', 'Tajawal', Tahoma, sans-serif;
+    direction: rtl;
+    text-align: right;
+    background-color: #ffffff;
+    color: #0f172a;
+    font-size: 10pt;
+    line-height: 1.65;
+    margin: 0;
+    padding: 0;
+}
+
+.doc-header {
+    background: linear-gradient(135deg, #0b132b 0%, #1c2541 100%);
+    color: #ffffff;
+    padding: 22px 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border-right: 6px solid #d4af37;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+
+.doc-badge {
+    display: inline-block;
+    background: rgba(212, 175, 55, 0.2);
+    color: #d4af37;
+    border: 1px solid #d4af37;
+    padding: 3px 12px;
+    border-radius: 20px;
+    font-size: 9pt;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.doc-title {
+    font-size: 18pt;
+    font-weight: 900;
+    margin: 0 0 4px 0;
+    color: #ffffff;
+}
+
+.doc-subtitle {
+    font-size: 10.5pt;
+    color: #cbd5e1;
+    margin: 0;
+}
+
+h1, h2, h3 {
+    font-family: 'Cairo', sans-serif;
+    color: #0f172a;
+    font-weight: 800;
+}
+
+h1 {
+    font-size: 14pt;
+    border-right: 5px solid #1e3a8a;
+    padding-right: 10px;
+    background: #f8fafc;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    margin-top: 22px;
+    border-radius: 0 4px 4px 0;
+}
+
+h2 {
+    font-size: 12pt;
+    color: #1e3a8a;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 4px;
+    margin-top: 18px;
+}
+
+h3 {
+    font-size: 10.5pt;
+    color: #334155;
+    margin-top: 12px;
+}
+
+p { margin: 5px 0 8px 0; text-align: justify; }
+
+.callout {
+    padding: 10px 14px;
+    border-radius: 6px;
+    margin: 10px 0;
+    font-size: 9.5pt;
+    page-break-inside: avoid;
+}
+
+.callout-info { background: #eff6ff; border-right: 4px solid #3b82f6; color: #1e40af; }
+.callout-warn { background: #fffbeb; border-right: 4px solid #f59e0b; color: #92400e; }
+.callout-danger { background: #fef2f2; border-right: 4px solid #ef4444; color: #991b1b; }
+.callout-success { background: #f0fdf4; border-right: 4px solid #10b981; color: #065f46; }
+
+.callout-title {
+    font-weight: 800;
+    margin-bottom: 3px;
+    font-size: 10pt;
+}
+
+.term-box {
+    background: #0f172a;
+    border-radius: 6px;
+    margin: 12px 0;
+    overflow: hidden;
+    border: 1px solid #334155;
+    page-break-inside: avoid;
+}
+
+.term-header {
+    background: #1e293b;
+    padding: 5px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #334155;
+}
+
+.term-dots { display: flex; gap: 5px; }
+.term-dot { width: 9px; height: 9px; border-radius: 50%; }
+.dot-red { background: #ef4444; }
+.dot-yellow { background: #f59e0b; }
+.dot-green { background: #10b981; }
+
+.term-title {
+    color: #94a3b8;
+    font-size: 8pt;
+    font-family: 'Fira Code', monospace;
+    direction: ltr;
+}
+
+.term-body {
+    padding: 10px 14px;
+    font-family: 'Fira Code', monospace;
+    font-size: 8.5pt;
+    line-height: 1.5;
+    color: #38bdf8;
+    direction: ltr;
+    text-align: left;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.cmd-comment { color: #64748b; }
+.cmd-prompt { color: #10b981; font-weight: bold; }
+.cmd-text { color: #f8fafc; font-weight: bold; }
+.cmd-arg { color: #fbbf24; }
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0 14px 0;
+    font-size: 9pt;
+    page-break-inside: avoid;
+}
+
+th {
+    background: #1e293b;
+    color: #ffffff;
+    font-weight: 700;
+    padding: 6px 8px;
+    border: 1px solid #334155;
+    text-align: right;
+}
+
+td {
+    padding: 6px 8px;
+    border: 1px solid #e2e8f0;
+    vertical-align: top;
+    line-height: 1.45;
+}
+
+tbody tr:nth-child(even) { background-color: #f8fafc; }
+
+.step-card {
+    display: flex;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    margin: 8px 0;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    page-break-inside: avoid;
+}
+
+.step-num-badge {
+    background: #1e3a8a;
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 11pt;
+    width: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.step-details {
+    padding: 8px 12px;
+    flex-grow: 1;
+}
+
+.step-name {
+    font-weight: 700;
+    font-size: 10pt;
+    color: #0f172a;
+    margin-bottom: 2px;
+}
+
+.step-text {
+    font-size: 9pt;
+    color: #475569;
+}
+
+.page-break { page-break-before: always; }
+</style>
+</head>
+<body>
+    <div class="doc-header">
+        <div class="doc-badge">الدليل 02 • التطبيق العملي للرفع</div>
+        <div class="doc-title">الدليل التطبيقي لرفع وتحديث LawSaaS على GitHub</div>
+        <div class="doc-subtitle">خطوات عملية حقيقية خطوة بخطوة للعمل على مستودع ABOOD7333/law_firm_saas</div>
+    </div>
+    
+<h1>1. تجهيز بيئة العمل المحلية على جهازك</h1>
+<p>
+في مشروع LawSaaS الفعلي، يوجد مسار عملك المحلي في المسار:
+<br><code>C:\Users\Roots\.gemini\antigravity\worktrees\law_firm1\analyze_missing_features</code>
+</p>
+
+<p>
+قبل أن تفكر في كتابة أي أمر رفع، هناك قاعدة أمنية ذهبية في هندسة البرمجيات:
+<strong>إياك أن ترفع ملفات الأسرار (.env) أو قواعد البيانات المحلية (.db) إلى GitHub!</strong>
+</p>
+
+<h2>التحقق من ملف .gitignore</h2>
+<p>
+ملف <code>.gitignore</code> هو الحارس الأمين؛ يخبر Git بالملفات والمجلدات التي يجب تجاهلها تماماً وعدم رؤيتها أو رفعها أبداً. تأكد دائماً أن الأسطر التالية موجودة داخله:
+</p>
+
+<div class="term-box">
+    <div class="term-header">
+        <div class="term-title">.gitignore</div>
+    </div>
+    <div class="term-body">.env
+.env.local
+*.db
+*.sqlite3
+__pycache__/
+*.pyc
+uploads/
+poppler/
+.pytest_cache/</div>
+</div>
+
+<h1>2. خطوات رفع التعديلات خطوة بخطوة (سيناريو حقيقي)</h1>
+
+<div class="step-card">
+    <div class="step-num-badge">1</div>
+    <div class="step-details">
+        <div class="step-name">الخطوة الأولى: فتح نافذة الأوامر والتحقق من الحالة</div>
+        <div class="step-text">افتح PowerShell في مسار المشروع واكتب <code>git status</code> لمعرفة الملفات التي قمت بتعديلها والتأكد من عدم وجود ملفات حساسة غير مرغوبة.</div>
+    </div>
+</div>
+
+<div class="term-box">
+    <div class="term-body"><span class="cmd-prompt">PS C:\...\law_firm1></span> <span class="cmd-text">git status</span></div>
+</div>
+
+<div class="step-card">
+    <div class="step-num-badge">2</div>
+    <div class="step-details">
+        <div class="step-name">الخطوة الثانية: تجهيز الملفات (Staging)</div>
+        <div class="step-text">أضف الملفات التي تريد رفعها. يفضل تحديد الملفات بالاسم لضمان الدقة، أو استخدام <code>git add .</code> إذا كنت واثقاً من نظافة كافة الملفات المعدلة.</div>
+    </div>
+</div>
+
+<div class="term-box">
+    <div class="term-body"><span class="cmd-prompt">PS C:\...\law_firm1></span> <span class="cmd-text">git add routers/incoming_cases.py database/models.py templates/incoming_cases/</span></div>
+</div>
+
+<div class="step-card">
+    <div class="step-num-badge">3</div>
+    <div class="step-details">
+        <div class="step-name">الخطوة الثالثة: توثيق التعديل وحفظه محلياً (Commit)</div>
+        <div class="step-text">احفظ التعديل برسالة معبرة وواضحة تشرح التحديث باللغة العربية أو الإنجليزية.</div>
+    </div>
+</div>
+
+<div class="term-box">
+    <div class="term-body"><span class="cmd-prompt">PS C:\...\law_firm1></span> <span class="cmd-text">git commit -m</span> <span class="cmd-arg">"تحديث واجهة القضايا الواردة وإضافة نموذج قيد الدعوى الجديد"</span></div>
+</div>
+
+<div class="step-card">
+    <div class="step-num-badge">4</div>
+    <div class="step-details">
+        <div class="step-name">الخطوة الرابعة: سحب أي تحديثات جديدة لمنع التعارض (Pull)</div>
+        <div class="step-text">قبل الرفع، تأكد أنك تملك أحدث نسخة عبر سحب أي تعديلات تم دمجها على السحابة.</div>
+    </div>
+</div>
+
+<div class="term-box">
+    <div class="term-body"><span class="cmd-prompt">PS C:\...\law_firm1></span> <span class="cmd-text">git pull origin main</span></div>
+</div>
+
+<div class="step-card">
+    <div class="step-num-badge">5</div>
+    <div class="step-details">
+        <div class="step-name">الخطوة الخامسة: رفع التعديلات نهائياً إلى GitHub (Push)</div>
+        <div class="step-text">أرسل التعديلات إلى مستودعك الرسمي على GitHub.</div>
+    </div>
+</div>
+
+<div class="term-box">
+    <div class="term-body"><span class="cmd-prompt">PS C:\...\law_firm1></span> <span class="cmd-text">git push origin main</span>
+<span class="cmd-comment"># سيظهر ناتج يوضح ضغط الكائنات ورفعها بنجاح:</span>
+Enumerating objects: 15, done.
+Writing objects: 100% (15/15), 12.45 KiB | 2.49 MiB/s, done.
+To https://github.com/ABOOD7333/law_firm_saas.git
+   793d3b0..a1b2c3d  main -> main</div>
+</div>
+
+<div class="page-break"></div>
+<h1>3. العمل الاحترافي عبر الفروع (Feature Branch Workflow)</h1>
+<p>
+في الشركات الكبرى، لا يرفع المطورون تعديلاتهم مباشرة إلى فرع <code>main</code>، بل ينشئون فرعاً باسم الميزة، يرفعونه إلى GitHub، ثم يفتحون طلب دمج (Pull Request) لمراجعة الكود قبل اعتماده. إليك الطريقة خطوة بخطوة:
+</p>
+
+<div class="term-box">
+    <div class="term-body"><span class="cmd-comment"># 1. إنشاء فرع جديد والتبديل إليه:</span>
+<span class="cmd-prompt">PS ></span> <span class="cmd-text">git checkout -b</span> <span class="cmd-arg">add-zatca-invoice-feature</span>
+
+<span class="cmd-comment"># 2. قم بتعديل أكوادك واختبرها محلياً...</span>
+
+<span class="cmd-comment"># 3. حفظ التعديل على الفرع الجديد:</span>
+<span class="cmd-prompt">PS ></span> <span class="cmd-text">git add .</span>
+<span class="cmd-prompt">PS ></span> <span class="cmd-text">git commit -m</span> <span class="cmd-arg">"إضافة باركود زاتكا في راوتر المحاسبة"</span>
+
+<span class="cmd-comment"># 4. رفع الفرع الجديد إلى GitHub:</span>
+<span class="cmd-prompt">PS ></span> <span class="cmd-text">git push -u origin</span> <span class="cmd-arg">add-zatca-invoice-feature</span></div>
+</div>
+
+<h2>كيف تدمج التعديل عبر واجهة موقع GitHub؟</h2>
+<ol>
+    <li>ادخل إلى صفحة مستودعك: <code>https://github.com/ABOOD7333/law_firm_saas</code></li>
+    <li>ستجد شريطاً أصفر ينبهك بوجود فرع جديد مع زر أخضر يسمى <strong>Compare & pull request</strong>. اضغط عليه.</li>
+    <li>اكتب وصفاً للتعديلات واضغط على <strong>Create pull request</strong>.</li>
+    <li>بعد التأكد من سلامة الفحص التلقائي (CI)، اضغط على <strong>Merge pull request</strong> ثم <strong>Confirm merge</strong>.</li>
+    <li>مبروك! أصبحت تعديلاتك مدمجة الآن في الفرع الرئيسي <code>main</code> وجاهزة للنشر على السيرفر!</li>
+</ol>
+
+</body>
+</html>

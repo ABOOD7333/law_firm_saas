@@ -1,0 +1,5830 @@
+{
+  ".dockerignore": {
+    "size": 814,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  ".env.example": {
+    "size": 1253,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  ".git": {
+    "size": 81,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  ".gitignore": {
+    "size": 1301,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "154.pdf": {
+    "size": 2687685,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "154_Server_Database.pdf": {
+    "size": 2763823,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "alembic.ini": {
+    "size": 1121,
+    "lines": 52,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "base.html": {
+    "size": 42804,
+    "lines": 819,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "check_admin_user.py": {
+    "size": 719,
+    "lines": 18,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "check_db.py": {
+    "size": 346,
+    "lines": 9,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "create_superadmin.py": {
+    "size": 4470,
+    "lines": 100,
+    "classes": [],
+    "functions": 2,
+    "routes": 0
+  },
+  "database.py": {
+    "size": 28146,
+    "lines": 708,
+    "classes": [],
+    "functions": 3,
+    "routes": 0
+  },
+  "debug.txt": {
+    "size": 1000,
+    "lines": 46,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "dependencies.py": {
+    "size": 16560,
+    "lines": 341,
+    "classes": [],
+    "functions": 6,
+    "routes": 0
+  },
+  "deploy.bat": {
+    "size": 323,
+    "lines": 12,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "DEPLOYMENT_GUIDE.md": {
+    "size": 5482,
+    "lines": 135,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "docker-compose.yml": {
+    "size": 2171,
+    "lines": 80,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "Dockerfile": {
+    "size": 1881,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "email_service.py": {
+    "size": 14269,
+    "lines": 298,
+    "classes": [],
+    "functions": 10,
+    "routes": 0
+  },
+  "error_handler.py": {
+    "size": 14020,
+    "lines": 320,
+    "classes": [],
+    "functions": 3,
+    "routes": 0
+  },
+  "export_all_databases.py": {
+    "size": 7770,
+    "lines": 180,
+    "classes": [],
+    "functions": 1,
+    "routes": 0
+  },
+  "fix_db.py": {
+    "size": 329,
+    "lines": 7,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "fix_encoding.py": {
+    "size": 2545,
+    "lines": 73,
+    "classes": [],
+    "functions": 1,
+    "routes": 0
+  },
+  "fix_html_templates.py": {
+    "size": 1029,
+    "lines": 25,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "fix_main.py": {
+    "size": 5314,
+    "lines": 130,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "fix_my_mistake.py": {
+    "size": 1560,
+    "lines": 34,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "fix_superadmin.py": {
+    "size": 8937,
+    "lines": 175,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "fix_superadmin_html.py": {
+    "size": 13024,
+    "lines": 225,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "generate_catalog_data.py": {
+    "size": 6804,
+    "lines": 138,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "generate_pdf_arabic.py": {
+    "size": 5230,
+    "lines": 47,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "law_firm.db": {
+    "size": 987136,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "main.py": {
+    "size": 168548,
+    "lines": 4437,
+    "classes": [
+      "CSRFMiddleware",
+      "LoginRateLimitMiddleware",
+      "SecurityHeadersMiddleware",
+      "SafeStaticFiles"
+    ],
+    "functions": 80,
+    "routes": 58
+  },
+  "patch_models.py": {
+    "size": 3964,
+    "lines": 83,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "patch_models_safe.py": {
+    "size": 3375,
+    "lines": 86,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "patch_security.py": {
+    "size": 5085,
+    "lines": 132,
+    "classes": [],
+    "functions": 2,
+    "routes": 0
+  },
+  "railway.json": {
+    "size": 210,
+    "lines": 9,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "README.md": {
+    "size": 3402,
+    "lines": 126,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "requirements.txt": {
+    "size": 1335,
+    "lines": 55,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "seed_real_offices.py": {
+    "size": 6151,
+    "lines": 149,
+    "classes": [],
+    "functions": 2,
+    "routes": 0
+  },
+  "superadmin.py": {
+    "size": 21997,
+    "lines": 427,
+    "classes": [],
+    "functions": 8,
+    "routes": 6
+  },
+  "test_login.py": {
+    "size": 1076,
+    "lines": 32,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "update_company_credentials.py": {
+    "size": 346,
+    "lines": 9,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "update_landing_route.py": {
+    "size": 1070,
+    "lines": 29,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "verify_syntax.py": {
+    "size": 596,
+    "lines": 16,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  ".github/workflows/ci.yml": {
+    "size": 4373,
+    "lines": 147,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "0/0_incoming_cases_full_dashboard.png": {
+    "size": 267178,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "0/1_police_cases.png": {
+    "size": 236321,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "0/2_prosecution_cases.png": {
+    "size": 241033,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "0/3_primary_court_cases.png": {
+    "size": 241786,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "0/4_appeal_court_cases.png": {
+    "size": 237268,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "0/5_supreme_court_cases.png": {
+    "size": 257972,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "0/6_execution_cases.png": {
+    "size": 283389,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "ai_engine/db_query_engine.py": {
+    "size": 37760,
+    "lines": 920,
+    "classes": [
+      "DBQueryEngine"
+    ],
+    "functions": 30,
+    "routes": 0
+  },
+  "ai_engine/document_generator.py": {
+    "size": 13994,
+    "lines": 264,
+    "classes": [
+      "DocumentGenerator"
+    ],
+    "functions": 8,
+    "routes": 0
+  },
+  "ai_engine/intent_detector.py": {
+    "size": 30481,
+    "lines": 629,
+    "classes": [
+      "Intent",
+      "IntentDetector"
+    ],
+    "functions": 21,
+    "routes": 0
+  },
+  "ai_engine/llm_service.py": {
+    "size": 18558,
+    "lines": 342,
+    "classes": [
+      "GeminiLegalAssistant"
+    ],
+    "functions": 11,
+    "routes": 0
+  },
+  "ai_engine/response_builder.py": {
+    "size": 29766,
+    "lines": 621,
+    "classes": [
+      "ResponseBuilder"
+    ],
+    "functions": 25,
+    "routes": 0
+  },
+  "ai_engine/search_engine.py": {
+    "size": 52236,
+    "lines": 837,
+    "classes": [
+      "LegalSearchEngine"
+    ],
+    "functions": 14,
+    "routes": 0
+  },
+  "ai_engine/__init__.py": {
+    "size": 128,
+    "lines": 2,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "ai_engine/knowledge_base/court_system.py": {
+    "size": 35226,
+    "lines": 421,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "ai_engine/knowledge_base/document_templates.py": {
+    "size": 24575,
+    "lines": 692,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "ai_engine/knowledge_base/legal_procedures.py": {
+    "size": 11973,
+    "lines": 112,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "ai_engine/knowledge_base/yemeni_laws.py": {
+    "size": 37230,
+    "lines": 402,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "ai_engine/knowledge_base/__init__.py": {
+    "size": 63,
+    "lines": 1,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "alembic/env.py": {
+    "size": 2933,
+    "lines": 91,
+    "classes": [],
+    "functions": 3,
+    "routes": 0
+  },
+  "alembic/script.py.mako": {
+    "size": 661,
+    "lines": 26,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "alembic/versions/001_initial_schema.py": {
+    "size": 4653,
+    "lines": 85,
+    "classes": [],
+    "functions": 2,
+    "routes": 0
+  },
+  "alembic/versions/20260530_2201_68f108684a94_add_mobile_enterprise_support.py": {
+    "size": 10739,
+    "lines": 214,
+    "classes": [],
+    "functions": 2,
+    "routes": 0
+  },
+  "alembic/versions/20260930_1200_7f31a20b6841_recoverable_login_lockout.py": {
+    "size": 409,
+    "lines": 18,
+    "classes": [],
+    "functions": 2,
+    "routes": 0
+  },
+  "alembic/versions/20260930_1201_13b7d2c9e841_bind_client_accounts.py": {
+    "size": 851,
+    "lines": 29,
+    "classes": [],
+    "functions": 2,
+    "routes": 0
+  },
+  "core/audit.py": {
+    "size": 2470,
+    "lines": 61,
+    "classes": [],
+    "functions": 1,
+    "routes": 0
+  },
+  "core/conflict_checker.py": {
+    "size": 13361,
+    "lines": 282,
+    "classes": [],
+    "functions": 2,
+    "routes": 0
+  },
+  "core/error_handler.py": {
+    "size": 14020,
+    "lines": 320,
+    "classes": [],
+    "functions": 3,
+    "routes": 0
+  },
+  "core/logger.py": {
+    "size": 2561,
+    "lines": 63,
+    "classes": [],
+    "functions": 1,
+    "routes": 0
+  },
+  "core/rate_limiter.py": {
+    "size": 4212,
+    "lines": 100,
+    "classes": [],
+    "functions": 6,
+    "routes": 0
+  },
+  "core/security.py": {
+    "size": 4418,
+    "lines": 123,
+    "classes": [],
+    "functions": 6,
+    "routes": 0
+  },
+  "core/subscription_tiers.py": {
+    "size": 10438,
+    "lines": 258,
+    "classes": [],
+    "functions": 7,
+    "routes": 0
+  },
+  "core/upload_security.py": {
+    "size": 2648,
+    "lines": 60,
+    "classes": [],
+    "functions": 1,
+    "routes": 0
+  },
+  "core/workflow_engine.py": {
+    "size": 10310,
+    "lines": 217,
+    "classes": [],
+    "functions": 3,
+    "routes": 0
+  },
+  "core/yemeni_laws.py": {
+    "size": 3828,
+    "lines": 83,
+    "classes": [],
+    "functions": 2,
+    "routes": 0
+  },
+  "core/__init__.py": {
+    "size": 0,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "core/security_center/alert_service.py": {
+    "size": 7965,
+    "lines": 153,
+    "classes": [],
+    "functions": 3,
+    "routes": 0
+  },
+  "core/security_center/audit_chain.py": {
+    "size": 11515,
+    "lines": 269,
+    "classes": [],
+    "functions": 7,
+    "routes": 0
+  },
+  "core/security_center/crypto_fields.py": {
+    "size": 7613,
+    "lines": 190,
+    "classes": [
+      "EncryptedString",
+      "EncryptedText"
+    ],
+    "functions": 7,
+    "routes": 0
+  },
+  "core/security_center/file_scanner.py": {
+    "size": 9619,
+    "lines": 199,
+    "classes": [],
+    "functions": 6,
+    "routes": 0
+  },
+  "core/security_center/monitor_middleware.py": {
+    "size": 17950,
+    "lines": 397,
+    "classes": [
+      "SecurityMonitoringMiddleware"
+    ],
+    "functions": 8,
+    "routes": 0
+  },
+  "core/security_center/remediation_engine.py": {
+    "size": 14373,
+    "lines": 271,
+    "classes": [
+      "AutoRemediationEngine"
+    ],
+    "functions": 7,
+    "routes": 0
+  },
+  "core/security_center/scanner_engine.py": {
+    "size": 39216,
+    "lines": 691,
+    "classes": [
+      "LawSaaSScanner"
+    ],
+    "functions": 13,
+    "routes": 0
+  },
+  "core/security_center/watchdog.py": {
+    "size": 5479,
+    "lines": 107,
+    "classes": [],
+    "functions": 1,
+    "routes": 0
+  },
+  "core/security_center/__init__.py": {
+    "size": 65,
+    "lines": 3,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "database/database.py": {
+    "size": 28475,
+    "lines": 718,
+    "classes": [],
+    "functions": 3,
+    "routes": 0
+  },
+  "database/models.py": {
+    "size": 82104,
+    "lines": 1191,
+    "classes": [
+      "Base",
+      "AccessProfiles",
+      "AuthVerificationTokens",
+      "AuthOtpTokens",
+      "PendingRegistrations",
+      "AuthSessions",
+      "AppSettings",
+      "LawAuditLog",
+      "LawCases",
+      "LawClients",
+      "LawClientRepresentatives",
+      "LawOffices",
+      "LawParties",
+      "LawHearings",
+      "LawDocuments",
+      "LawDocumentVersions",
+      "LawPleadings",
+      "LawJudgments",
+      "LawTransactions",
+      "LawTasks",
+      "LawExecutions",
+      "LawCorrespondences",
+      "LawNotes",
+      "LawLegalReferences",
+      "LawLimitations",
+      "LawPowerOfAttorney",
+      "LawRoles",
+      "LawPermissions",
+      "LawDeviceLoginState",
+      "LawEmailNotificationLog",
+      "LawExpenses",
+      "LawTimesheets",
+      "LawReferenceData",
+      "LawSpecializations",
+      "LawUserSpecializations",
+      "LawDeletedRecordArchive",
+      "LawNotificationLog",
+      "LawRequest",
+      "LawRequestApproval",
+      "LawRequestReceipt",
+      "LawTemplates",
+      "LawWorkflowRules",
+      "LawUserDevices",
+      "YemeniLawDocument",
+      "PaymentRequest",
+      "Invoices",
+      "InvoiceItems",
+      "ClientPayments",
+      "ClientIntakeForms",
+      "IntakeSubmissions",
+      "RetainerAgreements",
+      "LawIncomingCases",
+      "LawTrustAccounts",
+      "LawTrustTransactions"
+    ],
+    "functions": 0,
+    "routes": 0
+  },
+  "database/security_models.py": {
+    "size": 13862,
+    "lines": 218,
+    "classes": [
+      "SecurityScans",
+      "SecurityFindings",
+      "SecurityEvents",
+      "SecurityAlerts",
+      "SecurityDependencies",
+      "SecurityAuditLogs",
+      "SecurityScanSchedules",
+      "SecurityAlertSettings",
+      "SecurityScanTargets"
+    ],
+    "functions": 0,
+    "routes": 0
+  },
+  "database/__init__.py": {
+    "size": 48,
+    "lines": 3,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/01_Brand_Identity/Brand_Identity_And_Channels_Guide.md": {
+    "size": 5209,
+    "lines": 65,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/01_Brand_Identity/lawsaas_logo_golden_scales.jpg": {
+    "size": 465707,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/01_Brand_Identity/waziruk_logo.png": {
+    "size": 39794,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/02_Main_Promo/LawSaaS_Main_Promo_16x9_FullHD.mp4": {
+    "size": 2704159,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/02_Main_Promo/LawSaaS_Main_Promo_9x16_Vertical.mp4": {
+    "size": 2670156,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/02_Main_Promo/LawSaaS_Main_Promo_Instagram_1x1.mp4": {
+    "size": 2146386,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/02_Main_Promo/إعلان_منصة_وزيرك_الرئيسي.mp4": {
+    "size": 1976961,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/07_Scripts_And_Voiceovers/Main_Promo_Script.md": {
+    "size": 5835,
+    "lines": 23,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/07_Scripts_And_Voiceovers/promo_voiceover.mp3": {
+    "size": 499536,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/07_Scripts_And_Voiceovers/promo_voiceover.srt": {
+    "size": 0,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/07_Scripts_And_Voiceovers/scenes_metadata.json": {
+    "size": 3657,
+    "lines": 75,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/07_Scripts_And_Voiceovers/scene_1.mp3": {
+    "size": 66528,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/07_Scripts_And_Voiceovers/scene_2.mp3": {
+    "size": 71568,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/07_Scripts_And_Voiceovers/scene_3.mp3": {
+    "size": 62640,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/07_Scripts_And_Voiceovers/scene_4.mp3": {
+    "size": 66816,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/07_Scripts_And_Voiceovers/scene_5.mp3": {
+    "size": 68832,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/07_Scripts_And_Voiceovers/scene_6.mp3": {
+    "size": 63216,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/07_Scripts_And_Voiceovers/scene_7.mp3": {
+    "size": 79920,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/07_Scripts_And_Voiceovers/subtitles_timing.json": {
+    "size": 0,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/07_Scripts_And_Voiceovers/waziruk_scenes_meta.json": {
+    "size": 4646,
+    "lines": 82,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/07_Scripts_And_Voiceovers/waziruk_scene_1.mp3": {
+    "size": 51696,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/07_Scripts_And_Voiceovers/waziruk_scene_2.mp3": {
+    "size": 50112,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/07_Scripts_And_Voiceovers/waziruk_scene_3.mp3": {
+    "size": 58608,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/07_Scripts_And_Voiceovers/waziruk_scene_4.mp3": {
+    "size": 65664,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/07_Scripts_And_Voiceovers/waziruk_scene_5.mp3": {
+    "size": 53280,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/07_Scripts_And_Voiceovers/waziruk_scene_6.mp3": {
+    "size": 56880,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/07_Scripts_And_Voiceovers/waziruk_scene_7.mp3": {
+    "size": 79488,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/ambient_corporate_score.mp3": {
+    "size": 1996216,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/ambient_score_raw.wav": {
+    "size": 7320644,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/capture_ui_modules.py": {
+    "size": 22299,
+    "lines": 392,
+    "classes": [],
+    "functions": 2,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/ref_frame.png": {
+    "size": 15858,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/ref_frame_1.png": {
+    "size": 20713,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/ref_frame_5.png": {
+    "size": 14586,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/ref_frame_8.png": {
+    "size": 13848,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_commercial_promo.py": {
+    "size": 19641,
+    "lines": 514,
+    "classes": [],
+    "functions": 3,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_waziruk_single_promo.py": {
+    "size": 18959,
+    "lines": 507,
+    "classes": [],
+    "functions": 3,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/transcription_utf8.txt": {
+    "size": 189,
+    "lines": 1,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/user_voice_reference.mp4": {
+    "size": 622672,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/user_voice_reference.wav": {
+    "size": 319538,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_16x9/concat.txt": {
+    "size": 1113,
+    "lines": 7,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_16x9/scene_1.png": {
+    "size": 890162,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_16x9/scene_2.png": {
+    "size": 921355,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_16x9/scene_3.png": {
+    "size": 609710,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_16x9/scene_4.png": {
+    "size": 575165,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_16x9/scene_5.png": {
+    "size": 597210,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_16x9/scene_6.png": {
+    "size": 628478,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_16x9/scene_7.png": {
+    "size": 908297,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_16x9/seg_1.mp4": {
+    "size": 365293,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_16x9/seg_2.mp4": {
+    "size": 474927,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_16x9/seg_3.mp4": {
+    "size": 362534,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_16x9/seg_4.mp4": {
+    "size": 364127,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_16x9/seg_5.mp4": {
+    "size": 395683,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_16x9/seg_6.mp4": {
+    "size": 356028,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_16x9/seg_7.mp4": {
+    "size": 404429,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_16x9/voiceover_video_raw.mp4": {
+    "size": 2715305,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_1x1/concat.txt": {
+    "size": 1106,
+    "lines": 7,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_1x1/scene_1.png": {
+    "size": 534601,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_1x1/scene_2.png": {
+    "size": 464662,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_1x1/scene_3.png": {
+    "size": 369536,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_1x1/scene_4.png": {
+    "size": 353621,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_1x1/scene_5.png": {
+    "size": 364105,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_1x1/scene_6.png": {
+    "size": 392542,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_1x1/scene_7.png": {
+    "size": 550652,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_1x1/seg_1.mp4": {
+    "size": 300611,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_1x1/seg_2.mp4": {
+    "size": 354005,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_1x1/seg_3.mp4": {
+    "size": 278878,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_1x1/seg_4.mp4": {
+    "size": 289320,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_1x1/seg_5.mp4": {
+    "size": 311802,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_1x1/seg_6.mp4": {
+    "size": 296646,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_1x1/seg_7.mp4": {
+    "size": 333986,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_1x1/voiceover_video_raw.mp4": {
+    "size": 2157532,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_9x16/concat.txt": {
+    "size": 1113,
+    "lines": 7,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_9x16/scene_1.png": {
+    "size": 723231,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_9x16/scene_2.png": {
+    "size": 761093,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_9x16/scene_3.png": {
+    "size": 574663,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_9x16/scene_4.png": {
+    "size": 555096,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_9x16/scene_5.png": {
+    "size": 564713,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_9x16/scene_6.png": {
+    "size": 648899,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_9x16/scene_7.png": {
+    "size": 744035,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_9x16/seg_1.mp4": {
+    "size": 370054,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_9x16/seg_2.mp4": {
+    "size": 441547,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_9x16/seg_3.mp4": {
+    "size": 351680,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_9x16/seg_4.mp4": {
+    "size": 362767,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_9x16/seg_5.mp4": {
+    "size": 388204,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_9x16/seg_6.mp4": {
+    "size": 370239,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_9x16/seg_7.mp4": {
+    "size": 404527,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_9x16/voiceover_video_raw.mp4": {
+    "size": 2681302,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_waziruk_master/concat.txt": {
+    "size": 1183,
+    "lines": 7,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_waziruk_master/scene_1.png": {
+    "size": 893542,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_waziruk_master/scene_2.png": {
+    "size": 916140,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_waziruk_master/scene_3.png": {
+    "size": 609934,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_waziruk_master/scene_4.png": {
+    "size": 576766,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_waziruk_master/scene_5.png": {
+    "size": 597916,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_waziruk_master/scene_6.png": {
+    "size": 631451,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_waziruk_master/scene_7.png": {
+    "size": 912951,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_waziruk_master/seg_1.mp4": {
+    "size": 216950,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_waziruk_master/seg_2.mp4": {
+    "size": 264020,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_waziruk_master/seg_3.mp4": {
+    "size": 259169,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_waziruk_master/seg_4.mp4": {
+    "size": 352552,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_waziruk_master/seg_5.mp4": {
+    "size": 237072,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_waziruk_master/seg_6.mp4": {
+    "size": 248772,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_waziruk_master/seg_7.mp4": {
+    "size": 407925,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/render_waziruk_master/waziruk_voiceover_raw.mp4": {
+    "size": 1978520,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/ui_captures/real_ui_cases_1920.png": {
+    "size": 95598,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/ui_captures/real_ui_dashboard_1920.png": {
+    "size": 105029,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/ui_captures/real_ui_finance_1920.png": {
+    "size": 100848,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/ui_captures/real_ui_hearings_1920.png": {
+    "size": 83317,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/ui_captures/waziruk_landing_1920.png": {
+    "size": 974163,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/08_Project_Source_Files/ui_captures/waziruk_login_1920.png": {
+    "size": 445012,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "LawSaaS_Media_Production/09_Production_Reports/Phase1_Executive_Report.md": {
+    "size": 7408,
+    "lines": 53,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/cairo.dll": {
+    "size": 1016320,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/charset.dll": {
+    "size": 11776,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/deflate.dll": {
+    "size": 177152,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/expat.dll": {
+    "size": 402432,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/fontconfig-1.dll": {
+    "size": 282624,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/freetype.dll": {
+    "size": 670720,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/iconv.dll": {
+    "size": 937472,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/jpeg8.dll": {
+    "size": 803328,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/lcms2.dll": {
+    "size": 560128,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/Lerc.dll": {
+    "size": 519680,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/libcrypto-3-x64.dll": {
+    "size": 6459392,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/libcurl.dll": {
+    "size": 617984,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/libexpat.dll": {
+    "size": 402432,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/liblzma.dll": {
+    "size": 154624,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/libpng16.dll": {
+    "size": 196608,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/libssh2.dll": {
+    "size": 244224,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/libtiff.dll": {
+    "size": 493056,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/libzstd.dll": {
+    "size": 654336,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/openjp2.dll": {
+    "size": 353280,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/pdfattach.exe": {
+    "size": 22528,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/pdfdetach.exe": {
+    "size": 45568,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/pdffonts.exe": {
+    "size": 25600,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/pdfimages.exe": {
+    "size": 52224,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/pdfinfo.exe": {
+    "size": 65024,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/pdfseparate.exe": {
+    "size": 24064,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/pdftocairo.exe": {
+    "size": 164352,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/pdftohtml.exe": {
+    "size": 116224,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/pdftoppm.exe": {
+    "size": 48640,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/pdftops.exe": {
+    "size": 48640,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/pdftotext.exe": {
+    "size": 56832,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/pdfunite.exe": {
+    "size": 38400,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/pixman-1-0.dll": {
+    "size": 592896,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/poppler-cpp.dll": {
+    "size": 160768,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/poppler-glib.dll": {
+    "size": 404480,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/poppler.dll": {
+    "size": 5171712,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/tiff.dll": {
+    "size": 493056,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/zlib.dll": {
+    "size": 89088,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/zstd.dll": {
+    "size": 654336,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/bin/zstd.exe": {
+    "size": 160768,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/Annot.h": {
+    "size": 61988,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/AnnotStampImageHelper.h": {
+    "size": 2238,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/Array.h": {
+    "size": 2786,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/BBoxOutputDev.h": {
+    "size": 2438,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/CachedFile.h": {
+    "size": 4360,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/CairoFontEngine.h": {
+    "size": 4898,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/CairoOutputDev.h": {
+    "size": 22601,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/CairoRescaleBox.h": {
+    "size": 2595,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/Catalog.h": {
+    "size": 10781,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/CertificateInfo.h": {
+    "size": 4489,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/CharCodeToUnicode.h": {
+    "size": 5096,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/CharTypes.h": {
+    "size": 550,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/CMap.h": {
+    "size": 4814,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/CurlCachedFile.h": {
+    "size": 969,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/CurlPDFDocBuilder.h": {
+    "size": 1114,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/DateInfo.h": {
+    "size": 1913,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/Decrypt.h": {
+    "size": 5376,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/Dict.h": {
+    "size": 4938,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/Error.h": {
+    "size": 2346,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/ErrorCodes.h": {
+    "size": 2048,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/FDPDFDocBuilder.h": {
+    "size": 1280,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/FILECacheLoader.h": {
+    "size": 905,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/FileSpec.h": {
+    "size": 2641,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/FontEncodingTables.h": {
+    "size": 584,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/FontInfo.h": {
+    "size": 3160,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/Form.h": {
+    "size": 30831,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/Function.h": {
+    "size": 8625,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/Gfx.h": {
+    "size": 14606,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/GfxFont.h": {
+    "size": 16447,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/GfxState.h": {
+    "size": 67200,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/GfxState_helpers.h": {
+    "size": 2705,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/GlobalParams.h": {
+    "size": 9307,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/HashAlgorithm.h": {
+    "size": 533,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/Hints.h": {
+    "size": 2449,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/JArithmeticDecoder.h": {
+    "size": 4101,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/JBIG2Stream.h": {
+    "size": 6374,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/JPEG2000Stream.h": {
+    "size": 1606,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/JSInfo.h": {
+    "size": 1861,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/Lexer.h": {
+    "size": 3702,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/Linearization.h": {
+    "size": 1160,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/Link.h": {
+    "size": 17493,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/LocalPDFDocBuilder.h": {
+    "size": 1120,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/MarkedContentOutputDev.h": {
+    "size": 3745,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/Movie.h": {
+    "size": 3560,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/NameToCharCode.h": {
+    "size": 1408,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/NameToUnicodeTable.h": {
+    "size": 398149,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/Object.h": {
+    "size": 23834,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/OptionalContent.h": {
+    "size": 3278,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/Outline.h": {
+    "size": 3999,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/OutputDev.h": {
+    "size": 18865,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/Page.h": {
+    "size": 11422,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/PageTransition.h": {
+    "size": 3165,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/Parser.h": {
+    "size": 2749,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/PDFDoc.h": {
+    "size": 20898,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/PDFDocBuilder.h": {
+    "size": 1605,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/PDFDocEncoding.h": {
+    "size": 1350,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/PDFDocFactory.h": {
+    "size": 2059,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/poppler-config.h": {
+    "size": 4485,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/PopplerCache.h": {
+    "size": 1839,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/poppler_private_export.h": {
+    "size": 1247,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/PreScanOutputDev.h": {
+    "size": 6504,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/ProfileData.h": {
+    "size": 1031,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/PSOutputDev.h": {
+    "size": 26559,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/PSTokenizer.h": {
+    "size": 1316,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/Rendition.h": {
+    "size": 4686,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/SecurityHandler.h": {
+    "size": 4983,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/SignatureInfo.h": {
+    "size": 3266,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/Sound.h": {
+    "size": 2494,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/SplashOutputDev.h": {
+    "size": 17259,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/Stream-CCITT.h": {
+    "size": 24377,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/Stream.h": {
+    "size": 50502,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/StructElement.h": {
+    "size": 12382,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/StructTreeRoot.h": {
+    "size": 2608,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/TextOutputDev.h": {
+    "size": 35217,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/UnicodeCClassTables.h": {
+    "size": 108100,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/UnicodeCompTables.h": {
+    "size": 41139,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/UnicodeDecompTables.h": {
+    "size": 273108,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/UnicodeMap.h": {
+    "size": 3976,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/UnicodeMapFuncs.h": {
+    "size": 1183,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/UnicodeMapTables.h": {
+    "size": 12352,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/UnicodeTypeTable.h": {
+    "size": 1681,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/UTF.h": {
+    "size": 7036,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/ViewerPreferences.h": {
+    "size": 2573,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/XRef.h": {
+    "size": 13135,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/cpp/poppler-destination.h": {
+    "size": 1937,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/cpp/poppler-document.h": {
+    "size": 4904,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/cpp/poppler-embedded-file.h": {
+    "size": 1700,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/cpp/poppler-font-private.h": {
+    "size": 2218,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/cpp/poppler-font.h": {
+    "size": 2309,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/cpp/poppler-global.h": {
+    "size": 3684,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/cpp/poppler-image.h": {
+    "size": 1996,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/cpp/poppler-page-renderer.h": {
+    "size": 2180,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/cpp/poppler-page-transition.h": {
+    "size": 2035,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/cpp/poppler-page.h": {
+    "size": 6191,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/cpp/poppler-rectangle.h": {
+    "size": 1938,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/cpp/poppler-toc.h": {
+    "size": 1679,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/cpp/poppler-version.h": {
+    "size": 1247,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/cpp/poppler_cpp_export.h": {
+    "size": 1159,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/fofi/FoFiBase.h": {
+    "size": 2179,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/fofi/FoFiEncodings.h": {
+    "size": 1612,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/fofi/FoFiIdentifier.h": {
+    "size": 1800,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/fofi/FoFiTrueType.h": {
+    "size": 8796,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/fofi/FoFiType1.h": {
+    "size": 1925,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/fofi/FoFiType1C.h": {
+    "size": 9129,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/glib/poppler-action.h": {
+    "size": 12649,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/glib/poppler-annot.h": {
+    "size": 15870,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/glib/poppler-attachment.h": {
+    "size": 4715,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/glib/poppler-date.h": {
+    "size": 1072,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/glib/poppler-document.h": {
+    "size": 22585,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/glib/poppler-enums.h": {
+    "size": 9364,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/glib/poppler-features.h": {
+    "size": 2785,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/glib/poppler-form-field.h": {
+    "size": 17429,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/glib/poppler-layer.h": {
+    "size": 1763,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/glib/poppler-macros.h": {
+    "size": 1143,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/glib/poppler-media.h": {
+    "size": 3194,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/glib/poppler-movie.h": {
+    "size": 3142,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/glib/poppler-page.h": {
+    "size": 14811,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/glib/poppler-structure-element.h": {
+    "size": 17303,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/glib/poppler.h": {
+    "size": 10050,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/goo/gdir.h": {
+    "size": 2875,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/goo/gfile.h": {
+    "size": 4954,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/goo/gmem.h": {
+    "size": 5028,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/goo/GooCheckedOps.h": {
+    "size": 3660,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/goo/GooLikely.h": {
+    "size": 578,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/goo/GooString.h": {
+    "size": 9258,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/goo/GooTimer.h": {
+    "size": 1471,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/goo/grandom.h": {
+    "size": 462,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/goo/gstrtod.h": {
+    "size": 1550,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/goo/ImgWriter.h": {
+    "size": 1193,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/goo/JpegWriter.h": {
+    "size": 1986,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/goo/PNGWriter.h": {
+    "size": 1773,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/goo/TiffWriter.h": {
+    "size": 1871,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/splash/Splash.h": {
+    "size": 16673,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/splash/SplashBitmap.h": {
+    "size": 5429,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/splash/SplashClip.h": {
+    "size": 4472,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/splash/SplashErrorCodes.h": {
+    "size": 1529,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/splash/SplashFont.h": {
+    "size": 4564,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/splash/SplashFontEngine.h": {
+    "size": 3489,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/splash/SplashFontFile.h": {
+    "size": 2660,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/splash/SplashFontFileID.h": {
+    "size": 1332,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/splash/SplashFTFont.h": {
+    "size": 2421,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/splash/SplashFTFontEngine.h": {
+    "size": 2753,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/splash/SplashFTFontFile.h": {
+    "size": 2393,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/splash/SplashGlyphBitmap.h": {
+    "size": 713,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/splash/SplashMath.h": {
+    "size": 6534,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/splash/SplashPath.h": {
+    "size": 4497,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/splash/SplashPattern.h": {
+    "size": 3497,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/splash/SplashScreen.h": {
+    "size": 2829,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/splash/SplashState.h": {
+    "size": 4491,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/splash/SplashTypes.h": {
+    "size": 7186,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/splash/SplashXPath.h": {
+    "size": 3802,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/include/poppler/splash/SplashXPathScanner.h": {
+    "size": 4413,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/lib/poppler-cpp.lib": {
+    "size": 198166,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/lib/poppler-glib.lib": {
+    "size": 156196,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/lib/poppler.lib": {
+    "size": 10706424,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/lib/pkgconfig/poppler-cpp.pc": {
+    "size": 410,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/lib/pkgconfig/poppler-glib.pc": {
+    "size": 445,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/lib/pkgconfig/poppler.pc": {
+    "size": 325,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/share/man/man1/pdfattach.1": {
+    "size": 1188,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/share/man/man1/pdfdetach.1": {
+    "size": 2558,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/share/man/man1/pdffonts.1": {
+    "size": 2507,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/share/man/man1/pdfimages.1": {
+    "size": 6602,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/share/man/man1/pdfinfo.1": {
+    "size": 4095,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/share/man/man1/pdfseparate.1": {
+    "size": 1645,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/share/man/man1/pdftocairo.1": {
+    "size": 12043,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/share/man/man1/pdftohtml.1": {
+    "size": 2812,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/share/man/man1/pdftoppm.1": {
+    "size": 6893,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/share/man/man1/pdftops.1": {
+    "size": 9418,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/share/man/man1/pdftotext.1": {
+    "size": 4157,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/Library/share/man/man1/pdfunite.1": {
+    "size": 1208,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/CMakeLists.txt": {
+    "size": 9641,
+    "lines": 309,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/COPYING": {
+    "size": 1590,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/COPYING.adobe": {
+    "size": 1598,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/COPYING.gpl2": {
+    "size": 18326,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/Makefile": {
+    "size": 11251,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/poppler-data.pc": {
+    "size": 187,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/poppler-data.pc.in": {
+    "size": 166,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/README": {
+    "size": 1050,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cidToUnicode/Adobe-CNS1": {
+    "size": 116477,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cidToUnicode/Adobe-GB1": {
+    "size": 181710,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cidToUnicode/Adobe-Japan1": {
+    "size": 138701,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cidToUnicode/Adobe-Korea1": {
+    "size": 110112,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/Adobe-CNS1-0": {
+    "size": 3963,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/Adobe-CNS1-1": {
+    "size": 4147,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/Adobe-CNS1-2": {
+    "size": 4168,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/Adobe-CNS1-3": {
+    "size": 4273,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/Adobe-CNS1-4": {
+    "size": 4294,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/Adobe-CNS1-5": {
+    "size": 4294,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/Adobe-CNS1-6": {
+    "size": 4294,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/Adobe-CNS1-7": {
+    "size": 4268,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/Adobe-CNS1-B5pc": {
+    "size": 9445,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/Adobe-CNS1-ETen-B5": {
+    "size": 9865,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/Adobe-CNS1-H-CID": {
+    "size": 3463,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/Adobe-CNS1-H-Host": {
+    "size": 9980,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/Adobe-CNS1-H-Mac": {
+    "size": 9512,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/Adobe-CNS1-UCS2": {
+    "size": 284834,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/B5-H": {
+    "size": 7824,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/B5-V": {
+    "size": 3012,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/B5pc-H": {
+    "size": 7882,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/B5pc-UCS2": {
+    "size": 2715,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/B5pc-UCS2C": {
+    "size": 286096,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/B5pc-V": {
+    "size": 3024,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/CNS-EUC-H": {
+    "size": 12734,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/CNS-EUC-V": {
+    "size": 13814,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/CNS1-H": {
+    "size": 5846,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/CNS1-V": {
+    "size": 3020,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/CNS2-H": {
+    "size": 4433,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/CNS2-V": {
+    "size": 2757,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/ETen-B5-H": {
+    "size": 8044,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/ETen-B5-UCS2": {
+    "size": 289953,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/ETen-B5-V": {
+    "size": 3063,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/ETenms-B5-H": {
+    "size": 2806,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/ETenms-B5-V": {
+    "size": 3138,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/ETHK-B5-H": {
+    "size": 24528,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/ETHK-B5-V": {
+    "size": 3043,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/HKdla-B5-H": {
+    "size": 24400,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/HKdla-B5-V": {
+    "size": 3028,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/HKdlb-B5-H": {
+    "size": 21942,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/HKdlb-B5-V": {
+    "size": 3028,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/HKgccs-B5-H": {
+    "size": 14371,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/HKgccs-B5-V": {
+    "size": 3034,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/HKm314-B5-H": {
+    "size": 14174,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/HKm314-B5-V": {
+    "size": 3034,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/HKm471-B5-H": {
+    "size": 17294,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/HKm471-B5-V": {
+    "size": 3034,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/HKscs-B5-H": {
+    "size": 24582,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/HKscs-B5-V": {
+    "size": 3049,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/UCS2-B5pc": {
+    "size": 286421,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/UCS2-ETen-B5": {
+    "size": 300773,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/UniCNS-UCS2-H": {
+    "size": 343339,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/UniCNS-UCS2-V": {
+    "size": 3059,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/UniCNS-UTF16-H": {
+    "size": 272399,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/UniCNS-UTF16-V": {
+    "size": 3052,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/UniCNS-UTF32-H": {
+    "size": 343801,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/UniCNS-UTF32-V": {
+    "size": 3132,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/UniCNS-UTF8-H": {
+    "size": 309265,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-CNS1/UniCNS-UTF8-V": {
+    "size": 3088,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/Adobe-GB1-0": {
+    "size": 3401,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/Adobe-GB1-1": {
+    "size": 3563,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/Adobe-GB1-2": {
+    "size": 4565,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/Adobe-GB1-3": {
+    "size": 4564,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/Adobe-GB1-4": {
+    "size": 5146,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/Adobe-GB1-5": {
+    "size": 5251,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/Adobe-GB1-GBK-EUC": {
+    "size": 95320,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/Adobe-GB1-GBpc-EUC": {
+    "size": 5716,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/Adobe-GB1-H-CID": {
+    "size": 3582,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/Adobe-GB1-H-Host": {
+    "size": 95926,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/Adobe-GB1-H-Mac": {
+    "size": 5697,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/Adobe-GB1-UCS2": {
+    "size": 235479,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/GB-EUC-H": {
+    "size": 4598,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/GB-EUC-V": {
+    "size": 3196,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/GB-H": {
+    "size": 4486,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/GB-V": {
+    "size": 3172,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/GBK-EUC-H": {
+    "size": 87373,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/GBK-EUC-UCS2": {
+    "size": 235042,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/GBK-EUC-V": {
+    "size": 3184,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/GBK2K-H": {
+    "size": 96249,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/GBK2K-V": {
+    "size": 3598,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/GBKp-EUC-H": {
+    "size": 87353,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/GBKp-EUC-V": {
+    "size": 3190,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/GBpc-EUC-H": {
+    "size": 4628,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/GBpc-EUC-UCS2": {
+    "size": 2802,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/GBpc-EUC-UCS2C": {
+    "size": 149608,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/GBpc-EUC-V": {
+    "size": 3208,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/GBT-EUC-H": {
+    "size": 49203,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/GBT-EUC-V": {
+    "size": 3204,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/GBT-H": {
+    "size": 49091,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/GBT-V": {
+    "size": 3180,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/GBTpc-EUC-H": {
+    "size": 49235,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/GBTpc-EUC-V": {
+    "size": 3216,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/UCS2-GBK-EUC": {
+    "size": 245325,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/UCS2-GBpc-EUC": {
+    "size": 198653,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/UniGB-UCS2-H": {
+    "size": 288702,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/UniGB-UCS2-V": {
+    "size": 3266,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/UniGB-UTF16-H": {
+    "size": 214364,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/UniGB-UTF16-V": {
+    "size": 3163,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/UniGB-UTF32-H": {
+    "size": 282290,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/UniGB-UTF32-V": {
+    "size": 3279,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/UniGB-UTF8-H": {
+    "size": 252420,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-GB1/UniGB-UTF8-V": {
+    "size": 3217,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/78-EUC-H": {
+    "size": 15520,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/78-EUC-V": {
+    "size": 3324,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/78-H": {
+    "size": 15389,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/78-RKSJ-H": {
+    "size": 15553,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/78-RKSJ-V": {
+    "size": 3330,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/78-V": {
+    "size": 3300,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/78ms-RKSJ-H": {
+    "size": 17316,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/78ms-RKSJ-V": {
+    "size": 4362,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/83pv-RKSJ-H": {
+    "size": 7392,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/90ms-RKSJ-H": {
+    "size": 6327,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/90ms-RKSJ-UCS2": {
+    "size": 113616,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/90ms-RKSJ-V": {
+    "size": 4383,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/90msp-RKSJ-H": {
+    "size": 6256,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/90msp-RKSJ-V": {
+    "size": 4365,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/90pv-RKSJ-H": {
+    "size": 8168,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/90pv-RKSJ-UCS2": {
+    "size": 3344,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/90pv-RKSJ-UCS2C": {
+    "size": 104081,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/90pv-RKSJ-V": {
+    "size": 3842,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/Add-H": {
+    "size": 15579,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/Add-RKSJ-H": {
+    "size": 15774,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/Add-RKSJ-V": {
+    "size": 3956,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/Add-V": {
+    "size": 3926,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/Adobe-Japan1-0": {
+    "size": 3452,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/Adobe-Japan1-1": {
+    "size": 3453,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/Adobe-Japan1-2": {
+    "size": 3493,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/Adobe-Japan1-3": {
+    "size": 3504,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/Adobe-Japan1-4": {
+    "size": 4006,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/Adobe-Japan1-5": {
+    "size": 4405,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/Adobe-Japan1-6": {
+    "size": 4636,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/Adobe-Japan1-7": {
+    "size": 4610,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/Adobe-Japan1-90ms-RKSJ": {
+    "size": 7843,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/Adobe-Japan1-90pv-RKSJ": {
+    "size": 9932,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/Adobe-Japan1-H-CID": {
+    "size": 3781,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/Adobe-Japan1-H-Host": {
+    "size": 8113,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/Adobe-Japan1-H-Mac": {
+    "size": 6982,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/Adobe-Japan1-PS-H": {
+    "size": 24513,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/Adobe-Japan1-PS-V": {
+    "size": 14836,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/Adobe-Japan1-UCS2": {
+    "size": 313271,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/EUC-H": {
+    "size": 5280,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/EUC-V": {
+    "size": 3326,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/Ext-H": {
+    "size": 16179,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/Ext-RKSJ-H": {
+    "size": 16373,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/Ext-RKSJ-V": {
+    "size": 3596,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/Ext-V": {
+    "size": 3566,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/H": {
+    "size": 5139,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/Hankaku": {
+    "size": 2907,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/Hiragana": {
+    "size": 2879,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/Hojo-EUC-H": {
+    "size": 4786,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/Hojo-EUC-V": {
+    "size": 2783,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/Hojo-H": {
+    "size": 4436,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/Hojo-V": {
+    "size": 2759,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/Katakana": {
+    "size": 2789,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/NWP-H": {
+    "size": 18153,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/NWP-V": {
+    "size": 3726,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/RKSJ-H": {
+    "size": 5332,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/RKSJ-V": {
+    "size": 3332,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/Roman": {
+    "size": 2765,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/UCS2-90ms-RKSJ": {
+    "size": 156889,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/UCS2-90pv-RKSJ": {
+    "size": 149829,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/UniHojo-UCS2-H": {
+    "size": 88026,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/UniHojo-UCS2-V": {
+    "size": 2787,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/UniHojo-UTF16-H": {
+    "size": 67414,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/UniHojo-UTF16-V": {
+    "size": 2793,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/UniHojo-UTF32-H": {
+    "size": 89281,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/UniHojo-UTF32-V": {
+    "size": 2793,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/UniHojo-UTF8-H": {
+    "size": 78190,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/UniHojo-UTF8-V": {
+    "size": 2789,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/UniJIS-UCS2-H": {
+    "size": 177465,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/UniJIS-UCS2-HW-H": {
+    "size": 2899,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/UniJIS-UCS2-HW-V": {
+    "size": 6868,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/UniJIS-UCS2-V": {
+    "size": 6782,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/UniJIS-UTF16-H": {
+    "size": 202708,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/UniJIS-UTF16-V": {
+    "size": 6111,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/UniJIS-UTF32-H": {
+    "size": 259926,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/UniJIS-UTF32-V": {
+    "size": 7143,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/UniJIS-UTF8-H": {
+    "size": 230970,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/UniJIS-UTF8-V": {
+    "size": 6637,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/UniJIS2004-UTF16-H": {
+    "size": 202791,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/UniJIS2004-UTF16-V": {
+    "size": 6135,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/UniJIS2004-UTF32-H": {
+    "size": 260009,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/UniJIS2004-UTF32-V": {
+    "size": 7167,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/UniJIS2004-UTF8-H": {
+    "size": 231051,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/UniJIS2004-UTF8-V": {
+    "size": 6659,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/UniJISPro-UCS2-HW-V": {
+    "size": 7014,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/UniJISPro-UCS2-V": {
+    "size": 6896,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/UniJISPro-UTF8-V": {
+    "size": 7749,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/UniJISX0213-UTF32-H": {
+    "size": 259909,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/UniJISX0213-UTF32-V": {
+    "size": 7105,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/UniJISX02132004-UTF32-H": {
+    "size": 259993,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/UniJISX02132004-UTF32-V": {
+    "size": 7129,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/V": {
+    "size": 3302,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan1/WP-Symbol": {
+    "size": 3196,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Japan2/Adobe-Japan2-0": {
+    "size": 3270,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Korea1/Adobe-Korea1-0": {
+    "size": 3547,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Korea1/Adobe-Korea1-1": {
+    "size": 4238,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Korea1/Adobe-Korea1-2": {
+    "size": 4237,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Korea1/Adobe-Korea1-H-CID": {
+    "size": 3132,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Korea1/Adobe-Korea1-H-Host": {
+    "size": 17554,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Korea1/Adobe-Korea1-H-Mac": {
+    "size": 12819,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Korea1/Adobe-Korea1-KSCms-UHC": {
+    "size": 17348,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Korea1/Adobe-Korea1-KSCpc-EUC": {
+    "size": 12997,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Korea1/Adobe-Korea1-UCS2": {
+    "size": 156072,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Korea1/KSC-EUC-H": {
+    "size": 12288,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Korea1/KSC-EUC-V": {
+    "size": 3128,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Korea1/KSC-H": {
+    "size": 12191,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Korea1/KSC-Johab-H": {
+    "size": 88593,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Korea1/KSC-Johab-V": {
+    "size": 3142,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Korea1/KSC-V": {
+    "size": 3104,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Korea1/KSCms-UHC-H": {
+    "size": 16714,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Korea1/KSCms-UHC-HW-H": {
+    "size": 16709,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Korea1/KSCms-UHC-HW-V": {
+    "size": 3140,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Korea1/KSCms-UHC-UCS2": {
+    "size": 191337,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Korea1/KSCms-UHC-V": {
+    "size": 3142,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Korea1/KSCpc-EUC-H": {
+    "size": 13161,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Korea1/KSCpc-EUC-UCS2": {
+    "size": 17818,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Korea1/KSCpc-EUC-UCS2C": {
+    "size": 158315,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Korea1/KSCpc-EUC-V": {
+    "size": 3140,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Korea1/UCS2-KSCms-UHC": {
+    "size": 197939,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Korea1/UCS2-KSCpc-EUC": {
+    "size": 154815,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Korea1/UniKS-UCS2-H": {
+    "size": 174732,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Korea1/UniKS-UCS2-V": {
+    "size": 3169,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Korea1/UniKS-UTF16-H": {
+    "size": 131831,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Korea1/UniKS-UTF16-V": {
+    "size": 3127,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Korea1/UniKS-UTF32-H": {
+    "size": 173901,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Korea1/UniKS-UTF32-V": {
+    "size": 3227,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Korea1/UniKS-UTF8-H": {
+    "size": 154834,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-Korea1/UniKS-UTF8-V": {
+    "size": 3173,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-KR/Adobe-KR-0": {
+    "size": 2966,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-KR/Adobe-KR-1": {
+    "size": 3106,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-KR/Adobe-KR-2": {
+    "size": 3632,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-KR/Adobe-KR-3": {
+    "size": 3653,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-KR/Adobe-KR-4": {
+    "size": 3674,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-KR/Adobe-KR-5": {
+    "size": 3695,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-KR/Adobe-KR-6": {
+    "size": 3863,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-KR/Adobe-KR-7": {
+    "size": 4241,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-KR/Adobe-KR-8": {
+    "size": 4535,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-KR/Adobe-KR-9": {
+    "size": 4577,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-KR/Adobe-KR-UCS2": {
+    "size": 215700,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-KR/UniAKR-UTF16-H": {
+    "size": 199166,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-KR/UniAKR-UTF32-H": {
+    "size": 263101,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/cMap/Adobe-KR/UniAKR-UTF8-H": {
+    "size": 232713,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/nameToUnicode/Bulgarian": {
+    "size": 688,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/nameToUnicode/Greek": {
+    "size": 136,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/nameToUnicode/Thai": {
+    "size": 3190,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/unicodeMap/Big5": {
+    "size": 146522,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/unicodeMap/Big5ascii": {
+    "size": 146956,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/unicodeMap/EUC-CN": {
+    "size": 74242,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/unicodeMap/EUC-JP": {
+    "size": 72711,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/unicodeMap/GBK": {
+    "size": 128315,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/unicodeMap/ISO-2022-CN": {
+    "size": 73606,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/unicodeMap/ISO-2022-JP": {
+    "size": 72385,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/unicodeMap/ISO-2022-KR": {
+    "size": 74758,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/unicodeMap/ISO-8859-6": {
+    "size": 564,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/unicodeMap/ISO-8859-7": {
+    "size": 647,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/unicodeMap/ISO-8859-8": {
+    "size": 668,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/unicodeMap/ISO-8859-9": {
+    "size": 693,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/unicodeMap/KOI8-R": {
+    "size": 1004,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/unicodeMap/Latin2": {
+    "size": 1478,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/unicodeMap/Shift-JIS": {
+    "size": 72466,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/unicodeMap/TIS-620": {
+    "size": 498,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "poppler/poppler-24.08.0/share/poppler/unicodeMap/Windows-1255": {
+    "size": 704,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "rag_engine/config.py": {
+    "size": 2622,
+    "lines": 65,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "rag_engine/core/chunker.py": {
+    "size": 1775,
+    "lines": 42,
+    "classes": [
+      "LegalTextChunker"
+    ],
+    "functions": 3,
+    "routes": 0
+  },
+  "rag_engine/core/embedder.py": {
+    "size": 1968,
+    "lines": 44,
+    "classes": [
+      "LocalEmbedder"
+    ],
+    "functions": 4,
+    "routes": 0
+  },
+  "rag_engine/core/vector_store.py": {
+    "size": 8064,
+    "lines": 205,
+    "classes": [
+      "VectorStore"
+    ],
+    "functions": 7,
+    "routes": 0
+  },
+  "rag_engine/loaders/ocr_engine.py": {
+    "size": 14470,
+    "lines": 300,
+    "classes": [
+      "ImagePreprocessor",
+      "ArabicOCREngine"
+    ],
+    "functions": 11,
+    "routes": 0
+  },
+  "rag_engine/loaders/pdf_loader.py": {
+    "size": 2845,
+    "lines": 74,
+    "classes": [
+      "DocumentLoader"
+    ],
+    "functions": 5,
+    "routes": 0
+  },
+  "rag_engine/services/analyzer_service.py": {
+    "size": 16267,
+    "lines": 332,
+    "classes": [
+      "ContractAnalyzerAI"
+    ],
+    "functions": 7,
+    "routes": 0
+  },
+  "rag_engine/services/db_integration.py": {
+    "size": 2949,
+    "lines": 69,
+    "classes": [
+      "DBIntegrationService"
+    ],
+    "functions": 3,
+    "routes": 0
+  },
+  "rag_engine/services/drafter_service.py": {
+    "size": 2136,
+    "lines": 47,
+    "classes": [
+      "LegalDrafter"
+    ],
+    "functions": 3,
+    "routes": 0
+  },
+  "rag_engine/services/summarizer_service.py": {
+    "size": 2503,
+    "lines": 61,
+    "classes": [
+      "LegalSummarizer"
+    ],
+    "functions": 3,
+    "routes": 0
+  },
+  "rag_engine/tessdata/ara.traineddata": {
+    "size": 12603724,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "routers/accounting.py": {
+    "size": 18296,
+    "lines": 408,
+    "classes": [],
+    "functions": 8,
+    "routes": 7
+  },
+  "routers/advanced.py": {
+    "size": 591,
+    "lines": 12,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "routers/advanced_operations.py": {
+    "size": 5055,
+    "lines": 104,
+    "classes": [],
+    "functions": 2,
+    "routes": 2
+  },
+  "routers/ai_assistant.py": {
+    "size": 46087,
+    "lines": 955,
+    "classes": [],
+    "functions": 23,
+    "routes": 7
+  },
+  "routers/api": {
+    "size": 0,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "routers/api_case_recipients.py": {
+    "size": 6091,
+    "lines": 158,
+    "classes": [],
+    "functions": 3,
+    "routes": 3
+  },
+  "routers/calendar_route.py": {
+    "size": 9707,
+    "lines": 263,
+    "classes": [],
+    "functions": 2,
+    "routes": 2
+  },
+  "routers/client_portal.py": {
+    "size": 13977,
+    "lines": 338,
+    "classes": [],
+    "functions": 10,
+    "routes": 8
+  },
+  "routers/client_profile_route.py": {
+    "size": 9774,
+    "lines": 248,
+    "classes": [],
+    "functions": 5,
+    "routes": 4
+  },
+  "routers/conflict_check.py": {
+    "size": 3419,
+    "lines": 98,
+    "classes": [],
+    "functions": 2,
+    "routes": 2
+  },
+  "routers/contract_analyzer.py": {
+    "size": 1099,
+    "lines": 31,
+    "classes": [],
+    "functions": 1,
+    "routes": 1
+  },
+  "routers/correspondences.py": {
+    "size": 19126,
+    "lines": 431,
+    "classes": [],
+    "functions": 10,
+    "routes": 8
+  },
+  "routers/documents_route.py": {
+    "size": 36771,
+    "lines": 840,
+    "classes": [],
+    "functions": 12,
+    "routes": 11
+  },
+  "routers/executions.py": {
+    "size": 12631,
+    "lines": 252,
+    "classes": [],
+    "functions": 4,
+    "routes": 4
+  },
+  "routers/expenses.py": {
+    "size": 10209,
+    "lines": 208,
+    "classes": [],
+    "functions": 4,
+    "routes": 4
+  },
+  "routers/incoming_cases.py": {
+    "size": 55846,
+    "lines": 1365,
+    "classes": [],
+    "functions": 14,
+    "routes": 11
+  },
+  "routers/intake.py": {
+    "size": 24867,
+    "lines": 563,
+    "classes": [],
+    "functions": 10,
+    "routes": 9
+  },
+  "routers/judgments.py": {
+    "size": 20616,
+    "lines": 459,
+    "classes": [],
+    "functions": 7,
+    "routes": 7
+  },
+  "routers/kanban.py": {
+    "size": 9232,
+    "lines": 218,
+    "classes": [],
+    "functions": 8,
+    "routes": 6
+  },
+  "routers/legal_references.py": {
+    "size": 7982,
+    "lines": 181,
+    "classes": [],
+    "functions": 4,
+    "routes": 4
+  },
+  "routers/limitations.py": {
+    "size": 12316,
+    "lines": 284,
+    "classes": [],
+    "functions": 6,
+    "routes": 5
+  },
+  "routers/login_log___sessions.py": {
+    "size": 5484,
+    "lines": 102,
+    "classes": [],
+    "functions": 3,
+    "routes": 3
+  },
+  "routers/matters_route.py": {
+    "size": 19494,
+    "lines": 495,
+    "classes": [],
+    "functions": 8,
+    "routes": 7
+  },
+  "routers/mobile_api.py": {
+    "size": 65362,
+    "lines": 1597,
+    "classes": [
+      "LoginRequest",
+      "Verify2faRequest",
+      "ToggleTwoFactorRequest",
+      "MobileCaseCreate",
+      "ConflictCheckRequest"
+    ],
+    "functions": 50,
+    "routes": 44
+  },
+  "routers/mobile_biometrics.py": {
+    "size": 8690,
+    "lines": 205,
+    "classes": [
+      "RegisterDeviceRequest",
+      "BiometricLoginRequest",
+      "BiometricChallengeRequest"
+    ],
+    "functions": 5,
+    "routes": 3
+  },
+  "routers/mobile_sync.py": {
+    "size": 6518,
+    "lines": 152,
+    "classes": [
+      "SyncRequest"
+    ],
+    "functions": 3,
+    "routes": 1
+  },
+  "routers/notes.py": {
+    "size": 15858,
+    "lines": 376,
+    "classes": [],
+    "functions": 7,
+    "routes": 7
+  },
+  "routers/parties.py": {
+    "size": 18917,
+    "lines": 442,
+    "classes": [],
+    "functions": 7,
+    "routes": 5
+  },
+  "routers/pleadings.py": {
+    "size": 14671,
+    "lines": 354,
+    "classes": [],
+    "functions": 9,
+    "routes": 6
+  },
+  "routers/power_of_attorney.py": {
+    "size": 14028,
+    "lines": 279,
+    "classes": [],
+    "functions": 4,
+    "routes": 4
+  },
+  "routers/rag_router.py": {
+    "size": 13743,
+    "lines": 333,
+    "classes": [],
+    "functions": 9,
+    "routes": 7
+  },
+  "routers/reference_data.py": {
+    "size": 4812,
+    "lines": 85,
+    "classes": [],
+    "functions": 4,
+    "routes": 4
+  },
+  "routers/reports_route.py": {
+    "size": 191870,
+    "lines": 2965,
+    "classes": [],
+    "functions": 7,
+    "routes": 4
+  },
+  "routers/security_center.py": {
+    "size": 22495,
+    "lines": 541,
+    "classes": [],
+    "functions": 17,
+    "routes": 15
+  },
+  "routers/smart_automation_route.py": {
+    "size": 23298,
+    "lines": 597,
+    "classes": [],
+    "functions": 12,
+    "routes": 11
+  },
+  "routers/smart_search_route.py": {
+    "size": 11881,
+    "lines": 283,
+    "classes": [],
+    "functions": 2,
+    "routes": 2
+  },
+  "routers/superadmin.py": {
+    "size": 30711,
+    "lines": 589,
+    "classes": [],
+    "functions": 11,
+    "routes": 8
+  },
+  "routers/team_management.py": {
+    "size": 11134,
+    "lines": 190,
+    "classes": [],
+    "functions": 4,
+    "routes": 4
+  },
+  "routers/timeline_route.py": {
+    "size": 16362,
+    "lines": 340,
+    "classes": [],
+    "functions": 4,
+    "routes": 2
+  },
+  "routers/timesheet.py": {
+    "size": 13691,
+    "lines": 259,
+    "classes": [],
+    "functions": 5,
+    "routes": 5
+  },
+  "routers/trust_accounts_route.py": {
+    "size": 16467,
+    "lines": 424,
+    "classes": [],
+    "functions": 7,
+    "routes": 6
+  },
+  "routers/yemeni_laws.py": {
+    "size": 11336,
+    "lines": 269,
+    "classes": [],
+    "functions": 10,
+    "routes": 6
+  },
+  "routers/__init__.py": {
+    "size": 0,
+    "lines": 0,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "static/css/dashboard.css": {
+    "size": 29122,
+    "lines": 1118,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "static/css/style.css": {
+    "size": 6003,
+    "lines": 297,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/activity.html": {
+    "size": 6805,
+    "lines": 110,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/advanced_operations.html": {
+    "size": 21184,
+    "lines": 347,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/ai_assistant.html": {
+    "size": 40238,
+    "lines": 1193,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/automation.html": {
+    "size": 53823,
+    "lines": 890,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/base.html": {
+    "size": 55671,
+    "lines": 1053,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/calendar.html": {
+    "size": 16636,
+    "lines": 249,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/cases.html": {
+    "size": 37564,
+    "lines": 584,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/case_details.html": {
+    "size": 46327,
+    "lines": 550,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/case_report.html": {
+    "size": 18866,
+    "lines": 477,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/clients.html": {
+    "size": 49939,
+    "lines": 1102,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/client_portal.html": {
+    "size": 14727,
+    "lines": 379,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/client_profile.html": {
+    "size": 48281,
+    "lines": 667,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/conflict_check.html": {
+    "size": 21474,
+    "lines": 297,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/contract_analyzer.html": {
+    "size": 38389,
+    "lines": 778,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/correspondences.html": {
+    "size": 55417,
+    "lines": 823,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/dashboard.html": {
+    "size": 24558,
+    "lines": 326,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/documents.html": {
+    "size": 76322,
+    "lines": 944,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/execution.html": {
+    "size": 29865,
+    "lines": 468,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/expenses.html": {
+    "size": 30124,
+    "lines": 476,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/finance.html": {
+    "size": 38134,
+    "lines": 538,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/forgot_password.html": {
+    "size": 17450,
+    "lines": 334,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/hearings.html": {
+    "size": 101522,
+    "lines": 1232,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/judgments.html": {
+    "size": 61589,
+    "lines": 859,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/knowledge_admin.html": {
+    "size": 11198,
+    "lines": 200,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/landing.html": {
+    "size": 36345,
+    "lines": 920,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/legal_references.html": {
+    "size": 30373,
+    "lines": 466,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/limitations.html": {
+    "size": 37617,
+    "lines": 564,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/login.html": {
+    "size": 32567,
+    "lines": 531,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/login_2fa.html": {
+    "size": 6373,
+    "lines": 176,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/login_log.html": {
+    "size": 12270,
+    "lines": 245,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/matters.html": {
+    "size": 24968,
+    "lines": 344,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/matter_details.html": {
+    "size": 36839,
+    "lines": 511,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/matter_print.html": {
+    "size": 5610,
+    "lines": 137,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/notes.html": {
+    "size": 53363,
+    "lines": 826,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/parties.html": {
+    "size": 72424,
+    "lines": 859,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/pleadings.html": {
+    "size": 54051,
+    "lines": 706,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/pleadings_print.html": {
+    "size": 11431,
+    "lines": 330,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/power_of_attorney.html": {
+    "size": 29954,
+    "lines": 478,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/reference_data.html": {
+    "size": 12191,
+    "lines": 227,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/register.html": {
+    "size": 27407,
+    "lines": 457,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/reports.html": {
+    "size": 83452,
+    "lines": 2076,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/search.html": {
+    "size": 21418,
+    "lines": 451,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/security_center.html": {
+    "size": 53642,
+    "lines": 752,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/settings.html": {
+    "size": 18534,
+    "lines": 245,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/subscription.html": {
+    "size": 38770,
+    "lines": 757,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/superadmin.html": {
+    "size": 47862,
+    "lines": 705,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/tasks.html": {
+    "size": 55436,
+    "lines": 848,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/team.html": {
+    "size": 28778,
+    "lines": 553,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/timeline.html": {
+    "size": 17439,
+    "lines": 542,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/timesheet.html": {
+    "size": 32165,
+    "lines": 539,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/trust_accounts.html": {
+    "size": 24879,
+    "lines": 345,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/trust_account_details.html": {
+    "size": 25465,
+    "lines": 352,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/trust_receipt_print.html": {
+    "size": 5769,
+    "lines": 151,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/trust_statement_print.html": {
+    "size": 7941,
+    "lines": 174,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/yemeni_laws.html": {
+    "size": 12996,
+    "lines": 194,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/accounting/invoices.html": {
+    "size": 31822,
+    "lines": 508,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/accounting/invoice_form.html": {
+    "size": 15594,
+    "lines": 408,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/accounting/invoice_pdf.html": {
+    "size": 17427,
+    "lines": 470,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/client_portal/base.html": {
+    "size": 9112,
+    "lines": 259,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/client_portal/cases.html": {
+    "size": 7725,
+    "lines": 191,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/client_portal/contracts.html": {
+    "size": 19611,
+    "lines": 441,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/client_portal/dashboard.html": {
+    "size": 10522,
+    "lines": 244,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/client_portal/documents.html": {
+    "size": 6276,
+    "lines": 162,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/client_portal/finance.html": {
+    "size": 7639,
+    "lines": 208,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/client_portal/hearings.html": {
+    "size": 6675,
+    "lines": 169,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/components/report_letterhead.html": {
+    "size": 6146,
+    "lines": 181,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/incoming_cases/hub.html": {
+    "size": 42238,
+    "lines": 552,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/incoming_cases/section_view.html": {
+    "size": 138233,
+    "lines": 2234,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/intake/e_sign.html": {
+    "size": 10988,
+    "lines": 223,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/intake/intake_list.html": {
+    "size": 21941,
+    "lines": 381,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/intake/public_form.html": {
+    "size": 8391,
+    "lines": 157,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/intake/signed_contract_pdf.html": {
+    "size": 6733,
+    "lines": 128,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "templates/kanban/board.html": {
+    "size": 14655,
+    "lines": 404,
+    "classes": [],
+    "functions": 0,
+    "routes": 0
+  },
+  "utils/conflict_checker.py": {
+    "size": 5463,
+    "lines": 116,
+    "classes": [],
+    "functions": 2,
+    "routes": 0
+  },
+  "utils/zatca_qr.py": {
+    "size": 1384,
+    "lines": 40,
+    "classes": [],
+    "functions": 2,
+    "routes": 0
+  }
+}

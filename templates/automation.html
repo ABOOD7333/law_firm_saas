@@ -736,7 +736,7 @@ async function runConflictSearch() {
                     <strong>${escapeHtml(r.name)}</strong> (${escapeHtml(r.type)}) — القضية: <strong>${escapeHtml(r.case_number)}</strong> (${escapeHtml(r.case_title)})
                 </div>`;
             });
-            box.innerHTML = html;
+            box.innerHTML = DOMPurify.sanitize(html);  // [BUG-008 FIX]
         } else {
             box.innerHTML = `<div style="padding:15px; text-align:center; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; color:#166534; font-weight:700;"><i class="fa-solid fa-circle-check"></i> لا يوجد أي تعارض مصالح مسجل للاسم: "${escapeHtml(name)}"</div>`;
         }
@@ -770,7 +770,7 @@ function showTimeline() {
                     </div>`;
                 });
                 html += '</div>';
-                content.innerHTML = html;
+                content.innerHTML = DOMPurify.sanitize(html);  // [BUG-008 FIX]
             } else {
                 content.innerHTML = '<p style="text-align:center; color:#94a3b8; padding:30px;">لا توجد أحداث مسجلة لهذه القضية حتى الآن.</p>';
             }

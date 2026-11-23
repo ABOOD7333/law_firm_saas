@@ -294,7 +294,7 @@
                     <span>مُصدر التقرير:</span> <strong>{{ user.name }} ({{ user.role }})</strong>
                 </div>
                 <div class="meta-item">
-                    <span>تاريخ الإصدار:</span> <strong><script>document.write(new Date().toLocaleDateString('ar-SA'))</script></strong>
+                    <span>تاريخ الإصدار:</span> <strong><span id="report-issue-date"></span><script>document.getElementById('report-issue-date').textContent=new Date().toLocaleDateString('ar-SA')</script></strong><!-- [BUG-010 FIX] -->
                 </div>
                 <div class="meta-item">
                     <span>النطاق الزمني:</span> 

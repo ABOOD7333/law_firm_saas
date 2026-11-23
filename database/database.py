@@ -1,4 +1,4 @@
-"""
+﻿"""
 Database Configuration — LawSaaS
 يقرأ DATABASE_URL من ملف .env تلقائياً عبر python-dotenv
 """
@@ -6,6 +6,11 @@ from sqlalchemy import create_engine, event, inspect, text as _sql_text
 from sqlalchemy.orm import sessionmaker
 from .models import Base
 import os
+import logging
+import re  # [BUG-001 FIX] للتحقق من أسماء الجداول والأعمدة
+
+# [BUG-020 FIX] استخدام logger بدلاً من print
+_db_logger = logging.getLogger("lawsaas.database")
 
 # تحميل ملف .env — لكن لا يتغلب على متغيرات Railway (override=False)
 try:
@@ -67,7 +72,7 @@ def init_db():
     """
     try:
         Base.metadata.create_all(bind=engine)
-        print("[Database] create_all completed successfully.")
+        _db_logger.info("[Database] create_all completed successfully.")  # [BUG-020 FIX]
     except Exception:
         # Do not print the connection URL or driver exception (which may embed
         # deployment credentials). A partially initialized app must not start.
@@ -126,7 +131,7 @@ def init_db():
                 for obsolete_table in ("ai_chat_history", "ai_knowledge", "ai_user_quotas", "rag_chunk_metadata"):
                     if obsolete_table in inspect(conn).get_table_names():
                         conn.execute(_sql_text(f"DROP TABLE {obsolete_table}"))
-        print("[Database] Obsolete AI/RAG data removed; Yemeni-law records retained.")
+        _db_logger.info("[Database] Obsolete AI/RAG data removed; Yemeni-law records retained.")  # [BUG-020 FIX]
     except Exception:
         # A failed destructive migration must abort startup rather than leave the
         # application partially migrated or continue serving obsolete features.
@@ -185,7 +190,7 @@ def init_db():
                 "UPDATE law_offices SET subscription_plan = 'yearly', subscription_end = '2030-01-01 00:00:00', is_active = 1 WHERE is_active = 1 AND (subscription_plan = 'trial' OR subscription_end IS NULL OR subscription_end < '2027-01-01');"
             ))
     except Exception as e:
-        print(f"[Database Auto-Renew] {e}")
+        _db_logger.info(f"[Database Auto-Renew] {e}")  # [BUG-020 FIX]
     # إزالة حقول درجات التقاضي وبيانات المحكمة والنتائج من جدول law_cases نهائياً
     cols_to_drop = [
         'litigation_level_key',
@@ -691,6 +696,8 @@ def init_db():
         pass
 
     # Dynamic Column Synchronization (Ensures PostgreSQL on Railway has all model columns)
+    # [BUG-001 FIX] التحقق من أسماء الجداول والأعمدة قبل استخدامها في SQL
+    _SAFE_IDENTIFIER = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]{0,63}$')
     try:
         import sqlalchemy as sa
         insp = sa.inspect(engine)
@@ -701,18 +708,22 @@ def init_db():
                     existing_cols = {c['name'] for c in insp.get_columns(t_name)}
                     for col in t_obj.columns:
                         if col.name not in existing_cols:
+                            # [BUG-001 FIX] التحقق من صحة اسم العمود والجدول قبل تنفيذ SQL
+                            if not _SAFE_IDENTIFIER.match(t_name) or not _SAFE_IDENTIFIER.match(col.name):
+                                _db_logger.warning(f"[Migration] Skipped unsafe identifier: table={t_name!r} col={col.name!r}")
+                                continue
                             try:
                                 col_type_str = col.type.compile(engine.dialect)
                                 sql_str = f'ALTER TABLE "{t_name}" ADD COLUMN "{col.name}" {col_type_str}'
                                 conn.execute(text(sql_str))
-                                print(f"[Migration] Auto-added column {col.name} ({col_type_str}) to table {t_name}")
+                                _db_logger.info(f"[Migration] Auto-added column {col.name} ({col_type_str}) to table {t_name}")  # [BUG-020 FIX]
                             except Exception:
                                 pass
     except Exception as sync_exc:
-        print(f"[Migration Notice] Auto-sync column check: {sync_exc}")
+        _db_logger.info(f"[Migration Notice] Auto-sync column check: {sync_exc}")  # [BUG-020 FIX]
 
     # Never log DATABASE_URL: it may contain a username and password.
-    print(f"[Database] Connected using dialect: {engine.dialect.name}")
-    print(f"[Database] Tables initialized successfully.")
+    _db_logger.info(f"[Database] Connected using dialect: {engine.dialect.name}")  # [BUG-020 FIX]
+    _db_logger.info(f"[Database] Tables initialized successfully.")  # [BUG-020 FIX]
 
 

@@ -8,5 +8,5 @@ from database.models import AccessProfiles, LawCases, LawDocuments, LawTasks, La
 
 router = APIRouter()
 
-# get_current_user should be imported from somewhere, but to avoid circular imports, we can import it locally or move it.
-# For now, we will import it lazily from main, or better, we should create dependencies.py
+# [BUG-019] هذا الملف فارغ من الـ routes — الوظائف منقولة إلى routers/advanced_operations.py
+# يمكن حذف هذا الملف إذا تأكدت أن لا شيء يستورده مباشرة

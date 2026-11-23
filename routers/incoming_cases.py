@@ -766,8 +766,8 @@ async def get_incoming_case_details(
     if item.attachments_json:
         try:
             attachments = json.loads(item.attachments_json)
-        except:
-            attachments = []
+        except Exception:
+            attachments = []  # [BUG-005 FIX] JSON تالف → قائمة فارغة بدلاً من كسر الطلب
 
     cfg = SECTION_CONFIG.get(item.section_key, {})
 

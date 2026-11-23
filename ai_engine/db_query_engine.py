@@ -58,6 +58,7 @@ class DBQueryEngine:
             user = self.db.query(AccessProfiles).filter(AccessProfiles.id == self.user_id).first()
             if user:
                 client_records = self.db.query(LawClients).filter(
+                    LawClients.office_id == self.office_id,  # [BUG-007 FIX] multi-tenant isolation
                     (LawClients.phone == user.phone) | (LawClients.email == user.email)
                 ).all()
                 case_ids = [c.case_id for c in client_records if c.case_id]
@@ -81,6 +82,7 @@ class DBQueryEngine:
             user = self.db.query(AccessProfiles).filter(AccessProfiles.id == self.user_id).first()
             if user:
                 client_records = self.db.query(LawClients).filter(
+                    LawClients.office_id == self.office_id,  # [BUG-007 FIX] multi-tenant isolation
                     (LawClients.phone == user.phone) | (LawClients.email == user.email)
                 ).all()
                 case_ids = [c.case_id for c in client_records if c.case_id]
@@ -104,6 +106,7 @@ class DBQueryEngine:
             user = self.db.query(AccessProfiles).filter(AccessProfiles.id == self.user_id).first()
             if user:
                 client_records = self.db.query(LawClients).filter(
+                    LawClients.office_id == self.office_id,  # [BUG-007 FIX] multi-tenant isolation
                     (LawClients.phone == user.phone) | (LawClients.email == user.email)
                 ).all()
                 case_ids = [c.case_id for c in client_records if c.case_id]
@@ -703,6 +706,7 @@ class DBQueryEngine:
             user = self.db.query(AccessProfiles).filter(AccessProfiles.id == self.user_id).first()
             if user:
                 client_records = self.db.query(LawClients).filter(
+                    LawClients.office_id == self.office_id,  # [BUG-007 FIX] multi-tenant isolation
                     (LawClients.phone == user.phone) | (LawClients.email == user.email)
                 ).all()
                 case_ids = [c.case_id for c in client_records if c.case_id]

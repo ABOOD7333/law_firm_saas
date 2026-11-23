@@ -10,7 +10,8 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from database.database import get_db
-from database.models import AIChatHistory, AIKnowledge, AIUserQuota, AccessProfiles
+from database.models import AccessProfiles
+from database.ai_models import AIChatHistory, AIKnowledge, AIUserQuota  # [BUG-022 FIX] نماذج AI نُقلت إلى ai_models.py
 from dependencies import get_current_user
 
 router = APIRouter(prefix="/api/ai", tags=["AI Assistant"])

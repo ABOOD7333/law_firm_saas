@@ -663,7 +663,7 @@ async function loadCaseParties(caseId) {
             data.parties.forEach(p => {
                 html += `<span style="display:inline-block; margin-left:6px; cursor:pointer; background:#eff6ff; color:#2563eb; padding:2px 7px; border-radius:12px; font-weight:700;" onclick="selectParty('${p.name}')">${p.name} (${p.type})</span>`;
             });
-            badges.innerHTML = html;
+            badges.innerHTML = DOMPurify.sanitize(html);  // [BUG-008 FIX]
             quickPick.style.display = 'block';
         } else {
             quickPick.style.display = 'none';

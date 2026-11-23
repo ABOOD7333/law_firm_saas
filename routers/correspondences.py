@@ -252,7 +252,11 @@ async def add_correspondence(
         )
         db.add(followup_task)
 
-    db.commit()
+    try:  # [BUG-004 FIX] rollback عند فشل إضافة المراسلة
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"فشل حفظ المراسلة: {str(e)}")
     return RedirectResponse(url="/correspondences", status_code=303)
 
 
@@ -315,7 +319,11 @@ async def edit_correspondence(
         safe_proof_name = save_upload(proof_of_delivery, UPLOAD_DIR)
         c.proof_of_delivery_path = f"/static/uploads/correspondences/{safe_proof_name}"
 
-    db.commit()
+    try:  # [BUG-004 FIX] rollback عند فشل إضافة المراسلة
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"فشل حفظ المراسلة: {str(e)}")
     return RedirectResponse(url="/correspondences", status_code=303)
 
 
@@ -337,7 +345,11 @@ async def delete_correspondence(
         if not user_can_access_case(db, user, c.case_id):
             raise HTTPException(status_code=403, detail="غير مصرح بالوصول إلى القضية")
         c.is_deleted = 1
-        db.commit()
+        try:  # [BUG-004 FIX] rollback عند فشل إضافة المراسلة
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            raise HTTPException(status_code=500, detail=f"فشل حفظ المراسلة: {str(e)}")
     return RedirectResponse(url="/correspondences", status_code=303)
 
 

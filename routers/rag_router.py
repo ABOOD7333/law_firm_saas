@@ -70,8 +70,8 @@ def process_document_bg(document_id: int, file_path: str):
             if doc_record:
                 doc_record.status = 'failed'
                 db.commit()
-        except:
-            pass
+        except Exception:
+            pass  # [BUG-005 FIX] فشل تحديث حالة المستند — لا نريد إخفاء الخطأ الأصلي
     finally:
         db.close()
 
