@@ -464,6 +464,13 @@ class SafeStaticFiles(StaticFiles):
 
 app.mount("/static", SafeStaticFiles(directory="static"), name="static")
 
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    fav = "static/favicon.ico"
+    if os.path.exists(fav):
+        return FileResponse(fav)
+    return PlainTextResponse("Not found", status_code=404)
+
 # Templates setup - imported from dependencies to avoid circular imports in routers
 
 from dependencies import templates, get_current_user, check_user_permission, require_user_permission, user_can_access_case
