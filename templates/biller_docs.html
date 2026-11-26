@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>دليل الربط التقني الموحد للبنوك والمحافظ | منصة وزيرك (Waziruk Biller API v1)</title>
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/img/waziruk-logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; font-family: 'Cairo', sans-serif; }
+        body { margin: 0; background: #f8fafc; color: #0f172a; line-height: 1.75; }
+        .top-bar { background: linear-gradient(135deg, #0b132b 0%, #1e1b4b 100%); color: white; padding: 28px 24px; border-bottom: 3px solid #d4af37; }
+        .container { max-width: 1020px; margin: 0 auto; padding: 0 20px; }
+        .header-flex { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+        .brand-row { display: flex; align-items: center; gap: 14px; }
+        .brand-row img { width: 54px; height: 54px; border-radius: 14px; border: 2px solid #d4af37; object-fit: cover; }
+        .btn-print { background: linear-gradient(135deg, #d4af37, #b88918); color: #0b132b; border: none; padding: 11px 22px; border-radius: 10px; font-weight: 800; cursor: pointer; font-size: 0.92rem; display: inline-flex; align-items: center; gap: 8px; }
+        .card { background: white; border-radius: 16px; padding: 26px; margin-top: 24px; border: 1px solid #e2e8f0; box-shadow: 0 2px 12px rgba(15,23,42,0.04); }
+        h2 { color: #1e1b4b; font-size: 1.3rem; font-weight: 900; margin-top: 0; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+        h3 { color: #0f172a; font-size: 1.05rem; font-weight: 800; margin-top: 20px; }
+        pre { background: #0f172a; color: #e2e8f0; padding: 16px; border-radius: 12px; overflow-x: auto; direction: ltr; text-align: left; font-family: Consolas, monospace; font-size: 0.86rem; line-height: 1.55; }
+        code { font-family: Consolas, monospace; background: #f1f5f9; color: #be123c; padding: 2px 6px; border-radius: 5px; font-size: 0.88em; }
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: 800; direction: ltr; }
+        .badge-post { background: #dbeafe; color: #1e40af; }
+        .badge-get { background: #dcfce7; color: #166534; }
+        table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.9rem; }
+        th, td { padding: 10px 14px; border-bottom: 1px solid #e2e8f0; text-align: right; }
+        th { background: #f8fafc; font-weight: 800; color: #334155; }
+        @media print {
+            .btn-print { display: none !important; }
+            body { background: white; }
+            .card { box-shadow: none; border: 1px solid #cbd5e1; break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="top-bar">
+    <div class="container header-flex">
+        <div class="brand-row">
+            <img src="/static/img/lawsaas_logo_golden_scales.jpg" alt="شعار منصة وزيرك">
+            <div>
+                <h1 style="margin:0; font-size:1.5rem; font-weight:900;">وثيقة الربط التقني الموحد للبنوك والمحافظ (Biller API v1)</h1>
+                <p style="margin:4px 0 0 0; color:#cbd5e1; font-size:0.9rem;">منصة وزيرك السحابية لإدارة مكاتب المحاماة — بروتوكول الاستعلام والتحصيل الإلكتروني اللحظي</p>
+            </div>
+        </div>
+        <button onclick="window.print()" class="btn-print">
+            <i class="fa-solid fa-print"></i> طباعة / حفظ كـ PDF للبنك
+        </button>
+    </div>
+</div>
+
+<div class="container" style="padding-bottom: 50px;">
+
+    <div class="card">
+        <h2><i class="fa-solid fa-sitemap" style="color:#d4af37;"></i> 1. نظرة عامة على البنية المعمارية (Architecture Overview)</h2>
+        <p>تعتمد منصة <strong>وزيرك (Waziruk)</strong> معمارية تحصيل إلكتروني مركزية مستقلة (Centralized EBPP Hub). تكون منصة وزيرك هي المرجع الأساسي المعتمد للفواتير، والمبالغ، وتواريخ الاستحقاق، وتفعيل الاشتراكات؛ بينما تعمل البنوك والمحافظ الإلكترونية كقنوات سداد مرتبطة عبر واجهة API موحدة ومؤمّنة.</p>
+        <ul>
+            <li><strong>Base URL (الإنتاج):</strong> <code>https://waziruk.tech/api/v1/biller</code></li>
+            <li><strong>معرّف المشترك المعتمد:</strong> رقم الهاتف المسجل لصاحب مكتب المحاماة (مثال: <code>771234567</code>).</li>
+            <li><strong>دعم العملات المتعددة (Multi-Currency):</strong> تعود كل فاتورة بـ 4 خيارات جاهزة للسداد: الدولار (<code>USD</code>)، الريال القعيطي الجنوبي (<code>YER_SOUTH</code>)، الريال القديم الشمالي (<code>YER_NORTH</code>)، والريال السعودي (<code>SAR</code>).</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h2><i class="fa-solid fa-shield-halved" style="color:#059669;"></i> 2. المصادقة والأمان (Authentication & Security)</h2>
+        <p>يجب إرسال الترويسات الأمنية التالية مع جميع الطلبات الصادرة من خوادم البنك أو المحفظة:</p>
+        <table>
+            <thead>
+                <tr><th>Header</th><th>الوصف</th><th>مثال</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>X-API-KEY</code></td><td>مفتاح التعريف الخاص بالبنك أو المحفظة</td><td><code>wzk_kuraimi_9a8f...</code></td></tr>
+                <tr><td><code>X-Waziruk-Signature</code></td><td>التوقيع الرقمي المشفر باستخدام <code>HMAC-SHA256</code> لجسم الطلب (Raw JSON Body) بمفتاح <code>API_SECRET</code></td><td><code>sha256=e3b0c44298fc...</code></td></tr>
+                <tr><td><code>Idempotency-Key</code></td><td>مفتاح فريد لعملية الدفع لمنع التكرار عند إعادة المحاولة</td><td><code>BANK-TXN-20261127-991</code></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <h2><i class="fa-solid fa-magnifying-glass-dollar" style="color:#2563eb;"></i> 3. الاستعلام عن مستحقات المشترك (Bill Inquiry)</h2>
+        <p><span class="badge badge-post">POST</span> <code>/api/v1/biller/inquire</code> &nbsp; أو &nbsp; <span class="badge badge-get">GET</span> <code>/api/v1/biller/inquire?subscriber_phone=771234567</code></p>
+        <h3>نموذج الطلب (Request JSON):</h3>
+        <pre>{
+  "subscriber_phone": "771234567"
+}</pre>
+        <h3>نموذج الاستجابة (Response 200 OK):</h3>
+        <pre>{
+  "status": "SUCCESS",
+  "subscriber": {
+    "office_id": 12,
+    "office_name": "مكتب العدالة للمحاماة والاستشارات",
+    "owner_name": "أ. محمد علي",
+    "phone": "771234567",
+    "current_plan": "الشركات والمجموعات (السوبر)",
+    "subscription_end": "2026-11-30T00:00:00"
+  },
+  "invoices": [
+    {
+      "invoice_no": "WZ-202611-0001",
+      "invoice_type": "subscription_renewal",
+      "plan_id": "enterprise",
+      "title": "تجديد اشتراك باقة الشركات والمجموعات (السوبر)",
+      "base_amount_usd": 99.99,
+      "base_currency": "USD",
+      "payable_options": {
+        "USD": 99.99,
+        "YER_SOUTH": 204980.0,
+        "YER_NORTH": 53495.0,
+        "SAR": 374.96
+      },
+      "due_date": "2026-11-30",
+      "status": "UNPAID"
+    }
+  ]
+}</pre>
+    </div>
+
+    <div class="card">
+        <h2><i class="fa-solid fa-circle-check" style="color:#059669;"></i> 4. تنفيذ التحصيل وتأكيد السداد (Payment Collection)</h2>
+        <p><span class="badge badge-post">POST</span> <code>/api/v1/biller/pay</code> &nbsp; (أو Webhook: <code>/api/v1/biller/notify</code>)</p>
+        <h3>نموذج الطلب (Request JSON):</h3>
+        <pre>{
+  "invoice_no": "WZ-202611-0001",
+  "amount_paid": 204980,
+  "currency": "YER_SOUTH",
+  "bank_reference": "KRM-8899123",
+  "idempotency_key": "KRM-8899123"
+}</pre>
+        <h3>نموذج الاستجابة (Response 200 OK):</h3>
+        <pre>{
+  "status": "SUCCESS",
+  "transaction_id": "WZK-20261127-A1B2C3D4",
+  "invoice_no": "WZ-202611-0001",
+  "bank_reference": "KRM-8899123",
+  "paid_amount": 204980.0,
+  "currency": "YER_SOUTH",
+  "usd_equivalent": 99.99,
+  "paid_at": "2026-11-27T02:45:00",
+  "activation_message_ar": "تم تجديد باقة الشركات والمجموعات (السوبر) حتى 2026-12-30",
+  "message_en": "Payment confirmed and service activated"
+}</pre>
+    </div>
+
+    <div class="card">
+        <h2><i class="fa-solid fa-rotate" style="color:#7c3aed;"></i> 5. الاستعلام عن حالة العملية والإلغاء (Status & Refund)</h2>
+        <ul>
+            <li><span class="badge badge-get">GET</span> <code>/api/v1/biller/status/{transaction_id_or_bank_reference}</code> — للتحقق من مصير العملية في حال انقطاع الشبكة.</li>
+            <li><span class="badge badge-post">POST</span> <code>/api/v1/biller/refund</code> — لعكس/استرداد عملية سداد وإعادة الفاتورة لحالة الانتظار وفق الصلاحيات.</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h2><i class="fa-solid fa-triangle-exclamation" style="color:#dc2626;"></i> 6. رموز الأخطاء القياسية (Error Codes)</h2>
+        <table>
+            <thead><tr><th>الرمز (error_code)</th><th>HTTP</th><th>المعنى</th></tr></thead>
+            <tbody>
+                <tr><td><code>MISSING_API_KEY</code> / <code>INVALID_API_KEY</code></td><td>401</td><td>مفتاح الربط مفقود أو غير صحيح</td></tr>
+                <tr><td><code>INVALID_SIGNATURE</code></td><td>401</td><td>التوقيع الرقمي HMAC-SHA256 غير مطابق</td></tr>
+                <tr><td><code>SUBSCRIBER_NOT_FOUND</code></td><td>404</td><td>رقم هاتف المشترك غير مسجل في منصة وزيرك</td></tr>
+                <tr><td><code>INVOICE_NOT_FOUND</code></td><td>404</td><td>رقم الفاتورة غير موجود</td></tr>
+                <tr><td><code>ALREADY_PAID</code></td><td>400</td><td>الفاتورة مسددة مسبقاً</td></tr>
+                <tr><td><code>INSUFFICIENT_AMOUNT</code></td><td>400</td><td>المبلغ المرسل أقل من قيمة الفاتورة بالعملة المحددة</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+</div>
+</body>
+</html>

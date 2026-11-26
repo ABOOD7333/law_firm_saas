@@ -150,6 +150,15 @@ async def superadmin_page(request: Request, db: Session = Depends(get_db), user:
             "total_cases": db.query(LawCases).filter(LawCases.is_deleted == 0).count()
         }
             
+        from database.biller_models import PaymentProviders, BillerInvoices, BillerTransactions
+        from core.payment_hub.engine import seed_default_providers
+        seed_default_providers(db)
+        biller_providers = db.query(PaymentProviders).order_by(PaymentProviders.id.asc()).all()
+        biller_invoices_list = db.query(BillerInvoices).order_by(BillerInvoices.id.desc()).limit(50).all()
+        biller_txns_list = db.query(BillerTransactions).order_by(BillerTransactions.id.desc()).limit(50).all()
+        biller_collected_usd = sum((t.amount_usd_equivalent or 0.0) for t in db.query(BillerTransactions).filter(BillerTransactions.status == "success").all())
+        biller_pending_count = db.query(BillerInvoices).filter(BillerInvoices.status == "pending").count()
+
         return templates.TemplateResponse(request=request, name="superadmin.html", context={
             "user": user,
             "active_page": "superadmin",
@@ -158,6 +167,15 @@ async def superadmin_page(request: Request, db: Session = Depends(get_db), user:
             "metrics": metrics,
             "exchange_rates": rates,
             "tiers": TIERS,
+            "biller_providers": biller_providers,
+            "biller_invoices": biller_invoices_list,
+            "biller_transactions": biller_txns_list,
+            "biller_stats": {
+                "collected_usd": round(biller_collected_usd, 2),
+                "pending_invoices": biller_pending_count,
+                "active_providers": sum(1 for p in biller_providers if p.is_active),
+                "total_providers": len(biller_providers),
+            },
             "haseb_pos": {
                 "code": "2709660",
                 "merchant": "LawSaaS",
@@ -530,3 +548,133 @@ async def approve_payment(payment_id: int, request: Request, db: Session = Depen
         db.rollback()
         app_logger.error(f"Superadmin payment approval error: {e}")
         return JSONResponse({"success": False, "error": "حدث خطأ داخلي"}, status_code=500)
+
+
+# ==============================================================================
+# Waziruk Central Biller Gateway Management & Sandbox Simulator
+# ==============================================================================
+
+@router.post("/api/superadmin/biller/provider")
+async def add_biller_provider(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
+    """إضافة مزود خدمة دفع جديد (بنك أو محفظة) وتوليد مفاتيح الربط آلياً"""
+    if not user or not is_superadmin(user):
+        return JSONResponse({"success": False, "error": "غير مصرح لك"}, status_code=403)
+    try:
+        import secrets
+        from database.biller_models import PaymentProviders
+        data = await request.json()
+        code = str(data.get("code", "")).strip().lower().replace(" ", "_")
+        name_ar = str(data.get("name_ar", "")).strip()
+        name_en = str(data.get("name_en", "")).strip() or code.upper()
+        adapter_type = str(data.get("adapter_type", "generic")).strip().lower()
+        default_currency = str(data.get("default_currency", "AUTO")).strip().upper()
+        notes = str(data.get("notes", "")).strip()
+
+        if not code or not name_ar:
+            return JSONResponse({"success": False, "error": "رمز المزود والاسم العربي مطلوبان"}, status_code=400)
+
+        exists = db.query(PaymentProviders).filter(PaymentProviders.code == code).first()
+        if exists:
+            return JSONResponse({"success": False, "error": "رمز المزود مسجل مسبقاً"}, status_code=400)
+
+        prov = PaymentProviders(
+            code=code,
+            name_ar=name_ar,
+            name_en=name_en,
+            adapter_type=adapter_type,
+            is_active=1,
+            is_sandbox=0,
+            api_key=f"wzk_{code}_{secrets.token_hex(12)}",
+            api_secret=f"sec_{secrets.token_hex(24)}",
+            default_currency=default_currency,
+            notes=notes,
+        )
+        db.add(prov)
+        db.commit()
+        return JSONResponse({
+            "success": True,
+            "message": f"تم إضافة مزود الدفع '{name_ar}' وتوليد مفاتيح الربط بنجاح",
+            "api_key": prov.api_key,
+            "api_secret": prov.api_secret,
+        })
+    except Exception as e:
+        db.rollback()
+        app_logger.error(f"Add biller provider error: {e}")
+        return JSONResponse({"success": False, "error": "حدث خطأ داخلي"}, status_code=500)
+
+
+@router.post("/api/superadmin/biller/provider/{provider_id}/toggle")
+async def toggle_biller_provider(provider_id: int, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
+    """تفعيل أو تعطيل مزود دفع"""
+    if not user or not is_superadmin(user):
+        return JSONResponse({"success": False, "error": "غير مصرح لك"}, status_code=403)
+    from database.biller_models import PaymentProviders
+    prov = db.query(PaymentProviders).filter(PaymentProviders.id == provider_id).first()
+    if not prov:
+        return JSONResponse({"success": False, "error": "المزود غير موجود"}, status_code=404)
+    prov.is_active = 0 if prov.is_active else 1
+    db.commit()
+    return JSONResponse({
+        "success": True,
+        "is_active": prov.is_active,
+        "message": f"تم {'تفعيل' if prov.is_active else 'تعطيل'} مزود الدفع ({prov.name_ar}) بنجاح"
+    })
+
+
+@router.post("/api/superadmin/biller/provider/{provider_id}/regenerate")
+async def regenerate_biller_keys(provider_id: int, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
+    """إعادة توليد مفاتيح الربط السرية لمزود الدفع"""
+    if not user or not is_superadmin(user):
+        return JSONResponse({"success": False, "error": "غير مصرح لك"}, status_code=403)
+    import secrets
+    from database.biller_models import PaymentProviders
+    prov = db.query(PaymentProviders).filter(PaymentProviders.id == provider_id).first()
+    if not prov:
+        return JSONResponse({"success": False, "error": "المزود غير موجود"}, status_code=404)
+    prov.api_key = f"wzk_{prov.code}_{secrets.token_hex(12)}"
+    prov.api_secret = f"sec_{secrets.token_hex(24)}"
+    db.commit()
+    return JSONResponse({
+        "success": True,
+        "api_key": prov.api_key,
+        "api_secret": prov.api_secret,
+        "message": f"تم تجديد مفاتيح الأمان لمزود ({prov.name_ar}) بنجاح"
+    })
+
+
+@router.post("/api/superadmin/biller/sandbox/inquire")
+async def superadmin_sandbox_inquire(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
+    """محاكاة استعلام البنك برقم هاتف صاحب المكتب مباشرة من لوحة السوبر أدمن"""
+    if not user or not is_superadmin(user):
+        return JSONResponse({"success": False, "error": "غير مصرح لك"}, status_code=403)
+    data = await request.json()
+    phone = str(data.get("phone", "")).strip()
+    from core.payment_hub.engine import inquire_subscriber
+    res = inquire_subscriber(db, phone, provider_code="sandbox", ip_address=request.client.host if request.client else None)
+    return JSONResponse(res)
+
+
+@router.post("/api/superadmin/biller/sandbox/pay")
+async def superadmin_sandbox_pay(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
+    """محاكاة تأكيد الدفع الإلكتروني من البنك بالعملة المختارة (USD / YER_SOUTH / YER_NORTH / SAR)"""
+    if not user or not is_superadmin(user):
+        return JSONResponse({"success": False, "error": "غير مصرح لك"}, status_code=403)
+    import secrets
+    data = await request.json()
+    invoice_no = str(data.get("invoice_no", "")).strip()
+    currency = str(data.get("currency", "USD")).strip().upper()
+    amount_paid = float(data.get("amount_paid", 0))
+    from core.payment_hub.engine import process_payment
+    ref = f"SBX-{secrets.token_hex(4).upper()}"
+    res = process_payment(
+        db=db,
+        invoice_no=invoice_no,
+        amount_paid=amount_paid,
+        currency=currency,
+        bank_reference=ref,
+        idempotency_key=f"IDEM-{ref}",
+        provider_code="sandbox",
+        raw_request=data,
+        ip_address=request.client.host if request.client else None,
+    )
+    return JSONResponse(res)

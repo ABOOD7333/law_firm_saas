@@ -1184,8 +1184,9 @@ class LawTrustTransactions(Base):
     trust_account: Mapped['LawTrustAccounts'] = relationship('LawTrustAccounts', back_populates='transactions')
     creator: Mapped[Optional['AccessProfiles']] = relationship('AccessProfiles', foreign_keys=[created_by_user_id])
 
-# Import cybersecurity models to register them on Base.metadata
+# Import cybersecurity & biller models to register them on Base.metadata
 try:
     from . import security_models  # noqa: F401
+    from . import biller_models    # noqa: F401
 except Exception:
     pass

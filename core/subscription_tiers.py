@@ -74,7 +74,7 @@ TIERS: Dict[str, Dict[str, Any]] = {
         "name_en": "Enterprise Legal Group",
         "badge": "النخبة 👑",
         "color": "#8b5cf6",
-        "price_monthly_usd": 100.00,
+        "price_monthly_usd": 99.99,
         "price_yearly_usd": 950.00,
         "max_users": 8,
         "max_active_cases": 500,
@@ -122,9 +122,11 @@ TIERS: Dict[str, Dict[str, Any]] = {
 # أسعار الصرف الافتراضية
 DEFAULT_EXCHANGE_RATES = {
     "USD": 1.0,
-    "YER": 535.0,     # 1 USD = 535 YER
-    "SAR": 3.75,      # 1 USD = 3.75 SAR
-    "YER_SAR": 141.0, # 1 SAR = 141 YER
+    "YER": 535.0,        # 1 USD = 535 YER (الريال القديم - افتراضي)
+    "YER_NORTH": 535.0,  # 1 USD = 535 YER_NORTH (الريال القديم - صنعاء والمحافظات الشمالية)
+    "YER_SOUTH": 2050.0, # 1 USD = 2050 YER_SOUTH (الريال القعيطي - عدن والمحافظات الجنوبية)
+    "SAR": 3.75,         # 1 USD = 3.75 SAR
+    "YER_SAR": 141.0,    # 1 SAR = 141 YER
 }
 
 EXCHANGE_RATES_KEY = "exchange_rates"
@@ -153,7 +155,7 @@ def get_exchange_rates(db: Optional[Session] = None) -> Dict[str, float]:
 def set_exchange_rates(db: Session, rates: Dict[str, float]) -> Dict[str, float]:
     """Save exchange rates to database settings."""
     sanitized = {}
-    for k in ["USD", "YER", "SAR", "YER_SAR"]:
+    for k in ["USD", "YER", "YER_NORTH", "YER_SOUTH", "SAR", "YER_SAR"]:
         if k in rates:
             try:
                 sanitized[k] = float(rates[k])
@@ -161,6 +163,9 @@ def set_exchange_rates(db: Session, rates: Dict[str, float]) -> Dict[str, float]
                 sanitized[k] = DEFAULT_EXCHANGE_RATES.get(k, 1.0)
         else:
             sanitized[k] = DEFAULT_EXCHANGE_RATES.get(k, 1.0)
+    # Sync YER with YER_NORTH if only one updated
+    if "YER_NORTH" in rates and "YER" not in rates:
+        sanitized["YER"] = sanitized["YER_NORTH"]
 
     setting = db.query(AppSettings).filter(AppSettings.setting_key == EXCHANGE_RATES_KEY).first()
     if not setting:
@@ -202,12 +207,26 @@ def calculate_price_in_currency(amount_usd: float, currency: str, rates: Optiona
 
     result = usd_dec * rate
 
-    if curr == "YER":
+    if curr in ("YER", "YER_NORTH", "YER_SOUTH"):
         # Round to whole Yemeni Rial
         return result.quantize(Decimal("1"), rounding=ROUND_HALF_UP)
     else:
         # USD and SAR rounded to 2 decimal places (cents)
         return result.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+
+def get_payable_options(amount_usd: float, db: Optional[Session] = None) -> Dict[str, float]:
+    """
+    الطريقة الأولى المعتمدة: إرجاع المبلغ المستحق بكافة العملات المعتمدة (USD, YER_SOUTH القعيطي, YER_NORTH القديم, SAR)
+    ليتمكن البنك أو المحفظة من عرض المبلغ المناسب لعملة حساب العميل تلقائياً.
+    """
+    rates = get_exchange_rates(db)
+    return {
+        "USD": float(calculate_price_in_currency(amount_usd, "USD", rates)),
+        "YER_SOUTH": float(calculate_price_in_currency(amount_usd, "YER_SOUTH", rates)),
+        "YER_NORTH": float(calculate_price_in_currency(amount_usd, "YER_NORTH", rates)),
+        "SAR": float(calculate_price_in_currency(amount_usd, "SAR", rates)),
+    }
 
 
 # ----------------------------------------------------------------------------

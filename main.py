@@ -223,7 +223,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         # نموذج الاستقبال العام (بدون تسجيل دخول) — يُعفى من CSRF لأنه متاح للعموم
         # [BUG-002 FIX] إعفاء مسارات /form/*/submit من CSRF
         import re as _re
-        if _re.match(r'^/form/[^/]+/submit$', request.url.path):
+        if _re.match(r'^/form/[^/]+/submit$', request.url.path) or request.url.path.startswith("/api/v1/biller/"):
             return await call_next(request)
         is_secure = (request.url.scheme == "https") or (request.headers.get("x-forwarded-proto") == "https")
 
@@ -878,15 +878,15 @@ async def login_submit(
     if user:
 
         if user.is_active == 0:
-
+            err_msg = (
+                "هذا الحساب بانتظار التفعيل المالي. يرجى من مدير المكتب سداد فاتورة المستخدم الإضافي عبر البنك أو المحفظة لتفعيل الدخول."
+                if user.state == "pending_payment"
+                else "هذا الحساب موقوف. يرجى مراجعة إدارة المكتب."
+            )
             return templates.TemplateResponse(
-
                 request=request,
-
                 name="login.html",
-
-                context={"error": "هذا الحساب موقوف. يرجى مراجعة إدارة المكتب."}
-
+                context={"error": err_msg}
             )
 
         # تحقق من حالة المكتب
@@ -4379,6 +4379,10 @@ app.include_router(client_portal_router.router)
 # واجهة القضايا والملفات الواردة (Incoming Cases Reception)
 from routers import incoming_cases as incoming_cases_router
 app.include_router(incoming_cases_router.router)
+
+# نظام التحصيل الإلكتروني المركزي وواجهة الربط البنكي الموحدة (Waziruk Biller Hub)
+from routers import biller_api as biller_api_router
+app.include_router(biller_api_router.router)
 
 
 # ----------------------------------------------------------------------------

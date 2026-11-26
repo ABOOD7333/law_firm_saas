@@ -133,10 +133,50 @@ async def team_save(request: Request, db: Session = Depends(get_db), user: Acces
             ).count()
 
             if current_users_count >= max_users:
-                extra_hint = ""
                 if can_office_buy_extra_seat(office, current_users_count):
-                    extra_hint = " يمكنك طلب مقعد إضافي واحد للمكتب (100$ رسوم تأسيس تدفع مرة واحدة عند الشراء + 19$ بنسبة 19% تضاف مع كل تجديد) من لوحة الإعدادات أو الاشتراكات."
-                elif office and office.subscription_plan in ('solo', 'trial'):
+                    # التحقق من عدم وجود مستخدم إضافي معلق بانتظار السداد مسبقاً
+                    pending_u = db.query(AccessProfiles).filter(
+                        AccessProfiles.office_id == office_id,
+                        AccessProfiles.state == "pending_payment"
+                    ).first()
+                    if pending_u:
+                        return JSONResponse({
+                            "ok": False,
+                            "message": f"يوجد مستخدم إضافي ({pending_u.name}) تم إنشاؤه مسبقاً وبانتظار سداد فاتورة التفعيل ($100) عبر البنك أو المحفظة باستخدام رقم هاتف المكتب."
+                        }, status_code=400)
+
+                    if not pin or len(pin) < 6:
+                        return JSONResponse({"ok": False, "message": "رمز الدخول مطلوب (6 أحرف على الأقل) للحساب الجديد"})
+                    import os as _os, base64 as _b64
+                    _salt = _os.urandom(16)
+                    _raw = hashlib.pbkdf2_hmac('sha256', pin.encode(), _salt, 260000)
+                    pin_hash = f"pbkdf2:sha256:260000${_b64.b64encode(_salt).decode().rstrip('=')}${_b64.b64encode(_raw).decode().rstrip('=')}"
+
+                    new_m = AccessProfiles(
+                        name=name, username=username, phone=phone, email=email,
+                        birth_date=birth_date, role=role, job_title=job_title,
+                        is_active=0, can_view_all_cases=can_view,
+                        office_id=office_id, email_verified=1, reset_verified=0,
+                        state="pending_payment", access_pin_hash=pin_hash,
+                        protection_type="ربط الجهاز الحالي", preferred_theme="light",
+                        failed_attempts=0, permissions_json=permissions_str
+                    )
+                    db.add(new_m)
+                    db.commit()
+                    db.refresh(new_m)
+
+                    owner = db.query(AccessProfiles).filter(AccessProfiles.id == office.owner_user_id).first() if office and office.owner_user_id else user
+                    from core.payment_hub.engine import create_extra_seat_invoice
+                    inv = create_extra_seat_invoice(db, office, owner, new_m.id, new_m.name)
+                    return JSONResponse({
+                        "ok": True,
+                        "pending_payment": True,
+                        "invoice_no": inv.invoice_no,
+                        "message": f"تم إنشاء المستخدم ({new_m.name}) بنجاح! يرجى تفعيل المستخدم بسداد مبلغ 100$ (فاتورة رقم {inv.invoice_no}) عبر البنك أو المحفظة باستخدام رقم هاتفك."
+                    })
+
+                extra_hint = ""
+                if office and office.subscription_plan in ('solo', 'trial'):
                     extra_hint = " يرجى الترقية إلى باقة أعلى (المكتب الاحترافي أو الشركات) لزيادة سعة المستخدمين."
                 return JSONResponse({
                     "ok": False,
