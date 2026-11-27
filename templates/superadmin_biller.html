@@ -1,0 +1,351 @@
+{% extends "base.html" %}
+{% block title %}بوابة التحصيل الإلكتروني والربط البنكي | إدارة المنصة{% endblock %}
+
+{% block content %}
+<div style="max-width: 1400px; margin: 0 auto; padding: 10px 0 40px 0;">
+
+    <!-- Header Banner -->
+    <div style="background: linear-gradient(135deg, #0b132b 0%, #1e1b4b 100%); padding: 24px 28px; border-radius: 18px; color: white; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14); margin-bottom: 24px;">
+        <div style="display: flex; align-items: center; gap: 16px;">
+            <div style="width: 52px; height: 52px; border-radius: 14px; background: linear-gradient(135deg, #d4af37, #b88918); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #0b132b; box-shadow: 0 6px 16px rgba(212, 175, 55, 0.35);">
+                <i class="fa-solid fa-building-columns"></i>
+            </div>
+            <div>
+                <h1 style="margin: 0; font-size: 1.4rem; font-weight: 900; color: #fff;">بوابة التحصيل الإلكتروني المركزي والربط البنكي</h1>
+                <p style="margin: 4px 0 0 0; font-size: 0.88rem; color: #cbd5e1;">إدارة البنوك والمحافظ المرتبطة، مفاتيح الربط (API Keys)، الفواتير المركزية، ومحاكي الدفع الحي (Sandbox)</p>
+            </div>
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <a href="/developer/biller-api" target="_blank" style="background: linear-gradient(135deg, #d4af37, #b88918); color: #0b132b; padding: 10px 18px; border-radius: 10px; font-weight: 800; font-size: 0.88rem; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);">
+                <i class="fa-solid fa-book-open"></i> دليل الربط الفني للبنوك (API Docs)
+            </a>
+            <button onclick="openAddProviderModal()" style="background: rgba(255,255,255,0.14); color: white; border: 1px solid rgba(255,255,255,0.28); padding: 10px 18px; border-radius: 10px; font-weight: 700; font-size: 0.88rem; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-plus"></i> إضافة بنك / محفظة
+            </button>
+        </div>
+    </div>
+
+    <!-- Mini Stats Row -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
+        <div style="background: white; padding: 18px 20px; border-radius: 14px; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+            <div style="font-size: 0.82rem; color: #64748b; font-weight: 700;">إجمالي التحصيل الإلكتروني</div>
+            <div style="font-size: 1.65rem; font-weight: 900; color: #059669; margin-top: 6px;">${{ biller_stats.collected_usd }}</div>
+        </div>
+        <div style="background: white; padding: 18px 20px; border-radius: 14px; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+            <div style="font-size: 0.82rem; color: #64748b; font-weight: 700;">فواتير بانتظار السداد</div>
+            <div style="font-size: 1.65rem; font-weight: 900; color: #d97706; margin-top: 6px;">{{ biller_stats.pending_invoices }}</div>
+        </div>
+        <div style="background: white; padding: 18px 20px; border-radius: 14px; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+            <div style="font-size: 0.82rem; color: #64748b; font-weight: 700;">البنوك والمحافظ النشطة</div>
+            <div style="font-size: 1.65rem; font-weight: 900; color: #3b82f6; margin-top: 6px;">{{ biller_stats.active_providers }} / {{ biller_stats.total_providers }}</div>
+        </div>
+        <div style="background: white; padding: 18px 20px; border-radius: 14px; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+            <div style="font-size: 0.82rem; color: #64748b; font-weight: 700;">سعر الصرف القعيطي المعتمد</div>
+            <div style="font-size: 1.65rem; font-weight: 900; color: #0f172a; margin-top: 6px;">{{ exchange_rates.get('YER_SOUTH', 2050)|int }} <span style="font-size: 0.8rem; color: #64748b;">ريال/$</span></div>
+        </div>
+    </div>
+
+    <!-- Interactive Sandbox Bank Simulator -->
+    <div style="background: linear-gradient(135deg, #f0f9ff 0%, #eff6ff 100%); border: 1.5px solid #bfdbfe; border-radius: 16px; padding: 22px; margin-bottom: 24px;">
+        <div style="margin-bottom: 14px;">
+            <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #1e3a8a; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-flask"></i> محاكي الدفع البنكي التفاعلي (Sandbox Simulator)
+            </h3>
+            <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: #475569;">جرّب دورة استعلام البنك وسداد الفاتورة برقم الهاتف أمام مسؤولي البنوك بالعملات الأربع (دولار، قعيطي، قديم، سعودي)</p>
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+            <input type="text" id="sandboxPhoneInput" placeholder="أدخل رقم جوال صاحب المكتب (مثال: 771234567)" style="flex: 1; min-width: 240px; padding: 12px 16px; border: 2px solid #93c5fd; border-radius: 10px; font-size: 0.95rem; font-weight: 700; outline: none;">
+            <button onclick="sandboxInquire()" id="btnSandboxInquire" style="background: #2563eb; color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 800; font-size: 0.92rem; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-magnifying-glass-dollar"></i> استعلام عن المستحقات
+            </button>
+        </div>
+        <div id="sandboxResultBox" style="display: none; margin-top: 16px; background: white; border-radius: 12px; padding: 18px; border: 1px solid #cbd5e1;"></div>
+    </div>
+
+    <!-- Payment Providers Table -->
+    <div style="background: white; border-radius: 16px; padding: 22px; border: 1px solid #e2e8f0; box-shadow: 0 2px 10px rgba(0,0,0,0.03); margin-bottom: 24px;">
+        <h3 style="margin: 0 0 14px 0; font-size: 1.12rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-plug-circle-check" style="color: #059669;"></i> مزودو الدفع والبنوك المرتبطة (Payment Providers & API Keys)
+        </h3>
+        <div style="overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 12px;">
+            <table style="width: 100%; border-collapse: collapse; text-align: right; font-size: 0.88rem;">
+                <thead style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; color: #475569;">
+                    <tr>
+                        <th style="padding: 12px 14px;">المزود / البنك</th>
+                        <th style="padding: 12px 14px;">الرمز (Code)</th>
+                        <th style="padding: 12px 14px;">مفتاح الربط (X-API-KEY)</th>
+                        <th style="padding: 12px 14px;">الحالة</th>
+                        <th style="padding: 12px 14px;">إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in biller_providers %}
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 12px 14px;">
+                            <div style="font-weight: 800; color: #0f172a;">{{ p.name_ar }}</div>
+                            <div style="font-size: 0.78rem; color: #64748b;">{{ p.notes or p.name_en }}</div>
+                        </td>
+                        <td style="padding: 12px 14px; font-family: monospace; font-weight: 700; color: #334155;">{{ p.code }}</td>
+                        <td style="padding: 12px 14px;">
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <code style="background: #f1f5f9; padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; color: #0f172a;">{{ p.api_key[:20] }}...</code>
+                                <button onclick="copyBillerText('{{ p.api_key }}')" style="background: #e2e8f0; border: none; padding: 5px 9px; border-radius: 6px; cursor: pointer; font-size: 0.78rem;" title="نسخ API Key"><i class="fa-regular fa-copy"></i></button>
+                                <button onclick="copyBillerText('{{ p.api_secret }}')" style="background: #fef3c7; color: #92400e; border: none; padding: 5px 9px; border-radius: 6px; cursor: pointer; font-size: 0.78rem;" title="نسخ API Secret"><i class="fa-solid fa-key"></i></button>
+                            </div>
+                        </td>
+                        <td style="padding: 12px 14px;">
+                            {% if p.is_active %}
+                            <span style="background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 800;">مفعّل</span>
+                            {% else %}
+                            <span style="background: #f1f5f9; color: #64748b; padding: 4px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 800;">معطّل</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 12px 14px;">
+                            <div style="display: flex; gap: 6px;">
+                                <button onclick="toggleBillerProvider({{ p.id }})" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 6px 12px; border-radius: 7px; font-size: 0.78rem; font-weight: 700; cursor: pointer;">تبديل الحالة</button>
+                                <button onclick="regenerateBillerKeys({{ p.id }})" style="background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; padding: 6px 12px; border-radius: 7px; font-size: 0.78rem; font-weight: 700; cursor: pointer;">تجديد المفاتيح</button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pending Biller Invoices -->
+    <div style="background: white; border-radius: 16px; padding: 22px; border: 1px solid #e2e8f0; box-shadow: 0 2px 10px rgba(0,0,0,0.03); margin-bottom: 24px;">
+        <h3 style="margin: 0 0 14px 0; font-size: 1.12rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-file-invoice-dollar" style="color: #d97706;"></i> الفواتير الإلكترونية الصادرة للمكاتب (Biller Invoices)
+        </h3>
+        {% if biller_invoices %}
+        <div style="overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 12px;">
+            <table style="width: 100%; border-collapse: collapse; text-align: right; font-size: 0.85rem;">
+                <thead style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; color: #475569;">
+                    <tr>
+                        <th style="padding: 10px 14px;">رقم الفاتورة</th>
+                        <th style="padding: 10px 14px;">رقم هاتف المشترك</th>
+                        <th style="padding: 10px 14px;">البيان</th>
+                        <th style="padding: 10px 14px;">المبلغ ($)</th>
+                        <th style="padding: 10px 14px;">الاستحقاق</th>
+                        <th style="padding: 10px 14px;">الحالة</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for inv in biller_invoices %}
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 10px 14px; font-family: monospace; font-weight: 800; color: #4f46e5;">{{ inv.invoice_no }}</td>
+                        <td style="padding: 10px 14px; font-family: monospace; font-weight: 700;">{{ inv.subscriber_phone }}</td>
+                        <td style="padding: 10px 14px; font-weight: 700;">{{ inv.title }}</td>
+                        <td style="padding: 10px 14px; font-weight: 800; color: #0f172a;">${{ inv.total_usd }}</td>
+                        <td style="padding: 10px 14px; color: #64748b;">{{ inv.due_date }}</td>
+                        <td style="padding: 10px 14px;">
+                            {% if inv.status == 'paid' %}
+                            <span style="background: #dcfce7; color: #166534; padding: 3px 9px; border-radius: 6px; font-size: 0.76rem; font-weight: 800;">مسددة</span>
+                            {% elif inv.status == 'pending' %}
+                            <span style="background: #fef3c7; color: #92400e; padding: 3px 9px; border-radius: 6px; font-size: 0.76rem; font-weight: 800;">بانتظار السداد</span>
+                            {% else %}
+                            <span style="background: #f1f5f9; color: #475569; padding: 3px 9px; border-radius: 6px; font-size: 0.76rem; font-weight: 800;">{{ inv.status }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 12px; padding: 20px; text-align: center; color: #64748b; font-size: 0.88rem;">
+            لا توجد فواتير مصدرة بعد. تصدر الفواتير آلياً قبل انتهاء الاشتراك بـ 3 أيام أو عند طلب مقعد إضافي أو باقة جديدة.
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Live Biller Transactions -->
+    <div style="background: white; border-radius: 16px; padding: 22px; border: 1px solid #e2e8f0; box-shadow: 0 2px 10px rgba(0,0,0,0.03);">
+        <h3 style="margin: 0 0 14px 0; font-size: 1.12rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-receipt" style="color: #4f46e5;"></i> سجل الحركات المالية والتحصيل المركزي (Live Transactions)
+        </h3>
+        {% if biller_transactions %}
+        <div style="overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 12px;">
+            <table style="width: 100%; border-collapse: collapse; text-align: right; font-size: 0.85rem;">
+                <thead style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; color: #475569;">
+                    <tr>
+                        <th style="padding: 10px 14px;">رقم العملية</th>
+                        <th style="padding: 10px 14px;">المزود / البنك</th>
+                        <th style="padding: 10px 14px;">المرجع البنكي</th>
+                        <th style="padding: 10px 14px;">المبلغ المدفوع</th>
+                        <th style="padding: 10px 14px;">المعادل ($)</th>
+                        <th style="padding: 10px 14px;">الحالة</th>
+                        <th style="padding: 10px 14px;">التاريخ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in biller_transactions %}
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 10px 14px; font-family: monospace; font-weight: 700;">{{ t.transaction_id }}</td>
+                        <td style="padding: 10px 14px; font-weight: 700;">{{ t.provider_code }}</td>
+                        <td style="padding: 10px 14px; font-family: monospace;">{{ t.bank_reference }}</td>
+                        <td style="padding: 10px 14px; font-weight: 800;">{{ t.amount_paid }} {{ t.currency }}</td>
+                        <td style="padding: 10px 14px; color: #059669; font-weight: 700;">${{ t.amount_usd_equivalent }}</td>
+                        <td style="padding: 10px 14px;">
+                            {% if t.status == 'success' %}
+                            <span style="background: #dcfce7; color: #166534; padding: 3px 8px; border-radius: 6px; font-size: 0.76rem; font-weight: 800;">ناجحة</span>
+                            {% else %}
+                            <span style="background: #fee2e2; color: #991b1b; padding: 3px 8px; border-radius: 6px; font-size: 0.76rem; font-weight: 800;">{{ t.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 10px 14px; color: #64748b; font-size: 0.78rem;">{{ t.created_at }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 12px; padding: 20px; text-align: center; color: #64748b; font-size: 0.88rem;">
+            لا توجد عمليات تحصيل إلكتروني مسجلة بعد. استخدم محاكي الاختبار أعلاه لتجربة أول عملية دفع فورية!
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal: إضافة مزود دفع جديد -->
+<div id="addProviderModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.65); z-index: 10000; justify-content: center; align-items: center; padding: 20px;">
+    <div style="background: white; border-radius: 18px; width: 100%; max-width: 480px; padding: 26px; text-align: right; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
+        <h3 style="margin-top: 0; font-size: 1.2rem; font-weight: 800; color: #0f172a; margin-bottom: 14px;">إضافة بنك أو محفظة إلكترونية جديدة</h3>
+        <div style="display: grid; gap: 12px;">
+            <div>
+                <label style="display: block; font-size: 0.82rem; font-weight: 700; margin-bottom: 4px;">رمز المزود (بالإنجليزية بدون مسافات، مثال: jawali)</label>
+                <input type="text" id="newProvCode" placeholder="jawali" style="width: 100%; padding: 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box;">
+            </div>
+            <div>
+                <label style="display: block; font-size: 0.82rem; font-weight: 700; margin-bottom: 4px;">الاسم بالعربية</label>
+                <input type="text" id="newProvNameAr" placeholder="محفظة جوالي" style="width: 100%; padding: 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box;">
+            </div>
+            <div>
+                <label style="display: block; font-size: 0.82rem; font-weight: 700; margin-bottom: 4px;">نوع المحول (Adapter)</label>
+                <select id="newProvAdapter" style="width: 100%; padding: 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box;">
+                    <option value="generic">الموصل الموحد القياسي (Generic Unified API)</option>
+                    <option value="kuraimi">موصل الكريمي (Kuraimi)</option>
+                    <option value="jeeb">موصل جيب (Jeeb)</option>
+                    <option value="saba_cash">موصل سبأ كاش (SabaCash)</option>
+                    <option value="one_cash">موصل ون كاش (ONE Cash)</option>
+                </select>
+            </div>
+            <div>
+                <label style="display: block; font-size: 0.82rem; font-weight: 700; margin-bottom: 4px;">ملاحظات</label>
+                <input type="text" id="newProvNotes" placeholder="تفاصيل التعاقد أو الملاحظات" style="width: 100%; padding: 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; box-sizing: border-box;">
+            </div>
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button onclick="submitNewProvider()" style="flex: 1; background: #059669; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer;">حفظ وتوليد المفاتيح</button>
+            <button onclick="document.getElementById('addProviderModal').style.display='none'" style="flex: 1; background: #e2e8f0; color: #334155; border: none; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer;">إلغاء</button>
+        </div>
+    </div>
+</div>
+
+<script>
+function copyBillerText(txt) {
+    navigator.clipboard.writeText(txt).then(() => alert('تم النسخ إلى الحافظة بنجاح!'));
+}
+function openAddProviderModal() {
+    document.getElementById('addProviderModal').style.display = 'flex';
+}
+async function submitNewProvider() {
+    const code = document.getElementById('newProvCode').value.trim();
+    const name_ar = document.getElementById('newProvNameAr').value.trim();
+    const adapter_type = document.getElementById('newProvAdapter').value;
+    const notes = document.getElementById('newProvNotes').value.trim();
+    const csrfToken = document.cookie.split('; ').find(r => r.startsWith('csrf_token='))?.split('=')[1] || '';
+
+    const res = await fetch('/api/superadmin/biller/provider', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+        body: JSON.stringify({ code, name_ar, adapter_type, notes })
+    });
+    const data = await res.json();
+    if (data.success) {
+        alert(data.message + '\nAPI Key: ' + data.api_key);
+        location.reload();
+    } else alert(data.error || 'حدث خطأ');
+}
+async function toggleBillerProvider(id) {
+    const csrfToken = document.cookie.split('; ').find(r => r.startsWith('csrf_token='))?.split('=')[1] || '';
+    const res = await fetch('/api/superadmin/biller/provider/' + id + '/toggle', {
+        method: 'POST', headers: { 'X-CSRF-Token': csrfToken }
+    });
+    const data = await res.json();
+    if (data.success) location.reload();
+    else alert(data.error || 'فشل التحديث');
+}
+async function regenerateBillerKeys(id) {
+    if (!confirm('هل أنت متأكد؟ سيتم إبطال المفاتيح السابقة لهذا البنك فوراً!')) return;
+    const csrfToken = document.cookie.split('; ').find(r => r.startsWith('csrf_token='))?.split('=')[1] || '';
+    const res = await fetch('/api/superadmin/biller/provider/' + id + '/regenerate', {
+        method: 'POST', headers: { 'X-CSRF-Token': csrfToken }
+    });
+    const data = await res.json();
+    if (data.success) {
+        alert(data.message + '\nAPI Key الجديد: ' + data.api_key);
+        location.reload();
+    } else alert(data.error || 'فشل التجديد');
+}
+async function sandboxInquire() {
+    const phone = document.getElementById('sandboxPhoneInput').value.trim();
+    if (!phone) return alert('الرجاء إدخال رقم الهاتف أولاً');
+    const box = document.getElementById('sandboxResultBox');
+    box.style.display = 'block';
+    box.innerHTML = '<div style="text-align:center; padding:12px;"><i class="fa-solid fa-spinner fa-spin"></i> جاري الاستعلام من قاعدة البيانات...</div>';
+
+    const csrfToken = document.cookie.split('; ').find(r => r.startsWith('csrf_token='))?.split('=')[1] || '';
+    const res = await fetch('/api/superadmin/biller/sandbox/inquire', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+        body: JSON.stringify({ phone })
+    });
+    const data = await res.json();
+    if (data.status !== 'SUCCESS') {
+        box.innerHTML = `<div style="color:#dc2626; font-weight:800;">❌ ${data.message_ar || 'لم يتم العثور على مشترك بهذا الرقم'}</div>`;
+        return;
+    }
+    let html = `<div style="margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid #e2e8f0;">
+        <strong style="color:#0f172a; font-size:1.05rem;">🏢 ${data.subscriber.office_name}</strong>
+        <span style="color:#64748b; font-size:0.85rem; margin-right:10px;">(المالك: ${data.subscriber.owner_name} | الباقة الحالية: ${data.subscriber.current_plan})</span>
+    </div>`;
+
+    if (!data.invoices || data.invoices.length === 0) {
+        html += `<div style="color:#059669; font-weight:700;">✅ لا توجد فواتير مستحقة حالياً على هذا المكتب (الاشتراك ساري المفعول).</div>`;
+    } else {
+        data.invoices.forEach(inv => {
+            const opts = inv.payable_options;
+            html += `<div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:14px; margin-bottom:10px;">
+                <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+                    <span style="font-weight:800; color:#1e293b;">📄 ${inv.title} (<code style="color:#4f46e5;">${inv.invoice_no}</code>)</span>
+                    <span style="font-weight:800; color:#dc2626;">الاستحقاق: ${inv.due_date}</span>
+                </div>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:8px;">
+                    <button onclick="sandboxPay('${inv.invoice_no}', 'USD', ${opts.USD})" style="background:#059669; color:white; border:none; padding:10px; border-radius:8px; font-weight:800; cursor:pointer;">سداد بالدولار: $${opts.USD}</button>
+                    <button onclick="sandboxPay('${inv.invoice_no}', 'YER_SOUTH', ${opts.YER_SOUTH})" style="background:#7c3aed; color:white; border:none; padding:10px; border-radius:8px; font-weight:800; cursor:pointer;">سداد بالقعيطي: ${opts.YER_SOUTH.toLocaleString()} ريال</button>
+                    <button onclick="sandboxPay('${inv.invoice_no}', 'YER_NORTH', ${opts.YER_NORTH})" style="background:#2563eb; color:white; border:none; padding:10px; border-radius:8px; font-weight:800; cursor:pointer;">سداد بالقديم: ${opts.YER_NORTH.toLocaleString()} ريال</button>
+                    <button onclick="sandboxPay('${inv.invoice_no}', 'SAR', ${opts.SAR})" style="background:#0f766e; color:white; border:none; padding:10px; border-radius:8px; font-weight:800; cursor:pointer;">سداد بالسعودي: ${opts.SAR} ر.س</button>
+                </div>
+            </div>`;
+        });
+    }
+    box.innerHTML = html;
+}
+async function sandboxPay(invoiceNo, currency, amountPaid) {
+    if (!confirm(`تأكيد سداد الفاتورة ${invoiceNo} بمبلغ ${amountPaid} ${currency} عبر محاكي Sandbox؟`)) return;
+    const csrfToken = document.cookie.split('; ').find(r => r.startsWith('csrf_token='))?.split('=')[1] || '';
+    const res = await fetch('/api/superadmin/biller/sandbox/pay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+        body: JSON.stringify({ invoice_no: invoiceNo, currency, amount_paid: amountPaid })
+    });
+    const data = await res.json();
+    if (data.status === 'SUCCESS') {
+        alert(`✅ تم السداد والتفعيل بنجاح!\nرقم العملية: ${data.transaction_id}\n${data.activation_message_ar}`);
+        location.reload();
+    } else alert('❌ فشل السداد: ' + (data.message_ar || data.error || 'خطأ غير معروف'));
+}
+</script>
+{% endblock %}

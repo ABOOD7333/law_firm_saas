@@ -4466,6 +4466,94 @@ async def view_subscription(request: Request, db: Session = Depends(get_db)):
         "extra_seat_renewal_fee": EXTRA_SEAT_RENEWAL_FEE_USD
     })
 
+@app.post("/api/subscription/create-bill")
+async def api_subscription_create_bill(request: Request, db: Session = Depends(get_db)):
+    """إصدار فاتورة إلكترونية مركزية فورية عبر بوابة التحصيل (للسداد برقم الهاتف عبر البنك أو المحفظة)"""
+    from fastapi.responses import JSONResponse as _J
+    user = get_current_user(request, db)
+    if not user:
+        return _J({"success": False, "error": "غير مصرح"}, status_code=403)
+    if user.role not in ['مدير النظام', 'مدير', 'مدير المكتب', 'صاحب مكتب']:
+        return _J({"success": False, "error": "غير مصرح لك بإصدار فواتير الاشتراك"}, status_code=403)
+
+    data = await request.json()
+    plan_id = str(data.get("plan", "pro")).lower().strip()
+    cycle = str(data.get("cycle", "monthly")).lower().strip()
+
+    office = db.query(LawOffices).filter(LawOffices.id == user.office_id).first()
+    if not office:
+        return _J({"success": False, "error": "المكتب غير موجود"}, status_code=404)
+
+    owner = db.query(AccessProfiles).filter(AccessProfiles.id == office.owner_user_id).first() if office.owner_user_id else user
+    from core.subscription_tiers import get_tier, get_payable_options, EXTRA_SEAT_SETUP_FEE_USD, EXTRA_SEAT_RENEWAL_FEE_USD, can_office_buy_extra_seat
+    from core.payment_hub.engine import normalize_phone, generate_invoice_no
+    from database.biller_models import BillerInvoices
+
+    sub_phone = normalize_phone(owner.phone if owner else user.phone)
+    now = datetime.utcnow()
+
+    if plan_id == "extra_seat":
+        current_users_count = db.query(AccessProfiles).filter(
+            AccessProfiles.office_id == office.id,
+            AccessProfiles.role != 'موكل'
+        ).count()
+        if not can_office_buy_extra_seat(office, current_users_count):
+            return _J({"success": False, "error": "المكتب غير مؤهل لشراء مقعد إضافي حالياً"}, status_code=400)
+        inv_type = "extra_seat"
+        base_usd = EXTRA_SEAT_SETUP_FEE_USD
+        extra_fee = 0.0
+        total_usd = EXTRA_SEAT_SETUP_FEE_USD
+        title = "تفعيل مقعد مستخدم إضافي (مرة واحدة)"
+        cycle = "one_time"
+    else:
+        if plan_id not in ("solo", "pro", "enterprise"):
+            return _J({"success": False, "error": "الباقة غير صالحة"}, status_code=400)
+        tier = get_tier(plan_id)
+        inv_type = "subscription_renewal"
+        base_usd = float(tier["price_yearly_usd"] if cycle == "yearly" else tier["price_monthly_usd"])
+        extra_seats = int(getattr(office, "extra_seats", 0) or 0)
+        extra_fee = EXTRA_SEAT_RENEWAL_FEE_USD if (extra_seats >= 1 and plan_id in ("pro", "enterprise")) else 0.0
+        total_usd = round(base_usd + extra_fee, 2)
+        title = f"اشتراك باقة {tier['name_ar']} ({'سنوي' if cycle == 'yearly' else 'شهري'})"
+        if extra_fee > 0:
+            title += " + تجديد المقعد الإضافي (19%)"
+
+    # إلغاء أي فاتورة معلقة من نفس النوع لتجنب التضارب
+    db.query(BillerInvoices).filter(
+        BillerInvoices.office_id == office.id,
+        BillerInvoices.invoice_type == inv_type,
+        BillerInvoices.status == "pending"
+    ).update({"status": "cancelled"})
+
+    inv = BillerInvoices(
+        invoice_no=generate_invoice_no(db),
+        office_id=office.id,
+        subscriber_phone=sub_phone,
+        invoice_type=inv_type,
+        plan_id=plan_id,
+        billing_cycle=cycle,
+        title=title,
+        amount_usd=base_usd,
+        extra_seat_renewal_usd=extra_fee,
+        total_usd=total_usd,
+        status="pending",
+        due_date=now.strftime("%Y-%m-%d"),
+        created_at=now.isoformat(timespec="seconds"),
+    )
+    db.add(inv)
+    db.commit()
+    db.refresh(inv)
+
+    return _J({
+        "success": True,
+        "invoice_no": inv.invoice_no,
+        "title": inv.title,
+        "subscriber_phone": sub_phone,
+        "total_usd": total_usd,
+        "payable_options": get_payable_options(total_usd, db),
+    })
+
+
 @app.post("/api/subscription/checkout")
 async def api_subscription_checkout(request: Request, db: Session = Depends(get_db)):
     from fastapi.responses import JSONResponse as _J

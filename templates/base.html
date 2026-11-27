@@ -659,6 +659,9 @@
             <li class="nav-item {% if active_page == 'superadmin' %}active{% endif %}" style="margin-top:8px;border-top:1px solid var(--border-color);padding-top:8px; background-color: rgba(234, 179, 8, 0.05);">
                 <a href="/superadmin" style="color: #b45309;"><i class="fa-solid fa-crown" style="color:#eab308;"></i> إدارة المنصة (SuperAdmin)</a>
             </li>
+            <li class="nav-item {% if active_page == 'biller_gateway' %}active{% endif %}" style="background-color: rgba(16, 185, 129, 0.05);">
+                <a href="/superadmin/biller" style="color: #047857;"><i class="fa-solid fa-building-columns" style="color:#10b981;"></i> بوابة التحصيل والربط البنكي</a>
+            </li>
             <li class="nav-item {% if active_page == 'security_center' %}active{% endif %}" style="background-color: rgba(99, 102, 241, 0.05);">
                 <a href="/superadmin/security" style="color: #4f46e5;"><i class="fa-solid fa-shield-halved" style="color:#6366f1;"></i> مركز الأمن السيبراني (SOC)</a>
             </li>
@@ -692,6 +695,9 @@
             <div style="display: flex; gap: 8px; align-items: center;">
                 <a href="/superadmin" style="background: linear-gradient(135deg, #eab308, #ca8a04); color: #0f172a; padding: 6px 14px; border-radius: 8px; font-weight: 800; text-decoration: none; font-size: 0.83rem; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(234, 179, 8, 0.3);">
                     <i class="fa-solid fa-gauge-high"></i> لوحة إدارة المنصة والاشتراكات
+                </a>
+                <a href="/superadmin/biller" style="background: rgba(16, 185, 129, 0.22); color: #a7f3d0; padding: 6px 14px; border-radius: 8px; text-decoration: none; font-size: 0.83rem; border: 1px solid rgba(16, 185, 129, 0.45); display: inline-flex; align-items: center; gap: 6px; font-weight: 700;">
+                    <i class="fa-solid fa-building-columns"></i> بوابة التحصيل والربط البنكي
                 </a>
                 <a href="/superadmin/security" style="background: rgba(99, 102, 241, 0.25); color: #c7d2fe; padding: 6px 14px; border-radius: 8px; text-decoration: none; font-size: 0.83rem; border: 1px solid rgba(99, 102, 241, 0.4); display: inline-flex; align-items: center; gap: 6px;">
                     <i class="fa-solid fa-shield-halved"></i> مركز الأمن السيبراني (SOC)

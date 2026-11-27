@@ -320,31 +320,17 @@
             </ul>
         </div>
 
-        <form id="extraSeatForm" onsubmit="submitExtraSeatOrder(event)">
-            <input type="hidden" name="plan" value="extra_seat">
-            <input type="hidden" name="amount" value="100.00">
-            
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">
-                    رقم الحوالة / رقم المرجع <span style="color: red;">*</span>
-                </label>
-                <input type="text" id="seatTransferRef" required placeholder="مثال: حوالة الكريمي 87342918" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit;">
-            </div>
+        <div style="background: #ecfdf5; border: 1px solid #a7f3d0; padding: 14px; border-radius: 10px; margin-bottom: 18px; font-size: 0.9rem; color: #065f46; line-height: 1.7;">
+            <strong><i class="fa-solid fa-building-columns"></i> آلية التفعيل الإلكتروني للمقعد الإضافي:</strong>
+            <p style="margin: 6px 0 0 0;">توجه إلى صفحة <strong>إدارة الفريق</strong> وأضف المستخدم الجديد، وسيصدر النظام فاتورة تفعيل إلكترونية تلقائياً بقيمة <strong>$100</strong> يمكنك سدادها فوراً برقم هاتفك عبر البنك أو المحفظة.</p>
+        </div>
 
-            <div class="form-group" style="margin-bottom: 25px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--secondary-color);">
-                    صورة سند التحويل أو إشعار الإيداع <span style="color: red;">*</span>
-                </label>
-                <input type="file" id="seatReceiptFile" accept="image/*" required style="width: 100%; padding: 10px; border: 1px dashed var(--border-color); border-radius: 8px; font-family: inherit;">
-            </div>
-
-            <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                <button type="button" onclick="document.getElementById('extraSeatModal').style.display='none'" style="padding: 12px 20px; background: #e2e8f0; color: #475569; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-family: inherit;">إلغاء</button>
-                <button type="submit" id="btnSubmitSeat" class="btn-primary" style="padding: 12px 20px; font-family: inherit; display: inline-flex; align-items: center; gap: 8px;">
-                    <i class="fa-solid fa-paper-plane"></i> إرسال طلب الشعار والتفعيل
-                </button>
-            </div>
-        </form>
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <button type="button" onclick="document.getElementById('extraSeatModal').style.display='none'" style="padding: 12px 20px; background: #e2e8f0; color: #475569; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-family: inherit;">إغلاق</button>
+            <a href="/team" class="btn-primary" style="padding: 12px 20px; font-family: inherit; display: inline-flex; align-items: center; gap: 8px; text-decoration: none;">
+                <i class="fa-solid fa-users"></i> الانتقال لإدارة الفريق وإضافة المستخدم
+            </a>
+        </div>
     </div>
 </div>
 

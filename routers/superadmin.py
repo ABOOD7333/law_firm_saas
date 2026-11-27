@@ -150,15 +150,6 @@ async def superadmin_page(request: Request, db: Session = Depends(get_db), user:
             "total_cases": db.query(LawCases).filter(LawCases.is_deleted == 0).count()
         }
             
-        from database.biller_models import PaymentProviders, BillerInvoices, BillerTransactions
-        from core.payment_hub.engine import seed_default_providers
-        seed_default_providers(db)
-        biller_providers = db.query(PaymentProviders).order_by(PaymentProviders.id.asc()).all()
-        biller_invoices_list = db.query(BillerInvoices).order_by(BillerInvoices.id.desc()).limit(50).all()
-        biller_txns_list = db.query(BillerTransactions).order_by(BillerTransactions.id.desc()).limit(50).all()
-        biller_collected_usd = sum((t.amount_usd_equivalent or 0.0) for t in db.query(BillerTransactions).filter(BillerTransactions.status == "success").all())
-        biller_pending_count = db.query(BillerInvoices).filter(BillerInvoices.status == "pending").count()
-
         return templates.TemplateResponse(request=request, name="superadmin.html", context={
             "user": user,
             "active_page": "superadmin",
@@ -167,24 +158,53 @@ async def superadmin_page(request: Request, db: Session = Depends(get_db), user:
             "metrics": metrics,
             "exchange_rates": rates,
             "tiers": TIERS,
-            "biller_providers": biller_providers,
-            "biller_invoices": biller_invoices_list,
-            "biller_transactions": biller_txns_list,
-            "biller_stats": {
-                "collected_usd": round(biller_collected_usd, 2),
-                "pending_invoices": biller_pending_count,
-                "active_providers": sum(1 for p in biller_providers if p.is_active),
-                "total_providers": len(biller_providers),
-            },
-            "haseb_pos": {
-                "code": "2709660",
-                "merchant": "LawSaaS",
-                "currency": "USD"
-            }
         })
     except Exception as e:
         import traceback
         app_logger.error(f"Superadmin page error: {e}\n{traceback.format_exc()}")
+        return HTMLResponse(content="حدث خطأ داخلي", status_code=500)
+
+
+@router.get("/superadmin/biller", response_class=HTMLResponse)
+async def superadmin_biller_page(request: Request, db: Session = Depends(get_db), user: AccessProfiles = Depends(get_current_user)):
+    """صفحة مستقلة لبوابة التحصيل الإلكتروني المركزي والربط البنكي"""
+    if not user or not is_superadmin(user):
+        return RedirectResponse(url="/dashboard", status_code=303)
+    try:
+        from database.biller_models import PaymentProviders, BillerInvoices, BillerTransactions
+        from core.payment_hub.engine import seed_default_providers
+        seed_default_providers(db)
+        rates = get_exchange_rates(db)
+        biller_providers = db.query(PaymentProviders).order_by(PaymentProviders.id.asc()).all()
+        biller_invoices_list = db.query(BillerInvoices).order_by(BillerInvoices.id.desc()).limit(50).all()
+        biller_txns_list = db.query(BillerTransactions).order_by(BillerTransactions.id.desc()).limit(50).all()
+        biller_collected_usd = sum(
+            (t.amount_usd_equivalent or 0.0)
+            for t in db.query(BillerTransactions).filter(BillerTransactions.status == "success").all()
+        )
+        biller_pending_count = db.query(BillerInvoices).filter(BillerInvoices.status == "pending").count()
+
+        return templates.TemplateResponse(
+            request=request,
+            name="superadmin_biller.html",
+            context={
+                "user": user,
+                "active_page": "biller_gateway",
+                "exchange_rates": rates,
+                "biller_providers": biller_providers,
+                "biller_invoices": biller_invoices_list,
+                "biller_transactions": biller_txns_list,
+                "biller_stats": {
+                    "collected_usd": round(biller_collected_usd, 2),
+                    "pending_invoices": biller_pending_count,
+                    "active_providers": sum(1 for p in biller_providers if p.is_active),
+                    "total_providers": len(biller_providers),
+                },
+            },
+        )
+    except Exception as e:
+        import traceback
+        app_logger.error(f"Superadmin biller page error: {e}\n{traceback.format_exc()}")
         return HTMLResponse(content="حدث خطأ داخلي", status_code=500)
 
 @router.post("/api/superadmin/exchange-rates")

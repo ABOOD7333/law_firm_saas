@@ -546,31 +546,20 @@
         </div>
         {% endif %}
 
-        <!-- Kuraimi Bank Haseb Integration Banner -->
+        <!-- Unified Electronic Billing Banner -->
         <div class="kuraimi-section">
             <div class="kuraimi-info">
                 <div style="display: inline-flex; align-items: center; gap: 8px; font-size: 0.82rem; font-weight: 800; background: rgba(251,191,36,0.2); color: #fbbf24; padding: 4px 14px; border-radius: 20px; margin-bottom: 12px;">
-                    <i class="fa-solid fa-building-columns"></i> بوابة الدفع المعتمدة
+                    <i class="fa-solid fa-building-columns"></i> نظام التحصيل الإلكتروني المركزي الموحد
                 </div>
-                <h3>بنك الكريمي الإسلامي — خدمة حاسب</h3>
+                <h3>السداد الفوري عبر البنوك والمحافظ برقم هاتفك</h3>
                 <p>
-                    سدد اشتراكك مباشرة من تطبيق "الكريمي جوال" بإدخال رقم نقطة حاسب الرسمية أدناه أو مسح الرمز. 
-                    المبلغ محدد بالسنت الواحد ليتم مطابقة السداد وفتح المنظومة لك فوراً.
+                    اختر الباقة المناسبة أعلاه ليتم إصدار فاتورتك الإلكترونية فوراً. يمكنك بعدها فتح تطبيق البنك أو المحفظة الإلكترونية المرتبطة، اختيار خدمة <strong>"منصة وزيرك"</strong>، وإدخال رقم هاتفك لسداد الفاتورة وتفعيل اشتراكك لحظياً دون الحاجة لرفع أي إيصالات يدوية.
                 </p>
                 <div class="pos-badge-box">
-                    <span style="font-size: 0.85rem; color: #cbd5e1;">رقم نقطة حاسب:</span>
-                    <span class="pos-code" id="posCodeVal">2709660</span>
-                    <button class="copy-btn" onclick="navigator.clipboard.writeText('2709660'); alert('تم نسخ رقم نقطة حاسب: 2709660');">
-                        <i class="fa-solid fa-copy"></i> نسخ الرقم
-                    </button>
-                    <span style="font-size: 0.82rem; color: #a5b4fc; border-right: 1px solid rgba(255,255,255,0.2); padding-right: 12px; margin-right: 4px;">
-                        الاسم بالبنك: <strong>LawSaaS</strong>
-                    </span>
+                    <span style="font-size: 0.85rem; color: #cbd5e1;">العملات المدعومة تلقائياً:</span>
+                    <span style="font-size: 0.9rem; font-weight: 800; color: #fbbf24;">USD $ • الريال القعيطي • الريال القديم • SAR</span>
                 </div>
-            </div>
-            <div class="tag-img-box">
-                <img src="/static/img/kuraimi_haseb_tag.jpg" alt="بطاقة حاسب الكريمي" onerror="this.parentElement.style.display='none';">
-                <div style="font-size: 0.75rem; color: #64748b; font-weight: 700; margin-top: 6px;">بطاقة حاسب الرسمية</div>
             </div>
         </div>
 
@@ -615,56 +604,59 @@
 
     </div>
 
-    <!-- Checkout Modal -->
+    <!-- Electronic Biller Invoice Modal -->
     <div class="modal-overlay" id="checkoutModal">
         <div class="modal-box">
             <div class="modal-header">
-                <div class="modal-title">تأكيد الاشتراك عبر حاسب الكريمي</div>
+                <div class="modal-title"><i class="fa-solid fa-file-invoice-dollar" style="color: var(--primary);"></i> فاتورة التحصيل الإلكتروني الفوري</div>
                 <button class="modal-close" onclick="closeCheckoutModal()"><i class="fa-solid fa-xmark"></i></button>
             </div>
 
             <div class="summary-banner">
                 <div>
-                    <div style="font-size: 0.8rem; color: var(--muted); font-weight: 700;">الباقة المختارة</div>
+                    <div style="font-size: 0.8rem; color: var(--muted); font-weight: 700;">الباقة / الخدمة المختارة</div>
                     <div id="modalPlanName" style="font-size: 1.15rem; font-weight: 900; color: var(--primary);">المكتب الاحترافي</div>
                     <div id="modalCycleName" style="font-size: 0.8rem; color: var(--muted);">اشتراك شهري</div>
                 </div>
                 <div style="text-align: left;">
-                    <div style="font-size: 0.8rem; color: var(--muted); font-weight: 700;">المبلغ المطلوب بالسنت</div>
+                    <div style="font-size: 0.8rem; color: var(--muted); font-weight: 700;">إجمالي الفاتورة</div>
                     <div id="modalAmount" style="font-size: 1.6rem; font-weight: 900; color: var(--primary);">$49.99</div>
                     <div id="modalCurrencyTag" style="font-size: 0.75rem; color: #10b981; font-weight: 800;">USD</div>
                 </div>
             </div>
 
-            <div style="background: #f8fafc; padding: 14px; border-radius: 12px; margin-bottom: 20px; border: 1px dashed #cbd5e1; font-size: 0.85rem; line-height: 1.6;">
-                <strong>طريقة السداد عبر تطبيق "الكريمي جوال":</strong>
-                <ol style="margin-right: 20px; margin-top: 6px;">
-                    <li>افتح تطبيق الكريمي واختر <strong>خدمة حاسب</strong>.</li>
-                    <li>أدخل رقم النقطة: <strong>2709660</strong> (الاسم: <strong>LawSaaS</strong>).</li>
-                    <li>حوّل المبلغ الدقيق الموضح أعلاه بالسنت الواحد.</li>
-                </ol>
+            <div id="billGeneratingState" style="text-align: center; padding: 24px;">
+                <i class="fa-solid fa-spinner fa-spin" style="font-size: 2rem; color: var(--primary);"></i>
+                <div style="margin-top: 10px; font-weight: 700; color: var(--muted);">جاري إصدار الفاتورة الإلكترونية في البوابة المركزية...</div>
             </div>
 
-            <form id="checkoutForm" onsubmit="submitPayment(event)">
-                <input type="hidden" id="selectedPlanKey" value="pro_monthly">
-                <input type="hidden" id="selectedAmount" value="49.99">
-                <input type="hidden" id="selectedCurrency" value="USD">
-
-                <div class="form-group">
-                    <label class="form-label">رقم العملية المرجعي من إشعار الكريمي *</label>
-                    <input type="text" id="transferRef" class="form-input" placeholder="مثال: 984572013" required>
+            <div id="billReadyState" style="display: none;">
+                <div style="background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 12px; padding: 14px; margin-bottom: 16px;">
+                    <div style="font-weight: 800; color: #065f46; font-size: 0.95rem; margin-bottom: 6px;">
+                        <i class="fa-solid fa-circle-check"></i> تم إصدار فاتورتك بنجاح!
+                    </div>
+                    <div style="font-size: 0.86rem; color: #047857;">
+                        رقم الفاتورة: <strong id="billInvoiceNo" style="font-family: monospace; font-size: 1rem;">-</strong><br>
+                        رقم الهاتف للاستعلام في البنك/المحفظة: <strong id="billSubPhone" style="font-family: monospace; font-size: 1rem;">-</strong>
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label class="form-label">إرفاق صورة إشعار السداد *</label>
-                    <input type="file" id="receiptFile" class="form-input" accept="image/*" required onchange="handleFile(this)">
-                    <div id="fileNote" style="font-size: 0.75rem; color: var(--muted); margin-top: 4px;">يقبل صور JPG, PNG حتى 5 ميجابايت.</div>
+                <div style="font-size: 0.84rem; font-weight: 800; color: #334155; margin-bottom: 8px;">المبالغ المعتمدة حسب عملة محفظتك:</div>
+                <div id="billCurrencyGrid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 18px;"></div>
+
+                <div style="background: #f8fafc; padding: 12px 14px; border-radius: 10px; border: 1px dashed #cbd5e1; font-size: 0.83rem; line-height: 1.6; margin-bottom: 16px;">
+                    <strong>خطوات السداد والتفعيل الفوري:</strong>
+                    <ol style="margin: 6px 20px 0 0; padding: 0;">
+                        <li>افتح تطبيق البنك أو المحفظة الإلكترونية واختر خدمة <strong>منصة وزيرك</strong>.</li>
+                        <li>أدخل رقم هاتفك الموضح أعلاه لتظهر لك الفاتورة تلقائياً.</li>
+                        <li>أكّد الدفع، وسيتم تفعيل باقتك في المنصة لحظياً!</li>
+                    </ol>
                 </div>
 
-                <button type="submit" id="submitBtn" class="btn-subscribe btn-primary" style="margin-top: 20px;">
-                    <i class="fa-solid fa-paper-plane"></i> إرسال الطلب للتدقيق والتفعيل الآلي
+                <button type="button" onclick="window.location.reload()" class="btn-subscribe btn-primary">
+                    <i class="fa-solid fa-rotate"></i> تحديث الصفحة بعد السداد
                 </button>
-            </form>
+            </div>
         </div>
     </div>
 
@@ -725,95 +717,80 @@
             });
         }
 
+        async function issueElectronicBill(planKey, cycleKey, planName, cycleText, displayUsd) {
+            document.getElementById('modalPlanName').innerText = planName;
+            document.getElementById('modalCycleName').innerText = cycleText;
+            document.getElementById('modalAmount').innerText = '$' + displayUsd.toFixed(2);
+            document.getElementById('modalCurrencyTag').innerText = 'USD';
+            document.getElementById('billGeneratingState').style.display = 'block';
+            document.getElementById('billReadyState').style.display = 'none';
+            document.getElementById('checkoutModal').classList.add('open');
+
+            try {
+                const csrfToken = document.cookie.split('; ').find(r => r.startsWith('csrf_token='))?.split('=')[1] || '';
+                const res = await fetch('/api/subscription/create-bill', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                    body: JSON.stringify({ plan: planKey, cycle: cycleKey })
+                });
+                const data = await res.json();
+                if (!data.success) {
+                    alert(data.error || 'تعذر إصدار الفاتورة');
+                    closeCheckoutModal();
+                    return;
+                }
+                document.getElementById('billInvoiceNo').innerText = data.invoice_no;
+                document.getElementById('billSubPhone').innerText = data.subscriber_phone;
+                const opts = data.payable_options;
+                document.getElementById('billCurrencyGrid').innerHTML = `
+                    <div style="background:#f0fdf4; border:1px solid #bbf7d0; padding:8px 10px; border-radius:8px; text-align:center;">
+                        <div style="font-size:0.72rem; color:#166534;">الدولار الأمريكي</div>
+                        <div style="font-weight:900; color:#15803d;">$${opts.USD}</div>
+                    </div>
+                    <div style="background:#faf5ff; border:1px solid #e9d5ff; padding:8px 10px; border-radius:8px; text-align:center;">
+                        <div style="font-size:0.72rem; color:#6b21a8;">الريال القعيطي (عدن/جنوب)</div>
+                        <div style="font-weight:900; color:#7e22ce;">${opts.YER_SOUTH.toLocaleString()} ريال</div>
+                    </div>
+                    <div style="background:#eff6ff; border:1px solid #bfdbfe; padding:8px 10px; border-radius:8px; text-align:center;">
+                        <div style="font-size:0.72rem; color:#1e40af;">الريال القديم (صنعاء/شمال)</div>
+                        <div style="font-weight:900; color:#1d4ed8;">${opts.YER_NORTH.toLocaleString()} ريال</div>
+                    </div>
+                    <div style="background:#f0fdfa; border:1px solid #99f6e4; padding:8px 10px; border-radius:8px; text-align:center;">
+                        <div style="font-size:0.72rem; color:#115e59;">الريال السعودي</div>
+                        <div style="font-weight:900; color:#0f766e;">${opts.SAR} ر.س</div>
+                    </div>
+                `;
+                document.getElementById('billGeneratingState').style.display = 'none';
+                document.getElementById('billReadyState').style.display = 'block';
+            } catch (err) {
+                alert('تعذر الاتصال بالسيرفر');
+                closeCheckoutModal();
+            }
+        }
+
         function openCheckoutModal(tierKey) {
             const tier = TIERS_DATA[tierKey];
             let usd = currentCycle === 'yearly' ? tier.yearly : tier.monthly;
             let cycleText = currentCycle === 'yearly' ? 'اشتراك سنوي (توفير شهرين)' : 'اشتراك شهري';
-            
             if (hasOfficeExtraSeat && (tierKey === 'pro' || tierKey === 'enterprise')) {
                 usd += 19.0;
                 cycleText += ' + شامل 19$ تجديد المقعد الإضافي (بنسبة 19%)';
             }
-            const formatted = formatCurrency(usd);
-
-            document.getElementById('modalPlanName').innerText = tier.name;
-            document.getElementById('modalCycleName').innerText = cycleText;
-            document.getElementById('modalAmount').innerText = formatted;
-            document.getElementById('modalCurrencyTag').innerText = currentCurrency;
-
-            document.getElementById('selectedPlanKey').value = `${tierKey}_${currentCycle}`;
-            document.getElementById('selectedAmount').value = usd;
-            document.getElementById('selectedCurrency').value = currentCurrency;
-
-            document.getElementById('checkoutModal').classList.add('open');
+            issueElectronicBill(tierKey, currentCycle, tier.name, cycleText, usd);
         }
 
         function openExtraSeatCheckout() {
-            document.getElementById('modalPlanName').innerText = "مقعد مستخدم إضافي (+1)";
-            document.getElementById('modalCycleName').innerText = "رسوم تأسيس وشراء تدفع لمرة واحدة ($100)، وتجدد لاحقاً بنسبة 19% ($19) مع تجديد المكتب";
-            document.getElementById('modalAmount').innerText = formatCurrency(100.0);
-            document.getElementById('modalCurrencyTag').innerText = currentCurrency;
-
-            document.getElementById('selectedPlanKey').value = "extra_seat";
-            document.getElementById('selectedAmount').value = 100.0;
-            document.getElementById('selectedCurrency').value = currentCurrency;
-
-            document.getElementById('checkoutModal').classList.add('open');
+            issueElectronicBill(
+                'extra_seat',
+                'one_time',
+                'مقعد مستخدم إضافي (+1)',
+                'رسوم تأسيس وشراء لمرة واحدة ($100)، وتجدد لاحقاً بنسبة 19% ($19)',
+                100.0
+            );
         }
 
         function closeCheckoutModal() {
             document.getElementById('checkoutModal').classList.remove('open');
-        }
-
-        function handleFile(input) {
-            const file = input.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                base64Receipt = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
-
-        async function submitPayment(e) {
-            e.preventDefault();
-            const ref = document.getElementById('transferRef').value.trim();
-            if (!ref || !base64Receipt) {
-                alert('يرجى كتابة رقم العملية وإرفاق صورة الإيصال');
-                return;
-            }
-
-            const btn = document.getElementById('submitBtn');
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري إرسال الطلب...';
-
-            try {
-                const res = await fetch('/api/subscription/checkout', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        plan: document.getElementById('selectedPlanKey').value,
-                        amount: parseFloat(document.getElementById('selectedAmount').value),
-                        currency: document.getElementById('selectedCurrency').value,
-                        transfer_ref: ref,
-                        receipt_base64: base64Receipt
-                    })
-                });
-
-                const data = await res.json();
-                if (data.success) {
-                    alert('تم إرسال طلب السداد بنجاح! سيتم التدقيق البنكي وفتح مساحة عملك فوراً.');
-                    window.location.reload();
-                } else {
-                    alert(data.error || 'حدث خطأ أثناء معالجة الطلب');
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> إعادة المحاولة';
-                }
-            } catch (err) {
-                alert('تعذر الاتصال بالسيرفر. يرجى المحاولة مجدداً.');
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> إعادة المحاولة';
-            }
         }
     </script>
 </body>
