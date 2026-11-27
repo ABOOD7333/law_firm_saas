@@ -417,10 +417,6 @@ async function fixSubscriptions() {
     }
 }
 
-// 4. مراجعة إيصال حاسب واعتماده أو رفضه
-let currentPaymentId = null;
-}
-
 // 5. إيقاف / تفعيل مكتب
 async function toggleOffice(officeId) {
     if(!confirm("هل أنت متأكد من تغيير حالة هذا المكتب؟")) return;
@@ -479,3 +475,7 @@ async function impersonateOffice(officeId) {
         }
     } catch(e) {
         alert("فشل الاتصال بالخادم");
+    }
+}
+</script>
+{% endblock %}
