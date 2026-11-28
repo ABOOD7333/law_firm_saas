@@ -32,6 +32,52 @@
     font-size: 1.25rem;
     flex-shrink: 0;
   }
+  .laws-grid-5 {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 14px;
+    padding: 18px;
+    background: #f8fafc;
+  }
+  @media (max-width: 1200px) {
+    .laws-grid-5 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+  @media (max-width: 768px) {
+    .laws-grid-5 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 480px) {
+    .laws-grid-5 { grid-template-columns: 1fr; }
+  }
+  .law-tile-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-top: 3px solid #1d4ed8;
+    border-radius: 12px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 10px;
+    height: 100%;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+    transition: all 0.2s ease;
+  }
+  .law-tile-card:hover {
+    transform: translateY(-3px);
+    border-color: #2563eb;
+    box-shadow: 0 10px 22px rgba(37, 99, 235, 0.12);
+  }
+  .law-tile-title {
+    font-weight: 800;
+    font-size: 0.92rem;
+    line-height: 1.55;
+    color: #0f172a;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    min-height: 4.2em;
+  }
   .law-paper-desk {
     background: #e2e8f0;
     padding: 28px 18px;
@@ -258,7 +304,7 @@
       {% endif %}
     </div>
     <div class="card-body p-0">
-      <div id="lawResults" class="list-group list-group-flush"></div>
+      <div id="lawResults" class="laws-grid-5"></div>
     </div>
   </div>
 </div>
@@ -423,44 +469,40 @@ async function loadLaws() {
   const selectedLabel = category ? catSelect.options[catSelect.selectedIndex].text : (recentOnly ? 'أحدث التحديثات' : 'نتائج البحث والتصفية');
   document.getElementById('resultsHeading').innerHTML = `<i class="fa-solid fa-book-open text-primary ms-1"></i>${escapeHtml(selectedLabel)}`;
 
-  lawResults.innerHTML = '<div class="p-4 text-center text-muted">جارٍ البحث وتجهيز القائمة...</div>';
+  lawResults.innerHTML = '<div class="p-4 text-center text-muted" style="grid-column:1 / -1;">جارٍ البحث وتجهيز القوالب...</div>';
   try {
     const response = await fetch(`/api/laws?${params.toString()}`);
     const result = await response.json();
     if (!response.ok || !result.success) throw new Error(result.detail || 'تعذر تحميل التشريعات');
     document.getElementById('searchMessage').textContent = `تم العثور على ${result.data.length} تشريعاً مطابقاً`;
     if (!result.data.length) {
-      lawResults.innerHTML = '<div class="p-4 text-center text-muted">لا توجد تشريعات مطابقة لاختيارك حالياً.</div>';
+      lawResults.innerHTML = '<div class="p-4 text-center text-muted" style="grid-column:1 / -1;">لا توجد تشريعات مطابقة لاختيارك حالياً.</div>';
       return;
     }
     lawResults.innerHTML = result.data.map(law => `
-      <article class="list-group-item p-3 p-lg-4">
-        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
-          <div class="flex-grow-1">
-            <h5 class="fw-bold mb-2">
-              ${escapeHtml(law.title)}
-              ${law.is_recently_updated ? '<span class="badge bg-info text-dark ms-2" style="font-size:0.72rem;">مُحدّث حديثاً</span>' : ''}
-            </h5>
-            <div class="d-flex flex-wrap gap-2 mb-2">
-              <span class="badge text-bg-primary">${law.law_type === 'regulation' ? 'لائحة' : 'قانون'}</span>
-              ${statusBadge(law)}
-              <span class="badge text-bg-light border text-dark">${escapeHtml(law.category_name)}</span>
-              ${law.law_number ? `<span class="badge text-bg-light border text-dark">رقم ${escapeHtml(law.law_number)}</span>` : ''}
-              ${law.issue_year ? `<span class="badge text-bg-light border text-dark">${escapeHtml(law.issue_year)}</span>` : ''}
-            </div>
-            ${law.amendment_note ? `<div class="small text-warning-emphasis bg-warning-subtle px-2 py-1 rounded mb-2"><strong>تحديث تشريعي:</strong> ${escapeHtml(law.amendment_note)} ${law.last_amended_at ? `(${escapeHtml(law.last_amended_at)})` : ''}</div>` : ''}
-            ${law.source_reference ? `<div class="small text-muted mb-2">المصدر: ${escapeHtml(law.source_reference)}</div>` : ''}
-            ${law.excerpt ? `<p class="mb-0 text-secondary" style="white-space:pre-line">${escapeHtml(law.excerpt)}</p>` : '<p class="mb-0 small text-muted">وثيقة PDF رسمية أصلية. اضغط على قراءة لعرض الصفحات.</p>'}
+      <article class="law-tile-card" title="${escapeHtml(law.title)}">
+        <div>
+          <div class="d-flex justify-content-between align-items-center gap-1 mb-2">
+            <span class="badge text-bg-primary" style="font-size:0.7rem;">${law.law_type === 'regulation' ? 'لائحة' : 'قانون'}</span>
+            ${statusBadge(law)}
           </div>
-          <div class="d-flex gap-2 flex-wrap">
-            <button class="btn btn-sm btn-primary" type="button" onclick="openReader(${law.id})"><i class="fa-solid fa-file-lines ms-1"></i>عرض الورقة</button>
-            <button class="btn btn-sm btn-outline-primary" type="button" onclick="downloadLaw(${law.id})"><i class="fa-solid fa-download ms-1"></i>تنزيل</button>
-            ${canManageLaws ? `<button class="btn btn-sm btn-outline-secondary" type="button" onclick="editLaw(${law.id})">تعديل</button><button class="btn btn-sm btn-outline-danger" type="button" onclick="deleteLaw(${law.id})">حذف</button>` : ''}
+          <div class="law-tile-title" onclick="openReader(${law.id})" style="cursor:pointer;">
+            ${escapeHtml(law.title)}
           </div>
+          <div class="d-flex flex-wrap gap-1 mt-2">
+            ${law.law_number ? `<span class="badge text-bg-light border text-dark" style="font-size:0.7rem;">رقم ${escapeHtml(law.law_number)}</span>` : ''}
+            ${law.issue_year ? `<span class="badge text-bg-light border text-dark" style="font-size:0.7rem;">${escapeHtml(law.issue_year)}</span>` : ''}
+            ${law.is_recently_updated ? '<span class="badge bg-info text-dark" style="font-size:0.7rem;">مُحدّث</span>' : ''}
+          </div>
+        </div>
+        <div class="pt-2 border-top d-flex gap-1 flex-wrap align-items-center">
+          <button class="btn btn-sm btn-primary flex-grow-1 fw-bold" style="font-size:0.78rem;" type="button" onclick="openReader(${law.id})"><i class="fa-solid fa-file-lines ms-1"></i>عرض الورقة</button>
+          <button class="btn btn-sm btn-outline-primary" style="font-size:0.78rem;" type="button" onclick="downloadLaw(${law.id})" title="تنزيل"><i class="fa-solid fa-download"></i></button>
+          ${canManageLaws ? `<button class="btn btn-sm btn-outline-secondary" style="font-size:0.78rem;" type="button" onclick="editLaw(${law.id})" title="تعديل"><i class="fa-solid fa-pen"></i></button><button class="btn btn-sm btn-outline-danger" style="font-size:0.78rem;" type="button" onclick="deleteLaw(${law.id})" title="حذف"><i class="fa-solid fa-trash"></i></button>` : ''}
         </div>
       </article>`).join('');
   } catch (error) {
-    lawResults.innerHTML = `<div class="p-4 text-center text-danger">${escapeHtml(error.message)}</div>`;
+    lawResults.innerHTML = `<div class="p-4 text-center text-danger" style="grid-column:1 / -1;">${escapeHtml(error.message)}</div>`;
   }
 }
 
