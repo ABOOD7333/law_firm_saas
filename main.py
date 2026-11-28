@@ -415,8 +415,14 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
         response = await call_next(request)
 
-        # منع Clickjacking
-        response.headers["X-Frame-Options"] = "DENY"
+        is_inline_law_pdf = (
+            request.url.path.startswith("/api/laws/")
+            and request.url.path.endswith("/download")
+            and request.query_params.get("inline") in ("1", "true", "yes")
+        )
+
+        # منع Clickjacking (السماح فقط بعرض PDF القوانين داخل نفس الموقع)
+        response.headers["X-Frame-Options"] = "SAMEORIGIN" if is_inline_law_pdf else "DENY"
 
         # منع MIME Sniffing
         response.headers["X-Content-Type-Options"] = "nosniff"
@@ -436,14 +442,17 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
 
         # Content Security Policy
+        frame_ancestors = "frame-ancestors 'self';" if is_inline_law_pdf else "frame-ancestors 'none';"
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
             "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; "
             "img-src 'self' data: blob: https:; "
+            "frame-src 'self' blob:; "
+            "object-src 'self' blob:; "
             "connect-src 'self'; "
-            "frame-ancestors 'none';"
+            + frame_ancestors
         )
 
         return response
