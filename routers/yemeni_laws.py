@@ -8,7 +8,7 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import Response
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from core.security import validate_file_signature
@@ -109,11 +109,33 @@ async def list_laws(
         query = query.order_by(YemeniLawDocument.updated_at.desc(), YemeniLawDocument.created_at.desc())
     else:
         query = query.order_by(YemeniLawDocument.title.asc())
-    laws = query.limit(500).all()
+    laws = query.limit(2000).all()
     items = [_serialize(law, q) for law in laws]
     if recent_only in ("1", "true", "yes"):
         items = [it for it in items if it["is_recently_updated"] or it["status"] == "amended"]
     return {"success": True, "data": items}
+
+
+@router.get("/summary")
+async def laws_summary(
+    db: Session = Depends(get_db),
+    current_user: AccessProfiles = Depends(get_current_user),
+):
+    if not current_user:
+        raise HTTPException(status_code=401, detail="يلزم تسجيل الدخول")
+    rows = (
+        db.query(YemeniLawDocument.category, func.count(YemeniLawDocument.id))
+        .filter(YemeniLawDocument.is_deleted == 0)
+        .group_by(YemeniLawDocument.category)
+        .all()
+    )
+    counts = {cat: cnt for cat, cnt in rows}
+    total = sum(counts.values())
+    categories = [
+        {"key": key, "label": label, "count": counts.get(key, 0)}
+        for key, label in LEGAL_CATEGORIES.items()
+    ]
+    return {"success": True, "total": total, "categories": categories}
 
 
 @router.get("/{law_id}")
