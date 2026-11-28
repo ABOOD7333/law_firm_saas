@@ -270,10 +270,27 @@ async function openReader(id) {
   } else {
     amendBox.style.display = 'none';
   }
-  currentReaderRawText = law.legal_text || 'لا يوجد نص مستخرج لهذا التشريع. يمكنك تنزيل المستند الأصلي من زر التنزيل.';
-  document.getElementById('readerSearchInput').value = searchInput.value.trim();
-  document.getElementById('readerDownloadBtn').onclick = () => downloadLaw(law.id);
-  highlightInReader();
+  const cleanText = (law.legal_text || '').trim();
+  const toolbarEl = document.getElementById('readerSearchInput').closest('div').parentElement;
+  const bodyEl = document.getElementById('readerBody');
+  if (cleanText.length >= 30) {
+    toolbarEl.style.display = 'flex';
+    bodyEl.style.padding = '24px';
+    currentReaderRawText = cleanText;
+    document.getElementById('readerSearchInput').value = searchInput.value.trim();
+    document.getElementById('readerDownloadBtn').onclick = () => downloadLaw(law.id);
+    highlightInReader();
+  } else if (law.has_file) {
+    toolbarEl.style.display = 'none';
+    bodyEl.style.padding = '0';
+    currentReaderRawText = '';
+    bodyEl.innerHTML = `<iframe src="/api/laws/${law.id}/download?inline=1" style="width:100%; height:72vh; border:none; display:block;"></iframe>`;
+  } else {
+    toolbarEl.style.display = 'flex';
+    bodyEl.style.padding = '24px';
+    currentReaderRawText = 'لا يوجد نص أو ملف مرفق لهذا التشريع.';
+    highlightInReader();
+  }
   document.getElementById('lawReaderModal').style.display = 'block';
 }
 

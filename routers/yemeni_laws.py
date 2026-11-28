@@ -338,6 +338,7 @@ async def delete_law(
 @router.get("/{law_id}/download")
 async def download_law(
     law_id: int,
+    inline: bool = False,
     db: Session = Depends(get_db),
     current_user: AccessProfiles = Depends(get_current_user),
 ):
@@ -354,13 +355,14 @@ async def download_law(
         content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
         body = law.file_data
     elif law.legacy_file_path:
-        legacy_path = Path(law.legacy_file_path).resolve()
+        raw_p = Path(law.legacy_file_path)
+        legacy_path = (LEGACY_DATA_ROOT / raw_p).resolve() if not raw_p.is_absolute() else raw_p.resolve()
         if not legacy_path.is_relative_to(LEGACY_DATA_ROOT) or not legacy_path.is_file():
             body = None
         else:
             body = legacy_path.read_bytes()
-        filename = law.file_name or f"{law.title}.txt"
-        content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+        filename = law.file_name or f"{law.title}.pdf"
+        content_type = mimetypes.guess_type(filename)[0] or "application/pdf"
     else:
         body = law.legal_text.encode("utf-8")
         filename = f"{law.title}.txt"
@@ -369,8 +371,9 @@ async def download_law(
     if body is None:
         raise HTTPException(status_code=404, detail="ملف هذا التشريع غير متاح؛ يمكن تنزيل النص المحفوظ بدلاً منه")
     safe_header = quote(filename, safe="")
+    disp = "inline" if inline else "attachment"
     return Response(
         content=body,
         media_type=content_type,
-        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{safe_header}"},
+        headers={"Content-Disposition": f"{disp}; filename*=UTF-8''{safe_header}"},
     )
