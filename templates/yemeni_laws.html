@@ -158,7 +158,34 @@
       padding: 14px 8px;
     }
   }
+  .pdf-canvas-page {
+    display: block;
+    margin: 0 auto 16px;
+    max-width: 100%;
+    height: auto !important;
+    background: #fff;
+    border: 1px solid #cbd5e1;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+    user-select: none;
+  }
+  @media print {
+    body * {
+      display: none !important;
+      visibility: hidden !important;
+    }
+    body::after {
+      content: "الطباعة وحفظ القوانين غير متاح — المكتبة حصرية للقراءة والنسخ الجزئي داخل المنصة فقط.";
+      display: block !important;
+      visibility: visible !important;
+      text-align: center;
+      padding: 60px 24px;
+      font-size: 20px;
+      font-weight: bold;
+      color: #0f172a;
+    }
+  }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
 <div class="container-fluid py-3" dir="rtl">
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
@@ -300,7 +327,7 @@
         <span id="resultsHeading"><i class="fa-solid fa-book-open text-primary ms-1"></i>التشريعات المطابقة</span>
       </div>
       {% if not can_manage %}
-      <span class="badge text-bg-light border text-secondary">وضع القراءة والنسخ والتنزيل للمحامين</span>
+      <span class="badge text-bg-light border text-secondary">وضع القراءة والنسخ الجزئي داخل المنصة فقط</span>
       {% endif %}
     </div>
     <div class="card-body p-0">
@@ -331,9 +358,7 @@
         <button type="button" class="btn btn-sm btn-outline-secondary" onclick="jumpMatch(1)" title="التالي">▼</button>
       </div>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <button type="button" id="readerPrintBtn" class="btn btn-sm btn-outline-dark fw-bold" onclick="printLegalPaper()"><i class="fa-solid fa-print ms-1"></i>طباعة الورقة</button>
-        <button type="button" id="readerCopyBtn" class="btn btn-sm btn-outline-success fw-bold" onclick="copySelectedOrFull()"><i class="fa-regular fa-copy ms-1"></i>نسخ المحدد / الكل</button>
-        <button type="button" class="btn btn-sm btn-primary fw-bold" id="readerDownloadBtn"><i class="fa-solid fa-download ms-1"></i>تنزيل</button>
+        <button type="button" id="readerCopyBtn" class="btn btn-sm btn-outline-success fw-bold" onclick="copySelectedOnly()"><i class="fa-regular fa-copy ms-1"></i>نسخ الجزء المحدد</button>
       </div>
     </div>
 
@@ -497,7 +522,6 @@ async function loadLaws() {
         </div>
         <div class="pt-2 border-top d-flex gap-1 flex-wrap align-items-center">
           <button class="btn btn-sm btn-primary flex-grow-1 fw-bold" style="font-size:0.78rem;" type="button" onclick="openReader(${law.id})"><i class="fa-solid fa-file-lines ms-1"></i>عرض الورقة</button>
-          <button class="btn btn-sm btn-outline-primary" style="font-size:0.78rem;" type="button" onclick="downloadLaw(${law.id})" title="تنزيل"><i class="fa-solid fa-download"></i></button>
           ${canManageLaws ? `<button class="btn btn-sm btn-outline-secondary" style="font-size:0.78rem;" type="button" onclick="editLaw(${law.id})" title="تعديل"><i class="fa-solid fa-pen"></i></button><button class="btn btn-sm btn-outline-danger" style="font-size:0.78rem;" type="button" onclick="deleteLaw(${law.id})" title="حذف"><i class="fa-solid fa-trash"></i></button>` : ''}
         </div>
       </article>`).join('');
@@ -600,15 +624,12 @@ async function openReader(id) {
 
   const cleanText = (law.legal_text || '').replace(/[\ue000-\uf8ff\ufffd]/g, '').trim();
   const searchGroup = document.getElementById('readerSearchGroup');
-  const printBtn = document.getElementById('readerPrintBtn');
   const copyBtn = document.getElementById('readerCopyBtn');
   const deskEl = document.getElementById('readerDesk');
   const bodyEl = document.getElementById('readerBody');
-  document.getElementById('readerDownloadBtn').onclick = () => downloadLaw(law.id);
 
   if (cleanText.length >= 30) {
     searchGroup.style.display = 'flex';
-    printBtn.style.display = 'inline-block';
     copyBtn.style.display = 'inline-block';
     deskEl.style.padding = '28px 18px';
     currentReaderRawText = cleanText;
@@ -616,23 +637,60 @@ async function openReader(id) {
     highlightInReader();
   } else if (law.has_file) {
     searchGroup.style.display = 'none';
-    printBtn.style.display = 'none';
     copyBtn.style.display = 'none';
-    deskEl.style.padding = '16px';
+    deskEl.style.padding = '20px 14px';
     currentReaderRawText = '';
-    bodyEl.innerHTML = `
-      <div style="max-width:860px; margin:0 auto; background:#fff; border:1px solid #cbd5e1; border-top:5px solid #0b132b; border-radius:6px; overflow:hidden; box-shadow:0 12px 32px rgba(15,23,42,0.14);">
-        <iframe src="/api/laws/${law.id}/download?inline=1" style="width:100%; height:74vh; border:none; display:block;"></iframe>
-      </div>`;
+    await renderSecurePdfViewer(law.id, bodyEl);
   } else {
     searchGroup.style.display = 'none';
-    printBtn.style.display = 'none';
     copyBtn.style.display = 'none';
     deskEl.style.padding = '28px 18px';
     currentReaderRawText = 'لا يوجد نص أو ملف مرفق لهذا التشريع.';
     bodyEl.innerHTML = `<div class="law-paper-sheet text-center text-muted py-5">${escapeHtml(currentReaderRawText)}</div>`;
   }
   document.getElementById('lawReaderModal').style.display = 'block';
+}
+
+async function renderSecurePdfViewer(lawId, container) {
+  container.innerHTML = `
+    <div style="max-width:860px; margin:0 auto;" oncontextmenu="return false;">
+      <div id="pdfStatusBanner" class="text-center text-muted py-4 fw-bold">جارٍ تجهيز صفحات الوثيقة للقراءة الآمنة...</div>
+      <div id="pdfPagesHost"></div>
+    </div>`;
+  const statusEl = document.getElementById('pdfStatusBanner');
+  const pagesHost = document.getElementById('pdfPagesHost');
+
+  if (typeof pdfjsLib === 'undefined') {
+    statusEl.style.display = 'none';
+    pagesHost.innerHTML = `<iframe src="/api/laws/${lawId}/download?inline=1#toolbar=0&navpanes=0" style="width:100%; height:74vh; border:none; display:block;"></iframe>`;
+    return;
+  }
+
+  try {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const resp = await fetch(`/api/laws/${lawId}/download?inline=1`, { credentials: 'same-origin' });
+    if (!resp.ok) throw new Error('تعذر تحميل صفحات الوثيقة');
+    const arrayBuffer = await resp.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    statusEl.textContent = `عدد الصفحات: ${pdf.numPages} صفحة (للقراءة داخل المنصة فقط)`;
+    statusEl.className = 'text-center text-secondary small fw-bold mb-3';
+
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      const page = await pdf.getPage(pageNum);
+      const viewport = page.getViewport({ scale: 1.55 });
+      const canvas = document.createElement('canvas');
+      canvas.className = 'pdf-canvas-page';
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      canvas.oncontextmenu = () => false;
+      pagesHost.appendChild(canvas);
+      const ctx = canvas.getContext('2d');
+      await page.render({ canvasContext: ctx, viewport }).promise;
+    }
+  } catch (err) {
+    statusEl.style.display = 'none';
+    pagesHost.innerHTML = `<iframe src="/api/laws/${lawId}/download?inline=1#toolbar=0&navpanes=0" style="width:100%; height:74vh; border:none; display:block;"></iframe>`;
+  }
 }
 
 function closeReader() {
@@ -667,49 +725,23 @@ function jumpMatch(step) {
   target.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
-function copySelectedOrFull() {
+function copySelectedOnly() {
   const selected = window.getSelection()?.toString().trim();
-  const textToCopy = selected || currentReaderRawText;
-  navigator.clipboard.writeText(textToCopy).then(() => {
-    alert(selected ? 'تم نسخ النص المظلل إلى الحافظة!' : 'تم نسخ نص القانون بالكامل إلى الحافظة!');
+  if (!selected) {
+    alert('يرجى تظليل الجزء أو المادة التي تريد نسخها بالماوس أولاً.');
+    return;
+  }
+  navigator.clipboard.writeText(selected).then(() => {
+    alert('تم نسخ الجزء المحدد إلى الحافظة!');
   });
 }
 
-function printLegalPaper() {
-  const sheet = document.getElementById('legalPaperSheet');
-  if (!sheet) return;
-  const w = window.open('', '_blank', 'width=900,height=800');
-  w.document.write(`
-    <!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8">
-    <title>${escapeHtml(currentReaderLaw?.title || 'وثيقة قانونية')}</title>
-    <style>
-      body { font-family: 'Cairo', 'Traditional Arabic', Arial, sans-serif; color:#1e293b; padding:24px 36px; direction:rtl; }
-      .law-paper-header { border-bottom: 2px solid #0f172a; padding-bottom:14px; margin-bottom:20px; text-align:center; }
-      .law-paper-basmala { text-align:center; font-weight:800; font-size:1.1rem; margin:12px 0 18px; }
-      .law-paper-part { text-align:center; font-weight:800; background:#f1f5f9; border:1px solid #cbd5e1; padding:8px; margin:20px 0 10px; }
-      .law-paper-chapter { font-weight:800; color:#1e3a8a; border-bottom:1px dashed #93c5fd; padding-bottom:4px; margin:16px 0 8px; }
-      .law-paper-article { margin:10px 0; line-height:1.95; text-align:justify; }
-      .law-article-badge { font-weight:800; color:#1d4ed8; margin-left:6px; }
-      .law-paper-line { margin:5px 0; line-height:1.9; text-align:justify; }
-      @page { margin: 18mm; }
-    </style></head><body>${sheet.innerHTML}</body></html>
-  `);
-  w.document.close();
-  w.focus();
-  setTimeout(() => { w.print(); }, 300);
-}
-
-async function downloadLaw(id) {
-  const response = await fetch(`/api/laws/${id}/download`);
-  if (!response.ok) { const data = await response.json().catch(() => ({})); alert(data.detail || 'تعذر تنزيل المستند'); return; }
-  const blob = await response.blob();
-  const disposition = response.headers.get('Content-Disposition') || '';
-  const encoded = disposition.match(/filename\*=UTF-8''([^;]+)/i);
-  const filename = encoded ? decodeURIComponent(encoded[1]) : `yemeni-law-${id}.txt`;
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a'); link.href = url; link.download = filename; link.click();
-  URL.revokeObjectURL(url);
-}
+document.addEventListener('keydown', function (e) {
+  if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'p' || e.key.toLowerCase() === 's')) {
+    e.preventDefault();
+    alert('الحفظ والطباعة غير متاحين؛ يمكنك القراءة ونسخ الجزء المطلوب داخل المنصة فقط.');
+  }
+});
 
 {% if can_manage %}
 const lawForm = document.getElementById('lawForm');

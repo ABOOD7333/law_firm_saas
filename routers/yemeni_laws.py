@@ -366,6 +366,9 @@ async def download_law(
 ):
     if not current_user:
         raise HTTPException(status_code=401, detail="يلزم تسجيل الدخول")
+    if not inline:
+        # منع تنزيل وحفظ القوانين على الأجهزة؛ متاح فقط للسوبر أدمن أو للعرض الداخلي
+        _require_editor(current_user)
     law = db.query(YemeniLawDocument).filter(
         YemeniLawDocument.id == law_id, YemeniLawDocument.is_deleted == 0
     ).first()
@@ -391,11 +394,14 @@ async def download_law(
         content_type = "text/plain; charset=utf-8"
 
     if body is None:
-        raise HTTPException(status_code=404, detail="ملف هذا التشريع غير متاح؛ يمكن تنزيل النص المحفوظ بدلاً منه")
+        raise HTTPException(status_code=404, detail="ملف هذا التشريع غير متاح")
     safe_header = quote(filename, safe="")
     disp = "inline" if inline else "attachment"
     return Response(
         content=body,
         media_type=content_type,
-        headers={"Content-Disposition": f"{disp}; filename*=UTF-8''{safe_header}"},
+        headers={
+            "Content-Disposition": f"{disp}; filename*=UTF-8''{safe_header}",
+            "Cache-Control": "no-store",
+        },
     )

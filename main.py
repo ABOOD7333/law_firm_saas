@@ -449,6 +449,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
             "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; "
             "img-src 'self' data: blob: https:; "
+            "worker-src 'self' blob: https://cdnjs.cloudflare.com; "
             "frame-src 'self' blob:; "
             "object-src 'self' blob:; "
             "connect-src 'self'; "
