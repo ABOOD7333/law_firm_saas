@@ -4681,15 +4681,16 @@ async def yemeni_laws_page(request: Request, db: Session = Depends(get_db)):
     user = get_current_user(request, db)
     if not user or user.role in ['موكل']:
         return RedirectResponse("/", status_code=302)
-    editor_roles = {'صاحب المكتب', 'صاحب مكتب', 'مدير المكتب', 'مدير مكتب', 'مدير', 'مدير النظام'}
-    can_manage = getattr(user, 'is_superadmin', 0) == 1 or user.role in editor_roles
-    from core.yemeni_laws import LEGAL_CATEGORIES
+    # حصر إدارة وإضافة وتحديث القوانين بالسوبر أدمن فقط، والمحامون للاطلاع والنسخ والتنزيل
+    can_manage = getattr(user, 'is_superadmin', 0) == 1
+    from core.yemeni_laws import LEGAL_CATEGORIES, LAW_STATUSES
     return templates.TemplateResponse("yemeni_laws.html", {
         "request": request,
         "user": user,
         "current_user": user,
         "active_page": "yemeni-laws",
         "legal_categories": LEGAL_CATEGORIES,
+        "law_statuses": LAW_STATUSES,
         "can_manage": can_manage,
     })
 

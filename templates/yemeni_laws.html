@@ -5,67 +5,196 @@
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
     <div>
       <h2 class="fw-bold mb-1"><i class="fa-solid fa-scale-balanced text-primary ms-2"></i>القوانين واللوائح اليمنية</h2>
-      <div class="text-muted">مكتبة تشريعات للبحث والقراءة وتنزيل المستندات</div>
+      <div class="text-muted">مكتبة تشريعات يمنية موحدة للبحث، القراءة، نسخ المواد، وتنزيل المستندات الرسمية</div>
     </div>
-    <div class="d-flex gap-2 flex-wrap">
-      <select class="form-select" id="lawTypeFilter" aria-label="نوع التشريع">
-        <option value="">كل التشريعات</option><option value="law">قوانين</option><option value="regulation">لوائح</option>
+    <div class="d-flex gap-2 flex-wrap align-items-center">
+      <select class="form-select" id="lawTypeFilter" aria-label="نوع التشريع" style="width:auto;">
+        <option value="">كل التشريعات</option>
+        <option value="law">قوانين</option>
+        <option value="regulation">لوائح</option>
       </select>
-      <select class="form-select" id="categoryFilter" aria-label="تصنيف التشريع">
+      <select class="form-select" id="categoryFilter" aria-label="تصنيف التشريع" style="width:auto;">
         <option value="">كل التصنيفات</option>
         {% for value, label in legal_categories.items() %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
       </select>
+      <select class="form-select" id="statusFilter" aria-label="حالة التشريع" style="width:auto;">
+        <option value="">كل الحالات</option>
+        {% for value, label in law_statuses.items() %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+      </select>
+      <button type="button" id="recentToggleBtn" class="btn btn-outline-warning fw-bold" onclick="toggleRecentUpdates()">
+        <i class="fa-solid fa-sparkles ms-1"></i> أحدث التحديثات
+      </button>
     </div>
   </div>
 
   <div class="card border-0 shadow-sm mb-4">
     <div class="card-body">
-      <label for="lawSearch" class="form-label fw-bold">البحث في التشريعات ونصوصها</label>
+      <label for="lawSearch" class="form-label fw-bold">البحث في التشريعات ونصوصها وموادها</label>
       <div class="input-group">
-        <input id="lawSearch" class="form-control" type="search" placeholder="ابحث بعنوان القانون أو رقمه أو مادة من نصه">
+        <input id="lawSearch" class="form-control" type="search" placeholder="ابحث بعنوان القانون أو رقمه أو مادة من نصه (مثال: مادة 145 أو الشفعة)">
         <button id="searchButton" class="btn btn-primary" type="button"><i class="fa-solid fa-magnifying-glass ms-1"></i>بحث</button>
       </div>
-      <div id="searchMessage" class="small text-muted mt-2"></div>
+      <div id="searchMessage" class="small text-muted mt-2 fw-bold"></div>
     </div>
   </div>
 
   {% if can_manage %}
-  <details class="card border-0 shadow-sm mb-4" id="lawEditor">
-    <summary class="card-header bg-white fw-bold py-3" style="cursor:pointer"><i class="fa-solid fa-file-circle-plus text-primary ms-2"></i><span id="editorHeading">إضافة قانون أو لائحة</span></summary>
-    <div class="card-body">
-      <form id="lawForm" enctype="multipart/form-data">
-        <input type="hidden" id="lawId">
-        <div class="row g-3">
-          <div class="col-lg-6"><label class="form-label fw-bold" for="lawTitle">اسم التشريع</label><input class="form-control" id="lawTitle" maxlength="300" required></div>
-          <div class="col-lg-3"><label class="form-label fw-bold" for="lawType">النوع</label><select class="form-select" id="lawType" required><option value="law">قانون</option><option value="regulation">لائحة</option></select></div>
-          <div class="col-lg-3"><label class="form-label fw-bold" for="lawCategory">التصنيف</label><select class="form-select" id="lawCategory" required>{% for value, label in legal_categories.items() %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div>
-          <div class="col-md-3"><label class="form-label" for="lawNumber">رقم القانون/اللائحة</label><input class="form-control" id="lawNumber" maxlength="100"></div>
-          <div class="col-md-3"><label class="form-label" for="issueYear">سنة الإصدار</label><input class="form-control" id="issueYear" maxlength="30"></div>
-          <div class="col-md-6"><label class="form-label" for="lawSource">المصدر أو مرجع النشر</label><input class="form-control" id="lawSource" maxlength="500" placeholder="مثال: الجريدة الرسمية"></div>
-          <div class="col-12"><label class="form-label" for="lawText">نص القانون أو اللائحة</label><textarea class="form-control" id="lawText" rows="8" placeholder="أدخل النص هنا للبحث داخله"></textarea></div>
-          <div class="col-12"><label class="form-label" for="lawFile">المستند القانوني (PDF أو DOCX أو TXT، حتى 25 ميغابايت)</label><input class="form-control" id="lawFile" type="file" accept=".pdf,.docx,.txt"><div class="form-text">عند رفع مستند نصي، يُستخرج نصه تلقائيًا لدعم البحث. يمكنك تعديل النص المستخرج قبل الحفظ.</div></div>
-          <div class="col-12 d-flex gap-2"><button class="btn btn-primary" id="saveLawButton" type="submit">حفظ التشريع</button><button class="btn btn-outline-secondary" id="cancelEditButton" type="button" hidden>إلغاء التعديل</button><span id="formMessage" class="align-self-center small"></span></div>
+  <div class="row g-3 mb-4">
+    <div class="col-lg-8">
+      <details class="card border-0 shadow-sm" id="lawEditor">
+        <summary class="card-header bg-white fw-bold py-3" style="cursor:pointer">
+          <i class="fa-solid fa-file-circle-plus text-primary ms-2"></i>
+          <span id="editorHeading">إضافة أو تحديث قانون / لائحة (إدارة المنصة فقط)</span>
+        </summary>
+        <div class="card-body">
+          <form id="lawForm" enctype="multipart/form-data">
+            <input type="hidden" id="lawId">
+            <div class="row g-3">
+              <div class="col-lg-6"><label class="form-label fw-bold" for="lawTitle">اسم التشريع</label><input class="form-control" id="lawTitle" maxlength="300" required></div>
+              <div class="col-lg-3"><label class="form-label fw-bold" for="lawType">النوع</label><select class="form-select" id="lawType" required><option value="law">قانون</option><option value="regulation">لائحة</option></select></div>
+              <div class="col-lg-3"><label class="form-label fw-bold" for="lawCategory">التصنيف</label><select class="form-select" id="lawCategory" required>{% for value, label in legal_categories.items() %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div>
+
+              <div class="col-md-3"><label class="form-label" for="lawNumber">رقم القانون/اللائحة</label><input class="form-control" id="lawNumber" maxlength="100"></div>
+              <div class="col-md-3"><label class="form-label" for="issueYear">سنة الإصدار</label><input class="form-control" id="issueYear" maxlength="30"></div>
+              <div class="col-md-3">
+                <label class="form-label fw-bold" for="lawStatus">حالة التشريع</label>
+                <select class="form-select" id="lawStatus">
+                  {% for value, label in law_statuses.items() %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+                </select>
+              </div>
+              <div class="col-md-3"><label class="form-label" for="lastAmendedAt">تاريخ آخر تعديل</label><input class="form-control" id="lastAmendedAt" type="date"></div>
+
+              <div class="col-md-6"><label class="form-label" for="lawSource">المصدر أو مرجع النشر</label><input class="form-control" id="lawSource" maxlength="500" placeholder="مثال: الجريدة الرسمية"></div>
+              <div class="col-md-6"><label class="form-label" for="amendmentNote">بيان / ملخص التعديل التشريعي الأخير</label><input class="form-control" id="amendmentNote" maxlength="500" placeholder="مثال: عُدلت المواد 15 و 22 بموجب القرار رقم..."></div>
+
+              <div class="col-12"><label class="form-label" for="lawText">نص القانون أو اللائحة</label><textarea class="form-control" id="lawText" rows="7" placeholder="أدخل النص هنا للبحث داخله، أو اتركه فارغاً لاستخراجه من الملف المرفق"></textarea></div>
+              <div class="col-12"><label class="form-label" for="lawFile">المستند القانوني (PDF أو DOCX أو TXT، حتى 25 ميغابايت)</label><input class="form-control" id="lawFile" type="file" accept=".pdf,.docx,.txt"></div>
+              <div class="col-12 d-flex gap-2">
+                <button class="btn btn-primary" id="saveLawButton" type="submit"><i class="fa-solid fa-floppy-disk ms-1"></i>حفظ التشريع</button>
+                <button class="btn btn-outline-secondary" id="cancelEditButton" type="button" hidden>إلغاء التعديل</button>
+                <span id="formMessage" class="align-self-center small fw-bold"></span>
+              </div>
+            </div>
+          </form>
         </div>
-      </form>
+      </details>
     </div>
-  </details>
+
+    <div class="col-lg-4">
+      <details class="card border-0 shadow-sm" id="bulkImportBox">
+        <summary class="card-header bg-white fw-bold py-3" style="cursor:pointer">
+          <i class="fa-solid fa-cloud-arrow-up text-success ms-2"></i>
+          استيراد جماعي لملفات القوانين (Bulk Import)
+        </summary>
+        <div class="card-body">
+          <form id="bulkImportForm" enctype="multipart/form-data">
+            <div class="mb-2">
+              <label class="form-label small fw-bold">التصنيف الافتراضي</label>
+              <select class="form-select form-select-sm" id="bulkCategory">
+                {% for value, label in legal_categories.items() %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="mb-2">
+              <label class="form-label small fw-bold">النوع</label>
+              <select class="form-select form-select-sm" id="bulkType">
+                <option value="law">قوانين</option>
+                <option value="regulation">لوائح</option>
+              </select>
+            </div>
+            <div class="mb-2">
+              <label class="form-label small fw-bold">المصدر</label>
+              <input class="form-control form-control-sm" id="bulkSource" value="الجريدة الرسمية">
+            </div>
+            <div class="mb-3">
+              <label class="form-label small fw-bold">اختر ملفات متعددة (PDF, DOCX, TXT)</label>
+              <input class="form-control form-control-sm" id="bulkFiles" type="file" multiple accept=".pdf,.docx,.txt" required>
+            </div>
+            <button type="submit" id="bulkImportBtn" class="btn btn-success btn-sm w-100 fw-bold">
+              <i class="fa-solid fa-upload ms-1"></i> بدء الاستيراد الجماعي
+            </button>
+            <div id="bulkMessage" class="small mt-2 fw-bold"></div>
+          </form>
+        </div>
+      </details>
+    </div>
+  </div>
   {% endif %}
 
   <div class="card border-0 shadow-sm">
-    <div class="card-header bg-white fw-bold py-3">التشريعات المسجلة</div>
-    <div class="card-body p-0"><div id="lawResults" class="list-group list-group-flush"><div class="p-4 text-center text-muted">جارٍ تحميل التشريعات...</div></div></div>
+    <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
+      <span><i class="fa-solid fa-book-open text-primary ms-2"></i>التشريعات المسجلة</span>
+      {% if not can_manage %}
+      <span class="badge text-bg-light border text-secondary">وضع القراءة والنسخ والتنزيل للمحامين</span>
+      {% endif %}
+    </div>
+    <div class="card-body p-0">
+      <div id="lawResults" class="list-group list-group-flush">
+        <div class="p-4 text-center text-muted">جارٍ تحميل التشريعات...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Interactive Law Reader Modal -->
+<div id="lawReaderModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.7); z-index:10050; padding:16px; overflow-y:auto;">
+  <div style="max-width:960px; margin:20px auto; background:#fff; border-radius:16px; box-shadow:0 20px 50px rgba(0,0,0,0.3); overflow:hidden; display:flex; flex-direction:column; max-height:90vh;">
+    <div style="background:linear-gradient(135deg,#0b132b,#1e1b4b); color:#fff; padding:16px 22px; display:flex; justify-content:space-between; align-items:center; gap:12px;">
+      <div>
+        <h4 id="readerTitle" style="margin:0; font-weight:800; font-size:1.15rem;">عنوان القانون</h4>
+        <div id="readerMeta" style="font-size:0.82rem; color:#cbd5e1; margin-top:4px;"></div>
+      </div>
+      <button type="button" onclick="closeReader()" style="background:rgba(255,255,255,0.15); color:#fff; border:none; width:36px; height:36px; border-radius:50%; cursor:pointer; font-size:1.1rem;">✕</button>
+    </div>
+
+    <div id="readerAmendmentBox" style="display:none; background:#fffbeb; border-bottom:1px solid #fde68a; padding:10px 22px; color:#92400e; font-size:0.86rem; font-weight:700;"></div>
+
+    <!-- Reader Toolbar: Search inside law & Copy -->
+    <div style="padding:12px 22px; background:#f8fafc; border-bottom:1px solid #e2e8f0; display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between;">
+      <div style="display:flex; gap:8px; flex:1; min-width:240px; align-items:center;">
+        <input id="readerSearchInput" type="search" class="form-control form-control-sm" placeholder="ابحث داخل القانون (مثال: مادة 120 أو كلمة)..." oninput="highlightInReader()">
+        <span id="readerMatchCount" class="small text-muted fw-bold" style="white-space:nowrap;"></span>
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="jumpMatch(-1)" title="السابق">▲</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="jumpMatch(1)" title="التالي">▼</button>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button type="button" class="btn btn-sm btn-outline-success fw-bold" onclick="copySelectedOrFull()"><i class="fa-regular fa-copy ms-1"></i>نسخ المحدد / الكل</button>
+        <button type="button" class="btn btn-sm btn-primary fw-bold" id="readerDownloadBtn"><i class="fa-solid fa-download ms-1"></i>تنزيل</button>
+      </div>
+    </div>
+
+    <div id="readerBody" style="padding:24px; overflow-y:auto; flex:1; font-size:1.02rem; line-height:1.95; color:#1e293b; white-space:pre-wrap; user-select:text;"></div>
   </div>
 </div>
 
 <script>
-const categoryLabels = {{ legal_categories|tojson }};
 const canManageLaws = {{ 'true' if can_manage else 'false' }};
 const lawResults = document.getElementById('lawResults');
 const searchInput = document.getElementById('lawSearch');
 let searchTimer;
+let recentOnly = false;
+let currentReaderRawText = '';
+let currentMatchIndex = -1;
+
+function getCsrfToken() {
+  return document.cookie.split('; ').find(r => r.startsWith('csrf_token='))?.split('=')[1] || '';
+}
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+}
+
+function toggleRecentUpdates() {
+  recentOnly = !recentOnly;
+  const btn = document.getElementById('recentToggleBtn');
+  btn.classList.toggle('btn-warning', recentOnly);
+  btn.classList.toggle('btn-outline-warning', !recentOnly);
+  loadLaws();
+}
+
+function statusBadge(law) {
+  if (law.status === 'amended') return '<span class="badge text-bg-warning">معدّل</span>';
+  if (law.status === 'repealed') return '<span class="badge text-bg-danger">ملغى</span>';
+  return '<span class="badge text-bg-success">ساري المفعول</span>';
 }
 
 async function loadLaws() {
@@ -73,34 +202,44 @@ async function loadLaws() {
   const q = searchInput.value.trim();
   const category = document.getElementById('categoryFilter').value;
   const lawType = document.getElementById('lawTypeFilter').value;
+  const status = document.getElementById('statusFilter').value;
   if (q) params.set('q', q);
   if (category) params.set('category', category);
   if (lawType) params.set('law_type', lawType);
+  if (status) params.set('status', status);
+  if (recentOnly) params.set('recent_only', '1');
+
   lawResults.innerHTML = '<div class="p-4 text-center text-muted">جارٍ البحث...</div>';
   try {
     const response = await fetch(`/api/laws?${params.toString()}`);
     const result = await response.json();
     if (!response.ok || !result.success) throw new Error(result.detail || 'تعذر تحميل التشريعات');
-    document.getElementById('searchMessage').textContent = `${result.data.length} تشريع`;
+    document.getElementById('searchMessage').textContent = `${result.data.length} تشريع مسجل`;
     if (!result.data.length) {
-      lawResults.innerHTML = '<div class="p-4 text-center text-muted">لا توجد نتائج مطابقة.</div>';
+      lawResults.innerHTML = '<div class="p-4 text-center text-muted">لا توجد تشريعات مطابقة حالياً.</div>';
       return;
     }
     lawResults.innerHTML = result.data.map(law => `
       <article class="list-group-item p-3 p-lg-4">
         <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
           <div class="flex-grow-1">
-            <h5 class="fw-bold mb-2">${escapeHtml(law.title)}</h5>
+            <h5 class="fw-bold mb-2">
+              ${escapeHtml(law.title)}
+              ${law.is_recently_updated ? '<span class="badge bg-info text-dark ms-2" style="font-size:0.72rem;">مُحدّث حديثاً</span>' : ''}
+            </h5>
             <div class="d-flex flex-wrap gap-2 mb-2">
               <span class="badge text-bg-primary">${law.law_type === 'regulation' ? 'لائحة' : 'قانون'}</span>
+              ${statusBadge(law)}
               <span class="badge text-bg-light border text-dark">${escapeHtml(law.category_name)}</span>
               ${law.law_number ? `<span class="badge text-bg-light border text-dark">رقم ${escapeHtml(law.law_number)}</span>` : ''}
               ${law.issue_year ? `<span class="badge text-bg-light border text-dark">${escapeHtml(law.issue_year)}</span>` : ''}
             </div>
+            ${law.amendment_note ? `<div class="small text-warning-emphasis bg-warning-subtle px-2 py-1 rounded mb-2"><strong>تحديث تشريعي:</strong> ${escapeHtml(law.amendment_note)} ${law.last_amended_at ? `(${escapeHtml(law.last_amended_at)})` : ''}</div>` : ''}
             ${law.source_reference ? `<div class="small text-muted mb-2">المصدر: ${escapeHtml(law.source_reference)}</div>` : ''}
-            ${law.excerpt ? `<p class="mb-0 text-secondary" style="white-space:pre-line">${escapeHtml(law.excerpt)}</p>` : '<p class="mb-0 small text-muted">نص المستند غير مستخرج. يمكنك تنزيل الملف الأصلي.</p>'}
+            ${law.excerpt ? `<p class="mb-0 text-secondary" style="white-space:pre-line">${escapeHtml(law.excerpt)}</p>` : '<p class="mb-0 small text-muted">ملف رسمي مرفق. اضغط على قراءة أو تنزيل.</p>'}
           </div>
           <div class="d-flex gap-2 flex-wrap">
+            <button class="btn btn-sm btn-primary" type="button" onclick="openReader(${law.id})"><i class="fa-solid fa-book-open ms-1"></i>قراءة ونسخ</button>
             <button class="btn btn-sm btn-outline-primary" type="button" onclick="downloadLaw(${law.id})"><i class="fa-solid fa-download ms-1"></i>تنزيل</button>
             ${canManageLaws ? `<button class="btn btn-sm btn-outline-secondary" type="button" onclick="editLaw(${law.id})">تعديل</button><button class="btn btn-sm btn-outline-danger" type="button" onclick="deleteLaw(${law.id})">حذف</button>` : ''}
           </div>
@@ -115,6 +254,77 @@ document.getElementById('searchButton').addEventListener('click', loadLaws);
 searchInput.addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(loadLaws, 250); });
 document.getElementById('categoryFilter').addEventListener('change', loadLaws);
 document.getElementById('lawTypeFilter').addEventListener('change', loadLaws);
+document.getElementById('statusFilter').addEventListener('change', loadLaws);
+
+async function openReader(id) {
+  const response = await fetch(`/api/laws/${id}`);
+  const result = await response.json();
+  if (!response.ok || !result.success) { alert(result.detail || 'تعذر فتح القانون'); return; }
+  const law = result.data;
+  document.getElementById('readerTitle').textContent = law.title;
+  document.getElementById('readerMeta').textContent = `${law.category_name} • ${law.status_label}${law.law_number ? ' • رقم ' + law.law_number : ''}${law.issue_year ? ' • ' + law.issue_year : ''}`;
+  const amendBox = document.getElementById('readerAmendmentBox');
+  if (law.amendment_note) {
+    amendBox.textContent = `تنويه تشريعي: ${law.amendment_note}${law.last_amended_at ? ' (' + law.last_amended_at + ')' : ''}`;
+    amendBox.style.display = 'block';
+  } else {
+    amendBox.style.display = 'none';
+  }
+  currentReaderRawText = law.legal_text || 'لا يوجد نص مستخرج لهذا التشريع. يمكنك تنزيل المستند الأصلي من زر التنزيل.';
+  document.getElementById('readerSearchInput').value = searchInput.value.trim();
+  document.getElementById('readerDownloadBtn').onclick = () => downloadLaw(law.id);
+  highlightInReader();
+  document.getElementById('lawReaderModal').style.display = 'block';
+}
+
+function closeReader() {
+  document.getElementById('lawReaderModal').style.display = 'none';
+}
+
+function highlightInReader() {
+  const q = document.getElementById('readerSearchInput').value.trim();
+  const body = document.getElementById('readerBody');
+  const countEl = document.getElementById('readerMatchCount');
+  currentMatchIndex = -1;
+  if (!q) {
+    body.innerHTML = escapeHtml(currentReaderRawText);
+    countEl.textContent = '';
+    return;
+  }
+  const safeQ = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`(${safeQ})`, 'gi');
+  const parts = currentReaderRawText.split(regex);
+  let matches = 0;
+  body.innerHTML = parts.map((p, idx) => {
+    if (idx % 2 === 1) {
+      matches++;
+      return `<mark class="reader-match" style="background:#fde047; padding:1px 3px; border-radius:4px;">${escapeHtml(p)}</mark>`;
+    }
+    return escapeHtml(p);
+  }).join('');
+  countEl.textContent = matches ? `${matches} نتيجة` : '0 نتائج';
+  if (matches > 0) jumpMatch(1);
+}
+
+function jumpMatch(step) {
+  const marks = document.querySelectorAll('#readerBody .reader-match');
+  if (!marks.length) return;
+  if (currentMatchIndex >= 0 && marks[currentMatchIndex]) {
+    marks[currentMatchIndex].style.background = '#fde047';
+  }
+  currentMatchIndex = (currentMatchIndex + step + marks.length) % marks.length;
+  const target = marks[currentMatchIndex];
+  target.style.background = '#fb923c';
+  target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function copySelectedOrFull() {
+  const selected = window.getSelection()?.toString().trim();
+  const textToCopy = selected || currentReaderRawText;
+  navigator.clipboard.writeText(textToCopy).then(() => {
+    alert(selected ? 'تم نسخ النص المظلل إلى الحافظة!' : 'تم نسخ نص القانون بالكامل إلى الحافظة!');
+  });
+}
 
 async function downloadLaw(id) {
   const response = await fetch(`/api/laws/${id}/download`);
@@ -133,8 +343,8 @@ const lawForm = document.getElementById('lawForm');
 const lawEditor = document.getElementById('lawEditor');
 function resetLawForm() {
   lawForm.reset(); document.getElementById('lawId').value = '';
-  document.getElementById('editorHeading').textContent = 'إضافة قانون أو لائحة';
-  document.getElementById('saveLawButton').textContent = 'حفظ التشريع';
+  document.getElementById('editorHeading').textContent = 'إضافة أو تحديث قانون / لائحة (إدارة المنصة فقط)';
+  document.getElementById('saveLawButton').innerHTML = '<i class="fa-solid fa-floppy-disk ms-1"></i>حفظ التشريع';
   document.getElementById('cancelEditButton').hidden = true;
   document.getElementById('formMessage').textContent = '';
 }
@@ -150,17 +360,56 @@ lawForm.addEventListener('submit', async event => {
   body.append('law_number', document.getElementById('lawNumber').value.trim());
   body.append('issue_year', document.getElementById('issueYear').value.trim());
   body.append('source_reference', document.getElementById('lawSource').value.trim());
+  body.append('status', document.getElementById('lawStatus').value);
+  body.append('amendment_note', document.getElementById('amendmentNote').value.trim());
+  body.append('last_amended_at', document.getElementById('lastAmendedAt').value);
   body.append('legal_text', document.getElementById('lawText').value.trim());
   const file = document.getElementById('lawFile').files[0]; if (file) body.append('file', file);
   const button = document.getElementById('saveLawButton'); button.disabled = true;
   try {
-    const response = await fetch(id ? `/api/laws/${id}` : '/api/laws', {method:'POST', body});
+    const response = await fetch(id ? `/api/laws/${id}` : '/api/laws', {
+      method: 'POST',
+      headers: { 'X-CSRF-Token': getCsrfToken() },
+      body
+    });
     const result = await response.json();
     if (!response.ok || !result.success) throw new Error(result.detail || 'تعذر حفظ التشريع');
-    document.getElementById('formMessage').textContent = 'تم حفظ التشريع.';
+    document.getElementById('formMessage').textContent = 'تم حفظ التشريع بنجاح.';
     resetLawForm(); lawEditor.open = false; await loadLaws();
   } catch (error) { document.getElementById('formMessage').textContent = error.message; }
   finally { button.disabled = false; }
+});
+
+document.getElementById('bulkImportForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  const files = document.getElementById('bulkFiles').files;
+  if (!files.length) return;
+  const body = new FormData();
+  body.append('category', document.getElementById('bulkCategory').value);
+  body.append('law_type', document.getElementById('bulkType').value);
+  body.append('source_reference', document.getElementById('bulkSource').value.trim());
+  for (const f of files) body.append('files', f);
+
+  const btn = document.getElementById('bulkImportBtn');
+  const msg = document.getElementById('bulkMessage');
+  btn.disabled = true;
+  msg.textContent = 'جاري الاستيراد واستخراج النصوص...';
+  try {
+    const res = await fetch('/api/laws/bulk-import', {
+      method: 'POST',
+      headers: { 'X-CSRF-Token': getCsrfToken() },
+      body
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.detail || 'فشل الاستيراد');
+    msg.textContent = data.message;
+    document.getElementById('bulkImportForm').reset();
+    await loadLaws();
+  } catch (err) {
+    msg.textContent = err.message;
+  } finally {
+    btn.disabled = false;
+  }
 });
 
 async function editLaw(id) {
@@ -174,6 +423,9 @@ async function editLaw(id) {
   document.getElementById('lawNumber').value = law.law_number;
   document.getElementById('issueYear').value = law.issue_year;
   document.getElementById('lawSource').value = law.source_reference;
+  document.getElementById('lawStatus').value = law.status || 'active';
+  document.getElementById('amendmentNote').value = law.amendment_note || '';
+  document.getElementById('lastAmendedAt').value = law.last_amended_at || '';
   document.getElementById('lawText').value = law.legal_text || '';
   document.getElementById('editorHeading').textContent = 'تعديل التشريع';
   document.getElementById('saveLawButton').textContent = 'حفظ التعديلات';
@@ -183,7 +435,11 @@ async function editLaw(id) {
 
 async function deleteLaw(id) {
   if (!confirm('هل تريد حذف هذا التشريع من المكتبة؟')) return;
-  const response = await fetch(`/api/laws/${id}`, {method:'DELETE'}); const result = await response.json();
+  const response = await fetch(`/api/laws/${id}`, {
+    method: 'DELETE',
+    headers: { 'X-CSRF-Token': getCsrfToken() }
+  });
+  const result = await response.json();
   if (!response.ok || !result.success) { alert(result.detail || 'تعذر حذف التشريع'); return; }
   await loadLaws();
 }

@@ -20,6 +20,11 @@ LEGAL_CATEGORIES = {
 }
 
 ALLOWED_LAW_TYPES = {"law", "regulation"}
+LAW_STATUSES = {
+    "active": "ساري المفعول",
+    "amended": "معدّل",
+    "repealed": "ملغى",
+}
 ALLOWED_FILE_EXTENSIONS = {".pdf", ".docx", ".txt"}
 MAX_DOCUMENT_BYTES = 25 * 1024 * 1024
 MAX_PDF_PAGES = 500
